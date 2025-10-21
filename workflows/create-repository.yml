@@ -1,0 +1,196 @@
+name: Create Bootstrap Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: 'New repository name'
+        required: true
+        type: string
+      repo_owner:
+        description: 'Repository owner (user/org)'
+        required: false
+        type: string
+      repo_description:
+        description: 'Repository description'
+        required: false
+        default: 'Repository following SOLID principles and best practices'
+        type: string
+      visibility:
+        description: 'Repository visibility'
+        required: false
+        default: 'private'
+        type: choice
+        options:
+          - private
+          - public
+      enable_branch_protection:
+        description: 'Enable branch protection rules'
+        required: false
+        default: true
+        type: boolean
+      team_name:
+        description: 'GitHub team for code owners (e.g., org/team-leads)'
+        required: false
+        default: '@team-leads'
+        type: string
+      license_holder:
+        description: 'License copyright holder name'
+        required: false
+        type: string
+
+jobs:
+  create-repository:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@v4
+
+      - name: Set repository owner
+        id: set-owner
+        run: |
+          if [ -z "${{ github.event.inputs.repo_owner }}" ]; then
+            echo "owner=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          else
+            echo "owner=${{ github.event.inputs.repo_owner }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set license holder
+        id: set-license
+        run: |
+          if [ -z "${{ github.event.inputs.license_holder }}" ]; then
+            echo "holder=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          else
+            echo "holder=${{ github.event.inputs.license_holder }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create new repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /user/repos \
+            -f name="${{ github.event.inputs.repo_name }}" \
+            -f description="${{ github.event.inputs.repo_description }}" \
+            -f private=${{ github.event.inputs.visibility == 'private' }} \
+            -f has_issues=true \
+            -f has_projects=true \
+            -f has_wiki=false \
+            -f auto_init=true
+
+      - name: Wait for repository initialization
+        run: sleep 5
+
+      - name: Clone new repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone https://x-access-token:${GH_TOKEN}@github.com/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}.git new-repo
+          cd new-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Copy template files
+        run: |
+          cp -r templates/* new-repo/
+          cp -r templates/.github new-repo/
+          cp templates/.editorconfig new-repo/
+          cp templates/.gitignore new-repo/
+          cp templates/.gitattributes new-repo/
+          
+      - name: Update CODEOWNERS with team name
+        run: |
+          cd new-repo
+          sed -i "s/@team-leads/${{ github.event.inputs.team_name }}/g" .github/CODEOWNERS
+
+      - name: Update LICENSE with current year and holder
+        run: |
+          cd new-repo
+          CURRENT_YEAR=$(date +%Y)
+          sed -i "s/\[year\]/$CURRENT_YEAR/g" LICENSE
+          sed -i "s/\[fullname\]/${{ steps.set-license.outputs.holder }}/g" LICENSE
+
+      - name: Update SECURITY.md with repository info
+        run: |
+          cd new-repo
+          sed -i "s/security@example.com/security@${{ steps.set-owner.outputs.owner }}.com/g" SECURITY.md
+
+      - name: Commit and push files
+        run: |
+          cd new-repo
+          git add .
+          git commit -m "chore: initialize repository from bootstrap template"
+          git push
+
+      - name: Configure repository settings
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }} \
+            -f allow_squash_merge=true \
+            -f allow_merge_commit=false \
+            -f allow_rebase_merge=false \
+            -f delete_branch_on_merge=true \
+            -f allow_auto_merge=true \
+            -f allow_update_branch=true
+
+      - name: Create dev environment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/environments/dev \
+            -f wait_timer=0 \
+            -F prevent_self_review=false
+
+      - name: Create prod environment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/environments/prod \
+            -f wait_timer=30 \
+            -F prevent_self_review=true
+
+      - name: Apply branch protection rules
+        if: ${{ github.event.inputs.enable_branch_protection }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 3
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/branches/main/protection \
+            --input templates/.github/config/branch-protection.json
+
+      - name: Summary
+        run: |
+          echo "✅ Repository created successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository:** https://github.com/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Visibility:** ${{ github.event.inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch Protection:** ${{ github.event.inputs.enable_branch_protection }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Created Resources" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ CODEOWNERS" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Branch protection rules" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ .editorconfig (4 spaces code, 2 spaces config)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ .gitignore, .gitattributes" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Documentation templates" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
