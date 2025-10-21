@@ -1,0 +1,82 @@
+# Project Name
+
+## Overview
+
+Brief project description following SOLID principles, TDD, and DDD architecture patterns.
+
+## Architecture
+
+This project follows:
+- **SOLID principles** for maintainable code
+- **Test-Driven Development** (TDD) for reliability
+- **Domain-Driven Design** (DDD) for clear business logic
+- **Type-safe** implementation
+- **Dependency injection** for testability
+
+## Project Structure
+
+```
+.
+├── src/              # Source code
+├── tests/            # Test suites
+├── docs/             # Documentation
+├── .github/          # GitHub configurations
+└── config/           # Configuration files
+```
+
+## Development
+
+### Prerequisites
+
+List required tools and versions here.
+
+### Setup
+
+```bash
+git clone <repo-url>
+cd <repo-name>
+
+# Install dependencies
+make install
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run with coverage
+make coverage
+```
+
+## Code Standards
+
+- **Indentation**: 4 spaces (code), 2 spaces (YAML/JSON)
+- **Linting**: Enforced via pre-commit hooks
+- **Formatting**: Auto-format before commit
+- **Type safety**: Strictly enforced
+- **No trailing whitespace**
+
+## Contributing
+
+1. Create feature branch from `main`
+2. Write tests first (TDD)
+3. Implement feature
+4. Ensure all tests pass
+5. Run linter and formatter
+6. Submit PR (requires 2 approvals)
+
+See CONTRIBUTING.md and CODEOWNERS for details.
+
+## Testing Philosophy
+
+- All code must be testable
+- Unit tests for all modules
+- Integration tests for components
+- Test fixtures separated by module
+- Minimum 80% coverage
+
+## License
+
+See LICENSE file for details.
