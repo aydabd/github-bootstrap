@@ -1,0 +1,48 @@
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE and editor files
+.vscode/
+.idea/
+*.iml
+*.sublime-*
+
+# Build artifacts
+/build/
+/dist/
+/out/
+/target/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Dependencies
+/node_modules/
+/vendor/
+
+# Environment and secrets
+.env
+.env.local
+*.key
+*.pem
+secrets/
+
+# Logs
+*.log
+logs/
+
+# Coverage and test reports
+/coverage/
+*.cover
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
