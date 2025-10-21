@@ -1,0 +1,32 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Documents
+*.md text
+*.txt text
+*.csv text
+
+# Scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Serialization
+*.json text
+*.yml text
+*.yaml text
+*.toml text
+*.xml text
+
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
