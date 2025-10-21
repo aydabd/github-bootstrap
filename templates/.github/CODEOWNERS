@@ -1,0 +1,4 @@
+# CODEOWNERS - Define code ownership and review requirements
+# All files require review from the team
+
+* @team-leads
