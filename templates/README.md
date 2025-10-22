@@ -50,6 +50,22 @@ make test
 make coverage
 ```
 
+### Linting
+
+```bash
+# Run super-linter locally (check only)
+make lint
+
+# Run super-linter with auto-fix
+make lint-fix
+```
+
+The repository includes GitHub Super-Linter for consistent code quality:
+- **Automatic formatting** on pull requests
+- **Language-agnostic linting** for Markdown, YAML, JSON, XML, and EditorConfig
+- **Programming language validation** configured in `.super-linter.env`
+- **Local linting** with Docker via `make lint` commands
+
 ## Code Standards
 
 - **Indentation**: 4 spaces (code), 2 spaces (YAML/JSON)
