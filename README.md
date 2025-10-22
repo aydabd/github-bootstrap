@@ -44,7 +44,7 @@ Editor configurations, git settings, and ignore patterns that work across all la
 Code ownership rules, automated dependency updates, and branch protection settings requiring 2 approvals and code owner reviews.
 
 ### Documentation Templates
-Project README, contribution guidelines, changelog, security policy, and AI assistant instructions following SOLID, TDD, and DDD principles.
+Project README and AI assistant instructions (Agent, Claude, Copilot) following SOLID, TDD, and DDD principles.
 
 ### Repository Settings
 - Squash merge only
