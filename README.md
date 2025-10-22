@@ -11,6 +11,8 @@ Creates fully configured repositories with:
 - Development and production environments
 - Documentation templates
 - Editor and git configurations
+- Super-Linter workflow with auto-fix for PRs
+- Makefile for local linting with Docker
 
 ## Quick Start
 
@@ -34,6 +36,7 @@ Your new repository is created with all templates and settings.
 | `enable_branch_protection` | No | `true` | Enable branch protection rules |
 | `team_name` | No | `@team-leads` | GitHub team for code owners |
 | `license_holder` | No | Current user | License copyright holder |
+| `primary_language` | No | `multi-language` | Primary programming language for super-linter |
 
 ## What Gets Created
 
@@ -45,6 +48,13 @@ Code ownership rules, automated dependency updates, and branch protection settin
 
 ### Documentation Templates
 Project README and AI assistant instructions (Agent, Claude, Copilot) following SOLID, TDD, and DDD principles.
+
+### Super-Linter Integration
+- **GitHub Actions workflow** - Auto-formats code on pull requests and commits fixes back to the PR branch
+- **Language-agnostic linting** - Always validates Markdown, YAML, JSON, XML, and EditorConfig
+- **Programming language support** - Configurable via dropdown menu (JavaScript, TypeScript, Python, Java, Go, Rust, Ruby, PHP, C#, C++, or multi-language)
+- **Local linting** - Makefile with `make lint` and `make lint-fix` commands using Docker
+- **.super-linter.env** - Configuration file to enable/disable specific language linters
 
 ### Repository Settings
 - Squash merge only
@@ -73,6 +83,8 @@ All templates are in the `templates/` directory. Modify them to match your team'
 - Configure additional dependabot ecosystems
 - Change merge strategies
 - Modify environment settings
+- Customize super-linter configuration in `.super-linter.env`
+- Adjust language-specific linting rules
 
 ## How It Works
 
@@ -80,14 +92,16 @@ The workflow:
 1. Creates new repository via GitHub API
 2. Copies all template files from `templates/` directory
 3. Updates placeholders (team names, year, copyright holder)
-4. Configures repository settings
-5. Sets up environments and branch protection
-6. Commits everything to the new repository
+4. Configures super-linter based on selected programming language
+5. Configures repository settings
+6. Sets up environments and branch protection
+7. Commits everything to the new repository
 
 ## Requirements
 
 - GitHub personal access token with repo permissions
 - Team names must exist in your organization
+- Docker installed for local linting with `make lint` (optional)
 
 ## License
 

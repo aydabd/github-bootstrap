@@ -1,0 +1,130 @@
+name: Super-Linter
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  lint-and-format:
+    name: Lint and Auto-format Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Load Super-Linter Configuration
+        run: |
+          if [ -f .super-linter.env ]; then
+            set -a
+            source .super-linter.env
+            set +a
+            # Export all variables to GITHUB_ENV so they're available in subsequent steps
+            grep -v '^#' .super-linter.env | grep '=' | while IFS='=' read -r key value; do
+              echo "$key=$value" >> $GITHUB_ENV
+            done
+          fi
+
+      - name: Setup Git Config
+        if: github.event_name == 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Checkout PR Branch
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin ${{ github.head_ref }}
+          git checkout ${{ github.head_ref }}
+
+      - name: Run Super-Linter (Auto-fix)
+        if: github.event_name == 'pull_request'
+        uses: super-linter/super-linter@v7
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FIX_MODE: true
+          VALIDATE_ALL_CODEBASE: false
+          LINTER_RULES_PATH: /
+          # Language-agnostic linters (always enabled)
+          VALIDATE_EDITORCONFIG: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+          VALIDATE_XML: true
+          VALIDATE_NATURAL_LANGUAGE: true
+          # Programming language validation (controlled by .super-linter.env)
+          VALIDATE_JAVASCRIPT_ES: ${{ env.ENABLE_JAVASCRIPT || 'false' }}
+          VALIDATE_JAVASCRIPT_STANDARD: ${{ env.ENABLE_JAVASCRIPT || 'false' }}
+          VALIDATE_TYPESCRIPT_ES: ${{ env.ENABLE_TYPESCRIPT || 'false' }}
+          VALIDATE_TYPESCRIPT_STANDARD: ${{ env.ENABLE_TYPESCRIPT || 'false' }}
+          VALIDATE_PYTHON_BLACK: ${{ env.ENABLE_PYTHON || 'false' }}
+          VALIDATE_PYTHON_PYLINT: ${{ env.ENABLE_PYTHON || 'false' }}
+          VALIDATE_PYTHON_FLAKE8: ${{ env.ENABLE_PYTHON || 'false' }}
+          VALIDATE_JAVA: ${{ env.ENABLE_JAVA || 'false' }}
+          VALIDATE_GO: ${{ env.ENABLE_GO || 'false' }}
+          VALIDATE_RUST_2015: ${{ env.ENABLE_RUST || 'false' }}
+          VALIDATE_RUST_2018: ${{ env.ENABLE_RUST || 'false' }}
+          VALIDATE_RUST_2021: ${{ env.ENABLE_RUST || 'false' }}
+          VALIDATE_RUBY: ${{ env.ENABLE_RUBY || 'false' }}
+          VALIDATE_PHP_BUILTIN: ${{ env.ENABLE_PHP || 'false' }}
+          VALIDATE_CSHARP: ${{ env.ENABLE_CSHARP || 'false' }}
+          VALIDATE_CPP: ${{ env.ENABLE_CPP || 'false' }}
+
+      - name: Commit Auto-fixes
+        if: github.event_name == 'pull_request'
+        run: |
+          if [[ -n $(git status -s) ]]; then
+            git add -A
+            git commit -m "chore: auto-fix linting issues [skip ci]" || echo "No changes to commit"
+            git push origin ${{ github.head_ref }}
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Run Super-Linter (Check Only)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: super-linter/super-linter@v7
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FIX_MODE: false
+          VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'workflow_dispatch' }}
+          LINTER_RULES_PATH: /
+          # Language-agnostic linters (always enabled)
+          VALIDATE_EDITORCONFIG: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+          VALIDATE_XML: true
+          VALIDATE_NATURAL_LANGUAGE: true
+          # Programming language validation (controlled by .super-linter.env)
+          VALIDATE_JAVASCRIPT_ES: ${{ env.ENABLE_JAVASCRIPT || 'false' }}
+          VALIDATE_JAVASCRIPT_STANDARD: ${{ env.ENABLE_JAVASCRIPT || 'false' }}
+          VALIDATE_TYPESCRIPT_ES: ${{ env.ENABLE_TYPESCRIPT || 'false' }}
+          VALIDATE_TYPESCRIPT_STANDARD: ${{ env.ENABLE_TYPESCRIPT || 'false' }}
+          VALIDATE_PYTHON_BLACK: ${{ env.ENABLE_PYTHON || 'false' }}
+          VALIDATE_PYTHON_PYLINT: ${{ env.ENABLE_PYTHON || 'false' }}
+          VALIDATE_PYTHON_FLAKE8: ${{ env.ENABLE_PYTHON || 'false' }}
+          VALIDATE_JAVA: ${{ env.ENABLE_JAVA || 'false' }}
+          VALIDATE_GO: ${{ env.ENABLE_GO || 'false' }}
+          VALIDATE_RUST_2015: ${{ env.ENABLE_RUST || 'false' }}
+          VALIDATE_RUST_2018: ${{ env.ENABLE_RUST || 'false' }}
+          VALIDATE_RUST_2021: ${{ env.ENABLE_RUST || 'false' }}
+          VALIDATE_RUBY: ${{ env.ENABLE_RUBY || 'false' }}
+          VALIDATE_PHP_BUILTIN: ${{ env.ENABLE_PHP || 'false' }}
+          VALIDATE_CSHARP: ${{ env.ENABLE_CSHARP || 'false' }}
+          VALIDATE_CPP: ${{ env.ENABLE_CPP || 'false' }}

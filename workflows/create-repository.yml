@@ -38,6 +38,23 @@ on:
         description: 'License copyright holder name'
         required: false
         type: string
+      primary_language:
+        description: 'Primary programming language for super-linter configuration'
+        required: false
+        default: 'multi-language'
+        type: choice
+        options:
+          - multi-language
+          - javascript
+          - typescript
+          - python
+          - java
+          - go
+          - rust
+          - ruby
+          - php
+          - csharp
+          - cpp
 
 jobs:
   create-repository:
@@ -102,6 +119,7 @@ jobs:
           cp templates/.editorconfig new-repo/
           cp templates/.gitignore new-repo/
           cp templates/.gitattributes new-repo/
+          cp templates/.super-linter.env new-repo/
           
       - name: Update CODEOWNERS with team name
         run: |
@@ -115,10 +133,79 @@ jobs:
           sed -i "s/\[year\]/$CURRENT_YEAR/g" LICENSE
           sed -i "s/\[fullname\]/${{ steps.set-license.outputs.holder }}/g" LICENSE
 
-      - name: Update SECURITY.md with repository info
+      - name: Configure super-linter for primary language
         run: |
           cd new-repo
-          sed -i "s/security@example.com/security@${{ steps.set-owner.outputs.owner }}.com/g" SECURITY.md
+          LANG="${{ github.event.inputs.primary_language }}"
+          
+          # Set all languages to false by default
+          sed -i "s/ENABLE_JAVASCRIPT_VALUE/false/g" .super-linter.env
+          sed -i "s/ENABLE_TYPESCRIPT_VALUE/false/g" .super-linter.env
+          sed -i "s/ENABLE_PYTHON_VALUE/false/g" .super-linter.env
+          sed -i "s/ENABLE_JAVA_VALUE/false/g" .super-linter.env
+          sed -i "s/ENABLE_GO_VALUE/false/g" .super-linter.env
+          sed -i "s/ENABLE_RUST_VALUE/false/g" .super-linter.env
+          sed -i "s/ENABLE_RUBY_VALUE/false/g" .super-linter.env
+          sed -i "s/ENABLE_PHP_VALUE/false/g" .super-linter.env
+          sed -i "s/ENABLE_CSHARP_VALUE/false/g" .super-linter.env
+          sed -i "s/ENABLE_CPP_VALUE/false/g" .super-linter.env
+          
+          # Enable the selected language or all for multi-language
+          case "$LANG" in
+            "javascript")
+              sed -i "s/ENABLE_JAVASCRIPT=false/ENABLE_JAVASCRIPT=true/g" .super-linter.env
+              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/JavaScript/g" .super-linter.env
+              ;;
+            "typescript")
+              sed -i "s/ENABLE_TYPESCRIPT=false/ENABLE_TYPESCRIPT=true/g" .super-linter.env
+              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/TypeScript/g" .super-linter.env
+              ;;
+            "python")
+              sed -i "s/ENABLE_PYTHON=false/ENABLE_PYTHON=true/g" .super-linter.env
+              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Python/g" .super-linter.env
+              ;;
+            "java")
+              sed -i "s/ENABLE_JAVA=false/ENABLE_JAVA=true/g" .super-linter.env
+              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Java/g" .super-linter.env
+              ;;
+            "go")
+              sed -i "s/ENABLE_GO=false/ENABLE_GO=true/g" .super-linter.env
+              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Go/g" .super-linter.env
+              ;;
+            "rust")
+              sed -i "s/ENABLE_RUST=false/ENABLE_RUST=true/g" .super-linter.env
+              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Rust/g" .super-linter.env
+              ;;
+            "ruby")
+              sed -i "s/ENABLE_RUBY=false/ENABLE_RUBY=true/g" .super-linter.env
+              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Ruby/g" .super-linter.env
+              ;;
+            "php")
+              sed -i "s/ENABLE_PHP=false/ENABLE_PHP=true/g" .super-linter.env
+              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/PHP/g" .super-linter.env
+              ;;
+            "csharp")
+              sed -i "s/ENABLE_CSHARP=false/ENABLE_CSHARP=true/g" .super-linter.env
+              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/C#/g" .super-linter.env
+              ;;
+            "cpp")
+              sed -i "s/ENABLE_CPP=false/ENABLE_CPP=true/g" .super-linter.env
+              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/C++/g" .super-linter.env
+              ;;
+            "multi-language")
+              sed -i "s/ENABLE_JAVASCRIPT=false/ENABLE_JAVASCRIPT=true/g" .super-linter.env
+              sed -i "s/ENABLE_TYPESCRIPT=false/ENABLE_TYPESCRIPT=true/g" .super-linter.env
+              sed -i "s/ENABLE_PYTHON=false/ENABLE_PYTHON=true/g" .super-linter.env
+              sed -i "s/ENABLE_JAVA=false/ENABLE_JAVA=true/g" .super-linter.env
+              sed -i "s/ENABLE_GO=false/ENABLE_GO=true/g" .super-linter.env
+              sed -i "s/ENABLE_RUST=false/ENABLE_RUST=true/g" .super-linter.env
+              sed -i "s/ENABLE_RUBY=false/ENABLE_RUBY=true/g" .super-linter.env
+              sed -i "s/ENABLE_PHP=false/ENABLE_PHP=true/g" .super-linter.env
+              sed -i "s/ENABLE_CSHARP=false/ENABLE_CSHARP=true/g" .super-linter.env
+              sed -i "s/ENABLE_CPP=false/ENABLE_CPP=true/g" .super-linter.env
+              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Multi-Language/g" .super-linter.env
+              ;;
+          esac
 
       - name: Commit and push files
         run: |
@@ -183,6 +270,7 @@ jobs:
           echo "**Repository:** https://github.com/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Visibility:** ${{ github.event.inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch Protection:** ${{ github.event.inputs.enable_branch_protection }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Primary Language:** ${{ github.event.inputs.primary_language }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Created Resources" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ CODEOWNERS" >> $GITHUB_STEP_SUMMARY
@@ -194,3 +282,6 @@ jobs:
           echo "- ✅ .gitignore, .gitattributes" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Documentation templates" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Super-Linter workflow (auto-fix on PRs)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Super-Linter configuration (.super-linter.env)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY
