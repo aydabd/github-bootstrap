@@ -224,7 +224,7 @@ jobs:
             --method PATCH \
             -H "Accept: application/vnd.github+json" \
             /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }} \
-            --input "templates/.github/config/repo-settings.json"
+            --input ".github/config/repo-settings.json"
 
       - name: Create dev environment
         env:
@@ -256,7 +256,7 @@ jobs:
             --method PUT \
             -H "Accept: application/vnd.github+json" \
             /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/branches/main/protection \
-            --input "templates/.github/config/branch-protection.json"
+            --input ".github/config/branch-protection.json"
 
       - name: Summary
         run: |
