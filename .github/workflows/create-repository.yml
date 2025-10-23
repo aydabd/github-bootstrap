@@ -233,8 +233,7 @@ jobs:
           gh api \
             --method PUT \
             -H "Accept: application/vnd.github+json" \
-            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/environments/dev \
-            -F prevent_self_review=false
+            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/environments/dev
 
       - name: Create prod environment
         env:
@@ -243,8 +242,7 @@ jobs:
           gh api \
             --method PUT \
             -H "Accept: application/vnd.github+json" \
-            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/environments/prod \
-            -F prevent_self_review=false
+            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/environments/prod
 
       - name: Apply branch protection rules
         if: ${{ github.event.inputs.enable_branch_protection }}
