@@ -3,7 +3,7 @@ name: Delete repository
 on:
   workflow_dispatch:
     inputs:
-      confirm_repo:
+      repo:
         description: "Type the full repository name (owner/repo) to confirm deletion"
         required: true
         type: string
@@ -18,18 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     # This workflow uses a personal access token (GH_PAT) with repo deletion permissions.
     # Create a secret named GH_PAT with `delete_repo` scope (or an admin token) in the repository where you run this.
-    env:
-      REPO_FULL: ${{ github.repository }}
     steps:
-      - name: Validate confirmation value
-        run: |
-          echo "Expected repository: $REPO_FULL"
-          echo "Confirmation provided: ${{ github.event.inputs.confirm_repo }}"
-          if [ "${{ github.event.inputs.confirm_repo }}" != "$REPO_FULL" ]; then
-            echo "Confirmation mismatch — aborting. To delete, provide the exact repository name as 'confirm_repo'."
-            exit 1
-          fi
-
       - name: Dry-run check
         run: |
           if [ "${{ github.event.inputs.force }}" != "true" ]; then
@@ -41,6 +30,7 @@ jobs:
       - name: Delete repository via REST API
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO_FULL: ${{ inputs.repo }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
             echo "GH_PAT secret is missing. Please create a repository secret named GH_PAT with delete_repo permission."
