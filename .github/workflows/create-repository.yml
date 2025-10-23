@@ -224,12 +224,7 @@ jobs:
             --method PATCH \
             -H "Accept: application/vnd.github+json" \
             /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }} \
-            -f allow_squash_merge=true \
-            -f allow_merge_commit=false \
-            -f allow_rebase_merge=false \
-            -f delete_branch_on_merge=true \
-            -f allow_auto_merge=true \
-            -f allow_update_branch=true
+            --input templates/.github/config/repo-settings.json
 
       - name: Create dev environment
         env:
@@ -239,7 +234,6 @@ jobs:
             --method PUT \
             -H "Accept: application/vnd.github+json" \
             /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/environments/dev \
-            -f wait_timer=0 \
             -F prevent_self_review=false
 
       - name: Create prod environment
@@ -250,7 +244,6 @@ jobs:
             --method PUT \
             -H "Accept: application/vnd.github+json" \
             /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/environments/prod \
-            -f wait_timer=30 \
             -F prevent_self_review=true
 
       - name: Apply branch protection rules
