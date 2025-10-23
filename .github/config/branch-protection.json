@@ -11,7 +11,7 @@
       ]
     }
   },
-  "required_status_checks": null,
+  "required_status_checks": true,
   "enforce_admins": true,
   "required_pull_request_reviews": true,
   "restrictions": null,
