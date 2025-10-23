@@ -32,7 +32,7 @@ on:
       team_name:
         description: 'GitHub team for code owners (e.g., org/team-leads)'
         required: false
-        default: '@team-leads'
+        default: '* @team-leads'
         type: string
       license_holder:
         description: 'License copyright holder name'
@@ -88,7 +88,7 @@ jobs:
 
       - name: Create new repository
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           gh api \
             --method POST \
@@ -107,7 +107,7 @@ jobs:
 
       - name: Clone new repository
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           git clone https://x-access-token:${GH_TOKEN}@github.com/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}.git new-repo
           cd new-repo
@@ -218,7 +218,7 @@ jobs:
 
       - name: Configure repository settings
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           gh api \
             --method PATCH \
@@ -233,7 +233,7 @@ jobs:
 
       - name: Create dev environment
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           gh api \
             --method PUT \
@@ -244,7 +244,7 @@ jobs:
 
       - name: Create prod environment
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           gh api \
             --method PUT \
@@ -256,7 +256,7 @@ jobs:
       - name: Apply branch protection rules
         if: ${{ github.event.inputs.enable_branch_protection }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           sleep 3
           gh api \
