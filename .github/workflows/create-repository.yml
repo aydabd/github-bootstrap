@@ -244,7 +244,7 @@ jobs:
             --method PUT \
             -H "Accept: application/vnd.github+json" \
             /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/environments/prod \
-            -F prevent_self_review=true
+            -F prevent_self_review=false
 
       - name: Apply branch protection rules
         if: ${{ github.event.inputs.enable_branch_protection }}
