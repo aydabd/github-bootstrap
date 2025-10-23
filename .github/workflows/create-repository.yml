@@ -19,11 +19,11 @@ on:
       visibility:
         description: 'Repository visibility'
         required: false
-        default: 'private'
+        default: 'public'
         type: choice
         options:
-          - private
           - public
+          - private
       enable_branch_protection:
         description: 'Enable branch protection rules'
         required: false
@@ -96,7 +96,7 @@ jobs:
             /user/repos \
             -f name="${{ github.event.inputs.repo_name }}" \
             -f description="${{ github.event.inputs.repo_description }}" \
-            -f private=${{ github.event.inputs.visibility == 'private' }} \
+            -f public=${{ github.event.inputs.visibility == 'public' }} \
             -f has_issues=true \
             -f has_projects=true \
             -f has_wiki=false \
