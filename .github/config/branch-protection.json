@@ -1,5 +1,5 @@
 {
-  "name": "main",
+  "name": "main-protection",
   "target": "branch",
   "source_type": "Repository",
   "enforcement": "active",
@@ -7,14 +7,10 @@
     "ref_name": {
       "exclude": [],
       "include": [
-        "~DEFAULT_BRANCH"
+        "refs/heads/main"
       ]
     }
   },
-  "required_status_checks": true,
-  "enforce_admins": true,
-  "required_pull_request_reviews": true,
-  "restrictions": null,
   "rules": [
     {
       "type": "deletion"
@@ -29,22 +25,16 @@
         "dismiss_stale_reviews_on_push": true,
         "require_code_owner_review": true,
         "require_last_push_approval": true,
-        "required_review_thread_resolution": true,
-        "automatic_copilot_code_review_enabled": true,
-        "allowed_merge_methods": [
-          "squash",
-          "rebase"
-        ]
+        "required_review_thread_resolution": true
       }
     },
     {
       "type": "required_status_checks",
       "parameters": {
         "strict_required_status_checks_policy": true,
-        "do_not_enforce_on_create": false,
         "required_status_checks": [
           {
-            "context": "lint-snd-format"
+            "context": "lint-and-format"
           }
         ]
       }
