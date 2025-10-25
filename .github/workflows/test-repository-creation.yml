@@ -1,0 +1,231 @@
+name: Test Repository Creation
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_repo_name:
+        description: 'Name for test repository (will be prefixed with test-)'
+        required: false
+        default: 'bootstrap-test'
+        type: string
+      primary_language:
+        description: 'Primary language to test'
+        required: false
+        default: 'multi-language'
+        type: choice
+        options:
+          - multi-language
+          - javascript
+          - typescript
+          - python
+          - java
+          - go
+          - rust
+          - ruby
+          - php
+          - csharp
+          - cpp
+      cleanup_after_test:
+        description: 'Automatically delete test repository after testing'
+        required: false
+        default: true
+        type: boolean
+      wait_time_minutes:
+        description: 'Minutes to wait before cleanup (to inspect results)'
+        required: false
+        default: '10'
+        type: string
+
+jobs:
+  create-test-repo:
+    name: Create Test Repository
+    runs-on: ubuntu-latest
+    outputs:
+      test_repo_name: ${{ steps.generate-name.outputs.repo_name }}
+    permissions:
+      contents: write
+      id-token: write
+      actions: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Generate unique test repository name
+        id: generate-name
+        run: |
+          TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+          REPO_NAME="test-${{ github.event.inputs.test_repo_name }}-${TIMESTAMP}"
+          echo "repo_name=${REPO_NAME}" >> $GITHUB_OUTPUT
+          echo "Generated test repository name: ${REPO_NAME}"
+
+      - name: Trigger repository creation workflow
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          gh workflow run create-repository.yml \
+            --field repo_name="${{ steps.generate-name.outputs.repo_name }}" \
+            --field repo_description="Test repository for bootstrap validation - created $(date)" \
+            --field visibility="public" \
+            --field enable_branch_protection="false" \
+            --field team_name="* @${{ github.repository_owner }}" \
+            --field license_holder="${{ github.repository_owner }}" \
+            --field primary_language="${{ github.event.inputs.primary_language }}"
+
+      - name: Wait for repository creation
+        run: |
+          echo "Waiting 30 seconds for repository creation workflow to start..."
+          sleep 30
+
+      - name: Check repository creation status
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        timeout-minutes: 10
+        run: |
+          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          
+          # Wait for the workflow to complete
+          echo "Monitoring repository creation workflow..."
+          
+          # Check if repository exists (retry for up to 5 minutes)
+          for i in {1..30}; do
+            if gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}" >/dev/null 2>&1; then
+              echo "✅ Repository created successfully: https://github.com/${{ github.repository_owner }}/${REPO_NAME}"
+              break
+            else
+              echo "⏳ Waiting for repository creation... (attempt $i/30)"
+              sleep 10
+            fi
+            
+            if [ $i -eq 30 ]; then
+              echo "❌ Repository creation timed out"
+              exit 1
+            fi
+          done
+
+      - name: Validate repository structure
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          
+          echo "🔍 Validating repository structure..."
+          
+          # Check essential files exist
+          REQUIRED_FILES=(
+            ".github/workflows/super-linter.yml"
+            ".github/CODEOWNERS"
+            ".github/dependabot.yml"
+            ".super-linter.env"
+            ".editorconfig"
+            ".gitignore"
+            ".gitattributes"
+            "README.md"
+            "LICENSE"
+            "Makefile"
+          )
+          
+          for file in "${REQUIRED_FILES[@]}"; do
+            if gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/${file}" >/dev/null 2>&1; then
+              echo "✅ Found: ${file}"
+            else
+              echo "❌ Missing: ${file}"
+              exit 1
+            fi
+          done
+          
+          echo "🎉 All required files are present!"
+
+      - name: Check super-linter configuration
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          
+          echo "🔍 Checking super-linter configuration for language: ${{ github.event.inputs.primary_language }}"
+          
+          # Get the .super-linter.env content
+          LINTER_CONFIG=$(gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/.super-linter.env" --jq '.content' | base64 -d)
+          
+          echo "Super-linter configuration:"
+          echo "$LINTER_CONFIG"
+          
+          # Verify language-specific configuration
+          case "${{ github.event.inputs.primary_language }}" in
+            "javascript")
+              if echo "$LINTER_CONFIG" | grep -q "ENABLE_JAVASCRIPT=true"; then
+                echo "✅ JavaScript linting enabled correctly"
+              else
+                echo "❌ JavaScript linting not enabled"
+                exit 1
+              fi
+              ;;
+            "python")
+              if echo "$LINTER_CONFIG" | grep -q "ENABLE_PYTHON=true"; then
+                echo "✅ Python linting enabled correctly"
+              else
+                echo "❌ Python linting not enabled"
+                exit 1
+              fi
+              ;;
+            "multi-language")
+              ENABLED_COUNT=$(echo "$LINTER_CONFIG" | grep -c "=true" || true)
+              if [ $ENABLED_COUNT -ge 5 ]; then
+                echo "✅ Multi-language linting enabled correctly ($ENABLED_COUNT languages)"
+              else
+                echo "❌ Multi-language linting not configured properly (only $ENABLED_COUNT languages enabled)"
+                exit 1
+              fi
+              ;;
+            *)
+              echo "ℹ️ Language-specific validation not implemented for: ${{ github.event.inputs.primary_language }}"
+              ;;
+          esac
+
+      - name: Trigger super-linter workflow test
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          
+          echo "🧪 Triggering super-linter workflow in test repository..."
+          
+          # Trigger the super-linter workflow in the test repo
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository_owner }}/${REPO_NAME}/actions/workflows/super-linter.yml/dispatches" \
+            -f ref="main"
+          
+          echo "✅ Super-linter workflow triggered. Check: https://github.com/${{ github.repository_owner }}/${REPO_NAME}/actions"
+
+  cleanup-test-repo:
+    name: Cleanup Test Repository
+    needs: create-test-repo
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.cleanup_after_test == 'true' }}
+    
+    steps:
+      - name: Wait before cleanup
+        run: |
+          WAIT_MINUTES="${{ github.event.inputs.wait_time_minutes }}"
+          echo "⏳ Waiting ${WAIT_MINUTES} minutes before cleanup to allow inspection..."
+          sleep $((WAIT_MINUTES * 60))
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Delete test repository
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          REPO_NAME="${{ needs.create-test-repo.outputs.test_repo_name }}"
+          
+          echo "🗑️ Cleaning up test repository: ${REPO_NAME}"
+          
+          # Use the delete-repo workflow to clean up
+          gh workflow run delete-repo.yml \
+            --field repo="${{ github.repository_owner }}/${REPO_NAME}" \
+            --field force="true"
+          
+          echo "✅ Cleanup workflow triggered for repository: ${REPO_NAME}"

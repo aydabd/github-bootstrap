@@ -140,18 +140,6 @@ jobs:
           cd new-repo
           LANG="${{ github.event.inputs.primary_language }}"
           
-          # Set all languages to false by default
-          sed -i "s/ENABLE_JAVASCRIPT_VALUE/false/g" .super-linter.env
-          sed -i "s/ENABLE_TYPESCRIPT_VALUE/false/g" .super-linter.env
-          sed -i "s/ENABLE_PYTHON_VALUE/false/g" .super-linter.env
-          sed -i "s/ENABLE_JAVA_VALUE/false/g" .super-linter.env
-          sed -i "s/ENABLE_GO_VALUE/false/g" .super-linter.env
-          sed -i "s/ENABLE_RUST_VALUE/false/g" .super-linter.env
-          sed -i "s/ENABLE_RUBY_VALUE/false/g" .super-linter.env
-          sed -i "s/ENABLE_PHP_VALUE/false/g" .super-linter.env
-          sed -i "s/ENABLE_CSHARP_VALUE/false/g" .super-linter.env
-          sed -i "s/ENABLE_CPP_VALUE/false/g" .super-linter.env
-          
           # Enable the selected language or all for multi-language
           case "$LANG" in
             "javascript")

@@ -29,9 +29,6 @@ jobs:
       - name: Load Super-Linter Configuration
         run: |
           if [ -f .super-linter.env ]; then
-            set -a
-            source .super-linter.env
-            set +a
             # Export all variables to GITHUB_ENV so they're available in subsequent steps
             grep -v '^#' .super-linter.env | grep '=' | while IFS='=' read -r key value; do
               echo "$key=$value" >> $GITHUB_ENV
@@ -67,22 +64,22 @@ jobs:
           VALIDATE_XML: true
           VALIDATE_NATURAL_LANGUAGE: true
           # Programming language validation (controlled by .super-linter.env)
-          VALIDATE_JAVASCRIPT_ES: ${{ env.ENABLE_JAVASCRIPT || 'false' }}
-          VALIDATE_JAVASCRIPT_STANDARD: ${{ env.ENABLE_JAVASCRIPT || 'false' }}
-          VALIDATE_TYPESCRIPT_ES: ${{ env.ENABLE_TYPESCRIPT || 'false' }}
-          VALIDATE_TYPESCRIPT_STANDARD: ${{ env.ENABLE_TYPESCRIPT || 'false' }}
-          VALIDATE_PYTHON_BLACK: ${{ env.ENABLE_PYTHON || 'false' }}
-          VALIDATE_PYTHON_PYLINT: ${{ env.ENABLE_PYTHON || 'false' }}
-          VALIDATE_PYTHON_FLAKE8: ${{ env.ENABLE_PYTHON || 'false' }}
-          VALIDATE_JAVA: ${{ env.ENABLE_JAVA || 'false' }}
-          VALIDATE_GO: ${{ env.ENABLE_GO || 'false' }}
-          VALIDATE_RUST_2015: ${{ env.ENABLE_RUST || 'false' }}
-          VALIDATE_RUST_2018: ${{ env.ENABLE_RUST || 'false' }}
-          VALIDATE_RUST_2021: ${{ env.ENABLE_RUST || 'false' }}
-          VALIDATE_RUBY: ${{ env.ENABLE_RUBY || 'false' }}
-          VALIDATE_PHP_BUILTIN: ${{ env.ENABLE_PHP || 'false' }}
-          VALIDATE_CSHARP: ${{ env.ENABLE_CSHARP || 'false' }}
-          VALIDATE_CPP: ${{ env.ENABLE_CPP || 'false' }}
+          VALIDATE_JAVASCRIPT_ES: ${{ env.ENABLE_JAVASCRIPT }}
+          VALIDATE_JAVASCRIPT_STANDARD: ${{ env.ENABLE_JAVASCRIPT }}
+          VALIDATE_TYPESCRIPT_ES: ${{ env.ENABLE_TYPESCRIPT }}
+          VALIDATE_TYPESCRIPT_STANDARD: ${{ env.ENABLE_TYPESCRIPT }}
+          VALIDATE_PYTHON_BLACK: ${{ env.ENABLE_PYTHON }}
+          VALIDATE_PYTHON_PYLINT: ${{ env.ENABLE_PYTHON }}
+          VALIDATE_PYTHON_FLAKE8: ${{ env.ENABLE_PYTHON }}
+          VALIDATE_JAVA: ${{ env.ENABLE_JAVA }}
+          VALIDATE_GO: ${{ env.ENABLE_GO }}
+          VALIDATE_RUST_2015: ${{ env.ENABLE_RUST }}
+          VALIDATE_RUST_2018: ${{ env.ENABLE_RUST }}
+          VALIDATE_RUST_2021: ${{ env.ENABLE_RUST }}
+          VALIDATE_RUBY: ${{ env.ENABLE_RUBY }}
+          VALIDATE_PHP_BUILTIN: ${{ env.ENABLE_PHP }}
+          VALIDATE_CSHARP: ${{ env.ENABLE_CSHARP }}
+          VALIDATE_CPP: ${{ env.ENABLE_CPP }}
 
       - name: Commit Auto-fixes
         if: github.event_name == 'pull_request'
@@ -112,19 +109,19 @@ jobs:
           VALIDATE_XML: true
           VALIDATE_NATURAL_LANGUAGE: true
           # Programming language validation (controlled by .super-linter.env)
-          VALIDATE_JAVASCRIPT_ES: ${{ env.ENABLE_JAVASCRIPT || 'false' }}
-          VALIDATE_JAVASCRIPT_STANDARD: ${{ env.ENABLE_JAVASCRIPT || 'false' }}
-          VALIDATE_TYPESCRIPT_ES: ${{ env.ENABLE_TYPESCRIPT || 'false' }}
-          VALIDATE_TYPESCRIPT_STANDARD: ${{ env.ENABLE_TYPESCRIPT || 'false' }}
-          VALIDATE_PYTHON_BLACK: ${{ env.ENABLE_PYTHON || 'false' }}
-          VALIDATE_PYTHON_PYLINT: ${{ env.ENABLE_PYTHON || 'false' }}
-          VALIDATE_PYTHON_FLAKE8: ${{ env.ENABLE_PYTHON || 'false' }}
-          VALIDATE_JAVA: ${{ env.ENABLE_JAVA || 'false' }}
-          VALIDATE_GO: ${{ env.ENABLE_GO || 'false' }}
-          VALIDATE_RUST_2015: ${{ env.ENABLE_RUST || 'false' }}
-          VALIDATE_RUST_2018: ${{ env.ENABLE_RUST || 'false' }}
-          VALIDATE_RUST_2021: ${{ env.ENABLE_RUST || 'false' }}
-          VALIDATE_RUBY: ${{ env.ENABLE_RUBY || 'false' }}
-          VALIDATE_PHP_BUILTIN: ${{ env.ENABLE_PHP || 'false' }}
-          VALIDATE_CSHARP: ${{ env.ENABLE_CSHARP || 'false' }}
-          VALIDATE_CPP: ${{ env.ENABLE_CPP || 'false' }}
+          VALIDATE_JAVASCRIPT_ES: ${{ env.ENABLE_JAVASCRIPT }}
+          VALIDATE_JAVASCRIPT_STANDARD: ${{ env.ENABLE_JAVASCRIPT }}
+          VALIDATE_TYPESCRIPT_ES: ${{ env.ENABLE_TYPESCRIPT }}
+          VALIDATE_TYPESCRIPT_STANDARD: ${{ env.ENABLE_TYPESCRIPT }}
+          VALIDATE_PYTHON_BLACK: ${{ env.ENABLE_PYTHON }}
+          VALIDATE_PYTHON_PYLINT: ${{ env.ENABLE_PYTHON }}
+          VALIDATE_PYTHON_FLAKE8: ${{ env.ENABLE_PYTHON }}
+          VALIDATE_JAVA: ${{ env.ENABLE_JAVA }}
+          VALIDATE_GO: ${{ env.ENABLE_GO }}
+          VALIDATE_RUST_2015: ${{ env.ENABLE_RUST }}
+          VALIDATE_RUST_2018: ${{ env.ENABLE_RUST }}
+          VALIDATE_RUST_2021: ${{ env.ENABLE_RUST }}
+          VALIDATE_RUBY: ${{ env.ENABLE_RUBY }}
+          VALIDATE_PHP_BUILTIN: ${{ env.ENABLE_PHP }}
+          VALIDATE_CSHARP: ${{ env.ENABLE_CSHARP }}
+          VALIDATE_CPP: ${{ env.ENABLE_CPP }}
