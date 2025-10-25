@@ -251,9 +251,9 @@ jobs:
         run: |
           sleep 3
           gh api \
-            --method PUT \
+            --method POST \
             -H "Accept: application/vnd.github+json" \
-            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/branches/main/protection \
+            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/rulesets \
             --input ".github/config/branch-protection.json"
 
       - name: Summary
