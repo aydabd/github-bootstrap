@@ -93,7 +93,7 @@ jobs:
         run: |
           OWNER="${{ steps.set-owner.outputs.owner }}"
           VISIBILITY="${{ github.event.inputs.visibility }}"
-          
+
           # Determine if creating under user or organization
           if [ "$OWNER" = "${{ github.repository_owner }}" ]; then
             # Check if it's a user or organization
@@ -107,7 +107,7 @@ jobs:
             # Assume organization if owner is specified
             ENDPOINT="/orgs/$OWNER/repos"
           fi
-          
+
           # Create repository with appropriate visibility
           if [ "$ENDPOINT" = "/user/repos" ]; then
             # User repos: use 'private' field (true/false)
@@ -184,50 +184,69 @@ jobs:
                 sed -i "s/# VALIDATE_JAVASCRIPT_PRETTIER=true/VALIDATE_JAVASCRIPT_PRETTIER=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_JSX=true/VALIDATE_JSX=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_JSX_PRETTIER=true/VALIDATE_JSX_PRETTIER=true/g" .super-linter.env
+                sed -i "s/# FIX_JAVASCRIPT_ES=true/FIX_JAVASCRIPT_ES=true/g" .super-linter.env
+                sed -i "s/# FIX_JAVASCRIPT_PRETTIER=true/FIX_JAVASCRIPT_PRETTIER=true/g" .super-linter.env
+                sed -i "s/# FIX_JSX=true/FIX_JSX=true/g" .super-linter.env
+                sed -i "s/# FIX_JSX_PRETTIER=true/FIX_JSX_PRETTIER=true/g" .super-linter.env
                 ;;
               "typescript")
                 sed -i "s/# VALIDATE_TYPESCRIPT_ES=true/VALIDATE_TYPESCRIPT_ES=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_TYPESCRIPT_PRETTIER=true/VALIDATE_TYPESCRIPT_PRETTIER=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_TSX=true/VALIDATE_TSX=true/g" .super-linter.env
+                sed -i "s/# FIX_TYPESCRIPT_ES=true/FIX_TYPESCRIPT_ES=true/g" .super-linter.env
+                sed -i "s/# FIX_TYPESCRIPT_PRETTIER=true/FIX_TYPESCRIPT_PRETTIER=true/g" .super-linter.env
+                sed -i "s/# FIX_TSX=true/FIX_TSX=true/g" .super-linter.env
                 ;;
               "python")
                 sed -i "s/# VALIDATE_PYTHON_RUFF=true/VALIDATE_PYTHON_RUFF=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_PYTHON_RUFF_FORMAT=true/VALIDATE_PYTHON_RUFF_FORMAT=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_PYTHON_MYPY=true/VALIDATE_PYTHON_MYPY=true/g" .super-linter.env
+                sed -i "s/# FIX_PYTHON_RUFF=true/FIX_PYTHON_RUFF=true/g" .super-linter.env
+                sed -i "s/# FIX_PYTHON_RUFF_FORMAT=true/FIX_PYTHON_RUFF_FORMAT=true/g" .super-linter.env
                 ;;
               "java")
                 sed -i "s/# VALIDATE_JAVA=true/VALIDATE_JAVA=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_GOOGLE_JAVA_FORMAT=true/VALIDATE_GOOGLE_JAVA_FORMAT=true/g" .super-linter.env
+                sed -i "s/# FIX_GOOGLE_JAVA_FORMAT=true/FIX_GOOGLE_JAVA_FORMAT=true/g" .super-linter.env
                 ;;
               "go")
                 sed -i "s/# VALIDATE_GO=true/VALIDATE_GO=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_GO_MODULES=true/VALIDATE_GO_MODULES=true/g" .super-linter.env
+                sed -i "s/# FIX_GO_MODULES=true/FIX_GO_MODULES=true/g" .super-linter.env
                 ;;
               "rust")
                 sed -i "s/# VALIDATE_RUST_2021=true/VALIDATE_RUST_2021=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_RUST_CLIPPY=true/VALIDATE_RUST_CLIPPY=true/g" .super-linter.env
+                sed -i "s/# FIX_RUST_2021=true/FIX_RUST_2021=true/g" .super-linter.env
+                sed -i "s/# FIX_RUST_CLIPPY=true/FIX_RUST_CLIPPY=true/g" .super-linter.env
                 ;;
               "ruby")
                 sed -i "s/# VALIDATE_RUBY=true/VALIDATE_RUBY=true/g" .super-linter.env
+                sed -i "s/# FIX_RUBY=true/FIX_RUBY=true/g" .super-linter.env
                 ;;
               "php")
                 sed -i "s/# VALIDATE_PHP_BUILTIN=true/VALIDATE_PHP_BUILTIN=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_PHP_PHPCS=true/VALIDATE_PHP_PHPCS=true/g" .super-linter.env
+                sed -i "s/# FIX_PHP_PHPCS=true/FIX_PHP_PHPCS=true/g" .super-linter.env
                 ;;
               "csharp")
                 sed -i "s/# VALIDATE_CSHARP=true/VALIDATE_CSHARP=true/g" .super-linter.env
+                sed -i "s/# FIX_CSHARP=true/FIX_CSHARP=true/g" .super-linter.env
                 ;;
               "cpp")
                 sed -i "s/# VALIDATE_CPP=true/VALIDATE_CPP=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_CLANG_FORMAT=true/VALIDATE_CLANG_FORMAT=true/g" .super-linter.env
+                sed -i "s/# FIX_CLANG_FORMAT=true/FIX_CLANG_FORMAT=true/g" .super-linter.env
                 ;;
               "css")
                 sed -i "s/# VALIDATE_CSS=true/VALIDATE_CSS=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_CSS_PRETTIER=true/VALIDATE_CSS_PRETTIER=true/g" .super-linter.env
+                sed -i "s/# FIX_CSS_PRETTIER=true/FIX_CSS_PRETTIER=true/g" .super-linter.env
                 ;;
               "html")
                 sed -i "s/# VALIDATE_HTML=true/VALIDATE_HTML=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_HTML_PRETTIER=true/VALIDATE_HTML_PRETTIER=true/g" .super-linter.env
+                sed -i "s/# FIX_HTML_PRETTIER=true/FIX_HTML_PRETTIER=true/g" .super-linter.env
                 ;;
               "docker")
                 sed -i "s/# VALIDATE_DOCKERFILE_HADOLINT=true/VALIDATE_DOCKERFILE_HADOLINT=true/g" .super-linter.env
@@ -235,6 +254,7 @@ jobs:
               "terraform")
                 sed -i "s/# VALIDATE_TERRAFORM_FMT=true/VALIDATE_TERRAFORM_FMT=true/g" .super-linter.env
                 sed -i "s/# VALIDATE_TERRAFORM_TFLINT=true/VALIDATE_TERRAFORM_TFLINT=true/g" .super-linter.env
+                sed -i "s/# FIX_TERRAFORM_FMT=true/FIX_TERRAFORM_FMT=true/g" .super-linter.env
                 ;;
               "kotlin")
                 sed -i "s/# VALIDATE_KOTLIN=true/VALIDATE_KOTLIN=true/g" .super-linter.env
@@ -289,7 +309,7 @@ jobs:
           REPO_INFO=$(gh api /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }})
           VISIBILITY=$(echo "$REPO_INFO" | jq -r '.private')
           HAS_ISSUES=$(echo "$REPO_INFO" | jq -r '.has_issues')
-          
+
           if [ "$VISIBILITY" = "true" ] && [ "${{ github.event.inputs.visibility }}" = "private" ]; then
             echo "✅ Visibility: private (correct)" >> $GITHUB_STEP_SUMMARY
           elif [ "$VISIBILITY" = "false" ] && [ "${{ github.event.inputs.visibility }}" = "public" ]; then
@@ -297,7 +317,7 @@ jobs:
           else
             echo "⚠️ Visibility mismatch detected" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [ "$HAS_ISSUES" = "true" ]; then
             echo "✅ Issues enabled" >> $GITHUB_STEP_SUMMARY
           fi
@@ -372,7 +392,7 @@ jobs:
     if: ${{ failure() && github.event.inputs.cleanup_on_failure == 'true' }}
     permissions:
       contents: write
-    
+
     steps:
       - name: Delete repository on failure
         env:
@@ -380,17 +400,17 @@ jobs:
         run: |
           OWNER="${{ needs.create-repository.outputs.owner }}"
           REPO="${{ github.event.inputs.repo_name }}"
-          
+
           # Check if repository exists before attempting deletion
           if gh repo view "$OWNER/$REPO" &>/dev/null; then
             echo "🗑️ Deleting repository $OWNER/$REPO due to failure..." >> $GITHUB_STEP_SUMMARY
-            
+
             # Delete the repository
             gh api \
               --method DELETE \
               -H "Accept: application/vnd.github+json" \
               /repos/$OWNER/$REPO
-            
+
             echo "✅ Repository deleted successfully" >> $GITHUB_STEP_SUMMARY
           else
             echo "ℹ️ Repository does not exist, nothing to clean up" >> $GITHUB_STEP_SUMMARY

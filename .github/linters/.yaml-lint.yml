@@ -10,4 +10,4 @@ rules:
   comments:
     min-spaces-from-content: 1
   truthy:
-    allowed-values: ['true', 'false', 'on']
+    allowed-values: ["true", "false", "on"]

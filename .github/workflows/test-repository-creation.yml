@@ -62,7 +62,7 @@ jobs:
             --field license_holder="${{ github.repository_owner }}" \
             --field languages="${{ github.event.inputs.languages }}" \
             --field cleanup_on_failure="true"
-          
+
           echo "workflow_triggered=$(date +%s)" >> $GITHUB_OUTPUT
 
       - name: Monitor workflow execution
@@ -71,23 +71,23 @@ jobs:
         timeout-minutes: 10
         run: |
           echo "⏳ Monitoring create-repository workflow..."
-          
+
           # Wait a moment for the workflow to be registered
           sleep 5
-          
+
           # Poll for the workflow run
           for i in {1..60}; do
             # Get the latest workflow run for create-repository.yml
             RUN_STATUS=$(gh api \
               "/repos/${{ github.repository_owner }}/${{ github.repository }}/actions/workflows/create-repository.yml/runs?per_page=1" \
               --jq '.workflow_runs[0] | {status: .status, conclusion: .conclusion, html_url: .html_url}')
-            
+
             STATUS=$(echo "$RUN_STATUS" | jq -r '.status')
             CONCLUSION=$(echo "$RUN_STATUS" | jq -r '.conclusion')
             WORKFLOW_URL=$(echo "$RUN_STATUS" | jq -r '.html_url')
-            
+
             echo "Workflow status: $STATUS, conclusion: $CONCLUSION"
-            
+
             if [ "$STATUS" = "completed" ]; then
               if [ "$CONCLUSION" = "success" ]; then
                 echo "✅ Repository creation workflow completed successfully"
@@ -102,7 +102,7 @@ jobs:
               echo "⏳ Workflow still running... (check $i/60)"
               sleep 10
             fi
-            
+
             if [ $i -eq 60 ]; then
               echo "❌ Workflow monitoring timed out"
               echo "Workflow: $WORKFLOW_URL"
@@ -115,7 +115,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
-          
+
           if gh repo view ${{ github.repository_owner }}/${REPO_NAME} &>/dev/null; then
             echo "✅ Repository verified: https://github.com/${{ github.repository_owner }}/${REPO_NAME}"
           else
@@ -172,7 +172,7 @@ jobs:
 
           # Verify language-specific configuration (check for uncommented VALIDATE_* lines)
           LANGUAGES="${{ github.event.inputs.languages }}"
-          
+
           if [ "$LANGUAGES" = "language-agnostic-only" ]; then
             # Should only have language-agnostic linters enabled
             if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_EDITORCONFIG=true"; then
@@ -284,7 +284,7 @@ jobs:
               --method DELETE \
               -H "Accept: application/vnd.github+json" \
               /repos/${OWNER}/${REPO_NAME}
-            
+
             echo "✅ Repository deleted successfully" >> $GITHUB_STEP_SUMMARY
           else
             echo "ℹ️ Repository does not exist or was already deleted" >> $GITHUB_STEP_SUMMARY

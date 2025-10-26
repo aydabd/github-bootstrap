@@ -31,9 +31,6 @@ lint-fix:
 		-e RUN_LOCAL=true \
 		-e DEFAULT_BRANCH=main \
 		-e DEFAULT_WORKSPACE=/tmp/lint \
-		-e FIX_YAML_PRETTIER=true \
-		-e FIX_MARKDOWN_PRETTIER=true \
-		-e FIX_JSON_PRETTIER=true \
 		-v "$(PWD):/tmp/lint" \
 		ghcr.io/super-linter/super-linter:v8.2.1
 
