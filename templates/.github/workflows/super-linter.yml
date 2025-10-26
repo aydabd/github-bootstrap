@@ -33,6 +33,45 @@ jobs:
             grep -v '^#' .super-linter.env | grep '=' | while IFS='=' read -r key value; do
               echo "$key=$value" >> $GITHUB_ENV
             done
+            
+            # Set language-specific validation variables only if enabled
+            echo "Setting super-linter validation variables..."
+            if grep -q "ENABLE_JAVASCRIPT=true" .super-linter.env; then
+              echo "VALIDATE_JAVASCRIPT_ES=true" >> $GITHUB_ENV
+              echo "VALIDATE_JAVASCRIPT_STANDARD=true" >> $GITHUB_ENV
+            fi
+            if grep -q "ENABLE_TYPESCRIPT=true" .super-linter.env; then
+              echo "VALIDATE_TYPESCRIPT_ES=true" >> $GITHUB_ENV
+              echo "VALIDATE_TYPESCRIPT_STANDARD=true" >> $GITHUB_ENV
+            fi
+            if grep -q "ENABLE_PYTHON=true" .super-linter.env; then
+              echo "VALIDATE_PYTHON_BLACK=true" >> $GITHUB_ENV
+              echo "VALIDATE_PYTHON_PYLINT=true" >> $GITHUB_ENV
+              echo "VALIDATE_PYTHON_FLAKE8=true" >> $GITHUB_ENV
+            fi
+            if grep -q "ENABLE_JAVA=true" .super-linter.env; then
+              echo "VALIDATE_JAVA=true" >> $GITHUB_ENV
+            fi
+            if grep -q "ENABLE_GO=true" .super-linter.env; then
+              echo "VALIDATE_GO=true" >> $GITHUB_ENV
+            fi
+            if grep -q "ENABLE_RUST=true" .super-linter.env; then
+              echo "VALIDATE_RUST_2015=true" >> $GITHUB_ENV
+              echo "VALIDATE_RUST_2018=true" >> $GITHUB_ENV
+              echo "VALIDATE_RUST_2021=true" >> $GITHUB_ENV
+            fi
+            if grep -q "ENABLE_RUBY=true" .super-linter.env; then
+              echo "VALIDATE_RUBY=true" >> $GITHUB_ENV
+            fi
+            if grep -q "ENABLE_PHP=true" .super-linter.env; then
+              echo "VALIDATE_PHP_BUILTIN=true" >> $GITHUB_ENV
+            fi
+            if grep -q "ENABLE_CSHARP=true" .super-linter.env; then
+              echo "VALIDATE_CSHARP=true" >> $GITHUB_ENV
+            fi
+            if grep -q "ENABLE_CPP=true" .super-linter.env; then
+              echo "VALIDATE_CPP=true" >> $GITHUB_ENV
+            fi
           fi
 
       - name: Setup Git Config
@@ -63,23 +102,6 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_XML: true
           VALIDATE_NATURAL_LANGUAGE: true
-          # Programming language validation (controlled by .super-linter.env)
-          VALIDATE_JAVASCRIPT_ES: ${{ env.ENABLE_JAVASCRIPT }}
-          VALIDATE_JAVASCRIPT_STANDARD: ${{ env.ENABLE_JAVASCRIPT }}
-          VALIDATE_TYPESCRIPT_ES: ${{ env.ENABLE_TYPESCRIPT }}
-          VALIDATE_TYPESCRIPT_STANDARD: ${{ env.ENABLE_TYPESCRIPT }}
-          VALIDATE_PYTHON_BLACK: ${{ env.ENABLE_PYTHON }}
-          VALIDATE_PYTHON_PYLINT: ${{ env.ENABLE_PYTHON }}
-          VALIDATE_PYTHON_FLAKE8: ${{ env.ENABLE_PYTHON }}
-          VALIDATE_JAVA: ${{ env.ENABLE_JAVA }}
-          VALIDATE_GO: ${{ env.ENABLE_GO }}
-          VALIDATE_RUST_2015: ${{ env.ENABLE_RUST }}
-          VALIDATE_RUST_2018: ${{ env.ENABLE_RUST }}
-          VALIDATE_RUST_2021: ${{ env.ENABLE_RUST }}
-          VALIDATE_RUBY: ${{ env.ENABLE_RUBY }}
-          VALIDATE_PHP_BUILTIN: ${{ env.ENABLE_PHP }}
-          VALIDATE_CSHARP: ${{ env.ENABLE_CSHARP }}
-          VALIDATE_CPP: ${{ env.ENABLE_CPP }}
 
       - name: Commit Auto-fixes
         if: github.event_name == 'pull_request'
@@ -108,20 +130,3 @@ jobs:
           VALIDATE_JSON: true
           VALIDATE_XML: true
           VALIDATE_NATURAL_LANGUAGE: true
-          # Programming language validation (controlled by .super-linter.env)
-          VALIDATE_JAVASCRIPT_ES: ${{ env.ENABLE_JAVASCRIPT }}
-          VALIDATE_JAVASCRIPT_STANDARD: ${{ env.ENABLE_JAVASCRIPT }}
-          VALIDATE_TYPESCRIPT_ES: ${{ env.ENABLE_TYPESCRIPT }}
-          VALIDATE_TYPESCRIPT_STANDARD: ${{ env.ENABLE_TYPESCRIPT }}
-          VALIDATE_PYTHON_BLACK: ${{ env.ENABLE_PYTHON }}
-          VALIDATE_PYTHON_PYLINT: ${{ env.ENABLE_PYTHON }}
-          VALIDATE_PYTHON_FLAKE8: ${{ env.ENABLE_PYTHON }}
-          VALIDATE_JAVA: ${{ env.ENABLE_JAVA }}
-          VALIDATE_GO: ${{ env.ENABLE_GO }}
-          VALIDATE_RUST_2015: ${{ env.ENABLE_RUST }}
-          VALIDATE_RUST_2018: ${{ env.ENABLE_RUST }}
-          VALIDATE_RUST_2021: ${{ env.ENABLE_RUST }}
-          VALIDATE_RUBY: ${{ env.ENABLE_RUBY }}
-          VALIDATE_PHP_BUILTIN: ${{ env.ENABLE_PHP }}
-          VALIDATE_CSHARP: ${{ env.ENABLE_CSHARP }}
-          VALIDATE_CPP: ${{ env.ENABLE_CPP }}
