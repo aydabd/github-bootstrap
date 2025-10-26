@@ -1,0 +1,102 @@
+name: Super-Linter
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  lint-and-format:
+    name: Lint and Auto-format Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Git Config
+        if: github.event_name == 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Checkout PR Branch
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin ${{ github.head_ref }}
+          git checkout ${{ github.head_ref }}
+
+      - name: Run Super-Linter (Auto-fix)
+        if: github.event_name == 'pull_request'
+        uses: super-linter/super-linter@v7
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FIX_MODE: true
+          VALIDATE_ALL_CODEBASE: false
+          LINTER_RULES_PATH: /
+          # Language-agnostic linters (always enabled)
+          VALIDATE_EDITORCONFIG: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+          VALIDATE_XML: true
+          VALIDATE_NATURAL_LANGUAGE: true
+          # Shell and scripting
+          VALIDATE_BASH: true
+          VALIDATE_SHELL_SHFMT: true
+          # GitHub Actions workflows
+          VALIDATE_GITHUB_ACTIONS: true
+          # Docker
+          VALIDATE_DOCKERFILE_HADOLINT: true
+          # Additional useful linters for a bootstrap repository
+          VALIDATE_JSCPD: true
+
+      - name: Commit Auto-fixes
+        if: github.event_name == 'pull_request'
+        run: |
+          if [[ -n $(git status -s) ]]; then
+            git add -A
+            git commit -m "chore: auto-fix linting issues [skip ci]" || echo "No changes to commit"
+            git push origin ${{ github.head_ref }}
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Run Super-Linter (Check Only)
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: super-linter/super-linter@v7
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FIX_MODE: false
+          VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'workflow_dispatch' }}
+          LINTER_RULES_PATH: /
+          # Language-agnostic linters (always enabled)
+          VALIDATE_EDITORCONFIG: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+          VALIDATE_XML: true
+          VALIDATE_NATURAL_LANGUAGE: true
+          # Shell and scripting
+          VALIDATE_BASH: true
+          VALIDATE_SHELL_SHFMT: true
+          # GitHub Actions workflows
+          VALIDATE_GITHUB_ACTIONS: true
+          # Docker
+          VALIDATE_DOCKERFILE_HADOLINT: true
+          # Additional useful linters for a bootstrap repository
+          VALIDATE_JSCPD: true
