@@ -1,3 +1,6 @@
+---
+# Super-Linter workflow template for generated repositories
+# Configuration is loaded from .super-linter.env file
 name: Super-Linter
 
 on:
@@ -26,54 +29,6 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Load Super-Linter Configuration
-        run: |
-          if [ -f .super-linter.env ]; then
-            # Export all variables to GITHUB_ENV so they're available in subsequent steps
-            grep -v '^#' .super-linter.env | grep '=' | while IFS='=' read -r key value; do
-              echo "$key=$value" >> $GITHUB_ENV
-            done
-            
-            # Set language-specific validation variables only if enabled
-            echo "Setting super-linter validation variables..."
-            if grep -q "ENABLE_JAVASCRIPT=true" .super-linter.env; then
-              echo "VALIDATE_JAVASCRIPT_ES=true" >> $GITHUB_ENV
-              echo "VALIDATE_JAVASCRIPT_STANDARD=true" >> $GITHUB_ENV
-            fi
-            if grep -q "ENABLE_TYPESCRIPT=true" .super-linter.env; then
-              echo "VALIDATE_TYPESCRIPT_ES=true" >> $GITHUB_ENV
-              echo "VALIDATE_TYPESCRIPT_STANDARD=true" >> $GITHUB_ENV
-            fi
-            if grep -q "ENABLE_PYTHON=true" .super-linter.env; then
-              echo "VALIDATE_PYTHON_BLACK=true" >> $GITHUB_ENV
-              echo "VALIDATE_PYTHON_PYLINT=true" >> $GITHUB_ENV
-              echo "VALIDATE_PYTHON_FLAKE8=true" >> $GITHUB_ENV
-            fi
-            if grep -q "ENABLE_JAVA=true" .super-linter.env; then
-              echo "VALIDATE_JAVA=true" >> $GITHUB_ENV
-            fi
-            if grep -q "ENABLE_GO=true" .super-linter.env; then
-              echo "VALIDATE_GO=true" >> $GITHUB_ENV
-            fi
-            if grep -q "ENABLE_RUST=true" .super-linter.env; then
-              echo "VALIDATE_RUST_2015=true" >> $GITHUB_ENV
-              echo "VALIDATE_RUST_2018=true" >> $GITHUB_ENV
-              echo "VALIDATE_RUST_2021=true" >> $GITHUB_ENV
-            fi
-            if grep -q "ENABLE_RUBY=true" .super-linter.env; then
-              echo "VALIDATE_RUBY=true" >> $GITHUB_ENV
-            fi
-            if grep -q "ENABLE_PHP=true" .super-linter.env; then
-              echo "VALIDATE_PHP_BUILTIN=true" >> $GITHUB_ENV
-            fi
-            if grep -q "ENABLE_CSHARP=true" .super-linter.env; then
-              echo "VALIDATE_CSHARP=true" >> $GITHUB_ENV
-            fi
-            if grep -q "ENABLE_CPP=true" .super-linter.env; then
-              echo "VALIDATE_CPP=true" >> $GITHUB_ENV
-            fi
-          fi
-
       - name: Setup Git Config
         if: github.event_name == 'pull_request'
         run: |
@@ -88,20 +43,13 @@ jobs:
 
       - name: Run Super-Linter (Auto-fix)
         if: github.event_name == 'pull_request'
-        uses: super-linter/super-linter@v7
+        uses: super-linter/super-linter/slim@v8.2.1
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FIX_MODE: true
           VALIDATE_ALL_CODEBASE: false
-          LINTER_RULES_PATH: /
-          # Language-agnostic linters (always enabled)
-          VALIDATE_EDITORCONFIG: true
-          VALIDATE_MARKDOWN: true
-          VALIDATE_YAML: true
-          VALIDATE_JSON: true
-          VALIDATE_XML: true
-          VALIDATE_NATURAL_LANGUAGE: true
+          ENV_FILE: .super-linter.env
 
       - name: Commit Auto-fixes
         if: github.event_name == 'pull_request'
@@ -116,17 +64,10 @@ jobs:
 
       - name: Run Super-Linter (Check Only)
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        uses: super-linter/super-linter@v7
+        uses: super-linter/super-linter/slim@v8.2.1
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FIX_MODE: false
           VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'workflow_dispatch' }}
-          LINTER_RULES_PATH: /
-          # Language-agnostic linters (always enabled)
-          VALIDATE_EDITORCONFIG: true
-          VALIDATE_MARKDOWN: true
-          VALIDATE_YAML: true
-          VALIDATE_JSON: true
-          VALIDATE_XML: true
-          VALIDATE_NATURAL_LANGUAGE: true
+          ENV_FILE: .super-linter.env
