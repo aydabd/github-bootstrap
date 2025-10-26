@@ -8,52 +8,34 @@ help:
 	@echo "  make test       - Run repository creation tests"
 	@echo "  make clean      - Clean temporary files"
 
-# Run super-linter locally (check only mode)
+# Lint the codebase using Super-Linter
 lint:
-	@echo "Running super-linter in check mode..."
-	@docker pull ghcr.io/super-linter/super-linter:slim-latest
-	@docker run \
-		--rm \
+	@echo "Running Super-Linter..."
+	docker run --rm \
+		--platform linux/amd64 \
+		--env-file .super-linter.env \
+		-e PARALLEL_SHELL=/bin/bash \
 		-e RUN_LOCAL=true \
 		-e DEFAULT_BRANCH=main \
-		-e VALIDATE_ALL_CODEBASE=true \
-		-e FIX_MODE=false \
-		-e LOG_LEVEL=NOTICE \
-		-e VALIDATE_EDITORCONFIG=true \
-		-e VALIDATE_MARKDOWN=true \
-		-e VALIDATE_YAML=true \
-		-e VALIDATE_JSON=true \
-		-e VALIDATE_XML=true \
-		-e VALIDATE_NATURAL_LANGUAGE=true \
-		-e VALIDATE_BASH=true \
-		-e VALIDATE_SHELL_SHFMT=true \
-		-e VALIDATE_GITHUB_ACTIONS=true \
-		-v $(PWD):/tmp/lint \
-		ghcr.io/super-linter/super-linter:slim-latest
+		-e DEFAULT_WORKSPACE=/tmp/lint \
+		-v "$(PWD):/tmp/lint:ro" \
+		ghcr.io/super-linter/super-linter:v8.2.1
 
-# Run super-linter locally with auto-fix
+# Lint the codebase using Super-Linter with auto-fix
 lint-fix:
-	@echo "Running super-linter in fix mode..."
-	@docker pull ghcr.io/super-linter/super-linter:slim-latest
-	@docker run \
-		--rm \
+	@echo "Running Super-Linter with auto-fix..."
+	docker run --rm \
+		--platform linux/amd64 \
+		--env-file .super-linter.env \
+		-e PARALLEL_SHELL=/bin/bash \
 		-e RUN_LOCAL=true \
 		-e DEFAULT_BRANCH=main \
-		-e VALIDATE_ALL_CODEBASE=true \
-		-e FIX_MODE=true \
-		-e LOG_LEVEL=NOTICE \
-		-e VALIDATE_EDITORCONFIG=true \
-		-e VALIDATE_MARKDOWN=true \
-		-e VALIDATE_YAML=true \
-		-e VALIDATE_JSON=true \
-		-e VALIDATE_XML=true \
-		-e VALIDATE_NATURAL_LANGUAGE=true \
-		-e VALIDATE_BASH=true \
-		-e VALIDATE_SHELL_SHFMT=true \
-		-e VALIDATE_GITHUB_ACTIONS=true \
-		-v $(PWD):/tmp/lint \
-		ghcr.io/super-linter/super-linter:slim-latest
-	@echo "Auto-fixes applied. Review changes with 'git diff'"
+		-e DEFAULT_WORKSPACE=/tmp/lint \
+		-e FIX_YAML_PRETTIER=true \
+		-e FIX_MARKDOWN_PRETTIER=true \
+		-e FIX_JSON_PRETTIER=true \
+		-v "$(PWD):/tmp/lint" \
+		ghcr.io/super-linter/super-linter:v8.2.1
 
 # Run repository creation tests
 test:
