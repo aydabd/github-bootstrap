@@ -1,39 +1,28 @@
+---
 name: Test Repository Creation
 
 on:
   workflow_dispatch:
     inputs:
       test_repo_name:
-        description: 'Name for test repository (will be prefixed with test-)'
+        description: "Name for test repository (will be prefixed with test-)"
         required: false
-        default: 'bootstrap-test'
+        default: "bootstrap-test"
         type: string
-      primary_language:
-        description: 'Primary language to test'
+      languages:
+        description: "Languages to test (comma-separated or 'all' or 'language-agnostic-only')"
         required: false
-        default: 'multi-language'
-        type: choice
-        options:
-          - multi-language
-          - javascript
-          - typescript
-          - python
-          - java
-          - go
-          - rust
-          - ruby
-          - php
-          - csharp
-          - cpp
+        default: "language-agnostic-only"
+        type: string
       cleanup_after_test:
-        description: 'Automatically delete test repository after testing'
+        description: "Automatically delete test repository after testing"
         required: false
         default: true
         type: boolean
       wait_time_minutes:
-        description: 'Minutes to wait before cleanup (to inspect results)'
+        description: "Minutes to wait before cleanup (to inspect results)"
         required: false
-        default: '10'
+        default: "10"
         type: string
 
 jobs:
@@ -60,6 +49,7 @@ jobs:
           echo "Generated test repository name: ${REPO_NAME}"
 
       - name: Trigger repository creation workflow
+        id: trigger-workflow
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
@@ -70,47 +60,77 @@ jobs:
             --field enable_branch_protection="false" \
             --field team_name="* @${{ github.repository_owner }}" \
             --field license_holder="${{ github.repository_owner }}" \
-            --field primary_language="${{ github.event.inputs.primary_language }}"
+            --field languages="${{ github.event.inputs.languages }}" \
+            --field cleanup_on_failure="true"
+          
+          echo "workflow_triggered=$(date +%s)" >> $GITHUB_OUTPUT
 
-      - name: Wait for repository creation
-        run: |
-          echo "Waiting 30 seconds for repository creation workflow to start..."
-          sleep 30
-
-      - name: Check repository creation status
+      - name: Monitor workflow execution
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         timeout-minutes: 10
         run: |
-          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          echo "⏳ Monitoring create-repository workflow..."
           
-          # Wait for the workflow to complete
-          echo "Monitoring repository creation workflow..."
+          # Wait a moment for the workflow to be registered
+          sleep 5
           
-          # Check if repository exists (retry for up to 5 minutes)
-          for i in {1..30}; do
-            if gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}" >/dev/null 2>&1; then
-              echo "✅ Repository created successfully: https://github.com/${{ github.repository_owner }}/${REPO_NAME}"
-              break
+          # Poll for the workflow run
+          for i in {1..60}; do
+            # Get the latest workflow run for create-repository.yml
+            RUN_STATUS=$(gh api \
+              "/repos/${{ github.repository_owner }}/${{ github.repository }}/actions/workflows/create-repository.yml/runs?per_page=1" \
+              --jq '.workflow_runs[0] | {status: .status, conclusion: .conclusion, html_url: .html_url}')
+            
+            STATUS=$(echo "$RUN_STATUS" | jq -r '.status')
+            CONCLUSION=$(echo "$RUN_STATUS" | jq -r '.conclusion')
+            WORKFLOW_URL=$(echo "$RUN_STATUS" | jq -r '.html_url')
+            
+            echo "Workflow status: $STATUS, conclusion: $CONCLUSION"
+            
+            if [ "$STATUS" = "completed" ]; then
+              if [ "$CONCLUSION" = "success" ]; then
+                echo "✅ Repository creation workflow completed successfully"
+                echo "Workflow: $WORKFLOW_URL"
+                break
+              else
+                echo "❌ Repository creation workflow failed with conclusion: $CONCLUSION"
+                echo "Workflow: $WORKFLOW_URL"
+                exit 1
+              fi
             else
-              echo "⏳ Waiting for repository creation... (attempt $i/30)"
+              echo "⏳ Workflow still running... (check $i/60)"
               sleep 10
             fi
             
-            if [ $i -eq 30 ]; then
-              echo "❌ Repository creation timed out"
+            if [ $i -eq 60 ]; then
+              echo "❌ Workflow monitoring timed out"
+              echo "Workflow: $WORKFLOW_URL"
               exit 1
             fi
           done
+
+      - name: Verify repository was created
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          
+          if gh repo view ${{ github.repository_owner }}/${REPO_NAME} &>/dev/null; then
+            echo "✅ Repository verified: https://github.com/${{ github.repository_owner }}/${REPO_NAME}"
+          else
+            echo "❌ Repository not found after workflow completion"
+            exit 1
+          fi
 
       - name: Validate repository structure
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
-          
+
           echo "🔍 Validating repository structure..."
-          
+
           # Check essential files exist
           REQUIRED_FILES=(
             ".github/workflows/super-linter.yml"
@@ -124,7 +144,7 @@ jobs:
             "LICENSE"
             "Makefile"
           )
-          
+
           for file in "${REQUIRED_FILES[@]}"; do
             if gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/${file}" >/dev/null 2>&1; then
               echo "✅ Found: ${file}"
@@ -133,7 +153,7 @@ jobs:
               exit 1
             fi
           done
-          
+
           echo "🎉 All required files are present!"
 
       - name: Check super-linter configuration
@@ -141,91 +161,131 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
-          
-          echo "🔍 Checking super-linter configuration for language: ${{ github.event.inputs.primary_language }}"
-          
+
+          echo "🔍 Checking super-linter configuration for languages: ${{ github.event.inputs.languages }}"
+
           # Get the .super-linter.env content
           LINTER_CONFIG=$(gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/.super-linter.env" --jq '.content' | base64 -d)
-          
+
           echo "Super-linter configuration:"
           echo "$LINTER_CONFIG"
+
+          # Verify language-specific configuration (check for uncommented VALIDATE_* lines)
+          LANGUAGES="${{ github.event.inputs.languages }}"
           
-          # Verify language-specific configuration
-          case "${{ github.event.inputs.primary_language }}" in
-            "javascript")
-              if echo "$LINTER_CONFIG" | grep -q "ENABLE_JAVASCRIPT=true"; then
-                echo "✅ JavaScript linting enabled correctly"
-              else
-                echo "❌ JavaScript linting not enabled"
-                exit 1
-              fi
-              ;;
-            "python")
-              if echo "$LINTER_CONFIG" | grep -q "ENABLE_PYTHON=true"; then
-                echo "✅ Python linting enabled correctly"
-              else
-                echo "❌ Python linting not enabled"
-                exit 1
-              fi
-              ;;
-            "multi-language")
-              ENABLED_COUNT=$(echo "$LINTER_CONFIG" | grep -c "=true" || true)
-              if [ $ENABLED_COUNT -ge 5 ]; then
-                echo "✅ Multi-language linting enabled correctly ($ENABLED_COUNT languages)"
-              else
-                echo "❌ Multi-language linting not configured properly (only $ENABLED_COUNT languages enabled)"
-                exit 1
-              fi
-              ;;
-            *)
-              echo "ℹ️ Language-specific validation not implemented for: ${{ github.event.inputs.primary_language }}"
-              ;;
-          esac
+          if [ "$LANGUAGES" = "language-agnostic-only" ]; then
+            # Should only have language-agnostic linters enabled
+            if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_EDITORCONFIG=true"; then
+              echo "✅ Language-agnostic linters enabled correctly"
+            else
+              echo "❌ Language-agnostic linters not configured properly"
+              exit 1
+            fi
+          elif [ "$LANGUAGES" = "all" ]; then
+            # Should have many languages enabled
+            ENABLED_COUNT=$(echo "$LINTER_CONFIG" | grep -c "^VALIDATE_.*=true" || true)
+            if [ $ENABLED_COUNT -ge 20 ]; then
+              echo "✅ All languages enabled correctly ($ENABLED_COUNT linters)"
+            else
+              echo "❌ Not enough linters enabled for 'all' option (only $ENABLED_COUNT)"
+              exit 1
+            fi
+          else
+            # Check specific languages from comma-separated list
+            IFS=',' read -ra LANG_ARRAY <<< "$LANGUAGES"
+            for lang in "${LANG_ARRAY[@]}"; do
+              lang=$(echo "$lang" | xargs)  # trim whitespace
+              case "$lang" in
+                "javascript")
+                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_JAVASCRIPT_ES=true"; then
+                    echo "✅ JavaScript linting enabled"
+                  else
+                    echo "❌ JavaScript linting not enabled"
+                    exit 1
+                  fi
+                  ;;
+                "typescript")
+                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_TYPESCRIPT_ES=true"; then
+                    echo "✅ TypeScript linting enabled"
+                  else
+                    echo "❌ TypeScript linting not enabled"
+                    exit 1
+                  fi
+                  ;;
+                "python")
+                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_PYTHON_RUFF=true"; then
+                    echo "✅ Python linting enabled"
+                  else
+                    echo "❌ Python linting not enabled"
+                    exit 1
+                  fi
+                  ;;
+                "go")
+                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_GO=true"; then
+                    echo "✅ Go linting enabled"
+                  else
+                    echo "❌ Go linting not enabled"
+                    exit 1
+                  fi
+                  ;;
+                *)
+                  echo "ℹ️ Validation not implemented for: $lang"
+                  ;;
+              esac
+            done
+          fi
 
       - name: Trigger super-linter workflow test
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
-          
+
           echo "🧪 Triggering super-linter workflow in test repository..."
-          
+
           # Trigger the super-linter workflow in the test repo
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
             "/repos/${{ github.repository_owner }}/${REPO_NAME}/actions/workflows/super-linter.yml/dispatches" \
             -f ref="main"
-          
+
           echo "✅ Super-linter workflow triggered. Check: https://github.com/${{ github.repository_owner }}/${REPO_NAME}/actions"
 
   cleanup-test-repo:
     name: Cleanup Test Repository
     needs: create-test-repo
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.cleanup_after_test == 'true' }}
-    
+    if: ${{ always() && (github.event.inputs.cleanup_after_test == 'true' || failure()) }}
+    permissions:
+      contents: write
+
     steps:
       - name: Wait before cleanup
+        if: ${{ !failure() }}
         run: |
           WAIT_MINUTES="${{ github.event.inputs.wait_time_minutes }}"
           echo "⏳ Waiting ${WAIT_MINUTES} minutes before cleanup to allow inspection..."
           sleep $((WAIT_MINUTES * 60))
-
-      - name: Checkout repository
-        uses: actions/checkout@v5
 
       - name: Delete test repository
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           REPO_NAME="${{ needs.create-test-repo.outputs.test_repo_name }}"
-          
-          echo "🗑️ Cleaning up test repository: ${REPO_NAME}"
-          
-          # Use the delete-repo workflow to clean up
-          gh workflow run delete-repo.yml \
-            --field repo="${{ github.repository_owner }}/${REPO_NAME}" \
-            --field force="true"
-          
-          echo "✅ Cleanup workflow triggered for repository: ${REPO_NAME}"
+          OWNER="${{ github.repository_owner }}"
+
+          echo "🗑️ Cleaning up test repository: ${OWNER}/${REPO_NAME}"
+
+          # Check if repository exists before attempting deletion
+          if gh repo view "${OWNER}/${REPO_NAME}" &>/dev/null; then
+            # Delete the repository directly
+            gh api \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              /repos/${OWNER}/${REPO_NAME}
+            
+            echo "✅ Repository deleted successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ Repository does not exist or was already deleted" >> $GITHUB_STEP_SUMMARY
+          fi
