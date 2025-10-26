@@ -15,7 +15,25 @@ This project follows:
 
 ## Project Structure
 
-```
+# Project Name
+
+## Overview
+
+Brief project description following SOLID principles, TDD, and DDD architecture patterns.
+
+## Architecture
+
+This project follows:
+
+- **SOLID principles** for maintainable code
+- **Test-Driven Development** (TDD) for reliability
+- **Domain-Driven Design** (DDD) for clear business logic
+- **Type-safe** implementation
+- **Dependency injection** for testability
+
+## Project Structure
+
+```text
 .
 ├── src/              # Source code
 ├── tests/            # Test suites

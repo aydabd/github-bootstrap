@@ -12,6 +12,7 @@
 ## Code Standards
 
 **Formatting**
+
 - 4 spaces for code
 - 2 spaces for YAML/JSON
 - No trailing whitespace
@@ -19,6 +20,7 @@
 - Follow language idioms
 
 **Quality**
+
 - Lint before commit
 - Auto-format code
 - Self-documenting names
@@ -37,22 +39,27 @@
 ## SOLID Principles
 
 **Single Responsibility**
+
 - One reason to change
 - Focused modules
 
 **Open/Closed**
+
 - Open for extension
 - Closed for modification
 
 **Liskov Substitution**
+
 - Subtypes must be substitutable
 - Maintain contracts
 
 **Interface Segregation**
+
 - Small, focused interfaces
 - No fat interfaces
 
 **Dependency Inversion**
+
 - Depend on abstractions
 - Inject dependencies
 
