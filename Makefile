@@ -11,7 +11,7 @@ help:
 # Run super-linter locally (check only mode)
 lint:
 	@echo "Running super-linter in check mode..."
-	@docker pull github/super-linter:latest
+	@docker pull ghcr.io/super-linter/super-linter:slim-latest
 	@docker run \
 		--rm \
 		-e RUN_LOCAL=true \
@@ -19,14 +19,22 @@ lint:
 		-e VALIDATE_ALL_CODEBASE=true \
 		-e FIX_MODE=false \
 		-e LOG_LEVEL=NOTICE \
-		--env-file .super-linter.env \
+		-e VALIDATE_EDITORCONFIG=true \
+		-e VALIDATE_MARKDOWN=true \
+		-e VALIDATE_YAML=true \
+		-e VALIDATE_JSON=true \
+		-e VALIDATE_XML=true \
+		-e VALIDATE_NATURAL_LANGUAGE=true \
+		-e VALIDATE_BASH=true \
+		-e VALIDATE_SHELL_SHFMT=true \
+		-e VALIDATE_GITHUB_ACTIONS=true \
 		-v $(PWD):/tmp/lint \
-		github/super-linter:latest
+		ghcr.io/super-linter/super-linter:slim-latest
 
 # Run super-linter locally with auto-fix
 lint-fix:
 	@echo "Running super-linter in fix mode..."
-	@docker pull github/super-linter:latest
+	@docker pull ghcr.io/super-linter/super-linter:slim-latest
 	@docker run \
 		--rm \
 		-e RUN_LOCAL=true \
@@ -34,9 +42,17 @@ lint-fix:
 		-e VALIDATE_ALL_CODEBASE=true \
 		-e FIX_MODE=true \
 		-e LOG_LEVEL=NOTICE \
-		--env-file .super-linter.env \
+		-e VALIDATE_EDITORCONFIG=true \
+		-e VALIDATE_MARKDOWN=true \
+		-e VALIDATE_YAML=true \
+		-e VALIDATE_JSON=true \
+		-e VALIDATE_XML=true \
+		-e VALIDATE_NATURAL_LANGUAGE=true \
+		-e VALIDATE_BASH=true \
+		-e VALIDATE_SHELL_SHFMT=true \
+		-e VALIDATE_GITHUB_ACTIONS=true \
 		-v $(PWD):/tmp/lint \
-		github/super-linter:latest
+		ghcr.io/super-linter/super-linter:slim-latest
 	@echo "Auto-fixes applied. Review changes with 'git diff'"
 
 # Run repository creation tests
