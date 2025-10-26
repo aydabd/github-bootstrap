@@ -1,0 +1,13 @@
+---
+# yamllint configuration for GitHub workflows
+
+extends: default
+
+rules:
+  line-length:
+    max: 160
+    level: warning
+  comments:
+    min-spaces-from-content: 1
+  truthy:
+    allowed-values: ['true', 'false', 'on']
