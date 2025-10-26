@@ -1,3 +1,6 @@
+---
+# Super-Linter workflow for github-bootstrap repository
+# This is the simplified bootstrap repository linter focusing on core validation
 name: Super-Linter
 
 on:
@@ -40,24 +43,13 @@ jobs:
 
       - name: Run Super-Linter (Auto-fix)
         if: github.event_name == 'pull_request'
-        uses: super-linter/super-linter/slim@v7
+        uses: super-linter/super-linter/slim@v8.2.1
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FIX_MODE: true
           VALIDATE_ALL_CODEBASE: false
-          # Language-agnostic linters (always enabled)
-          VALIDATE_EDITORCONFIG: true
-          VALIDATE_MARKDOWN: true
-          VALIDATE_YAML: true
-          VALIDATE_JSON: true
-          VALIDATE_XML: true
-          VALIDATE_NATURAL_LANGUAGE: true
-          # Shell and scripting
-          VALIDATE_BASH: true
-          VALIDATE_SHELL_SHFMT: true
-          # GitHub Actions workflows
-          VALIDATE_GITHUB_ACTIONS: true
+          ENV_FILE: .super-linter.env
 
       - name: Commit Auto-fixes
         if: github.event_name == 'pull_request'
@@ -72,21 +64,10 @@ jobs:
 
       - name: Run Super-Linter (Check Only)
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        uses: super-linter/super-linter/slim@v7
+        uses: super-linter/super-linter/slim@v8.2.1
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FIX_MODE: false
           VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'workflow_dispatch' }}
-          # Language-agnostic linters (always enabled)
-          VALIDATE_EDITORCONFIG: true
-          VALIDATE_MARKDOWN: true
-          VALIDATE_YAML: true
-          VALIDATE_JSON: true
-          VALIDATE_XML: true
-          VALIDATE_NATURAL_LANGUAGE: true
-          # Shell and scripting
-          VALIDATE_BASH: true
-          VALIDATE_SHELL_SHFMT: true
-          # GitHub Actions workflows
-          VALIDATE_GITHUB_ACTIONS: true
+          ENV_FILE: .super-linter.env
