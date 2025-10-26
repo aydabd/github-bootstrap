@@ -1,64 +1,63 @@
+---
 name: Create Bootstrap Repository
 
 on:
   workflow_dispatch:
     inputs:
       repo_name:
-        description: 'New repository name'
+        description: "New repository name"
         required: true
         type: string
       repo_owner:
-        description: 'Repository owner (user/org)'
+        description: "Repository owner (user/org)"
         required: false
         type: string
       repo_description:
-        description: 'Repository description'
+        description: "Repository description"
         required: false
-        default: 'Repository following SOLID principles and best practices'
+        default: "Repository following SOLID principles and best practices"
         type: string
       visibility:
-        description: 'Repository visibility'
+        description: "Repository visibility"
         required: false
-        default: 'public'
+        default: "public"
         type: choice
         options:
           - public
           - private
+          - internal
+      cleanup_on_failure:
+        description: "Delete repository if creation fails"
+        required: false
+        default: true
+        type: boolean
       enable_branch_protection:
-        description: 'Enable branch protection rules'
+        description: "Enable branch protection rules"
         required: false
         default: true
         type: boolean
       team_name:
-        description: 'GitHub team for code owners (e.g., org/team-leads)'
+        description: "GitHub team for code owners (e.g., org/team-leads)"
         required: false
-        default: '* @team-leads'
+        default: "team-leads"
         type: string
       license_holder:
-        description: 'License copyright holder name'
+        description: "License copyright holder name"
         required: false
         type: string
-      primary_language:
-        description: 'Primary programming language for super-linter configuration'
+      languages:
+        description: "Programming languages (comma-separated: javascript,typescript,python or 'all' for monorepo)"
         required: false
-        default: 'multi-language'
-        type: choice
-        options:
-          - multi-language
-          - javascript
-          - typescript
-          - python
-          - java
-          - go
-          - rust
-          - ruby
-          - php
-          - csharp
-          - cpp
+        default: "language-agnostic-only"
+        type: string
 
 jobs:
   create-repository:
+    name: Create Repository
     runs-on: ubuntu-latest
+    outputs:
+      owner: ${{ steps.set-owner.outputs.owner }}
+      repo_created: ${{ steps.create-repo.outputs.repo_created }}
     permissions:
       contents: write
       id-token: write
@@ -76,6 +75,7 @@ jobs:
           else
             echo "owner=${{ github.event.inputs.repo_owner }}" >> $GITHUB_OUTPUT
           fi
+          echo "repo_created=false" >> $GITHUB_OUTPUT
 
       - name: Set license holder
         id: set-license
@@ -87,20 +87,55 @@ jobs:
           fi
 
       - name: Create new repository
+        id: create-repo
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          gh api \
-            --method POST \
-            -H "Accept: application/vnd.github+json" \
-            /user/repos \
-            -f name="${{ github.event.inputs.repo_name }}" \
-            -f description="${{ github.event.inputs.repo_description }}" \
-            -f public=${{ github.event.inputs.visibility == 'public' }} \
-            -f has_issues=true \
-            -f has_projects=true \
-            -f has_wiki=false \
-            -f auto_init=true
+          OWNER="${{ steps.set-owner.outputs.owner }}"
+          VISIBILITY="${{ github.event.inputs.visibility }}"
+          
+          # Determine if creating under user or organization
+          if [ "$OWNER" = "${{ github.repository_owner }}" ]; then
+            # Check if it's a user or organization
+            ORG_TYPE=$(gh api /users/$OWNER --jq '.type')
+            if [ "$ORG_TYPE" = "Organization" ]; then
+              ENDPOINT="/orgs/$OWNER/repos"
+            else
+              ENDPOINT="/user/repos"
+            fi
+          else
+            # Assume organization if owner is specified
+            ENDPOINT="/orgs/$OWNER/repos"
+          fi
+          
+          # Create repository with appropriate visibility
+          if [ "$ENDPOINT" = "/user/repos" ]; then
+            # User repos: use 'private' field (true/false)
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              "$ENDPOINT" \
+              -f name="${{ github.event.inputs.repo_name }}" \
+              -f description="${{ github.event.inputs.repo_description }}" \
+              -f private=${{ github.event.inputs.visibility != 'public' }} \
+              -f has_issues=true \
+              -f has_projects=true \
+              -f has_wiki=false \
+              -f auto_init=true
+          else
+            # Organization repos: use 'visibility' field (public/private/internal)
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              "$ENDPOINT" \
+              -f name="${{ github.event.inputs.repo_name }}" \
+              -f description="${{ github.event.inputs.repo_description }}" \
+              -f visibility="$VISIBILITY" \
+              -f has_issues=true \
+              -f has_projects=true \
+              -f has_wiki=false \
+              -f auto_init=true
+          fi
 
       - name: Wait for repository initialization
         run: sleep 5
@@ -122,11 +157,11 @@ jobs:
           cp templates/.gitignore new-repo/
           cp templates/.gitattributes new-repo/
           cp templates/.super-linter.env new-repo/
-          
+
       - name: Update CODEOWNERS with team name
         run: |
           cd new-repo
-          sed -i "s/@team-leads/${{ github.event.inputs.team_name }}/g" .github/CODEOWNERS
+          sed -i "s/team-leads/${{ github.event.inputs.team_name }}/g" .github/CODEOWNERS
 
       - name: Update LICENSE with current year and holder
         run: |
@@ -135,74 +170,137 @@ jobs:
           sed -i "s/\[year\]/$CURRENT_YEAR/g" LICENSE
           sed -i "s/\[fullname\]/${{ steps.set-license.outputs.holder }}/g" LICENSE
 
-      - name: Configure super-linter for primary language
+      - name: Configure super-linter for selected languages
         run: |
           cd new-repo
-          LANG="${{ github.event.inputs.primary_language }}"
-          
-          # Enable the selected language or all for multi-language
-          case "$LANG" in
-            "javascript")
-              sed -i "s/ENABLE_JAVASCRIPT=false/ENABLE_JAVASCRIPT=true/g" .super-linter.env
-              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/JavaScript/g" .super-linter.env
-              ;;
-            "typescript")
-              sed -i "s/ENABLE_TYPESCRIPT=false/ENABLE_TYPESCRIPT=true/g" .super-linter.env
-              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/TypeScript/g" .super-linter.env
-              ;;
-            "python")
-              sed -i "s/ENABLE_PYTHON=false/ENABLE_PYTHON=true/g" .super-linter.env
-              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Python/g" .super-linter.env
-              ;;
-            "java")
-              sed -i "s/ENABLE_JAVA=false/ENABLE_JAVA=true/g" .super-linter.env
-              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Java/g" .super-linter.env
-              ;;
-            "go")
-              sed -i "s/ENABLE_GO=false/ENABLE_GO=true/g" .super-linter.env
-              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Go/g" .super-linter.env
-              ;;
-            "rust")
-              sed -i "s/ENABLE_RUST=false/ENABLE_RUST=true/g" .super-linter.env
-              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Rust/g" .super-linter.env
-              ;;
-            "ruby")
-              sed -i "s/ENABLE_RUBY=false/ENABLE_RUBY=true/g" .super-linter.env
-              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Ruby/g" .super-linter.env
-              ;;
-            "php")
-              sed -i "s/ENABLE_PHP=false/ENABLE_PHP=true/g" .super-linter.env
-              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/PHP/g" .super-linter.env
-              ;;
-            "csharp")
-              sed -i "s/ENABLE_CSHARP=false/ENABLE_CSHARP=true/g" .super-linter.env
-              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/C#/g" .super-linter.env
-              ;;
-            "cpp")
-              sed -i "s/ENABLE_CPP=false/ENABLE_CPP=true/g" .super-linter.env
-              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/C++/g" .super-linter.env
-              ;;
-            "multi-language")
-              sed -i "s/ENABLE_JAVASCRIPT=false/ENABLE_JAVASCRIPT=true/g" .super-linter.env
-              sed -i "s/ENABLE_TYPESCRIPT=false/ENABLE_TYPESCRIPT=true/g" .super-linter.env
-              sed -i "s/ENABLE_PYTHON=false/ENABLE_PYTHON=true/g" .super-linter.env
-              sed -i "s/ENABLE_JAVA=false/ENABLE_JAVA=true/g" .super-linter.env
-              sed -i "s/ENABLE_GO=false/ENABLE_GO=true/g" .super-linter.env
-              sed -i "s/ENABLE_RUST=false/ENABLE_RUST=true/g" .super-linter.env
-              sed -i "s/ENABLE_RUBY=false/ENABLE_RUBY=true/g" .super-linter.env
-              sed -i "s/ENABLE_PHP=false/ENABLE_PHP=true/g" .super-linter.env
-              sed -i "s/ENABLE_CSHARP=false/ENABLE_CSHARP=true/g" .super-linter.env
-              sed -i "s/ENABLE_CPP=false/ENABLE_CPP=true/g" .super-linter.env
-              sed -i "s/PRIMARY_LANGUAGE_PLACEHOLDER/Multi-Language/g" .super-linter.env
-              ;;
-          esac
+          LANGUAGES="${{ github.event.inputs.languages }}"
+
+          # Helper function to enable a language in .super-linter.env
+          enable_language() {
+            local lang=$1
+            case "$lang" in
+              "javascript")
+                sed -i "s/# VALIDATE_JAVASCRIPT_ES=true/VALIDATE_JAVASCRIPT_ES=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_JAVASCRIPT_PRETTIER=true/VALIDATE_JAVASCRIPT_PRETTIER=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_JSX=true/VALIDATE_JSX=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_JSX_PRETTIER=true/VALIDATE_JSX_PRETTIER=true/g" .super-linter.env
+                ;;
+              "typescript")
+                sed -i "s/# VALIDATE_TYPESCRIPT_ES=true/VALIDATE_TYPESCRIPT_ES=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_TYPESCRIPT_PRETTIER=true/VALIDATE_TYPESCRIPT_PRETTIER=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_TSX=true/VALIDATE_TSX=true/g" .super-linter.env
+                ;;
+              "python")
+                sed -i "s/# VALIDATE_PYTHON_RUFF=true/VALIDATE_PYTHON_RUFF=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_PYTHON_RUFF_FORMAT=true/VALIDATE_PYTHON_RUFF_FORMAT=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_PYTHON_MYPY=true/VALIDATE_PYTHON_MYPY=true/g" .super-linter.env
+                ;;
+              "java")
+                sed -i "s/# VALIDATE_JAVA=true/VALIDATE_JAVA=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_GOOGLE_JAVA_FORMAT=true/VALIDATE_GOOGLE_JAVA_FORMAT=true/g" .super-linter.env
+                ;;
+              "go")
+                sed -i "s/# VALIDATE_GO=true/VALIDATE_GO=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_GO_MODULES=true/VALIDATE_GO_MODULES=true/g" .super-linter.env
+                ;;
+              "rust")
+                sed -i "s/# VALIDATE_RUST_2021=true/VALIDATE_RUST_2021=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_RUST_CLIPPY=true/VALIDATE_RUST_CLIPPY=true/g" .super-linter.env
+                ;;
+              "ruby")
+                sed -i "s/# VALIDATE_RUBY=true/VALIDATE_RUBY=true/g" .super-linter.env
+                ;;
+              "php")
+                sed -i "s/# VALIDATE_PHP_BUILTIN=true/VALIDATE_PHP_BUILTIN=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_PHP_PHPCS=true/VALIDATE_PHP_PHPCS=true/g" .super-linter.env
+                ;;
+              "csharp")
+                sed -i "s/# VALIDATE_CSHARP=true/VALIDATE_CSHARP=true/g" .super-linter.env
+                ;;
+              "cpp")
+                sed -i "s/# VALIDATE_CPP=true/VALIDATE_CPP=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_CLANG_FORMAT=true/VALIDATE_CLANG_FORMAT=true/g" .super-linter.env
+                ;;
+              "css")
+                sed -i "s/# VALIDATE_CSS=true/VALIDATE_CSS=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_CSS_PRETTIER=true/VALIDATE_CSS_PRETTIER=true/g" .super-linter.env
+                ;;
+              "html")
+                sed -i "s/# VALIDATE_HTML=true/VALIDATE_HTML=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_HTML_PRETTIER=true/VALIDATE_HTML_PRETTIER=true/g" .super-linter.env
+                ;;
+              "docker")
+                sed -i "s/# VALIDATE_DOCKERFILE_HADOLINT=true/VALIDATE_DOCKERFILE_HADOLINT=true/g" .super-linter.env
+                ;;
+              "terraform")
+                sed -i "s/# VALIDATE_TERRAFORM_FMT=true/VALIDATE_TERRAFORM_FMT=true/g" .super-linter.env
+                sed -i "s/# VALIDATE_TERRAFORM_TFLINT=true/VALIDATE_TERRAFORM_TFLINT=true/g" .super-linter.env
+                ;;
+              "kotlin")
+                sed -i "s/# VALIDATE_KOTLIN=true/VALIDATE_KOTLIN=true/g" .super-linter.env
+                ;;
+              *)
+                echo "Warning: Unknown language '$lang' - skipping"
+                ;;
+            esac
+          }
+
+          # Process the languages input
+          if [ "$LANGUAGES" = "all" ]; then
+            # Enable all major languages for monorepo
+            enable_language "javascript"
+            enable_language "typescript"
+            enable_language "python"
+            enable_language "java"
+            enable_language "go"
+            enable_language "rust"
+            enable_language "ruby"
+            enable_language "php"
+            enable_language "csharp"
+            enable_language "cpp"
+            echo "Enabled all major languages" >> $GITHUB_STEP_SUMMARY
+          elif [ "$LANGUAGES" = "language-agnostic-only" ]; then
+            # No changes needed - defaults are already language-agnostic only
+            echo "Using language-agnostic linters only" >> $GITHUB_STEP_SUMMARY
+          else
+            # Split comma-separated languages and enable each one
+            IFS=',' read -ra LANG_ARRAY <<< "$LANGUAGES"
+            for lang in "${LANG_ARRAY[@]}"; do
+              # Trim whitespace
+              lang=$(echo "$lang" | xargs)
+              enable_language "$lang"
+              echo "Enabled language: $lang" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
 
       - name: Commit and push files
+        id: push-files
         run: |
           cd new-repo
           git add .
           git commit -m "chore: initialize repository from bootstrap template"
           git push
+          echo "✅ Template files pushed" >> $GITHUB_STEP_SUMMARY
+
+      - name: Verify repository settings
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          REPO_INFO=$(gh api /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }})
+          VISIBILITY=$(echo "$REPO_INFO" | jq -r '.private')
+          HAS_ISSUES=$(echo "$REPO_INFO" | jq -r '.has_issues')
+          
+          if [ "$VISIBILITY" = "true" ] && [ "${{ github.event.inputs.visibility }}" = "private" ]; then
+            echo "✅ Visibility: private (correct)" >> $GITHUB_STEP_SUMMARY
+          elif [ "$VISIBILITY" = "false" ] && [ "${{ github.event.inputs.visibility }}" = "public" ]; then
+            echo "✅ Visibility: public (correct)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Visibility mismatch detected" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "$HAS_ISSUES" = "true" ]; then
+            echo "✅ Issues enabled" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Configure repository settings
         env:
@@ -251,7 +349,7 @@ jobs:
           echo "**Repository:** https://github.com/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Visibility:** ${{ github.event.inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch Protection:** ${{ github.event.inputs.enable_branch_protection }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Primary Language:** ${{ github.event.inputs.primary_language }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Languages:** ${{ github.event.inputs.languages }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Created Resources" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ CODEOWNERS" >> $GITHUB_STEP_SUMMARY
@@ -266,3 +364,34 @@ jobs:
           echo "- ✅ Super-Linter workflow (auto-fix on PRs)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Super-Linter configuration (.super-linter.env)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY
+
+  teardown:
+    name: Cleanup Repository
+    runs-on: ubuntu-latest
+    needs: create-repository
+    if: ${{ failure() && github.event.inputs.cleanup_on_failure == 'true' }}
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Delete repository on failure
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          OWNER="${{ needs.create-repository.outputs.owner }}"
+          REPO="${{ github.event.inputs.repo_name }}"
+          
+          # Check if repository exists before attempting deletion
+          if gh repo view "$OWNER/$REPO" &>/dev/null; then
+            echo "🗑️ Deleting repository $OWNER/$REPO due to failure..." >> $GITHUB_STEP_SUMMARY
+            
+            # Delete the repository
+            gh api \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              /repos/$OWNER/$REPO
+            
+            echo "✅ Repository deleted successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ Repository does not exist, nothing to clean up" >> $GITHUB_STEP_SUMMARY
+          fi
