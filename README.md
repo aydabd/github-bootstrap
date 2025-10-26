@@ -1,5 +1,7 @@
 # github-bootstrap
 
+[![Super-Linter](https://github.com/aydabd/github-bootstrap/actions/workflows/super-linter.yml/badge.svg)](https://github.com/aydabd/github-bootstrap/actions/workflows/super-linter.yml)
+
 Bootstrap new GitHub repositories with best practices, SOLID principles, and language-agnostic templates.
 
 ## What It Does

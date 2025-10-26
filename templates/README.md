@@ -1,4 +1,6 @@
-# Project Name
+# {{REPOSITORY_NAME}}
+
+[![Super-Linter](https://github.com/{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}/actions/workflows/super-linter.yml/badge.svg)](https://github.com/{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}/actions/workflows/super-linter.yml)
 
 ## Overview
 
@@ -13,17 +15,6 @@ This project follows:
 - **Domain-Driven Design** (DDD) for clear business logic
 - **Type-safe** implementation
 - **Dependency injection** for testability
-
-## Project Structure
-
-```text
-.
-├── src/              # Source code
-├── tests/            # Test suites
-├── docs/             # Documentation
-├── .github/          # GitHub configurations
-└── config/           # Configuration files
-```
 
 ## Development
 

@@ -170,6 +170,12 @@ jobs:
           sed -i "s/\[year\]/$CURRENT_YEAR/g" LICENSE
           sed -i "s/\[fullname\]/${{ steps.set-license.outputs.holder }}/g" LICENSE
 
+      - name: Update README with repository details
+        run: |
+          cd new-repo
+          sed -i "s/{{REPOSITORY_OWNER}}/${{ steps.set-owner.outputs.owner }}/g" README.md
+          sed -i "s/{{REPOSITORY_NAME}}/${{ github.event.inputs.repo_name }}/g" README.md
+
       - name: Configure super-linter for selected languages
         run: |
           cd new-repo
