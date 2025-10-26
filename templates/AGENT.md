@@ -22,7 +22,7 @@
 **Quality**
 
 - Lint before commit
-- Auto-format code
+- ### Autoformat
 - Self-documenting names
 - Clear module boundaries
 - Minimal comments (code explains itself)
@@ -83,7 +83,7 @@
 
 - Docstrings for public APIs
 - Inline docs for complex logic
-- README per major module
+- Readme per major module
 - Record architecture decisions
 - Document non-obvious code
 

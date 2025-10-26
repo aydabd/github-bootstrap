@@ -71,6 +71,6 @@ Senior system developer environment. Language-agnostic. SOLID principles always 
 
 - Simple, clear explanations
 - Complete, working code
-- No TODO or placeholder code
+- No todo or placeholder code
 - Proper error handling
 - Clean separation of concerns

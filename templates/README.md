@@ -7,23 +7,6 @@ Brief project description following SOLID principles, TDD, and DDD architecture 
 ## Architecture
 
 This project follows:
-- **SOLID principles** for maintainable code
-- **Test-Driven Development** (TDD) for reliability
-- **Domain-Driven Design** (DDD) for clear business logic
-- **Type-safe** implementation
-- **Dependency injection** for testability
-
-## Project Structure
-
-# Project Name
-
-## Overview
-
-Brief project description following SOLID principles, TDD, and DDD architecture patterns.
-
-## Architecture
-
-This project follows:
 
 - **SOLID principles** for maintainable code
 - **Test-Driven Development** (TDD) for reliability
@@ -51,8 +34,8 @@ List required tools and versions here.
 ### Setup
 
 ```bash
-git clone <repo-url>
-cd <repo-name>
+git clone <repository-url>
+cd <repository-name>
 
 # Install dependencies
 make install
@@ -74,11 +57,12 @@ make coverage
 # Run super-linter locally (check only)
 make lint
 
-# Run super-linter with auto-fix
+# Run super-linter with autofix
 make lint-fix
 ```
 
 The repository includes GitHub Super-Linter for consistent code quality:
+
 - **Automatic formatting** on pull requests
 - **Language-agnostic linting** for Markdown, YAML, JSON, XML, and EditorConfig
 - **Programming language validation** configured in `.super-linter.env`
@@ -88,7 +72,7 @@ The repository includes GitHub Super-Linter for consistent code quality:
 
 - **Indentation**: 4 spaces (code), 2 spaces (YAML/JSON)
 - **Linting**: Enforced via pre-commit hooks
-- **Formatting**: Auto-format before commit
+- **Formatting**: Autoformat before commit
 - **Type safety**: Strictly enforced
 - **No trailing whitespace**
 
