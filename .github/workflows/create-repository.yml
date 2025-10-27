@@ -136,6 +136,7 @@ jobs:
               -f has_wiki=false \
               -f auto_init=true
           fi
+          echo "repo_created=true" >> $GITHUB_OUTPUT
 
       - name: Wait for repository initialization
         run: sleep 5
@@ -395,7 +396,8 @@ jobs:
     name: Cleanup Repository
     runs-on: ubuntu-latest
     needs: create-repository
-    if: ${{ failure() && github.event.inputs.cleanup_on_failure == 'true' }}
+    # Only cleanup if repo was created AND (creation failed AND cleanup is enabled)
+    if: ${{ always() && needs.create-repository.outputs.repo_created == 'true' && needs.create-repository.result == 'failure' && github.event.inputs.cleanup_on_failure == 'true' }}
     permissions:
       contents: write
 

@@ -31,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       test_repo_name: ${{ steps.generate-name.outputs.repo_name }}
+      repo_created: ${{ steps.verify-repo.outputs.created }}
     permissions:
       contents: write
       id-token: write
@@ -111,6 +112,7 @@ jobs:
           done
 
       - name: Verify repository was created
+        id: verify-repo
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
@@ -118,8 +120,10 @@ jobs:
 
           if gh repo view ${{ github.repository_owner }}/${REPO_NAME} &>/dev/null; then
             echo "✅ Repository verified: https://github.com/${{ github.repository_owner }}/${REPO_NAME}"
+            echo "created=true" >> $GITHUB_OUTPUT
           else
             echo "❌ Repository not found after workflow completion"
+            echo "created=false" >> $GITHUB_OUTPUT
             exit 1
           fi
 
@@ -256,13 +260,15 @@ jobs:
     name: Cleanup Test Repository
     needs: create-test-repo
     runs-on: ubuntu-latest
-    if: ${{ always() && (github.event.inputs.cleanup_after_test == 'true' || failure()) }}
+    # Only run if repo was actually created AND (user wants cleanup OR the creation job failed)
+    if: ${{ always() && needs.create-test-repo.outputs.repo_created == 'true' && (github.event.inputs.cleanup_after_test == 'true' || needs.create-test-repo.result == 'failure') }}
     permissions:
       contents: write
 
     steps:
       - name: Wait before cleanup
-        if: ${{ !failure() }}
+        # Only wait if the creation job succeeded - skip wait on failures
+        if: ${{ needs.create-test-repo.result == 'success' }}
         run: |
           WAIT_MINUTES="${{ github.event.inputs.wait_time_minutes }}"
           echo "⏳ Waiting ${WAIT_MINUTES} minutes before cleanup to allow inspection..."
