@@ -35,6 +35,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Load Super-Linter Config
+        run: |
+          # Use grep inverse matching to exclude eventual comments in the .env file
+          # because the GitHub Actions command to set environment variables doesn't support comments.
+          grep -v '^#' .super-linter.env | grep -v '^$' >> "$GITHUB_ENV"
+
       - name: Checkout PR Branch
         if: github.event_name == 'pull_request'
         run: |
@@ -47,9 +53,7 @@ jobs:
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FIX_MODE: true
           VALIDATE_ALL_CODEBASE: false
-          ENV_FILE: .super-linter.env
 
       - name: Commit Auto-fixes
         if: github.event_name == 'pull_request'
@@ -68,6 +72,4 @@ jobs:
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FIX_MODE: false
           VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'workflow_dispatch' }}
-          ENV_FILE: .super-linter.env
