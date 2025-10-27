@@ -22,7 +22,7 @@ on:
       wait_time_minutes:
         description: "Minutes to wait before cleanup (to inspect results)"
         required: false
-        default: "10"
+        default: "5"
         type: string
 
 jobs:
@@ -261,7 +261,11 @@ jobs:
     needs: create-test-repo
     runs-on: ubuntu-latest
     # Only run if repo was actually created AND (user wants cleanup OR the creation job failed)
-    if: ${{ always() && needs.create-test-repo.outputs.repo_created == 'true' && (github.event.inputs.cleanup_after_test == 'true' || needs.create-test-repo.result == 'failure') }}
+    if: >-
+      ${{ always() &&
+      needs.create-test-repo.outputs.repo_created == 'true' &&
+      (github.event.inputs.cleanup_after_test == 'true' ||
+      needs.create-test-repo.result == 'failure') }}
     permissions:
       contents: write
 

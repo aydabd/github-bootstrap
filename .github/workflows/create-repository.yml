@@ -110,31 +110,46 @@ jobs:
 
           # Create repository with appropriate visibility
           if [ "$ENDPOINT" = "/user/repos" ]; then
-            # User repos: use 'private' field (true/false)
+            # User repos: use 'private' field (boolean)
+            if [ "$VISIBILITY" = "public" ]; then
+              PRIVATE_VALUE=false
+            else
+              PRIVATE_VALUE=true
+            fi
+
+            # Use jq to build proper JSON payload with boolean values
             gh api \
               --method POST \
               -H "Accept: application/vnd.github+json" \
               "$ENDPOINT" \
-              -f name="${{ github.event.inputs.repo_name }}" \
-              -f description="${{ github.event.inputs.repo_description }}" \
-              -f private=${{ github.event.inputs.visibility != 'public' }} \
-              -f has_issues=true \
-              -f has_projects=true \
-              -f has_wiki=false \
-              -f auto_init=true
+              --input - <<EOF
+          {
+            "name": "${{ github.event.inputs.repo_name }}",
+            "description": "${{ github.event.inputs.repo_description }}",
+            "private": $PRIVATE_VALUE,
+            "has_issues": true,
+            "has_projects": true,
+            "has_wiki": false,
+            "auto_init": true
+          }
+          EOF
           else
             # Organization repos: use 'visibility' field (public/private/internal)
             gh api \
               --method POST \
               -H "Accept: application/vnd.github+json" \
               "$ENDPOINT" \
-              -f name="${{ github.event.inputs.repo_name }}" \
-              -f description="${{ github.event.inputs.repo_description }}" \
-              -f visibility="$VISIBILITY" \
-              -f has_issues=true \
-              -f has_projects=true \
-              -f has_wiki=false \
-              -f auto_init=true
+              --input - <<EOF
+          {
+            "name": "${{ github.event.inputs.repo_name }}",
+            "description": "${{ github.event.inputs.repo_description }}",
+            "visibility": "$VISIBILITY",
+            "has_issues": true,
+            "has_projects": true,
+            "has_wiki": false,
+            "auto_init": true
+          }
+          EOF
           fi
           echo "repo_created=true" >> $GITHUB_OUTPUT
 
@@ -152,12 +167,17 @@ jobs:
 
       - name: Copy template files
         run: |
+          # Copy all template files and directories
           cp -r templates/* new-repo/
           cp -r templates/.github new-repo/
-          cp templates/.github/linters/.editorconfig new-repo/
+
+          # Copy root-level dotfiles
           cp templates/.gitignore new-repo/
           cp templates/.gitattributes new-repo/
           cp templates/.super-linter.env new-repo/
+
+          # Copy .editorconfig from linters to root for IDE integration
+          cp templates/.github/linters/.editorconfig new-repo/
 
       - name: Update CODEOWNERS with team name
         run: |
@@ -397,7 +417,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: create-repository
     # Only cleanup if repo was created AND (creation failed AND cleanup is enabled)
-    if: ${{ always() && needs.create-repository.outputs.repo_created == 'true' && needs.create-repository.result == 'failure' && github.event.inputs.cleanup_on_failure == 'true' }}
+    if: >-
+      always() &&
+      needs.create-repository.outputs.repo_created == 'true' &&
+      needs.create-repository.result == 'failure' &&
+      github.event.inputs.cleanup_on_failure == 'true'
     permissions:
       contents: write
 
