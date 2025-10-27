@@ -154,7 +154,7 @@ jobs:
         run: |
           cp -r templates/* new-repo/
           cp -r templates/.github new-repo/
-          cp templates/.editorconfig new-repo/
+          cp templates/.github/linters/.editorconfig new-repo/
           cp templates/.gitignore new-repo/
           cp templates/.gitattributes new-repo/
           cp templates/.super-linter.env new-repo/
