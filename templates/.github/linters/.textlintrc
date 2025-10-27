@@ -1,15 +1,15 @@
 {
-  "rules": {
-    "terminology": {
-      "defaultTerms": false,
-      "skip": ["Blockquote"]
+    "rules": {
+        "terminology": {
+            "defaultTerms": false,
+            "skip": ["Blockquote"]
+        }
+    },
+    "filters": {
+        "allowlist": {
+            "allow": [
+                "/\\b(TODO|FIXME)\\b/i"
+            ]
+        }
     }
-  },
-  "filters": {
-    "allowlist": {
-      "allow": [
-        "/\\b(TODO|FIXME)\\b/i"
-      ]
-    }
-  }
 }
