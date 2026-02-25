@@ -19,12 +19,33 @@ Creates fully configured repositories with:
 
 ## Quick Start
 
+Choose one of two methods to bootstrap a new repository:
+
+### Option A — GitHub Actions (no local tools required)
+
 1. Use this template or fork this repository
 2. Go to **Actions** → **Create Bootstrap Repository**
 3. Click **Run workflow**
 4. Enter repository name (required)
 5. Configure optional settings
 6. Run
+
+### Option B — Terraform IaC
+
+1. Use this template or fork this repository
+2. Go to **Actions** → **Terraform Create Repository**
+3. Click **Run workflow** and fill in the inputs, **or** apply locally:
+
+   ```bash
+   cd terraform
+   terraform init
+   terraform apply \
+     -var="github_token=ghp_yourtoken" \
+     -var="repo_name=my-new-repo" \
+     -var="repo_owner=my-org"
+   ```
+
+See [`terraform/README.md`](terraform/README.md) for full documentation.
 
 Your new repository is created with all templates and settings.
 
@@ -98,6 +119,8 @@ All templates are in the `templates/` directory. Modify them to match your team'
 
 ## How It Works
 
+### GitHub Actions Workflow
+
 The workflow:
 
 1. Creates new repository via GitHub API
@@ -107,6 +130,18 @@ The workflow:
 5. Configures repository settings
 6. Sets up environments and branch protection
 7. Commits everything to the new repository
+
+### Terraform IaC
+
+The Terraform module (in `terraform/`) manages the same infrastructure declaratively:
+
+1. Creates the repository with all settings via `github_repository`
+2. Creates `dev` and `prod` environments via `github_repository_environment`
+3. Applies branch protection via `github_repository_ruleset`
+4. The wrapper workflow then copies template files and configures super-linter
+
+Terraform provides idempotent applies and state tracking, making it suitable for
+managing repositories as long-lived infrastructure.
 
 ## Requirements
 
