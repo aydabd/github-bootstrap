@@ -170,6 +170,7 @@ jobs:
           # Copy all template files and directories
           cp -r templates/* new-repo/
           cp -r templates/.github new-repo/
+          cp -r templates/.cursor new-repo/
 
           # Copy root-level dotfiles
           cp templates/.gitignore new-repo/
