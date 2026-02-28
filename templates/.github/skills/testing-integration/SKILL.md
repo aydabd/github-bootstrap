@@ -9,7 +9,7 @@ description: >
 
 ## Test Pyramid
 
-```
+```text
         /  E2E  \        ← few: full system, real environment
        / Integr. \       ← moderate: real components, no network
       /   Unit    \      ← many: fast, isolated, mocked dependencies
@@ -55,7 +55,7 @@ Before declaring a feature integration-tested, verify:
 
 Every requirement should map to at least one test:
 
-```
+```text
 Requirement: "Users can export data as CSV"
 ├── Unit:        TestCSVFormatter_ValidData_ReturnsCSV
 ├── Integration: TestExportPipeline_FetchAndFormat_ProducesFile

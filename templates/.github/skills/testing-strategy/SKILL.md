@@ -35,14 +35,14 @@ Add a test only when it satisfies at least ONE of:
 
 Use the format `TestUnit_Scenario_ExpectedOutcome`:
 
-```
+```text
 TestParseConfig_MissingRequiredField_ReturnsError
 TestParseConfig_ValidInput_ReturnsParsedResult
 ```
 
 Sub-tests use plain, readable English:
 
-```
+```text
 "missing required field returns error"
 "valid input with 3 items succeeds"
 ```

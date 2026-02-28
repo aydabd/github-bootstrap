@@ -9,7 +9,7 @@ description: >
 
 ## Requirements → Implementation Flow
 
-```
+```text
 Requirement → Design → Implementation → Unit Tests → Integration Tests → E2E → Review → Merge
 ```
 
@@ -24,13 +24,13 @@ Every feature follows this flow. No step is skipped.
 
 ## Connecting Requirements to Tests
 
-| Requirement type | Test layer | Example |
-|---|---|---|
-| Business rule | Unit test | Input validation, calculation logic |
-| Component interaction | Integration test | Service calls repository correctly |
-| User-facing behavior | E2E test | CLI outputs expected result |
-| Error handling | Unit + Integration | Graceful failure on bad input |
-| Performance | Benchmark | Response time under load |
+| Requirement type      | Test layer         | Example                             |
+| --------------------- | ------------------ | ----------------------------------- |
+| Business rule         | Unit test          | Input validation, calculation logic |
+| Component interaction | Integration test   | Service calls repository correctly  |
+| User-facing behavior  | E2E test           | CLI outputs expected result         |
+| Error handling        | Unit + Integration | Graceful failure on bad input       |
+| Performance           | Benchmark          | Response time under load            |
 
 ## Implementation Checklist
 

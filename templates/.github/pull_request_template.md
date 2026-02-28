@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD041 -->
+
 ## Summary
 
 <!-- Brief description of what this PR does (1-2 sentences). -->

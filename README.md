@@ -72,6 +72,7 @@ Project readme and AI assistant instructions (Agent, Claude, Copilot) following 
 - Prod environment (30s wait, reviews required)
 
 ## Core Principles
+
 All templates follow SOLID principles, TDD, DDD, type safety,
 and language-agnostic code formatting (4 spaces code, 2 spaces config).
 

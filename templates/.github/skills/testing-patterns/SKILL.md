@@ -11,7 +11,7 @@ description: >
 
 Prefer table-driven tests when testing the same function across multiple scenarios:
 
-```
+```text
 tests := []struct {
     name    string
     input   InputType
@@ -34,7 +34,7 @@ for _, tt := range tests {
 
 Mock at the **interface** boundary, not the implementation:
 
-```
+```text
 // Define a small interface for the dependency
 type DataStore interface {
     Get(key string) (string, error)

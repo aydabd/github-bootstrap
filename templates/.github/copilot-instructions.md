@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions
 
-<- ParseReportingEntity: fix docstring to match implementation Single source of truth is .github/instructions/project.instructions.md -->
+<!-- Single source of truth is .github/instructions/project.instructions.md -->
 <!--
   GitHub Copilot (VS Code >= 1.99 / Copilot Chat) automatically loads every
   .github/instructions/*.instructions.md file whose applyTo glob matches the

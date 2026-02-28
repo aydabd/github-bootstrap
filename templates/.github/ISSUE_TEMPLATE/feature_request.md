@@ -27,8 +27,8 @@ assignees: ""
 <!-- How should this feature be tested? -->
 
 | Scenario | Input | Expected Output |
-|---|---|---|
-| | | |
+| -------- | ----- | --------------- |
+|          |       |                 |
 
 ## Alternatives Considered
 
