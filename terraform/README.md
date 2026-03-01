@@ -42,27 +42,27 @@ into the new repository.
 
 ## Input Variables
 
-| Variable                  | Required | Default                                           | Description                                 |
-| ------------------------- | -------- | ------------------------------------------------- | ------------------------------------------- |
-| `github_token`            | **Yes**  | -                                                 | GitHub PAT with repo + admin:org scopes     |
-| `repo_name`               | **Yes**  | -                                                 | New repository name                         |
-| `repo_owner`              | No       | `""` (uses token owner)                           | Repository owner (user or organization)     |
-| `repo_description`        | No       | `"Repository following SOLID principles…"`        | Repository description                      |
-| `visibility`              | No       | `"public"`                                        | `public`, `private`, or `internal`          |
-| `enable_branch_protection`| No       | `true`                                            | Create branch protection ruleset for `main` |
-| `team_name`               | No       | `"team-leads"`                                    | GitHub team for CODEOWNERS                  |
-| `license_holder`          | No       | `""` (uses `repo_owner`)                          | License copyright holder                    |
-| `languages`               | No       | `"language-agnostic-only"`                        | Comma-separated languages for super-linter  |
+| Variable                   | Required | Default                                    | Description                                 |
+| -------------------------- | -------- | ------------------------------------------ | ------------------------------------------- |
+| `github_token`             | **Yes**  | -                                          | GitHub PAT with repo + admin:org scopes     |
+| `repo_name`                | **Yes**  | -                                          | New repository name                         |
+| `repo_owner`               | No       | `""` (uses token owner)                    | Repository owner (user or organization)     |
+| `repo_description`         | No       | `"Repository following SOLID principles…"` | Repository description                      |
+| `visibility`               | No       | `"public"`                                 | `public`, `private`, or `internal`          |
+| `enable_branch_protection` | No       | `true`                                     | Create branch protection ruleset for `main` |
+| `team_name`                | No       | `"team-leads"`                             | GitHub team for CODEOWNERS                  |
+| `license_holder`           | No       | `""` (uses `repo_owner`)                   | License copyright holder                    |
+| `languages`                | No       | `"language-agnostic-only"`                 | Comma-separated languages for super-linter  |
 
 ## Outputs
 
-| Output            | Description                          |
-| ----------------- | ------------------------------------ |
-| `repository_url`  | HTML URL of the created repository   |
-| `repository_name` | Name of the created repository       |
-| `clone_url_https` | HTTPS clone URL                      |
-| `clone_url_ssh`   | SSH clone URL                        |
-| `full_name`       | Full `owner/name` repository path    |
+| Output            | Description                        |
+| ----------------- | ---------------------------------- |
+| `repository_url`  | HTML URL of the created repository |
+| `repository_name` | Name of the created repository     |
+| `clone_url_https` | HTTPS clone URL                    |
+| `clone_url_ssh`   | SSH clone URL                      |
+| `full_name`       | Full `owner/name` repository path  |
 
 ## State Management
 
@@ -81,13 +81,13 @@ terraform {
 
 ## Differences from the GitHub Actions Workflow
 
-| Feature                   | GitHub Actions Workflow          | Terraform Module                        |
-| ------------------------- | -------------------------------- | --------------------------------------- |
-| Repository creation       | ✅ GitHub API via `gh` CLI       | ✅ `github_repository` resource         |
-| Repository settings       | ✅ PATCH via `gh api`            | ✅ Inline in `github_repository`        |
-| Environments              | ✅ PUT via `gh api`              | ✅ `github_repository_environment`      |
-| Branch protection         | ✅ POST rulesets via `gh api`    | ✅ `github_repository_ruleset`          |
-| Template files            | ✅ Git clone + copy + push       | ✅ Handled by the wrapper workflow      |
-| Language configuration    | ✅ `sed` on `.super-linter.env`  | ✅ Handled by the wrapper workflow      |
-| State tracking            | ❌ Stateless                     | ✅ Terraform state (drift detection)    |
-| Idempotency               | ⚠️ Creates new repo each run    | ✅ Apply is idempotent                  |
+| Feature                | GitHub Actions Workflow         | Terraform Module                     |
+| ---------------------- | ------------------------------- | ------------------------------------ |
+| Repository creation    | ✅ GitHub API via `gh` CLI      | ✅ `github_repository` resource      |
+| Repository settings    | ✅ PATCH via `gh api`           | ✅ Inline in `github_repository`     |
+| Environments           | ✅ PUT via `gh api`             | ✅ `github_repository_environment`   |
+| Branch protection      | ✅ POST rulesets via `gh api`   | ✅ `github_repository_ruleset`       |
+| Template files         | ✅ Git clone + copy + push      | ✅ Handled by the wrapper workflow   |
+| Language configuration | ✅ `sed` on `.super-linter.env` | ✅ Handled by the wrapper workflow   |
+| State tracking         | ❌ Stateless                    | ✅ Terraform state (drift detection) |
+| Idempotency            | ⚠️ Creates new repo each run    | ✅ Apply is idempotent               |
