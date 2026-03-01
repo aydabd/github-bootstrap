@@ -94,42 +94,23 @@ Project readme and AI assistant instructions (Agent, Claude, Copilot) following 
 
 ## Core Principles
 
-All templates follow:
+All templates follow SOLID principles, TDD, DDD, type safety,
+and language-agnostic code formatting (4 spaces code, 2 spaces config).
 
-- **SOLID principles** - Maintainable architecture
-- **Test-Driven Development** - Everything testable
-- **Domain-Driven Design** - Clear business logic
-- **Language-agnostic** - Works with any programming language
-- **Type safety** - Strict typing enforced
-- **Code formatting** - 4 spaces (code), 2 spaces (config)
-- **No trailing whitespace** - Clean code standards
+## AI Agent Instructions
+
+Templates use a **single source of truth** pattern for AI agent instructions:
+
+- **Canonical file**: `.github/instructions/project.instructions.md`
+- **Thin pointers**: `AGENT.md`, `CLAUDE.md`, `.github/copilot-instructions.md`
+- **Cursor rules**: `.cursor/rules/project.mdc`
+
+Edit only the canonical file — all agents pick up changes automatically.
 
 ## Customization
 
-All templates are in the `templates/` directory. Modify them to match your team's needs:
-
-- Update team names and ownership rules
-- Adjust branch protection requirements
-- Add or remove documentation templates
-- Configure additional dependabot ecosystems
-- Change merge strategies
-- Modify environment settings
-- Customize super-linter configuration in `.super-linter.env`
-- Adjust language-specific linter rules
-
-## How It Works
-
-### GitHub Actions Workflow
-
-The workflow:
-
-1. Creates new repository via GitHub API
-2. Copies all template files from `templates/` directory
-3. Updates placeholders (team names, year, copyright holder)
-4. Configures super-linter based on selected programming language
-5. Configures repository settings
-6. Sets up environments and branch protection
-7. Commits everything to the new repository
+All templates are in `templates/`. Modify them to match your team's needs.
+See repository settings, environment configuration, and super-linter options.
 
 ### Terraform IaC
 
@@ -146,7 +127,6 @@ managing repositories as long-lived infrastructure.
 ## Requirements
 
 - GitHub personal access token with repository permissions
-- Team names must exist in your organization
 - Docker installed for local linting with `make lint` (optional)
 
 ## License
