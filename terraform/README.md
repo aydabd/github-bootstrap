@@ -50,9 +50,9 @@ into the new repository.
 | `repo_description`         | No       | `"Repository following SOLID principles…"` | Repository description                      |
 | `visibility`               | No       | `"public"`                                 | `public`, `private`, or `internal`          |
 | `enable_branch_protection` | No       | `true`                                     | Create branch protection ruleset for `main` |
-| `team_name`                | No       | `"team-leads"`                             | GitHub team for CODEOWNERS                  |
-| `license_holder`           | No       | `""` (uses `repo_owner`)                   | License copyright holder                    |
-| `languages`                | No       | `"language-agnostic-only"`                 | Comma-separated languages for super-linter  |
+| `team_name`                | No       | `"team-leads"`                             | GitHub team name used by the wrapper workflow when templating CODEOWNERS (no direct Terraform effect) |
+| `license_holder`           | No       | `""` (uses `repo_owner`)                   | License copyright holder used only when the wrapper workflow templates the LICENSE file (no direct Terraform effect) |
+| `languages`                | No       | `"language-agnostic-only"`                 | Comma-separated languages used by the wrapper workflow to configure Super-Linter files (no direct Terraform effect) |
 
 ## Outputs
 
@@ -66,8 +66,7 @@ into the new repository.
 
 ## State Management
 
-For team or CI use, store Terraform state remotely. Example using the GitHub-hosted backend or
-Terraform Cloud:
+For team or CI use, store Terraform state remotely. For example, using an S3 backend:
 
 ```hcl
 terraform {

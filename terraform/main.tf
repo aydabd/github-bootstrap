@@ -1,9 +1,3 @@
-locals {
-  # Use provided repo_owner or fall back to the token owner (empty string delegates to provider)
-  effective_owner  = var.repo_owner
-  effective_holder = var.license_holder != "" ? var.license_holder : var.repo_owner
-}
-
 # Create the GitHub repository
 resource "github_repository" "new_repo" {
   name        = var.repo_name

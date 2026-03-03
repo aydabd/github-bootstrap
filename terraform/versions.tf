@@ -11,5 +11,5 @@ terraform {
 
 provider "github" {
   token = var.github_token
-  owner = var.repo_owner
+  owner = var.repo_owner != "" ? var.repo_owner : null
 }

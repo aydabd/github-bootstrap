@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       owner: ${{ steps.set-owner.outputs.owner }}
-      repo_created: ${{ steps.terraform-apply.outputs.repo_created }}
+      repo_created: ${{ steps.check-repo.outputs.repo_created }}
     permissions:
       contents: write
       id-token: write
@@ -114,6 +114,7 @@ jobs:
       - name: Terraform Apply
         id: terraform-apply
         working-directory: terraform
+        continue-on-error: true
         env:
           TF_VAR_github_token: ${{ secrets.GH_PAT }}
           TF_VAR_repo_name: ${{ github.event.inputs.repo_name }}
@@ -124,9 +125,23 @@ jobs:
           TF_VAR_team_name: ${{ github.event.inputs.team_name }}
           TF_VAR_license_holder: ${{ steps.set-license.outputs.holder }}
           TF_VAR_languages: ${{ github.event.inputs.languages }}
+        run: terraform apply -auto-approve tfplan
+
+      - name: Check repository created
+        id: check-repo
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          terraform apply -auto-approve tfplan
-          echo "repo_created=true" >> $GITHUB_OUTPUT
+          if gh repo view "${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}" &>/dev/null; then
+            echo "repo_created=true" >> $GITHUB_OUTPUT
+          else
+            echo "repo_created=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Fail job if Terraform apply failed
+        if: steps.terraform-apply.outcome == 'failure'
+        run: exit 1
 
       - name: Wait for repository initialization
         run: sleep 5
@@ -144,6 +159,7 @@ jobs:
         run: |
           cp -r templates/* new-repo/
           cp -r templates/.github new-repo/
+          cp -r templates/.cursor new-repo/
           cp templates/.gitignore new-repo/
           cp templates/.gitattributes new-repo/
           cp templates/.super-linter.env new-repo/
@@ -321,7 +337,7 @@ jobs:
           echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY
 
   teardown:
-    name: Terraform Destroy on Failure
+    name: Delete Repository on Failure
     runs-on: ubuntu-latest
     needs: terraform-create-repository
     if: >-
@@ -333,42 +349,20 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout bootstrap repository
-        uses: actions/checkout@v5
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "~> 1.5"
-          terraform_wrapper: false
-
-      - name: Set repository owner
-        id: set-owner
+      - name: Delete repository on failure
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          if [ -z "${{ github.event.inputs.repo_owner }}" ]; then
-            echo "owner=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          OWNER="${{ needs.terraform-create-repository.outputs.owner }}"
+          REPO="${{ github.event.inputs.repo_name }}"
+
+          if gh repo view "$OWNER/$REPO" &>/dev/null; then
+            echo "🗑️ Deleting repository $OWNER/$REPO due to failure..." >> $GITHUB_STEP_SUMMARY
+            gh api \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              /repos/$OWNER/$REPO
+            echo "✅ Repository deleted successfully" >> $GITHUB_STEP_SUMMARY
           else
-            echo "owner=${{ github.event.inputs.repo_owner }}" >> $GITHUB_OUTPUT
+            echo "ℹ️ Repository does not exist, nothing to clean up" >> $GITHUB_STEP_SUMMARY
           fi
-
-      - name: Terraform Init
-        working-directory: terraform
-        env:
-          TF_VAR_github_token: ${{ secrets.GH_PAT }}
-        run: terraform init
-
-      - name: Terraform Destroy
-        working-directory: terraform
-        env:
-          TF_VAR_github_token: ${{ secrets.GH_PAT }}
-          TF_VAR_repo_name: ${{ github.event.inputs.repo_name }}
-          TF_VAR_repo_owner: ${{ steps.set-owner.outputs.owner }}
-          TF_VAR_repo_description: ${{ github.event.inputs.repo_description }}
-          TF_VAR_visibility: ${{ github.event.inputs.visibility }}
-          TF_VAR_enable_branch_protection: ${{ github.event.inputs.enable_branch_protection }}
-          TF_VAR_team_name: ${{ github.event.inputs.team_name }}
-          TF_VAR_license_holder: ${{ github.repository_owner }}
-          TF_VAR_languages: ${{ github.event.inputs.languages }}
-        run: |
-          terraform destroy -auto-approve || true
-          echo "🗑️ Repository destroyed via Terraform" >> $GITHUB_STEP_SUMMARY
