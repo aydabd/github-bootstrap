@@ -1,12 +1,12 @@
-# Super Linter output (documentation)
+# Super-linter summary
 
-This directory is intended to hold **generated output** from the Super Linter
-(for example, when run in CI). Actual linter run results are ephemeral and
-**should not be committed to version control**.
+| Language                   | Validation result |
+| -------------------------- | ----------------- |
+| GIT_MERGE_CONFLICT_MARKERS | Pass ✅           |
+| MARKDOWN                   | Pass ✅           |
+| MARKDOWN_PRETTIER          | Pass ✅           |
+| NATURAL_LANGUAGE           | Pass ✅           |
+| PRE_COMMIT                 | Pass ✅           |
+| YAML_PRETTIER              | Pass ✅           |
 
-If you run the Super Linter locally or in CI, configure it to write reports
-into this directory, but ensure your `.gitignore` excludes `super-linter-output/`
-so that those reports do not become stale files in the repository.
-
-This file exists only as documentation of the directory's purpose and does
-not represent the result of any particular linter run.
+All files and directories linted successfully

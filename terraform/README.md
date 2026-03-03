@@ -42,17 +42,17 @@ into the new repository.
 
 ## Input Variables
 
-| Variable                   | Required | Default                                    | Description                                 |
-| -------------------------- | -------- | ------------------------------------------ | ------------------------------------------- |
-| `github_token`             | **Yes**  | -                                          | GitHub PAT with repo + admin:org scopes     |
-| `repo_name`                | **Yes**  | -                                          | New repository name                         |
-| `repo_owner`               | No       | `""` (uses token owner)                    | Repository owner (user or organization)     |
-| `repo_description`         | No       | `"Repository following SOLID principles…"` | Repository description                      |
-| `visibility`               | No       | `"public"`                                 | `public`, `private`, or `internal`          |
-| `enable_branch_protection` | No       | `true`                                     | Create branch protection ruleset for `main` |
-| `team_name`                | No       | `"team-leads"`                             | GitHub team name used by the wrapper workflow when templating CODEOWNERS (no direct Terraform effect) |
+| Variable                   | Required | Default                                    | Description                                                                                                          |
+| -------------------------- | -------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `github_token`             | **Yes**  | -                                          | GitHub PAT with repo + admin:org scopes                                                                              |
+| `repo_name`                | **Yes**  | -                                          | New repository name                                                                                                  |
+| `repo_owner`               | No       | `""` (uses token owner)                    | Repository owner (user or organization)                                                                              |
+| `repo_description`         | No       | `"Repository following SOLID principles…"` | Repository description                                                                                               |
+| `visibility`               | No       | `"public"`                                 | `public`, `private`, or `internal`                                                                                   |
+| `enable_branch_protection` | No       | `true`                                     | Create branch protection ruleset for `main`                                                                          |
+| `team_name`                | No       | `"team-leads"`                             | GitHub team name used by the wrapper workflow when templating CODEOWNERS (no direct Terraform effect)                |
 | `license_holder`           | No       | `""` (uses `repo_owner`)                   | License copyright holder used only when the wrapper workflow templates the LICENSE file (no direct Terraform effect) |
-| `languages`                | No       | `"language-agnostic-only"`                 | Comma-separated languages used by the wrapper workflow to configure Super-Linter files (no direct Terraform effect) |
+| `languages`                | No       | `"language-agnostic-only"`                 | Comma-separated languages used by the wrapper workflow to configure Super-Linter files (no direct Terraform effect)  |
 
 ## Outputs
 
