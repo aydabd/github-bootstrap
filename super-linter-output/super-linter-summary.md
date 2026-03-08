@@ -7,6 +7,7 @@
 | MARKDOWN_PRETTIER          | Pass ✅           |
 | NATURAL_LANGUAGE           | Pass ✅           |
 | PRE_COMMIT                 | Pass ✅           |
+| TERRAFORM_FMT              | Pass ✅           |
 | YAML_PRETTIER              | Pass ✅           |
 
 All files and directories linted successfully
