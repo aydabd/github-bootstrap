@@ -22,32 +22,28 @@ install:
 # Run super-linter locally (check only mode)
 lint:
 	@echo "Running super-linter in check mode..."
-	@docker pull github/super-linter:latest
-	@docker run \
-		--rm \
+	docker run --rm \
+		--platform linux/amd64 \
+		--env-file .super-linter.env \
+		-e PARALLEL_SHELL=/bin/bash \
 		-e RUN_LOCAL=true \
 		-e DEFAULT_BRANCH=main \
-		-e VALIDATE_ALL_CODEBASE=true \
-		-e FIX_MODE=false \
-		-e LOG_LEVEL=NOTICE \
-		--env-file .super-linter.env \
-		-v $(PWD):/tmp/lint \
-		github/super-linter:latest
+		-e DEFAULT_WORKSPACE=/tmp/lint \
+		-v "$(PWD):/tmp/lint:ro" \
+		ghcr.io/super-linter/super-linter/slim:v8.2.1
 
 # Run super-linter locally with auto-fix
 lint-fix:
 	@echo "Running super-linter in fix mode..."
-	@docker pull github/super-linter:latest
-	@docker run \
-		--rm \
+	docker run --rm \
+		--platform linux/amd64 \
+		--env-file .super-linter.env \
+		-e PARALLEL_SHELL=/bin/bash \
 		-e RUN_LOCAL=true \
 		-e DEFAULT_BRANCH=main \
-		-e VALIDATE_ALL_CODEBASE=true \
-		-e FIX_MODE=true \
-		-e LOG_LEVEL=NOTICE \
-		--env-file .super-linter.env \
-		-v $(PWD):/tmp/lint \
-		github/super-linter:latest
+		-e DEFAULT_WORKSPACE=/tmp/lint \
+		-v "$(PWD):/tmp/lint" \
+		ghcr.io/super-linter/super-linter/slim:v8.2.1
 	@echo "Auto-fixes applied. Review changes with 'git diff'"
 
 # Run tests (customize based on your language)
