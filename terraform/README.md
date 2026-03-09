@@ -88,5 +88,7 @@ terraform {
 | Branch protection      | ✅ POST rulesets via `gh api`   | ✅ `github_repository_ruleset`       |
 | Template files         | ✅ Git clone + copy + push      | ✅ Handled by the wrapper workflow   |
 | Language configuration | ✅ `sed` on `.super-linter.env` | ✅ Handled by the wrapper workflow   |
+| Conventional commits   | ✅ commitlint config + linter   | ✅ Handled by the wrapper workflow   |
+| Release Please         | ✅ Workflow + config files      | ✅ Handled by the wrapper workflow   |
 | State tracking         | ❌ Stateless                    | ✅ Terraform state (drift detection) |
 | Idempotency            | ⚠️ Creates new repo each run    | ✅ Apply is idempotent               |

@@ -14,6 +14,8 @@ Creates fully configured repositories with:
 - Development and production environments
 - Documentation templates
 - Editor and Git configurations
+- Conventional commits enforcement via commitlint
+- Release Please workflow for automated semantic versioning
 - Super-Linter workflow with autofix for PRs
 - Makefile for local linting with Docker
 
@@ -83,6 +85,27 @@ Project readme and AI assistant instructions (Agent, Claude, Copilot) following 
 - **Programming language support** - Configurable via dropdown menu (JavaScript, TypeScript, Python, Java, Go, Rust, Ruby, PHP, C#, C++, or multi-language)
 - **Local linting** - Makefile with `make lint` and `make lint-fix` commands using Docker
 - **.super-linter.env** - Configuration file to enable/disable specific language linters
+
+### Conventional Commits
+
+All repositories enforce [conventional commits](https://www.conventionalcommits.org/)
+using commitlint integrated with Super-Linter:
+
+- **Commit format** - `type(scope): description` (e.g., `feat: add login`, `fix(auth): token refresh`)
+- **Allowed types** - `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+- **Configuration** - `.commitlintrc.yml` at the repository root
+- **Enforcement** - Validated automatically via Super-Linter on every PR and push
+
+### Release Please (Semantic Versioning)
+
+Automated releases powered by [Google's Release Please](https://github.com/googleapis/release-please):
+
+- **Semantic versioning** - Versions are bumped automatically based on conventional commit types
+  (`feat` → minor, `fix` → patch, `feat!`/`BREAKING CHANGE` → major)
+- **Release PRs** - Release Please opens a PR that tracks changes and updates the changelog
+- **CHANGELOG.md** - Generated automatically from conventional commit messages
+- **GitHub Releases** - Created automatically when a release PR is merged
+- **Configuration** - `release-please-config.json` and `.release-please-manifest.json`
 
 ### Repository Settings
 

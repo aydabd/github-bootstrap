@@ -1,0 +1,37 @@
+# Commitlint configuration for conventional commits
+# See: https://www.conventionalcommits.org/
+extends:
+  - "@commitlint/config-conventional"
+
+rules:
+  # Type must be one of the following
+  type-enum:
+    - 2
+    - always
+    - - feat
+      - fix
+      - docs
+      - style
+      - refactor
+      - perf
+      - test
+      - build
+      - ci
+      - chore
+      - revert
+
+  # Subject must not be empty
+  subject-empty:
+    - 2
+    - never
+
+  # Type must not be empty
+  type-empty:
+    - 2
+    - never
+
+  # Header max length
+  header-max-length:
+    - 2
+    - always
+    - 100

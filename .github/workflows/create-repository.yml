@@ -176,6 +176,8 @@ jobs:
           cp templates/.gitignore new-repo/
           cp templates/.gitattributes new-repo/
           cp templates/.super-linter.env new-repo/
+          cp templates/.commitlintrc.yml new-repo/
+          cp templates/.release-please-manifest.json new-repo/
 
           # Copy .editorconfig from linters to root for IDE integration
           cp templates/.github/linters/.editorconfig new-repo/
@@ -411,6 +413,8 @@ jobs:
           echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Super-Linter workflow (auto-fix on PRs)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Super-Linter configuration (.super-linter.env)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Conventional commits (commitlint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Release Please workflow (semantic versioning)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY
 
   teardown:
