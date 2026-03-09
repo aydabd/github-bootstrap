@@ -302,6 +302,40 @@ jobs:
             done
           fi
 
+      - name: Configure Release Please for selected languages
+        run: |
+          cd new-repo
+          LANGUAGES="${{ github.event.inputs.languages }}"
+
+          # Map language to release-please release-type
+          # See: https://github.com/googleapis/release-please#supported-release-types
+          get_release_type() {
+            local lang=$1
+            case "$lang" in
+              "javascript"|"typescript") echo "node" ;;
+              "python")                  echo "python" ;;
+              "go")                      echo "go" ;;
+              "rust")                    echo "rust" ;;
+              "java"|"kotlin")           echo "java" ;;
+              "ruby")                    echo "ruby" ;;
+              "php")                     echo "php" ;;
+              "terraform")              echo "terraform-module" ;;
+              *)                         echo "simple" ;;
+            esac
+          }
+
+          RELEASE_TYPE="simple"
+
+          if [ "$LANGUAGES" != "all" ] && [ "$LANGUAGES" != "language-agnostic-only" ]; then
+            # Use the first language in the comma-separated list to determine release type
+            FIRST_LANG=$(echo "$LANGUAGES" | cut -d',' -f1 | xargs)
+            RELEASE_TYPE=$(get_release_type "$FIRST_LANG")
+          fi
+
+          # Update release-please-config.json with the correct release type
+          jq --arg rt "$RELEASE_TYPE" '."release-type" = $rt' release-please-config.json > tmp.json && mv tmp.json release-please-config.json
+          echo "Release Please configured with release-type: $RELEASE_TYPE" >> $GITHUB_STEP_SUMMARY
+
       - name: Commit and push files
         id: push-files
         run: |

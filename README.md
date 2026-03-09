@@ -102,10 +102,28 @@ Automated releases powered by [Google's Release Please](https://github.com/googl
 
 - **Semantic versioning** - Versions are bumped automatically based on conventional commit types
   (`feat` → minor, `fix` → patch, `feat!`/`BREAKING CHANGE` → major)
+- **Language-aware configuration** - Release type is set automatically based on the selected
+  language so that version files (e.g., `package.json`, `Cargo.toml`, `pyproject.toml`) are
+  updated correctly
 - **Release PRs** - Release Please opens a PR that tracks changes and updates the changelog
 - **CHANGELOG.md** - Generated automatically from conventional commit messages
 - **GitHub Releases** - Created automatically when a release PR is merged
 - **Configuration** - `release-please-config.json` and `.release-please-manifest.json`
+
+#### Language to Release Type Mapping
+
+| Language Input       | Release Type       | Version Files Updated                       |
+| -------------------- | ------------------ | ------------------------------------------- |
+| `javascript`         | `node`             | `package.json`                              |
+| `typescript`         | `node`             | `package.json`                              |
+| `python`             | `python`           | `pyproject.toml`, `setup.py`, `setup.cfg`   |
+| `go`                 | `go`               | Go module tags                              |
+| `rust`               | `rust`             | `Cargo.toml`                                |
+| `java` / `kotlin`    | `java`             | `pom.xml`                                   |
+| `ruby`               | `ruby`             | `*.gemspec`, `lib/**/version.rb`            |
+| `php`                | `php`              | `composer.json`                             |
+| `terraform`          | `terraform-module` | Terraform module tags                       |
+| `all` / multi / other | `simple`          | `CHANGELOG.md` only                         |
 
 ### Repository Settings
 
