@@ -29,7 +29,7 @@ lint:
 		-e DEFAULT_BRANCH=main \
 		-e DEFAULT_WORKSPACE=/tmp/lint \
 		-v "$(PWD):/tmp/lint:ro" \
-		ghcr.io/super-linter/super-linter:slim-v8.2.1
+		ghcr.io/super-linter/super-linter:slim-v8.5.0
 
 # Lint the codebase using Super-Linter with auto-fix
 lint-fix:
@@ -42,7 +42,7 @@ lint-fix:
 		-e DEFAULT_BRANCH=main \
 		-e DEFAULT_WORKSPACE=/tmp/lint \
 		-v "$(PWD):/tmp/lint" \
-		ghcr.io/super-linter/super-linter:slim-v8.2.1
+		ghcr.io/super-linter/super-linter:slim-v8.5.0
 
 # Run repository creation tests
 test:

@@ -80,7 +80,7 @@ jobs:
 
     steps:
       - name: Checkout bootstrap repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set repository owner
         id: set-owner

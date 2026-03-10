@@ -11,7 +11,7 @@
 repos:
   # ── Basic file hygiene ───────────────────────────────────────────────────────
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         exclude: "\\.(md)$" # markdownlint manages trailing spaces in .md files
@@ -34,7 +34,7 @@ repos:
   # ── Shell formatting (shfmt) ──────────────────────────────────────────────────
   # Mirrors FIX_SHELL_SHFMT in CI.
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.9.0-1
+    rev: v3.12.0-2
     hooks:
       - id: shfmt
         args: [--write]
@@ -42,7 +42,7 @@ repos:
   # ── Conventional commit messages ──────────────────────────────────────────────
   # Mirrors VALIDATE_GIT_COMMITLINT in CI; runs only on the commit-msg stage.
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v3.6.0
+    rev: v4.4.0
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
