@@ -13,7 +13,8 @@ module.exports = {
 
     // Skip any pre-conventional automation commits that were created before
     // commitlint was enabled in this project and cannot be rewritten.
-    ignores: [(commit) => commit === "Initial plan"],
+    // Use .trim() because git commit messages include trailing newlines.
+    ignores: [(commit) => commit.trim() === "Initial plan"],
 
     rules: {
         // Type must be one of the following
