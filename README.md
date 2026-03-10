@@ -104,7 +104,24 @@ using commitlint integrated with Super-Linter:
 
 Choose your release automation tool when creating a repository:
 
-#### Option A — Release Please (default)
+#### Option A — git-cliff (default, tag-based)
+
+Lightweight, tag-driven releases powered by [git-cliff](https://git-cliff.org) (~9k ⭐):
+
+- **Tag-based workflow** — Push a version tag (`v1.2.3`) to trigger a release
+- **Fast** — Written in Rust; generates changelogs in milliseconds
+- **Language-agnostic** — Works for any language without version file management
+- **CHANGELOG.md** — Generated from conventional commits, committed back to the default branch
+- **GitHub Releases** — Created automatically with the tag's changelog section as release notes
+- **Config file** — `cliff.toml` (Tera template for full customisation)
+
+```sh
+# Create a release with git-cliff
+git tag v1.2.3
+git push origin v1.2.3   # triggers the git-cliff-release.yml workflow
+```
+
+#### Option B — release-please (PR-based)
 
 Automated PR-based releases powered by [Google's Release Please](https://github.com/googleapis/release-please):
 
@@ -133,23 +150,6 @@ Automated PR-based releases powered by [Google's Release Please](https://github.
 | `all` / `language-agnostic-only`        | `simple`           | `CHANGELOG.md` only                       |
 | `typescript,python` (multi, first wins) | `node`             | Same as first language (`package.json`)   |
 
-#### Option B — git-cliff (tag-based)
-
-Lightweight, tag-driven releases powered by [git-cliff](https://git-cliff.org) (~9k ⭐):
-
-- **Tag-based workflow** — Push a version tag (`v1.2.3`) to trigger a release
-- **Fast** — Written in Rust; generates changelogs in milliseconds
-- **Language-agnostic** — Works for any language without version file management
-- **CHANGELOG.md** — Generated from conventional commits, committed back to the default branch
-- **GitHub Releases** — Created automatically with the tag's changelog section as release notes
-- **Config file** — `cliff.toml` (Tera template for full customisation)
-
-```sh
-# Create a release with git-cliff
-git tag v1.2.3
-git push origin v1.2.3   # triggers the git-cliff-release.yml workflow
-```
-
 #### Option C — semantic-release (push-to-main, fully automated)
 
 [semantic-release](https://github.com/semantic-release/semantic-release) (~23k ⭐) — the most popular
@@ -167,37 +167,13 @@ automatically.
 # semantic-release runs on every push to main and auto-tags + releases.
 ```
 
-#### Option D — Changesets (PR-based monorepo versioning)
-
-[Changesets](https://github.com/changesets/changesets) (~11k ⭐) — designed for JavaScript/TypeScript
-monorepos with multiple packages. Each change is described in a "changeset" file before merging.
-
-- **Monorepo-first** — Manages independent versioning across multiple packages
-- **Explicit changesets** — Developers declare version bumps intentionally (`npx changeset`)
-- **Version PRs** — The action opens a "Version Packages" PR that applies all pending changesets
-- **GitHub Releases** — Created per-package when the version PR is merged
-- **Config file** — `.changeset/config.json`
-
-> ⚠️ **Note**: Changesets requires Node.js and is best suited for JS/TS projects with `package.json`.
-> For other languages, prefer **git-cliff** or **semantic-release**.
-
-```sh
-# Developer workflow with changesets
-npx changeset          # describe your change (prompts for type + message)
-git add .changeset/
-git commit -m "chore: add changeset for my-feature"
-# On merge to main → the action opens a "Version Packages" PR
-# Merge the version PR → GitHub Releases are created
-```
-
 ### Release Tool Comparison
 
-| Tool             | Stars | Trigger           | Language support | Monorepo    | Manual step     |
-| ---------------- | ----- | ----------------- | ---------------- | ----------- | --------------- |
-| release-please   | ~7k   | push to main (PR) | language-aware   | partial     | merge PR        |
-| git-cliff        | ~9k   | git tag           | any              | ✅          | `git tag`       |
-| semantic-release | ~23k  | push to main      | any              | via plugins | automatic       |
-| changesets       | ~11k  | push to main (PR) | JS/TS only       | ✅          | `npx changeset` |
+| Tool             | Stars | Trigger           | Language support | Monorepo    | Manual step |
+| ---------------- | ----- | ----------------- | ---------------- | ----------- | ----------- |
+| git-cliff        | ~9k   | git tag           | any              | ✅          | `git tag`   |
+| release-please   | ~7k   | push to main (PR) | language-aware   | partial     | merge PR    |
+| semantic-release | ~23k  | push to main      | any              | via plugins | automatic   |
 
 ### Repository Settings
 

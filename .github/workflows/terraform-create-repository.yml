@@ -53,18 +53,16 @@ on:
       release_tool:
         description: >-
           Release automation tool:
-          'release-please' (PR-based, auto-bumps version files),
           'git-cliff' (tag-triggered, fast changelog, any language),
-          'semantic-release' (push-to-main, fully automated, any language),
-          'changesets' (PR-based monorepo versioning, JS/TS)
+          'release-please' (PR-based, auto-bumps version files),
+          'semantic-release' (push-to-main, fully automated, any language)
         required: false
-        default: "release-please"
+        default: "git-cliff"
         type: choice
         options:
-          - release-please
           - git-cliff
+          - release-please
           - semantic-release
-          - changesets
 
 jobs:
   terraform-create-repository:
@@ -183,7 +181,6 @@ jobs:
 
           # Copy release-tool specific dotfiles / directories
           cp templates/.releaserc.json new-repo/
-          cp -r templates/.changeset new-repo/
 
           cp templates/.github/linters/.editorconfig new-repo/
 
@@ -192,31 +189,24 @@ jobs:
           cd new-repo
           RELEASE_TOOL="${{ github.event.inputs.release_tool }}"
 
-          # Files (use rm -f) and directories (use rm -rf) separated by type
+          # Files (use rm -f) separated by release tool
           RP_FILES="release-please-config.json .release-please-manifest.json .github/workflows/release-please.yml"
           GC_FILES="cliff.toml .github/workflows/git-cliff-release.yml"
           SR_FILES=".releaserc.json .github/workflows/semantic-release.yml"
-          # changesets uses a directory (.changeset/) plus a workflow file
-          CS_FILES=".github/workflows/changesets-release.yml"
-          CS_DIRS=".changeset"
 
           case "$RELEASE_TOOL" in
-            "git-cliff")
-              rm -f $RP_FILES $SR_FILES $CS_FILES && rm -rf $CS_DIRS
-              echo "Release tool: **git-cliff** — tag-triggered changelog + GitHub Release (any language, ~9k ⭐)" >> $GITHUB_STEP_SUMMARY
+            "release-please")
+              rm -f $GC_FILES $SR_FILES
+              echo "Release tool: **release-please** — PR-based semantic versioning (language-aware, ~7k ⭐)" >> $GITHUB_STEP_SUMMARY
               ;;
             "semantic-release")
-              rm -f $RP_FILES $GC_FILES $CS_FILES && rm -rf $CS_DIRS
+              rm -f $RP_FILES $GC_FILES
               echo "Release tool: **semantic-release** — push-to-main, fully automated versioning (any language, ~23k ⭐)" >> $GITHUB_STEP_SUMMARY
               ;;
-            "changesets")
-              rm -f $RP_FILES $GC_FILES $SR_FILES
-              echo "Release tool: **changesets** — PR-based monorepo versioning (JS/TS, ~11k ⭐)" >> $GITHUB_STEP_SUMMARY
-              ;;
             *)
-              # Default: release-please
-              rm -f $GC_FILES $SR_FILES $CS_FILES && rm -rf $CS_DIRS
-              echo "Release tool: **release-please** — PR-based semantic versioning (language-aware, ~7k ⭐)" >> $GITHUB_STEP_SUMMARY
+              # Default: git-cliff
+              rm -f $RP_FILES $SR_FILES
+              echo "Release tool: **git-cliff** — tag-triggered changelog + GitHub Release (any language, ~9k ⭐)" >> $GITHUB_STEP_SUMMARY
               ;;
           esac
 
@@ -356,7 +346,7 @@ jobs:
           fi
 
       - name: Configure Release Please for selected languages
-        if: github.event.inputs.release_tool == 'release-please' || github.event.inputs.release_tool == ''
+        if: github.event.inputs.release_tool == 'release-please'
         run: |
           cd new-repo
           LANGUAGES="${{ github.event.inputs.languages }}"
@@ -407,7 +397,7 @@ jobs:
           echo "**Visibility:** ${{ github.event.inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch Protection:** ${{ github.event.inputs.enable_branch_protection }}" >> $GITHUB_STEP_SUMMARY
           echo "**Languages:** ${{ github.event.inputs.languages }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Release tool:** ${{ github.event.inputs.release_tool || 'release-please' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Release tool:** ${{ github.event.inputs.release_tool || 'git-cliff' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Created Resources (via Terraform)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ GitHub repository" >> $GITHUB_STEP_SUMMARY
@@ -427,20 +417,16 @@ jobs:
           echo "- ✅ Super-Linter configuration (.super-linter.env)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Conventional commits (commitlint)" >> $GITHUB_STEP_SUMMARY
           case "${{ github.event.inputs.release_tool }}" in
-            "git-cliff")
-              echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ cliff.toml (changelog configuration)" >> $GITHUB_STEP_SUMMARY
+            "release-please")
+              echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
               ;;
             "semantic-release")
               echo "- ✅ semantic-release workflow (push-to-main, fully automated)" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ .releaserc.json (semantic-release configuration)" >> $GITHUB_STEP_SUMMARY
               ;;
-            "changesets")
-              echo "- ✅ Changesets release workflow (PR-based monorepo versioning)" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ .changeset/config.json (changesets configuration)" >> $GITHUB_STEP_SUMMARY
-              ;;
             *)
-              echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ cliff.toml (changelog configuration)" >> $GITHUB_STEP_SUMMARY
               ;;
           esac
           echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY

@@ -65,8 +65,11 @@ jobs:
         uses: hashicorp/setup-terraform@v3
 
       - name: Install Node.js lint tools
+        # Use --loglevel=error to suppress known transitive-dep deprecation warnings
+        # (git-raw-commits from @commitlint/read, glob from textlint) that are
+        # upstream issues outside our control.
         run: |
-          npm install --global --quiet \
+          npm install --global --loglevel=error \
             markdownlint-cli \
             prettier \
             @commitlint/cli \
