@@ -135,7 +135,7 @@ Automated PR-based releases powered by [Google's Release Please](https://github.
 
 #### Option B — git-cliff (tag-based)
 
-Lightweight, tag-driven releases powered by [git-cliff](https://git-cliff.org):
+Lightweight, tag-driven releases powered by [git-cliff](https://git-cliff.org) (~9k ⭐):
 
 - **Tag-based workflow** — Push a version tag (`v1.2.3`) to trigger a release
 - **Fast** — Written in Rust; generates changelogs in milliseconds
@@ -149,6 +149,55 @@ Lightweight, tag-driven releases powered by [git-cliff](https://git-cliff.org):
 git tag v1.2.3
 git push origin v1.2.3   # triggers the git-cliff-release.yml workflow
 ```
+
+#### Option C — semantic-release (push-to-main, fully automated)
+
+[semantic-release](https://github.com/semantic-release/semantic-release) (~23k ⭐) — the most popular
+release automation tool. Zero manual steps: every merge to `main` is analysed and released
+automatically.
+
+- **Fully automated** — No tags, no PRs needed; semantic-release decides the version from commits
+- **Language-agnostic** — GitHub-releases-only mode works for any language
+- **CHANGELOG.md** — Generated and committed back to `main` automatically
+- **GitHub Releases** — Created with generated release notes on every merge
+- **Config file** — `.releaserc.json` (plugin-based, highly extensible)
+
+```sh
+# Nothing to do manually! Just merge to main with conventional commits.
+# semantic-release runs on every push to main and auto-tags + releases.
+```
+
+#### Option D — Changesets (PR-based monorepo versioning)
+
+[Changesets](https://github.com/changesets/changesets) (~11k ⭐) — designed for JavaScript/TypeScript
+monorepos with multiple packages. Each change is described in a "changeset" file before merging.
+
+- **Monorepo-first** — Manages independent versioning across multiple packages
+- **Explicit changesets** — Developers declare version bumps intentionally (`npx changeset`)
+- **Version PRs** — The action opens a "Version Packages" PR that applies all pending changesets
+- **GitHub Releases** — Created per-package when the version PR is merged
+- **Config file** — `.changeset/config.json`
+
+> ⚠️ **Note**: Changesets requires Node.js and is best suited for JS/TS projects with `package.json`.
+> For other languages, prefer **git-cliff** or **semantic-release**.
+
+```sh
+# Developer workflow with changesets
+npx changeset          # describe your change (prompts for type + message)
+git add .changeset/
+git commit -m "chore: add changeset for my-feature"
+# On merge to main → the action opens a "Version Packages" PR
+# Merge the version PR → GitHub Releases are created
+```
+
+### Release Tool Comparison
+
+| Tool               | Stars | Trigger     | Language support | Monorepo | Manual step     |
+| ------------------ | ----- | ----------- | ---------------- | -------- | --------------- |
+| release-please     | ~7k   | push to main (PR) | language-aware | partial | merge PR   |
+| git-cliff          | ~9k   | git tag     | any              | ✅       | `git tag`       |
+| semantic-release   | ~23k  | push to main | any             | via plugins | automatic   |
+| changesets         | ~11k  | push to main (PR) | JS/TS only  | ✅       | `npx changeset` |
 
 ### Repository Settings
 
