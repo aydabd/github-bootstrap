@@ -136,7 +136,7 @@ jobs:
 
       - name: Check for merge conflict markers
         run: |
-          if git grep --line-number "<<<<<<< " 2>/dev/null | grep .; then
+          if git grep --line-number "[<][<][<][<][<][<][<] " 2>/dev/null | grep .; then
             echo "ERROR: Merge conflict markers found!" >&2
             exit 1
           fi
