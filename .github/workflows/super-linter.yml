@@ -12,6 +12,11 @@ on:
       - main
   workflow_dispatch:
 
+# Cancel in-progress runs for the same ref to avoid redundant work on rapid pushes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
@@ -34,6 +39,26 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # Cache the super-linter Docker image to avoid re-pulling ~1.5 GB on every run.
+      # The key is pinned to the exact image version so the cache auto-invalidates on upgrades.
+      - name: Cache Super-Linter Docker image
+        id: cache-super-linter
+        uses: actions/cache@v4
+        with:
+          path: /tmp/super-linter.tar
+          key: super-linter-slim-v8.2.1-${{ runner.os }}
+
+      - name: Load cached Super-Linter image
+        if: steps.cache-super-linter.outputs.cache-hit == 'true'
+        run: docker load -i /tmp/super-linter.tar
+
+      - name: Pull and cache Super-Linter image
+        if: steps.cache-super-linter.outputs.cache-hit != 'true'
+        run: |
+          docker pull ghcr.io/super-linter/super-linter:slim-v8.2.1
+          docker save ghcr.io/super-linter/super-linter:slim-v8.2.1 \
+            -o /tmp/super-linter.tar
 
       - name: Load Super-Linter Config
         run: |
