@@ -80,11 +80,15 @@ Project readme and AI assistant instructions (Agent, Claude, Copilot) following 
 
 ### Super-Linter Integration
 
-- **GitHub Actions workflow** - Autoformats code on pull requests and commits fixes back to the PR branch
-- **Language-agnostic linting** - Always validates Markdown, YAML, JSON, XML, and EditorConfig
-- **Programming language support** - Configurable via dropdown menu (JavaScript, TypeScript, Python, Java, Go, Rust, Ruby, PHP, C#, C++, or multi-language)
-- **Local linting** - Makefile with `make lint` and `make lint-fix` commands using Docker
-- **.super-linter.env** - Configuration file to enable/disable specific language linters
+- **GitHub Actions workflow** — Autoformats code on pull requests and commits fixes back to the PR branch
+- **One linter per file type** — JSON, YAML, and Markdown each use a single tool to avoid
+  rule conflicts and keep runs fast (`VALIDATE_JSON_PRETTIER`, `VALIDATE_YAML_PRETTIER`,
+  `VALIDATE_MARKDOWN` + `FIX_MARKDOWN_PRETTIER`)
+- **Shell scripts** — shellcheck (correctness) + shfmt (formatting) run as complementary tools
+- **Language-specific linters** — Enabled automatically via dropdown when the repository is created;
+  commented-out stubs remain in `.super-linter.env` for easy opt-in later
+- **Local linting** — Makefile with `make lint` and `make lint-fix` commands using Docker
+- **`slim` image** — Only the linters you need; dramatically smaller than the `standard` image
 
 ### Conventional Commits
 
@@ -96,35 +100,55 @@ using commitlint integrated with Super-Linter:
 - **Configuration** - `.commitlintrc.yml` at the repository root
 - **Enforcement** - Validated automatically via Super-Linter on every PR and push
 
-### Release Please (Semantic Versioning)
+### Release Automation
 
-Automated releases powered by [Google's Release Please](https://github.com/googleapis/release-please):
+Choose your release automation tool when creating a repository:
 
-- **Semantic versioning** - Versions are bumped automatically based on conventional commit types
+#### Option A — Release Please (default)
+
+Automated PR-based releases powered by [Google's Release Please](https://github.com/googleapis/release-please):
+
+- **Semantic versioning** — Versions bumped automatically from commit types
   (`feat` → minor, `fix` → patch, `feat!`/`BREAKING CHANGE` → major)
-- **Language-aware configuration** - Release type is set automatically based on the selected
-  language so that version files (e.g., `package.json`, `Cargo.toml`, `pyproject.toml`) are
-  updated correctly
-- **Release PRs** - Release Please opens a PR that tracks changes and updates the changelog
-- **CHANGELOG.md** - Generated automatically from conventional commit messages
-- **GitHub Releases** - Created automatically when a release PR is merged
-- **Configuration** - `release-please-config.json` and `.release-please-manifest.json`
+- **Language-aware** — Release type set from the selected language (updates `package.json`,
+  `Cargo.toml`, `pyproject.toml`, etc.)
+- **Release PRs** — Release Please opens a PR that tracks changes and updates the changelog
+- **CHANGELOG.md** — Generated automatically from conventional commit messages
+- **GitHub Releases** — Created automatically when the release PR is merged
+- **Config files** — `release-please-config.json`, `.release-please-manifest.json`
 
-#### Language to Release Type Mapping
+##### Language to Release Type Mapping
 
-| Language Input                    | Release Type       | Version Files Updated                       |
-| --------------------------------- | ------------------ | ------------------------------------------- |
-| `javascript`                      | `node`             | `package.json`                              |
-| `typescript`                      | `node`             | `package.json`                              |
-| `python`                          | `python`           | `pyproject.toml`, `setup.py`, `setup.cfg`   |
-| `go`                              | `go`               | Go module tags                              |
-| `rust`                            | `rust`             | `Cargo.toml`                                |
-| `java` / `kotlin`                 | `java`             | `pom.xml`                                   |
-| `ruby`                            | `ruby`             | `*.gemspec`, `lib/**/version.rb`            |
-| `php`                             | `php`              | `composer.json`                             |
-| `terraform`                       | `terraform-module` | Terraform module tags                       |
-| `all` / `language-agnostic-only`  | `simple`           | `CHANGELOG.md` only                         |
-| `typescript,python` (multi, first wins) | `node`       | Same as first language (e.g., `package.json` for `typescript`) |
+| Language Input                          | Release Type       | Version Files Updated                       |
+| --------------------------------------- | ------------------ | ------------------------------------------- |
+| `javascript`                            | `node`             | `package.json`                              |
+| `typescript`                            | `node`             | `package.json`                              |
+| `python`                                | `python`           | `pyproject.toml`, `setup.py`, `setup.cfg`   |
+| `go`                                    | `go`               | Go module tags                              |
+| `rust`                                  | `rust`             | `Cargo.toml`                                |
+| `java` / `kotlin`                       | `java`             | `pom.xml`                                   |
+| `ruby`                                  | `ruby`             | `*.gemspec`, `lib/**/version.rb`            |
+| `php`                                   | `php`              | `composer.json`                             |
+| `terraform`                             | `terraform-module` | Terraform module tags                       |
+| `all` / `language-agnostic-only`        | `simple`           | `CHANGELOG.md` only                         |
+| `typescript,python` (multi, first wins) | `node`             | Same as first language (`package.json`)     |
+
+#### Option B — git-cliff (tag-based)
+
+Lightweight, tag-driven releases powered by [git-cliff](https://git-cliff.org):
+
+- **Tag-based workflow** — Push a version tag (`v1.2.3`) to trigger a release
+- **Fast** — Written in Rust; generates changelogs in milliseconds
+- **Language-agnostic** — Works for any language without version file management
+- **CHANGELOG.md** — Generated from conventional commits, committed back to the default branch
+- **GitHub Releases** — Created automatically with the tag's changelog section as release notes
+- **Config file** — `cliff.toml` (Tera template for full customisation)
+
+```sh
+# Create a release with git-cliff
+git tag v1.2.3
+git push origin v1.2.3   # triggers the git-cliff-release.yml workflow
+```
 
 ### Repository Settings
 

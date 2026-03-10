@@ -50,6 +50,14 @@ on:
         required: false
         default: "language-agnostic-only"
         type: string
+      release_tool:
+        description: "Release automation tool: 'release-please' (PR-based, auto-bumps versions) or 'git-cliff' (tag-based, fast changelog generation)"
+        required: false
+        default: "release-please"
+        type: choice
+        options:
+          - release-please
+          - git-cliff
 
 jobs:
   terraform-create-repository:
@@ -166,6 +174,23 @@ jobs:
           cp templates/.commitlintrc.yml new-repo/
           cp templates/.release-please-manifest.json new-repo/
           cp templates/.github/linters/.editorconfig new-repo/
+
+      - name: Configure release tool
+        run: |
+          cd new-repo
+          RELEASE_TOOL="${{ github.event.inputs.release_tool }}"
+
+          if [ "$RELEASE_TOOL" = "git-cliff" ]; then
+            # Remove release-please files; keep git-cliff workflow + cliff.toml
+            rm -f release-please-config.json .release-please-manifest.json
+            rm -f .github/workflows/release-please.yml
+            echo "Release tool: git-cliff (tag-based changelog generation)" >> $GITHUB_STEP_SUMMARY
+          else
+            # Default: release-please — remove git-cliff files
+            rm -f cliff.toml
+            rm -f .github/workflows/git-cliff-release.yml
+            echo "Release tool: release-please (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Update CODEOWNERS with team name
         run: |
@@ -303,6 +328,7 @@ jobs:
           fi
 
       - name: Configure Release Please for selected languages
+        if: github.event.inputs.release_tool == 'release-please' || github.event.inputs.release_tool == ''
         run: |
           cd new-repo
           LANGUAGES="${{ github.event.inputs.languages }}"
@@ -353,6 +379,7 @@ jobs:
           echo "**Visibility:** ${{ github.event.inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch Protection:** ${{ github.event.inputs.enable_branch_protection }}" >> $GITHUB_STEP_SUMMARY
           echo "**Languages:** ${{ github.event.inputs.languages }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Release tool:** ${{ github.event.inputs.release_tool || 'release-please' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Created Resources (via Terraform)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ GitHub repository" >> $GITHUB_STEP_SUMMARY
@@ -371,7 +398,12 @@ jobs:
           echo "- ✅ Super-Linter workflow (auto-fix on PRs)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Super-Linter configuration (.super-linter.env)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Conventional commits (commitlint)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Release Please workflow (semantic versioning)" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.release_tool }}" = "git-cliff" ]; then
+            echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ cliff.toml (changelog configuration)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY
 
   teardown:
