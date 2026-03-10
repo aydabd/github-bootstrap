@@ -1,14 +1,8 @@
-// Commitlint ignores for pre-conventional automation commits.
-// This file is referenced by .commitlintrc.yml via "extends" so that the
-// ignores() function (not expressible in YAML) is available.
+// This file is no longer used. The ignores() function has been moved to
+// .commitlintrc.cjs (the primary commitlint config) because commitlint v20
+// only applies ignores() from the root config, not from extends entries.
 //
-// The "Initial plan" commit was created by the copilot automation agent
-// before commitlint was enabled in this project and cannot be rewritten.
+// Kept here only so existing git history references remain valid.
 "use strict";
 
-module.exports = {
-    ignores: [
-        // Skip the empty "Initial plan" bootstrap commit from the agent.
-        (commit) => commit === "Initial plan",
-    ],
-};
+module.exports = {};
