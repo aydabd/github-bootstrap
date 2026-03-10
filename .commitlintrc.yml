@@ -1,7 +1,13 @@
 # Commitlint configuration for conventional commits
 # See: https://www.conventionalcommits.org/
+#
+# The second extends entry (commitlint-ignores.cjs) supplies an ignores()
+# function that is not expressible in YAML. It skips any pre-conventional
+# automation commit created before commitlint was enabled in this project
+# (e.g. the empty "Initial plan" bootstrap commit).
 extends:
   - "@commitlint/config-conventional"
+  - "./commitlint-ignores.cjs"
 
 rules:
   # Type must be one of the following
