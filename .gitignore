@@ -10,3 +10,4 @@ terraform/override.tf.json
 terraform/*_override.tf
 terraform/*_override.tf.json
 terraform/.terraform.tfstate.lock.info
+super-linter-output/

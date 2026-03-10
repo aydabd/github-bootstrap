@@ -119,19 +119,19 @@ Automated PR-based releases powered by [Google's Release Please](https://github.
 
 ##### Language to Release Type Mapping
 
-| Language Input                          | Release Type       | Version Files Updated                       |
-| --------------------------------------- | ------------------ | ------------------------------------------- |
-| `javascript`                            | `node`             | `package.json`                              |
-| `typescript`                            | `node`             | `package.json`                              |
-| `python`                                | `python`           | `pyproject.toml`, `setup.py`, `setup.cfg`   |
-| `go`                                    | `go`               | Go module tags                              |
-| `rust`                                  | `rust`             | `Cargo.toml`                                |
-| `java` / `kotlin`                       | `java`             | `pom.xml`                                   |
-| `ruby`                                  | `ruby`             | `*.gemspec`, `lib/**/version.rb`            |
-| `php`                                   | `php`              | `composer.json`                             |
-| `terraform`                             | `terraform-module` | Terraform module tags                       |
-| `all` / `language-agnostic-only`        | `simple`           | `CHANGELOG.md` only                         |
-| `typescript,python` (multi, first wins) | `node`             | Same as first language (`package.json`)     |
+| Language Input                          | Release Type       | Version Files Updated                     |
+| --------------------------------------- | ------------------ | ----------------------------------------- |
+| `javascript`                            | `node`             | `package.json`                            |
+| `typescript`                            | `node`             | `package.json`                            |
+| `python`                                | `python`           | `pyproject.toml`, `setup.py`, `setup.cfg` |
+| `go`                                    | `go`               | Go module tags                            |
+| `rust`                                  | `rust`             | `Cargo.toml`                              |
+| `java` / `kotlin`                       | `java`             | `pom.xml`                                 |
+| `ruby`                                  | `ruby`             | `*.gemspec`, `lib/**/version.rb`          |
+| `php`                                   | `php`              | `composer.json`                           |
+| `terraform`                             | `terraform-module` | Terraform module tags                     |
+| `all` / `language-agnostic-only`        | `simple`           | `CHANGELOG.md` only                       |
+| `typescript,python` (multi, first wins) | `node`             | Same as first language (`package.json`)   |
 
 #### Option B — git-cliff (tag-based)
 
@@ -192,12 +192,12 @@ git commit -m "chore: add changeset for my-feature"
 
 ### Release Tool Comparison
 
-| Tool               | Stars | Trigger     | Language support | Monorepo | Manual step     |
-| ------------------ | ----- | ----------- | ---------------- | -------- | --------------- |
-| release-please     | ~7k   | push to main (PR) | language-aware | partial | merge PR   |
-| git-cliff          | ~9k   | git tag     | any              | ✅       | `git tag`       |
-| semantic-release   | ~23k  | push to main | any             | via plugins | automatic   |
-| changesets         | ~11k  | push to main (PR) | JS/TS only  | ✅       | `npx changeset` |
+| Tool             | Stars | Trigger           | Language support | Monorepo    | Manual step     |
+| ---------------- | ----- | ----------------- | ---------------- | ----------- | --------------- |
+| release-please   | ~7k   | push to main (PR) | language-aware   | partial     | merge PR        |
+| git-cliff        | ~9k   | git tag           | any              | ✅          | `git tag`       |
+| semantic-release | ~23k  | push to main      | any              | via plugins | automatic       |
+| changesets       | ~11k  | push to main (PR) | JS/TS only       | ✅          | `npx changeset` |
 
 ### Repository Settings
 

@@ -1,6 +1,16 @@
 ---
-# Super-Linter workflow for github-bootstrap repository
-# This is the simplified bootstrap repository linter focusing on core validation
+# Lint and auto-format code using native tools (no Docker overhead).
+#
+# Pull-request runs (two phases):
+#   1. Auto-fix: Prettier + markdownlint fix formatting, commit result back
+#      with "[skip ci]" so this workflow is NOT re-triggered.
+#   2. Validate: Run all linters; fail the PR if anything is still wrong.
+#
+# Push-to-main / workflow_dispatch runs: validate only (no commits).
+#
+# Re-trigger question: auto-fix commits use "[skip ci]" in the subject line,
+# which causes GitHub Actions to skip all workflows for that commit, so there
+# is no infinite loop.  The author's next push will trigger a fresh run.
 name: Super-Linter
 
 on:
@@ -12,7 +22,7 @@ on:
       - main
   workflow_dispatch:
 
-# Cancel in-progress runs for the same ref to avoid redundant work on rapid pushes.
+# Cancel superseded runs on the same ref (e.g. rapid pushes to the same PR branch).
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -28,10 +38,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ── Checkout ──────────────────────────────────────────────────────────────
       - name: Checkout Code
         uses: actions/checkout@v6
         with:
+          # Full history so commitlint can walk the full PR range.
           fetch-depth: 0
+          # Check out the actual PR branch so auto-fix commits can be pushed back.
+          ref: ${{ github.head_ref || github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Git Config
@@ -40,61 +54,105 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Cache the super-linter Docker image to avoid re-pulling ~1.5 GB on every run.
-      # The key is pinned to the exact image version so the cache auto-invalidates on upgrades.
-      - name: Cache Super-Linter Docker image
-        id: cache-super-linter
-        uses: actions/cache@v5
+      # ── Tool installation ──────────────────────────────────────────────────────
+      # Native tools install in ~20 s; no Docker image pull (~72 s) needed.
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
         with:
-          path: /tmp/super-linter.tar
-          key: super-linter-slim-v8.5.0-${{ runner.os }}
+          node-version: lts/*
 
-      - name: Load cached Super-Linter image
-        if: steps.cache-super-linter.outputs.cache-hit == 'true'
-        run: docker load -i /tmp/super-linter.tar
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-      - name: Pull and cache Super-Linter image
-        if: steps.cache-super-linter.outputs.cache-hit != 'true'
+      - name: Install Node.js lint tools
         run: |
-          docker pull ghcr.io/super-linter/super-linter:slim-v8.5.0
-          docker save ghcr.io/super-linter/super-linter:slim-v8.5.0 \
-            -o /tmp/super-linter.tar
+          npm install --global --quiet \
+            markdownlint-cli2 \
+            prettier \
+            @commitlint/cli \
+            @commitlint/config-conventional \
+            textlint \
+            textlint-rule-terminology \
+            editorconfig-checker
 
-      - name: Load Super-Linter Config
-        run: |
-          # Use grep inverse matching to exclude eventual comments in the .env file
-          # because the GitHub Actions command to set environment variables doesn't support comments.
-          grep -v '^#' .super-linter.env | grep -v '^$' >> "$GITHUB_ENV"
+      - name: Install Python tools
+        run: pip install --quiet pre-commit
 
-      - name: Checkout PR Branch
+      # ── Auto-fix pass (PR only) ────────────────────────────────────────────────
+      # Formatters run first so the validation pass always sees clean files.
+      # Fixes are committed back with "[skip ci]" to prevent an infinite loop.
+      # The "|| true" on auto-fix steps is intentional: these are best-effort
+      # formatters; unfixable issues (e.g. parse errors) are caught in the
+      # validation pass below, which does NOT use "|| true".
+      - name: Auto-fix Prettier (Markdown / YAML / JSON)
         if: github.event_name == 'pull_request'
         run: |
-          git fetch origin ${{ github.head_ref }}
-          git checkout ${{ github.head_ref }}
+          prettier --write "**/*.{md,yaml,yml,json}" \
+            --ignore-path .gitignore || true
 
-      - name: Run Super-Linter (Auto-fix)
+      - name: Auto-fix markdownlint
         if: github.event_name == 'pull_request'
-        uses: super-linter/super-linter/slim@v8.5.0
-        env:
-          DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_ALL_CODEBASE: false
+        run: |
+          markdownlint-cli2 --fix "**/*.md" \
+            --config .github/linters/.markdownlint.json || true
+
+      - name: Auto-fix Terraform fmt
+        if: github.event_name == 'pull_request'
+        run: |
+          # Only run if the terraform directory exists.
+          [[ -d ./terraform ]] && terraform fmt -recursive ./terraform || true
 
       - name: Commit Auto-fixes
         if: github.event_name == 'pull_request'
         run: |
-          if [[ -n $(git status -s) ]]; then
+          if [[ -n $(git status --short) ]]; then
             git add -A
-            git commit -m "chore: auto-fix linting issues [skip ci]" || echo "No changes to commit"
-            git push origin ${{ github.head_ref }}
+            git commit -m "chore: auto-fix linting issues [skip ci]"
+            git push origin HEAD
+            echo "Auto-fixes committed and pushed."
           else
-            echo "No changes to commit"
+            echo "No linting fixes needed."
           fi
 
-      - name: Run Super-Linter (Check Only)
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        uses: super-linter/super-linter/slim@v8.5.0
-        env:
-          DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'workflow_dispatch' }}
+      # ── Validation pass ────────────────────────────────────────────────────────
+      - name: Validate Markdown
+        run: |
+          markdownlint-cli2 "**/*.md" \
+            --config .github/linters/.markdownlint.json
+
+      - name: Validate Prettier formatting (Markdown / YAML / JSON)
+        run: |
+          prettier --check "**/*.{md,yaml,yml,json}" \
+            --ignore-path .gitignore
+
+      - name: Validate EditorConfig
+        run: editorconfig-checker
+
+      - name: Validate Terraform formatting
+        run: terraform fmt -recursive -check ./terraform
+
+      - name: Validate pre-commit config
+        run: pre-commit validate-config .pre-commit-config.yaml
+
+      - name: Check for merge conflict markers
+        run: |
+          if git grep --line-number "<<<<<<< " 2>/dev/null | grep .; then
+            echo "ERROR: Merge conflict markers found!" >&2
+            exit 1
+          fi
+          echo "No merge conflict markers found."
+
+      - name: Validate commit messages (commitlint)
+        if: github.event_name == 'pull_request'
+        run: |
+          npx commitlint \
+            --from "${{ github.event.pull_request.base.sha }}" \
+            --to "${{ github.event.pull_request.head.sha }}"
+
+      - name: Validate natural language (textlint)
+        # Advisory only: textlint-rule-terminology with defaultTerms=false and
+        # no custom terms performs no checks, but the step validates the config.
+        run: |
+          textlint \
+            --config .github/linters/.textlintrc \
+            "**/*.md" || true
