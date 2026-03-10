@@ -112,18 +112,19 @@ Automated releases powered by [Google's Release Please](https://github.com/googl
 
 #### Language to Release Type Mapping
 
-| Language Input       | Release Type       | Version Files Updated                       |
-| -------------------- | ------------------ | ------------------------------------------- |
-| `javascript`         | `node`             | `package.json`                              |
-| `typescript`         | `node`             | `package.json`                              |
-| `python`             | `python`           | `pyproject.toml`, `setup.py`, `setup.cfg`   |
-| `go`                 | `go`               | Go module tags                              |
-| `rust`               | `rust`             | `Cargo.toml`                                |
-| `java` / `kotlin`    | `java`             | `pom.xml`                                   |
-| `ruby`               | `ruby`             | `*.gemspec`, `lib/**/version.rb`            |
-| `php`                | `php`              | `composer.json`                             |
-| `terraform`          | `terraform-module` | Terraform module tags                       |
-| `all` / multi / other | `simple`          | `CHANGELOG.md` only                         |
+| Language Input                    | Release Type       | Version Files Updated                       |
+| --------------------------------- | ------------------ | ------------------------------------------- |
+| `javascript`                      | `node`             | `package.json`                              |
+| `typescript`                      | `node`             | `package.json`                              |
+| `python`                          | `python`           | `pyproject.toml`, `setup.py`, `setup.cfg`   |
+| `go`                              | `go`               | Go module tags                              |
+| `rust`                            | `rust`             | `Cargo.toml`                                |
+| `java` / `kotlin`                 | `java`             | `pom.xml`                                   |
+| `ruby`                            | `ruby`             | `*.gemspec`, `lib/**/version.rb`            |
+| `php`                             | `php`              | `composer.json`                             |
+| `terraform`                       | `terraform-module` | Terraform module tags                       |
+| `all` / `language-agnostic-only`  | `simple`           | `CHANGELOG.md` only                         |
+| `typescript,python` (multi, first wins) | `node`       | Same as first language (e.g., `package.json` for `typescript`) |
 
 ### Repository Settings
 
