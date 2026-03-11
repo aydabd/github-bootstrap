@@ -66,8 +66,11 @@ on:
       gh_token:
         description: >-
           Personal Access Token with repo and admin:org scopes.
-          If omitted, the repository secret GH_PAT is used.
-          Use this when you do not have permission to set repository secrets.
+          WARNING: This input is NOT treated as a secret — its value may be
+          visible in the run's inputs/metadata to anyone who can view the run.
+          Prefer using the repository secret GH_PAT whenever possible.
+          Only use this input when you do not have permission to set repository
+          secrets and use a short-lived token with minimum required scopes.
         required: false
         type: string
 

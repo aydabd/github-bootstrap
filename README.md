@@ -63,7 +63,13 @@ you can pass your token directly when triggering a workflow:
 2. Fill in the **Personal Access Token (gh_token)** field with your `ghp_…` token
 
 > **Security note:** The token is immediately masked with `::add-mask::` at the start of each job
-> so it never appears in plain text in the workflow logs.
+> so it never appears in plain text in the workflow logs. Masking only prevents the token from
+> being printed in logs; the raw workflow input value may still be visible in the run's
+> inputs/metadata to anyone who can view the run. Prefer
+> [Option A — Repository secret](#option-a--repository-secret-recommended-for-sharedteam-use)
+> whenever possible, and if you must use Option B, use a short-lived token with the minimum
+> required scopes.
+
 > **Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
 > Use `private` for personal account repositories.
 
