@@ -15,12 +15,14 @@ This Terraform module creates a fully configured GitHub repository with the same
 ### Prerequisites
 
 A GitHub Personal Access Token (PAT) is the only credential required — no GitHub App needed.
+Terraform CLI version **1.5 or later** is required (see `versions.tf`).
 
-| Use case                           | Required PAT scopes                  |
-| ---------------------------------- | ------------------------------------ |
-| Personal account repository        | `repo`                               |
-| Organization repository            | `repo` + `admin:org`                 |
-| Cleanup on failure (`delete_repo`) | `repo` + `admin:org` + `delete_repo` |
+| Use case                                           | Required PAT scopes                  |
+| -------------------------------------------------- | ------------------------------------ |
+| Personal account repository                        | `repo`                               |
+| Organization repository                            | `repo` + `admin:org`                 |
+| Cleanup on failure (`delete_repo`) — personal repo | `repo` + `delete_repo`               |
+| Cleanup on failure (`delete_repo`) — org repo      | `repo` + `admin:org` + `delete_repo` |
 
 ### Apply via CLI — personal repository
 
