@@ -70,8 +70,8 @@ you can pass your token directly when triggering a workflow:
 > whenever possible, and if you must use Option B, use a short-lived token with the minimum
 > required scopes.
 
-> **Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
-> Use `private` for personal account repositories.
+**Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
+Use `private` for personal account repositories.
 
 ## Quick Start
 
