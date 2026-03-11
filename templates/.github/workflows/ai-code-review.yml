@@ -83,12 +83,9 @@ jobs:
           direct_prompt: |
             Review this pull request focusing ONLY on high-impact issues:
 
-            1. **Security vulnerabilities** — injection, auth bypass, secrets exposure,
-               unsafe deserialization, path traversal, XSS, CSRF, etc.
-            2. **Bugs and logic errors** — null pointer issues, off-by-one errors,
-               race conditions, resource leaks, incorrect error handling
-            3. **Critical design flaws** — violations of SOLID principles that will
-               cause maintenance problems, missing input validation, broken API contracts
+            1. **Security vulnerabilities** — injection, auth bypass, secrets exposure, unsafe deserialization, path traversal, XSS, CSRF
+            2. **Bugs and logic errors** — null pointer issues, off-by-one errors, race conditions, resource leaks, incorrect error handling
+            3. **Critical design flaws** — violations of SOLID principles, missing input validation, broken API contracts
 
             DO NOT comment on:
             - Style preferences (linters handle this)
