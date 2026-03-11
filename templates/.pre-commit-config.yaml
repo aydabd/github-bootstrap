@@ -23,13 +23,14 @@ repos:
         args: [--unsafe] # allow custom YAML tags used in some workflows
       - id: check-json
 
-  # ── Prettier (JSON / YAML / Markdown) ────────────────────────────────────────
-  # Mirrors FIX_JSON_PRETTIER, FIX_YAML_PRETTIER, FIX_MARKDOWN_PRETTIER in CI.
+  # ── Prettier (JSON / YAML) ───────────────────────────────────────────────────
+  # Mirrors FIX_JSON_PRETTIER, FIX_YAML_PRETTIER in CI.
+  # Markdown is handled exclusively by markdownlint (see markdownlint hook above).
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v3.0.3
     hooks:
       - id: prettier
-        types_or: [yaml, json, markdown]
+        types_or: [yaml, json]
 
   # ── Shell formatting (shfmt) ──────────────────────────────────────────────────
   # Mirrors FIX_SHELL_SHFMT in CI.

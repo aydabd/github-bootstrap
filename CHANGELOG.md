@@ -2,10 +2,9 @@
 
 ## [1.0.1](https://github.com/aydabd/github-bootstrap/compare/v1.0.0...v1.0.1) (2026-03-11)
 
-
 ### Bug Fixes
 
-* exclude CHANGELOG.md from markdownlint linting ([#8](https://github.com/aydabd/github-bootstrap/issues/8)) ([e06989a](https://github.com/aydabd/github-bootstrap/commit/e06989a6e4ff2d2bf3913d0926580f21bd2c0c24))
+- exclude CHANGELOG.md from markdownlint linting ([#8](https://github.com/aydabd/github-bootstrap/issues/8)) ([e06989a](https://github.com/aydabd/github-bootstrap/commit/e06989a6e4ff2d2bf3913d0926580f21bd2c0c24))
 
 ## 1.0.0 (2026-03-11)
 
