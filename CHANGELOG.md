@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/aydabd/github-bootstrap/compare/v1.0.1...v1.0.2) (2026-03-11)
+
+
+### Bug Fixes
+
+* remove Markdown from Prettier scope to resolve conflict with markdownlint ([b91c3bf](https://github.com/aydabd/github-bootstrap/commit/b91c3bfc859e6289379667fcdbd1dde42bedba6a))
+
 ## [1.0.1](https://github.com/aydabd/github-bootstrap/compare/v1.0.0...v1.0.1) (2026-03-11)
 
 ### Bug Fixes
