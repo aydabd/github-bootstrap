@@ -41,8 +41,8 @@ jobs:
     runs-on: ubuntu-latest
 
     # Run when:
-    #   1. A PR is opened/updated AND the ANTHROPIC_API_KEY secret exists
-    #   2. An issue comment mentions @claude on a PR
+    #   1. A PR is opened/updated (non-draft, no skip-ai-review label)
+    #   2. A repo member/owner/collaborator comments @claude on a PR
     # Skip draft PRs and PRs with the "skip-ai-review" label.
     if: |
       (
