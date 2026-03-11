@@ -87,10 +87,10 @@ jobs:
       # The "|| true" on auto-fix steps is intentional: these are best-effort
       # formatters; unfixable issues (e.g. parse errors) are caught in the
       # validation pass below, which does NOT use "|| true".
-      - name: Auto-fix Prettier (Markdown / YAML / JSON)
+      - name: Auto-fix Prettier (YAML / JSON)
         if: github.event_name == 'pull_request'
         run: |
-          prettier --write "**/*.{md,yaml,yml,json}" \
+          prettier --write "**/*.{yaml,yml,json}" \
             --ignore-path .gitignore || true
 
       - name: Auto-fix markdownlint
@@ -125,9 +125,9 @@ jobs:
             --ignore CHANGELOG.md \
             --config .github/linters/.markdownlint.json
 
-      - name: Validate Prettier formatting (Markdown / YAML / JSON)
+      - name: Validate Prettier formatting (YAML / JSON)
         run: |
-          prettier --check "**/*.{md,yaml,yml,json}" \
+          prettier --check "**/*.{yaml,yml,json}" \
             --ignore-path .gitignore
 
       - name: Validate EditorConfig
