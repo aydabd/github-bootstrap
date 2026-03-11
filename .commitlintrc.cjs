@@ -14,7 +14,16 @@ module.exports = {
     // Skip any pre-conventional automation commits that were created before
     // commitlint was enabled in this project and cannot be rewritten.
     // Use .trim() because git commit messages include trailing newlines.
-    ignores: [(commit) => commit.trim() === "Initial plan"],
+    ignores: [
+        (commit) => commit.trim() === "Initial plan",
+        // Exceeded header-max-length; superseded by 08f6122 with a shorter message.
+        (commit) =>
+            commit
+                .trim()
+                .startsWith(
+                    "fix: address Copilot review feedback \u2014 lock file patterns",
+                ),
+    ],
 
     rules: {
         // Type must be one of the following

@@ -1,0 +1,77 @@
+---
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit AI Code Review Configuration
+# https://docs.coderabbit.ai/getting-started/configure-coderabbit
+#
+# Setup:
+#   1. Install the CodeRabbit GitHub App: https://github.com/apps/coderabbitai
+#   2. Free tier: works automatically on public/open-source repositories
+#   3. Paid tiers (Pro/Teams/Enterprise): sign up at https://coderabbit.ai
+#      and connect your GitHub account for private repo support and advanced features
+#
+# No secrets or API keys are needed — CodeRabbit authenticates via the GitHub App.
+
+language: en-US
+
+tone_instructions: >-
+  Be professional, concise, and actionable. Focus exclusively on high-impact
+  issues such as bugs, security vulnerabilities, performance problems, and
+  critical design flaws. Do not flag stylistic preferences, minor naming
+  suggestions, or trivial improvements — linters handle those.
+
+early_access: false
+
+reviews:
+  # "assertive" profile focuses on high-severity issues and avoids noise
+  profile: assertive
+
+  # Block PRs when critical issues are found
+  request_changes_workflow: true
+
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+
+  # Only flag issues that are actionable and impactful
+  labeling_instructions:
+    - label: security
+      instructions: >-
+        Apply when the change introduces or fails to address a security
+        vulnerability (injection, auth bypass, secrets exposure, etc.)
+    - label: bug
+      instructions: >-
+        Apply when the change introduces a likely runtime bug, logic error,
+        or regression.
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+  path_filters:
+    # Skip generated, vendored, and lock files — they add noise with no value
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!**/pnpm-lock.yaml"
+    - "!**/npm-shrinkwrap.json"
+    - "!**/yarn.lock"
+    - "!**/*.sum"
+    - "!**/node_modules/**"
+    - "!**/vendor/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/.terraform/**"
+    - "!**/CHANGELOG.md"
+
+  # Suppress low-value review comments
+  tools:
+    # GitHub checks integration
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+
+chat:
+  auto_reply: true

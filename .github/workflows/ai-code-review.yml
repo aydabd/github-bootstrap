@@ -1,0 +1,101 @@
+---
+# AI-powered code review using Claude.
+#
+# This workflow provides AI code review on pull requests using Anthropic's
+# Claude via the official claude-code-action. It focuses on high-impact issues:
+# security vulnerabilities, bugs, logic errors, and critical design flaws.
+#
+# Setup:
+#   1. Get an API key from https://console.anthropic.com
+#   2. Add it as a repository secret named ANTHROPIC_API_KEY
+#
+# The workflow is skipped gracefully when no API key is configured,
+# so it is safe to include in any repository without breaking CI.
+#
+# CodeRabbit integration:
+#   This workflow complements CodeRabbit (configured via .coderabbit.yaml).
+#   CodeRabbit runs automatically via its GitHub App — no workflow needed.
+#   Together they provide two independent AI reviewers for maximum coverage.
+
+name: AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+
+# Cancel superseded runs on the same PR to save resources.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  claude-review:
+    name: Claude AI Review
+    runs-on: ubuntu-latest
+
+    # Run when:
+    #   1. A PR is opened/updated (non-draft, no skip-ai-review label)
+    #   2. A repo member/owner/collaborator comments @claude on a PR
+    # Skip draft PRs and PRs with the "skip-ai-review" label.
+    if: |
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.draft == false &&
+        !contains(github.event.pull_request.labels.*.name, 'skip-ai-review')
+      ) ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        contains(github.event.comment.body, '@claude') &&
+        !contains(github.event.issue.labels.*.name, 'skip-ai-review') &&
+        (
+          github.event.comment.author_association == 'MEMBER' ||
+          github.event.comment.author_association == 'OWNER' ||
+          github.event.comment.author_association == 'COLLABORATOR'
+        )
+      )
+
+    steps:
+      - name: Check for API key
+        id: check-key
+        run: |
+          if [[ -n "${{ secrets.ANTHROPIC_API_KEY }}" ]]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping Claude review — ANTHROPIC_API_KEY secret is not configured."
+            echo "To enable Claude AI reviews, add your Anthropic API key as a repository secret."
+          fi
+
+      - name: Run Claude Code Review
+        if: steps.check-key.outputs.has_key == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Direct Claude to focus on high-impact issues only
+          direct_prompt: |
+            Review this pull request focusing ONLY on high-impact issues:
+
+            1. **Security vulnerabilities** — injection, auth bypass, secrets exposure, unsafe deserialization, path traversal, XSS, CSRF
+            2. **Bugs and logic errors** — null pointer issues, off-by-one errors, race conditions, resource leaks, incorrect error handling
+            3. **Critical design flaws** — violations of SOLID principles, missing input validation, broken API contracts
+
+            DO NOT comment on:
+            - Style preferences (linters handle this)
+            - Minor naming suggestions
+            - Trivial improvements that don't affect correctness or security
+            - Documentation formatting
+
+            For each issue found, explain WHY it is a problem and suggest a concrete fix.
+            If the PR looks good with no high-impact issues, say so briefly.
+
+          # Timeout for the review (in milliseconds)
+          timeout_ms: 120000

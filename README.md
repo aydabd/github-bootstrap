@@ -17,6 +17,7 @@ Creates fully configured repositories with:
 - Conventional commits enforcement via commitlint
 - Release Please workflow for automated semantic versioning
 - Super-Linter workflow with autofix for PRs
+- AI code review with CodeRabbit and Claude (see [AI Code Review](#ai-code-review))
 - Makefile for local linting with Docker
 
 ## Setup
@@ -132,6 +133,56 @@ using commitlint integrated with Super-Linter:
 - **Allowed types** - `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
 - **Configuration** - `.commitlintrc.yml` at the repository root
 - **Enforcement** - Validated automatically via Super-Linter on every PR and push
+
+### AI Code Review
+
+Every repository gets two independent AI reviewers that focus on **high and critical issues only** —
+no noise from style nitpicks (linters handle those).
+
+#### CodeRabbit (GitHub App)
+
+[CodeRabbit](https://coderabbit.ai) reviews every PR automatically via its GitHub App:
+
+- **Free tier** — Works out of the box on public/open-source repositories
+- **Paid tiers** (Pro / Teams) — Sign up at [coderabbit.ai](https://coderabbit.ai)
+  and connect your GitHub organization for private repo support and advanced features
+- **Enterprise** — Requires the [CodeRabbit GitHub App](https://github.com/apps/coderabbitai)
+  installed on your GitHub Enterprise Server instance; see
+  [coderabbit.ai/enterprise](https://coderabbit.ai) for self-hosted deployment options
+- **No secrets needed** — Authentication is handled by the GitHub App
+- **Configuration** — `.coderabbit.yaml` at the repository root (included in all templates)
+
+Setup: install the [CodeRabbit GitHub App](https://github.com/apps/coderabbitai) on your
+repository or organization. Reviews start automatically on the next PR.
+
+#### Claude AI Review (GitHub Actions)
+
+[Claude](https://anthropic.com) provides a second AI review layer via the
+`anthropics/claude-code-action` GitHub Action:
+
+- **API key** — Add an `ANTHROPIC_API_KEY` repository secret from
+  [console.anthropic.com](https://console.anthropic.com)
+- **Graceful skip** — The workflow is skipped with a notice when no API key is configured,
+  so it never breaks CI
+- **Interactive** — Comment `@claude` on any PR to ask follow-up questions
+- **Configuration** — `.github/workflows/ai-code-review.yml`
+
+#### Review Focus
+
+Both reviewers are configured to flag only high-impact issues:
+
+| Category              | Examples                                                     |
+| --------------------- | ------------------------------------------------------------ |
+| Security              | Injection, auth bypass, secrets exposure, XSS, CSRF          |
+| Bugs                  | Null pointers, off-by-one, race conditions, resource leaks   |
+| Critical design flaws | Broken API contracts, missing input validation, SOLID issues |
+
+Style, formatting, and naming concerns are **not** flagged — those are handled by
+Super-Linter and pre-commit hooks.
+
+#### Opting Out
+
+Add the `skip-ai-review` label to any PR to skip both AI reviewers for that PR.
 
 ### Release Automation
 

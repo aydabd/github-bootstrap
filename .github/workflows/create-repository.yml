@@ -191,6 +191,7 @@ jobs:
           cp templates/.super-linter.env new-repo/
           cp templates/.commitlintrc.yml new-repo/
           cp templates/.release-please-manifest.json new-repo/
+          cp templates/.coderabbit.yaml new-repo/
 
           # Copy release-tool specific dotfiles / directories
           cp templates/.releaserc.json new-repo/
