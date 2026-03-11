@@ -64,7 +64,6 @@ you can pass your token directly when triggering a workflow:
 
 > **Security note:** The token is immediately masked with `::add-mask::` at the start of each job
 > so it never appears in plain text in the workflow logs.
-
 > **Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
 > Use `private` for personal account repositories.
 
