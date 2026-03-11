@@ -63,6 +63,16 @@ on:
           - git-cliff
           - release-please
           - semantic-release
+      gh_token:
+        description: >-
+          Personal Access Token with repo and admin:org scopes.
+          WARNING: This input is NOT treated as a secret — its value may be
+          visible in the run's inputs/metadata to anyone who can view the run.
+          Prefer using the repository secret GH_PAT whenever possible.
+          Only use this input when you do not have permission to set repository
+          secrets and use a short-lived token with minimum required scopes.
+        required: false
+        type: string
 
 jobs:
   terraform-create-repository:
@@ -104,16 +114,23 @@ jobs:
             echo "holder=${{ github.event.inputs.license_holder }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Resolve GitHub token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          gh_token: ${{ github.event.inputs.gh_token }}
+          gh_pat_secret: ${{ secrets.GH_PAT }}
+
       - name: Terraform Init
         working-directory: terraform
         env:
-          TF_VAR_github_token: ${{ secrets.GH_PAT }}
+          TF_VAR_github_token: ${{ steps.resolve-token.outputs.token }}
         run: terraform init
 
       - name: Terraform Plan
         working-directory: terraform
         env:
-          TF_VAR_github_token: ${{ secrets.GH_PAT }}
+          TF_VAR_github_token: ${{ steps.resolve-token.outputs.token }}
           TF_VAR_repo_name: ${{ github.event.inputs.repo_name }}
           TF_VAR_repo_owner: ${{ steps.set-owner.outputs.owner }}
           TF_VAR_repo_description: ${{ github.event.inputs.repo_description }}
@@ -129,7 +146,7 @@ jobs:
         working-directory: terraform
         continue-on-error: true
         env:
-          TF_VAR_github_token: ${{ secrets.GH_PAT }}
+          TF_VAR_github_token: ${{ steps.resolve-token.outputs.token }}
           TF_VAR_repo_name: ${{ github.event.inputs.repo_name }}
           TF_VAR_repo_owner: ${{ steps.set-owner.outputs.owner }}
           TF_VAR_repo_description: ${{ github.event.inputs.repo_description }}
@@ -144,7 +161,7 @@ jobs:
         id: check-repo
         if: always()
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           if gh repo view "${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}" &>/dev/null; then
             echo "repo_created=true" >> $GITHUB_OUTPUT
@@ -161,7 +178,7 @@ jobs:
 
       - name: Clone new repository
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           git clone https://x-access-token:${GH_TOKEN}@github.com/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}.git new-repo
           cd new-repo
@@ -445,9 +462,19 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@v6
+
+      - name: Resolve GitHub token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          gh_token: ${{ github.event.inputs.gh_token }}
+          gh_pat_secret: ${{ secrets.GH_PAT }}
+
       - name: Delete repository on failure
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           OWNER="${{ needs.terraform-create-repository.outputs.owner }}"
           REPO="${{ github.event.inputs.repo_name }}"

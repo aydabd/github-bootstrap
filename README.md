@@ -39,7 +39,11 @@ required — the PAT alone is sufficient for both personal accounts and organiza
 
 4. Copy the generated token (starts with `ghp_…`)
 
-### 2 — Add the PAT as a repository secret
+### 2 — Provide the PAT to the workflow
+
+There are two ways to supply the token, listed from most to least recommended:
+
+#### Option A — Repository secret (recommended for shared/team use)
 
 1. Fork this repository **or** click **Use this template** → **Create a new repository**
    (for company use, create the fork/template repo inside your organization)
@@ -48,8 +52,26 @@ required — the PAT alone is sufficient for both personal accounts and organiza
 4. Name: `GH_PAT`, Value: your token from step 1
 5. Click **Add secret**
 
-> **Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
-> Use `private` for personal account repositories.
+The workflows will automatically pick up `GH_PAT` without any extra input.
+
+#### Option B — Workflow input (for users without secret-management access)
+
+If you are working in an enterprise or internal repository where you cannot add repository secrets,
+you can pass your token directly when triggering a workflow:
+
+1. Go to **Actions** → select the workflow → **Run workflow**
+2. Fill in the **Personal Access Token (gh_token)** field with your `ghp_…` token
+
+> **Security note:** The token is immediately masked with `::add-mask::` at the start of each job
+> so it never appears in plain text in the workflow logs. Masking only prevents the token from
+> being printed in logs; the raw workflow input value may still be visible in the run's
+> inputs/metadata to anyone who can view the run. Prefer
+> [Option A — Repository secret](#option-a--repository-secret-recommended-for-sharedteam-use)
+> whenever possible, and if you must use Option B, use a short-lived token with the minimum
+> required scopes.
+
+**Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
+Use `private` for personal account repositories.
 
 ## Quick Start
 
@@ -302,7 +324,8 @@ managing repositories as long-lived infrastructure.
 ## Requirements
 
 - GitHub personal access token (PAT) with `repo` scope (add `admin:org` for organization repositories)
-  stored as a `GH_PAT` repository secret — see [Setup](#setup)
+  — stored as a `GH_PAT` repository secret **or** provided via the `gh_token` workflow input
+  — see [Setup](#setup)
 - Docker installed for local linting with `make lint` (optional)
 
 ## License

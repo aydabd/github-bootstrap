@@ -1,0 +1,41 @@
+---
+name: Resolve GitHub Token
+description: >-
+  Resolves a GitHub Personal Access Token from a workflow_dispatch input or
+  the GH_PAT repository secret, masks it immediately, and exports it as a
+  step output. Fails fast if neither source provides a value.
+
+inputs:
+  gh_token:
+    description: Optional user-supplied PAT from workflow_dispatch input.
+    required: false
+    default: ""
+  gh_pat_secret:
+    description: >-
+      Repository secret GH_PAT. Pass as
+      ${{ secrets.GH_PAT }} from the calling workflow.
+    required: false
+    default: ""
+
+outputs:
+  token:
+    description: Resolved and masked GitHub token.
+    value: ${{ steps.resolve.outputs.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve token
+      id: resolve
+      shell: bash
+      env:
+        INPUT_TOKEN: ${{ inputs.gh_token }}
+        SECRET_TOKEN: ${{ inputs.gh_pat_secret }}
+      run: |
+        TOKEN="${INPUT_TOKEN:-$SECRET_TOKEN}"
+        if [ -z "$TOKEN" ]; then
+          echo "::error::No GitHub token available. Provide the 'gh_token' input or set the GH_PAT repository secret."
+          exit 1
+        fi
+        echo "::add-mask::$TOKEN"
+        echo "token=$TOKEN" >> $GITHUB_OUTPUT

@@ -24,6 +24,16 @@ on:
         required: false
         default: "5"
         type: string
+      gh_token:
+        description: >-
+          Personal Access Token with repo and admin:org scopes.
+          WARNING: This input is NOT treated as a secret — its value may be
+          visible in the run's inputs/metadata to anyone who can view the run.
+          Prefer using the repository secret GH_PAT whenever possible.
+          Only use this input when you do not have permission to set repository
+          secrets and use a short-lived token with minimum required scopes.
+        required: false
+        type: string
 
 jobs:
   create-test-repo:
@@ -49,10 +59,17 @@ jobs:
           echo "repo_name=${REPO_NAME}" >> $GITHUB_OUTPUT
           echo "Generated test repository name: ${REPO_NAME}"
 
+      - name: Resolve GitHub token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          gh_token: ${{ github.event.inputs.gh_token }}
+          gh_pat_secret: ${{ secrets.GH_PAT }}
+
       - name: Trigger repository creation workflow
         id: trigger-workflow
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           gh workflow run create-repository.yml \
             --field repo_name="${{ steps.generate-name.outputs.repo_name }}" \
@@ -68,7 +85,7 @@ jobs:
 
       - name: Monitor workflow execution
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         timeout-minutes: 10
         run: |
           echo "⏳ Monitoring create-repository workflow..."
@@ -114,7 +131,7 @@ jobs:
       - name: Verify repository was created
         id: verify-repo
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
 
@@ -129,7 +146,7 @@ jobs:
 
       - name: Validate repository structure
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
 
@@ -162,7 +179,7 @@ jobs:
 
       - name: Check super-linter configuration
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
 
@@ -241,7 +258,7 @@ jobs:
 
       - name: Trigger super-linter workflow test
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
 
@@ -270,6 +287,16 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@v6
+
+      - name: Resolve GitHub token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          gh_token: ${{ github.event.inputs.gh_token }}
+          gh_pat_secret: ${{ secrets.GH_PAT }}
+
       - name: Wait before cleanup
         # Only wait if the creation job succeeded - skip wait on failures
         if: ${{ needs.create-test-repo.result == 'success' }}
@@ -280,7 +307,7 @@ jobs:
 
       - name: Delete test repository
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           REPO_NAME="${{ needs.create-test-repo.outputs.test_repo_name }}"
           OWNER="${{ github.repository_owner }}"
