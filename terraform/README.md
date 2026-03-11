@@ -14,11 +14,34 @@ This Terraform module creates a fully configured GitHub repository with the same
 
 ### Prerequisites
 
-- Terraform >= 1.5
-- GitHub personal access token with `repo` and `admin:org` scopes stored in `TF_VAR_github_token`
-  or passed as an input variable
+A GitHub Personal Access Token (PAT) is the only credential required — no GitHub App needed.
 
-### Apply via CLI
+| Use case                           | Required PAT scopes                  |
+| ---------------------------------- | ------------------------------------ |
+| Personal account repository        | `repo`                               |
+| Organization repository            | `repo` + `admin:org`                 |
+| Cleanup on failure (`delete_repo`) | `repo` + `admin:org` + `delete_repo` |
+
+### Apply via CLI — personal repository
+
+```bash
+# Option 1: pass token via environment variable (recommended — avoids shell history)
+export TF_VAR_github_token="ghp_yourtoken"
+
+cd terraform
+terraform init
+terraform apply \
+  -var="repo_name=my-new-repo"
+
+# Option 2: pass token inline
+cd terraform
+terraform init
+terraform apply \
+  -var="github_token=ghp_yourtoken" \
+  -var="repo_name=my-new-repo"
+```
+
+### Apply via CLI — organization repository
 
 ```bash
 cd terraform
@@ -33,18 +56,22 @@ terraform apply \
   -var="team_name=my-team"
 ```
 
+> **Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
+
 ### Apply via GitHub Actions
 
-Trigger the
-[**Terraform Create Repository**](../.github/workflows/terraform-create-repository.yml) workflow
-from the **Actions** tab. It runs `terraform apply` and then copies the bootstrap template files
-into the new repository.
+1. Fork this repository **or** click **Use this template** inside your organization
+2. Add a `GH_PAT` repository secret with the token (see [Setup](../README.md#setup))
+3. Trigger the
+   [**Terraform Create Repository**](../.github/workflows/terraform-create-repository.yml) workflow
+   from the **Actions** tab. It runs `terraform apply` and then copies the bootstrap template files
+   into the new repository.
 
 ## Input Variables
 
 | Variable                   | Required | Default                                    | Description                                                                                                          |
 | -------------------------- | -------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `github_token`             | **Yes**  | -                                          | GitHub PAT with repo + admin:org scopes                                                                              |
+| `github_token`             | **Yes**  | -                                          | GitHub PAT — `repo` scope for personal repos; add `admin:org` for organization repos                                 |
 | `repo_name`                | **Yes**  | -                                          | New repository name                                                                                                  |
 | `repo_owner`               | No       | `""` (uses token owner)                    | Repository owner (user or organization)                                                                              |
 | `repo_description`         | No       | `"Repository following SOLID principles…"` | Repository description                                                                                               |
