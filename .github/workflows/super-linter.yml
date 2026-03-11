@@ -97,6 +97,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           markdownlint --fix "**/*.md" \
+            --ignore CHANGELOG.md \
             --config .github/linters/.markdownlint.json || true
 
       - name: Auto-fix Terraform fmt
@@ -121,6 +122,7 @@ jobs:
       - name: Validate Markdown
         run: |
           markdownlint "**/*.md" \
+            --ignore CHANGELOG.md \
             --config .github/linters/.markdownlint.json
 
       - name: Validate Prettier formatting (Markdown / YAML / JSON)
