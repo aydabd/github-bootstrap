@@ -1,0 +1,45 @@
+---
+# semantic-release workflow: fully-automated version management and GitHub Releases.
+#
+# On every push to main, semantic-release will:
+#   1. Analyse conventional commits since the last release to determine the next version
+#   2. Generate release notes and update CHANGELOG.md
+#   3. Create a git tag and commit the updated changelog back to main [skip ci]
+#   4. Publish a GitHub Release with the generated release notes
+#
+# No manual tagging is required — semantic-release manages everything.
+#
+# Stars: 23k+  See: https://github.com/semantic-release/semantic-release
+name: Release (semantic-release)
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Semantic Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+
+      - name: Run semantic-release
+        run: npx --yes semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

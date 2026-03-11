@@ -1,0 +1,78 @@
+---
+# git-cliff release workflow: generate CHANGELOG and create GitHub releases
+# based on conventional commits and version tags (vX.Y.Z).
+#
+# Usage:
+#   git tag v1.2.3
+#   git push origin v1.2.3
+#
+# This workflow will:
+#   1. Generate / update CHANGELOG.md using git-cliff
+#   2. Commit the updated changelog back to the default branch
+#   3. Create a GitHub Release with the version's changelog section as notes
+#
+# See: https://git-cliff.org
+name: Release (git-cliff)
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Git config
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Generate full CHANGELOG
+        uses: orhun/git-cliff-action@v4.7.1
+        with:
+          config: cliff.toml
+          args: --verbose --output CHANGELOG.md
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+          OUTPUT: CHANGELOG.md
+
+      - name: Generate release notes for this tag
+        id: release-notes
+        uses: orhun/git-cliff-action@v4.7.1
+        with:
+          config: cliff.toml
+          args: --verbose --latest --strip header
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+          OUTPUT: RELEASE_NOTES.md
+
+      - name: Commit updated CHANGELOG
+        run: |
+          git add CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo "CHANGELOG.md unchanged, nothing to commit"
+          else
+            git commit -m "chore(release): update CHANGELOG.md for ${{ github.ref_name }} [skip ci]"
+            git push origin HEAD:${{ github.event.repository.default_branch }}
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2.5.0
+        with:
+          name: ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

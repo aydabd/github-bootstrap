@@ -1,0 +1,4 @@
+# Commitlint configuration moved to .commitlintrc.cjs which supports the
+# ignores() function required to skip pre-conventional automation commits.
+# This file is intentionally null so cosmiconfig skips to .commitlintrc.cjs.
+null

@@ -50,6 +50,19 @@ on:
         required: false
         default: "language-agnostic-only"
         type: string
+      release_tool:
+        description: >-
+          Release automation tool:
+          'git-cliff' (tag-triggered, fast changelog, any language),
+          'release-please' (PR-based, auto-bumps version files),
+          'semantic-release' (push-to-main, fully automated, any language)
+        required: false
+        default: "git-cliff"
+        type: choice
+        options:
+          - git-cliff
+          - release-please
+          - semantic-release
 
 jobs:
   terraform-create-repository:
@@ -65,10 +78,10 @@ jobs:
 
     steps:
       - name: Checkout bootstrap repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: "~> 1.5"
           terraform_wrapper: false
@@ -163,7 +176,39 @@ jobs:
           cp templates/.gitignore new-repo/
           cp templates/.gitattributes new-repo/
           cp templates/.super-linter.env new-repo/
+          cp templates/.commitlintrc.yml new-repo/
+          cp templates/.release-please-manifest.json new-repo/
+
+          # Copy release-tool specific dotfiles / directories
+          cp templates/.releaserc.json new-repo/
+
           cp templates/.github/linters/.editorconfig new-repo/
+
+      - name: Configure release tool
+        run: |
+          cd new-repo
+          RELEASE_TOOL="${{ github.event.inputs.release_tool }}"
+
+          # Files (use rm -f) separated by release tool
+          RP_FILES="release-please-config.json .release-please-manifest.json .github/workflows/release-please.yml"
+          GC_FILES="cliff.toml .github/workflows/git-cliff-release.yml"
+          SR_FILES=".releaserc.json .github/workflows/semantic-release.yml"
+
+          case "$RELEASE_TOOL" in
+            "release-please")
+              rm -f $GC_FILES $SR_FILES
+              echo "Release tool: **release-please** — PR-based semantic versioning (language-aware, ~7k ⭐)" >> $GITHUB_STEP_SUMMARY
+              ;;
+            "semantic-release")
+              rm -f $RP_FILES $GC_FILES
+              echo "Release tool: **semantic-release** — push-to-main, fully automated versioning (any language, ~23k ⭐)" >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              # Default: git-cliff
+              rm -f $RP_FILES $SR_FILES
+              echo "Release tool: **git-cliff** — tag-triggered changelog + GitHub Release (any language, ~9k ⭐)" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
 
       - name: Update CODEOWNERS with team name
         run: |
@@ -300,6 +345,41 @@ jobs:
             done
           fi
 
+      - name: Configure Release Please for selected languages
+        if: github.event.inputs.release_tool == 'release-please'
+        run: |
+          cd new-repo
+          LANGUAGES="${{ github.event.inputs.languages }}"
+
+          # Map language to release-please release-type
+          # See: https://github.com/googleapis/release-please#supported-release-types
+          get_release_type() {
+            local lang=$1
+            case "$lang" in
+              "javascript"|"typescript") echo "node" ;;
+              "python")                  echo "python" ;;
+              "go")                      echo "go" ;;
+              "rust")                    echo "rust" ;;
+              "java"|"kotlin")           echo "java" ;;
+              "ruby")                    echo "ruby" ;;
+              "php")                     echo "php" ;;
+              "terraform")              echo "terraform-module" ;;
+              *)                         echo "simple" ;;
+            esac
+          }
+
+          RELEASE_TYPE="simple"
+
+          if [ "$LANGUAGES" != "all" ] && [ "$LANGUAGES" != "language-agnostic-only" ]; then
+            # Use the first language in the comma-separated list to determine release type
+            FIRST_LANG=$(echo "$LANGUAGES" | cut -d',' -f1 | xargs)
+            RELEASE_TYPE=$(get_release_type "$FIRST_LANG")
+          fi
+
+          # Update release-please-config.json with the correct release type
+          jq --arg rt "$RELEASE_TYPE" '."release-type" = $rt' release-please-config.json > tmp.json && mv tmp.json release-please-config.json
+          echo "Release Please configured with release-type: $RELEASE_TYPE" >> $GITHUB_STEP_SUMMARY
+
       - name: Commit and push files
         id: push-files
         run: |
@@ -317,6 +397,7 @@ jobs:
           echo "**Visibility:** ${{ github.event.inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch Protection:** ${{ github.event.inputs.enable_branch_protection }}" >> $GITHUB_STEP_SUMMARY
           echo "**Languages:** ${{ github.event.inputs.languages }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Release tool:** ${{ github.event.inputs.release_tool || 'git-cliff' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Created Resources (via Terraform)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ GitHub repository" >> $GITHUB_STEP_SUMMARY
@@ -334,6 +415,20 @@ jobs:
           echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Super-Linter workflow (auto-fix on PRs)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Super-Linter configuration (.super-linter.env)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Conventional commits (commitlint)" >> $GITHUB_STEP_SUMMARY
+          case "${{ github.event.inputs.release_tool }}" in
+            "release-please")
+              echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
+              ;;
+            "semantic-release")
+              echo "- ✅ semantic-release workflow (push-to-main, fully automated)" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ .releaserc.json (semantic-release configuration)" >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ cliff.toml (changelog configuration)" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
           echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY
 
   teardown:

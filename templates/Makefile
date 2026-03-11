@@ -1,14 +1,15 @@
-.PHONY: help install lint lint-fix test coverage clean
+.PHONY: help install install-hooks lint lint-fix test coverage clean
 
 # Default target
 help:
 	@echo "Available targets:"
-	@echo "  make install    - Install dependencies"
-	@echo "  make lint       - Run super-linter locally (check only)"
-	@echo "  make lint-fix   - Run super-linter locally with auto-fix"
-	@echo "  make test       - Run tests"
-	@echo "  make coverage   - Run tests with coverage"
-	@echo "  make clean      - Clean build artifacts"
+	@echo "  make install       - Install dependencies"
+	@echo "  make install-hooks - Install pre-commit hooks for local formatting"
+	@echo "  make lint          - Run super-linter locally (check only)"
+	@echo "  make lint-fix      - Run super-linter locally with auto-fix"
+	@echo "  make test          - Run tests"
+	@echo "  make coverage      - Run tests with coverage"
+	@echo "  make clean         - Clean build artifacts"
 
 # Install dependencies (customize based on your language)
 install:
@@ -18,6 +19,15 @@ install:
 	# Example for Python: pip install -r requirements.txt
 	# Example for Go: go mod download
 	# Example for Ruby: bundle install
+
+# Install pre-commit hooks so formatting is fixed locally before every push.
+# This keeps CI validate-only and makes PRs faster.
+install-hooks:
+	@echo "Installing pre-commit hooks..."
+	pip install pre-commit
+	pre-commit install
+	pre-commit install --hook-type commit-msg
+	@echo "Hooks installed. Run 'pre-commit run --all-files' to check all files."
 
 # Run super-linter locally (check only mode)
 lint:
@@ -30,7 +40,7 @@ lint:
 		-e DEFAULT_BRANCH=main \
 		-e DEFAULT_WORKSPACE=/tmp/lint \
 		-v "$(PWD):/tmp/lint:ro" \
-		ghcr.io/super-linter/super-linter/slim:v8.2.1
+		ghcr.io/super-linter/super-linter:slim-v8.5.0
 
 # Run super-linter locally with auto-fix
 lint-fix:
@@ -43,7 +53,7 @@ lint-fix:
 		-e DEFAULT_BRANCH=main \
 		-e DEFAULT_WORKSPACE=/tmp/lint \
 		-v "$(PWD):/tmp/lint" \
-		ghcr.io/super-linter/super-linter/slim:v8.2.1
+		ghcr.io/super-linter/super-linter:slim-v8.5.0
 	@echo "Auto-fixes applied. Review changes with 'git diff'"
 
 # Run tests (customize based on your language)
