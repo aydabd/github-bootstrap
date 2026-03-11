@@ -63,6 +63,13 @@ on:
           - git-cliff
           - release-please
           - semantic-release
+      gh_token:
+        description: >-
+          Personal Access Token with repo and admin:org scopes.
+          If omitted, the repository secret GH_PAT is used.
+          Use this when you do not have permission to set repository secrets.
+        required: false
+        type: string
 
 jobs:
   create-repository:
@@ -99,10 +106,24 @@ jobs:
             echo "holder=${{ github.event.inputs.license_holder }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Resolve GitHub token
+        id: resolve-token
+        env:
+          INPUT_TOKEN: ${{ github.event.inputs.gh_token }}
+          SECRET_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          TOKEN="${INPUT_TOKEN:-$SECRET_TOKEN}"
+          if [ -z "$TOKEN" ]; then
+            echo "::error::No GitHub token available. Provide the 'gh_token' input or set the GH_PAT repository secret."
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
       - name: Create new repository
         id: create-repo
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           OWNER="${{ steps.set-owner.outputs.owner }}"
           VISIBILITY="${{ github.event.inputs.visibility }}"
@@ -171,7 +192,7 @@ jobs:
 
       - name: Clone new repository
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           git clone https://x-access-token:${GH_TOKEN}@github.com/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}.git new-repo
           cd new-repo
@@ -412,7 +433,7 @@ jobs:
 
       - name: Verify repository settings
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           REPO_INFO=$(gh api /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }})
           VISIBILITY=$(echo "$REPO_INFO" | jq -r '.private')
@@ -432,7 +453,7 @@ jobs:
 
       - name: Configure repository settings
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           gh api \
             --method PATCH \
@@ -442,7 +463,7 @@ jobs:
 
       - name: Create dev environment
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           gh api \
             --method PUT \
@@ -451,7 +472,7 @@ jobs:
 
       - name: Create prod environment
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           gh api \
             --method PUT \
@@ -461,7 +482,7 @@ jobs:
       - name: Apply branch protection rules
         if: ${{ github.event.inputs.enable_branch_protection }}
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           sleep 3
           gh api \
@@ -522,9 +543,23 @@ jobs:
       contents: write
 
     steps:
+      - name: Resolve GitHub token
+        id: resolve-token
+        env:
+          INPUT_TOKEN: ${{ github.event.inputs.gh_token }}
+          SECRET_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          TOKEN="${INPUT_TOKEN:-$SECRET_TOKEN}"
+          if [ -z "$TOKEN" ]; then
+            echo "::error::No GitHub token available. Provide the 'gh_token' input or set the GH_PAT repository secret."
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
       - name: Delete repository on failure
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           OWNER="${{ needs.create-repository.outputs.owner }}"
           REPO="${{ github.event.inputs.repo_name }}"

@@ -63,6 +63,13 @@ on:
           - git-cliff
           - release-please
           - semantic-release
+      gh_token:
+        description: >-
+          Personal Access Token with repo and admin:org scopes.
+          If omitted, the repository secret GH_PAT is used.
+          Use this when you do not have permission to set repository secrets.
+        required: false
+        type: string
 
 jobs:
   terraform-create-repository:
@@ -104,16 +111,30 @@ jobs:
             echo "holder=${{ github.event.inputs.license_holder }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Resolve GitHub token
+        id: resolve-token
+        env:
+          INPUT_TOKEN: ${{ github.event.inputs.gh_token }}
+          SECRET_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          TOKEN="${INPUT_TOKEN:-$SECRET_TOKEN}"
+          if [ -z "$TOKEN" ]; then
+            echo "::error::No GitHub token available. Provide the 'gh_token' input or set the GH_PAT repository secret."
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
       - name: Terraform Init
         working-directory: terraform
         env:
-          TF_VAR_github_token: ${{ secrets.GH_PAT }}
+          TF_VAR_github_token: ${{ steps.resolve-token.outputs.token }}
         run: terraform init
 
       - name: Terraform Plan
         working-directory: terraform
         env:
-          TF_VAR_github_token: ${{ secrets.GH_PAT }}
+          TF_VAR_github_token: ${{ steps.resolve-token.outputs.token }}
           TF_VAR_repo_name: ${{ github.event.inputs.repo_name }}
           TF_VAR_repo_owner: ${{ steps.set-owner.outputs.owner }}
           TF_VAR_repo_description: ${{ github.event.inputs.repo_description }}
@@ -129,7 +150,7 @@ jobs:
         working-directory: terraform
         continue-on-error: true
         env:
-          TF_VAR_github_token: ${{ secrets.GH_PAT }}
+          TF_VAR_github_token: ${{ steps.resolve-token.outputs.token }}
           TF_VAR_repo_name: ${{ github.event.inputs.repo_name }}
           TF_VAR_repo_owner: ${{ steps.set-owner.outputs.owner }}
           TF_VAR_repo_description: ${{ github.event.inputs.repo_description }}
@@ -144,7 +165,7 @@ jobs:
         id: check-repo
         if: always()
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           if gh repo view "${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}" &>/dev/null; then
             echo "repo_created=true" >> $GITHUB_OUTPUT
@@ -161,7 +182,7 @@ jobs:
 
       - name: Clone new repository
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           git clone https://x-access-token:${GH_TOKEN}@github.com/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}.git new-repo
           cd new-repo
@@ -445,9 +466,23 @@ jobs:
       contents: write
 
     steps:
+      - name: Resolve GitHub token
+        id: resolve-token
+        env:
+          INPUT_TOKEN: ${{ github.event.inputs.gh_token }}
+          SECRET_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          TOKEN="${INPUT_TOKEN:-$SECRET_TOKEN}"
+          if [ -z "$TOKEN" ]; then
+            echo "::error::No GitHub token available. Provide the 'gh_token' input or set the GH_PAT repository secret."
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
       - name: Delete repository on failure
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           OWNER="${{ needs.terraform-create-repository.outputs.owner }}"
           REPO="${{ github.event.inputs.repo_name }}"

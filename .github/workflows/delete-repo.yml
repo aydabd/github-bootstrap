@@ -13,12 +13,20 @@ on:
         required: false
         default: "false"
         type: boolean
+      gh_token:
+        description: >-
+          Personal Access Token with delete_repo scope.
+          If omitted, the repository secret GH_PAT is used.
+          Use this when you do not have permission to set repository secrets.
+        required: false
+        type: string
 
 jobs:
   delete-repo:
     runs-on: ubuntu-latest
-    # This workflow uses a personal access token (GH_PAT) with repo deletion permissions.
-    # Create a secret named GH_PAT with `delete_repo` scope (or an admin token) in the repository where you run this.
+    # This workflow uses a personal access token (GH_PAT or gh_token input) with repo deletion permissions.
+    # Create a secret named GH_PAT with `delete_repo` scope (or an admin token) in the repository where you run this,
+    # or provide the token directly via the 'gh_token' workflow input.
     steps:
       - name: Dry-run check
         run: |
@@ -28,16 +36,25 @@ jobs:
             exit 0
           fi
 
-      - name: Delete repository via REST API
+      - name: Resolve GitHub token
+        id: resolve-token
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-          REPO_FULL: ${{ inputs.repo }}
+          INPUT_TOKEN: ${{ github.event.inputs.gh_token }}
+          SECRET_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          if [ -z "$GH_TOKEN" ]; then
-            echo "GH_PAT secret is missing. Please create a repository secret named GH_PAT with delete_repo permission."
+          TOKEN="${INPUT_TOKEN:-$SECRET_TOKEN}"
+          if [ -z "$TOKEN" ]; then
+            echo "::error::No GitHub token available. Provide the 'gh_token' input or set the GH_PAT repository secret."
             exit 1
           fi
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
 
+      - name: Delete repository via REST API
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          REPO_FULL: ${{ inputs.repo }}
+        run: |
           echo "Deleting repository: $REPO_FULL"
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -X DELETE \
@@ -51,7 +68,7 @@ jobs:
             echo "Failed to delete repository. HTTP status: $HTTP_STATUS"
             # Provide help for common failures
             if [ "$HTTP_STATUS" = "403" ]; then
-              echo "403 Forbidden — ensure GH_PAT has the delete_repo scope and the actor has sufficient permissions."
+              echo "403 Forbidden — ensure the token has the delete_repo scope and the actor has sufficient permissions."
             elif [ "$HTTP_STATUS" = "404" ]; then
               echo "404 Not Found — repository may not exist or token lacks access."
             fi
