@@ -54,6 +54,10 @@ reviews:
   path_filters:
     # Skip generated, vendored, and lock files — they add noise with no value
     - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!**/pnpm-lock.yaml"
+    - "!**/npm-shrinkwrap.json"
+    - "!**/yarn.lock"
     - "!**/*.sum"
     - "!**/node_modules/**"
     - "!**/vendor/**"

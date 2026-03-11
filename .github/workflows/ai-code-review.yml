@@ -6,13 +6,8 @@
 # security vulnerabilities, bugs, logic errors, and critical design flaws.
 #
 # Setup:
-#   Option A — Anthropic API Key:
-#     1. Get an API key from https://console.anthropic.com
-#     2. Add it as a repository secret named ANTHROPIC_API_KEY
-#
-#   Option B — Amazon Bedrock:
-#     1. Configure AWS credentials with Bedrock access
-#     2. Set secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+#   1. Get an API key from https://console.anthropic.com
+#   2. Add it as a repository secret named ANTHROPIC_API_KEY
 #
 # The workflow is skipped gracefully when no API key is configured,
 # so it is safe to include in any repository without breaking CI.
@@ -58,7 +53,13 @@ jobs:
       (
         github.event_name == 'issue_comment' &&
         github.event.issue.pull_request &&
-        contains(github.event.comment.body, '@claude')
+        contains(github.event.comment.body, '@claude') &&
+        !contains(github.event.issue.labels.*.name, 'skip-ai-review') &&
+        (
+          github.event.comment.author_association == 'MEMBER' ||
+          github.event.comment.author_association == 'OWNER' ||
+          github.event.comment.author_association == 'COLLABORATOR'
+        )
       )
 
     steps:

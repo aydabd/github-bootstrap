@@ -144,8 +144,11 @@ no noise from style nitpicks (linters handle those).
 [CodeRabbit](https://coderabbit.ai) reviews every PR automatically via its GitHub App:
 
 - **Free tier** — Works out of the box on public/open-source repositories
-- **Paid tiers** (Pro / Teams / Enterprise) — Sign up at [coderabbit.ai](https://coderabbit.ai)
+- **Paid tiers** (Pro / Teams) — Sign up at [coderabbit.ai](https://coderabbit.ai)
   and connect your GitHub organization for private repo support and advanced features
+- **Enterprise** — Requires the [CodeRabbit GitHub App](https://github.com/apps/coderabbitai)
+  installed on your GitHub Enterprise Server instance; see
+  [coderabbit.ai/enterprise](https://coderabbit.ai) for self-hosted deployment options
 - **No secrets needed** — Authentication is handled by the GitHub App
 - **Configuration** — `.coderabbit.yaml` at the repository root (included in all templates)
 
@@ -159,8 +162,6 @@ repository or organization. Reviews start automatically on the next PR.
 
 - **API key** — Add an `ANTHROPIC_API_KEY` repository secret from
   [console.anthropic.com](https://console.anthropic.com)
-- **Amazon Bedrock** — Alternatively configure AWS credentials
-  (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`) with Bedrock access
 - **Graceful skip** — The workflow is skipped with a notice when no API key is configured,
   so it never breaks CI
 - **Interactive** — Comment `@claude` on any PR to ask follow-up questions
