@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/aydabd/github-bootstrap/compare/v1.0.2...v1.1.0) (2026-03-11)
+
+
+### Features
+
+* add AI code review with CodeRabbit and Claude ([#12](https://github.com/aydabd/github-bootstrap/issues/12)) ([96020be](https://github.com/aydabd/github-bootstrap/commit/96020be682c809ddc63b5a9889bcf02509f45a6e))
+
 ## [1.0.2](https://github.com/aydabd/github-bootstrap/compare/v1.0.1...v1.0.2) (2026-03-11)
 
 
