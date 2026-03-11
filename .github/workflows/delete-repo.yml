@@ -39,19 +39,15 @@ jobs:
             exit 0
           fi
 
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@v6
+
       - name: Resolve GitHub token
         id: resolve-token
-        env:
-          INPUT_TOKEN: ${{ github.event.inputs.gh_token }}
-          SECRET_TOKEN: ${{ secrets.GH_PAT }}
-        run: |
-          TOKEN="${INPUT_TOKEN:-$SECRET_TOKEN}"
-          if [ -z "$TOKEN" ]; then
-            echo "::error::No GitHub token available. Provide the 'gh_token' input or set the GH_PAT repository secret."
-            exit 1
-          fi
-          echo "::add-mask::$TOKEN"
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          gh_token: ${{ github.event.inputs.gh_token }}
+          gh_pat_secret: ${{ secrets.GH_PAT }}
 
       - name: Delete repository via REST API
         env:
