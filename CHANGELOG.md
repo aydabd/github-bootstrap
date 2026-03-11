@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/aydabd/github-bootstrap/compare/v1.1.0...v1.2.0) (2026-03-11)
+
+
+### Features
+
+* support user-supplied PAT via workflow input with composite token resolution ([1e72b07](https://github.com/aydabd/github-bootstrap/commit/1e72b072a2ce7e835c4a1885f240743d05a45285))
+
 ## [1.1.0](https://github.com/aydabd/github-bootstrap/compare/v1.0.2...v1.1.0) (2026-03-11)
 
 
