@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/aydabd/github-bootstrap/compare/v1.2.0...v1.2.1) (2026-03-12)
+
+
+### Bug Fixes
+
+* remove disallowed template expression from composite action input description ([#16](https://github.com/aydabd/github-bootstrap/issues/16)) ([a0a0d46](https://github.com/aydabd/github-bootstrap/commit/a0a0d467d0945c8245f80c873c3b9df9897a6a9e))
+
 ## [1.2.0](https://github.com/aydabd/github-bootstrap/compare/v1.1.0...v1.2.0) (2026-03-11)
 
 
