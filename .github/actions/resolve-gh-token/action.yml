@@ -13,7 +13,7 @@ inputs:
   gh_pat_secret:
     description: >-
       Repository secret GH_PAT. Pass as
-      ${{ secrets.GH_PAT }} from the calling workflow.
+      secrets.GH_PAT from the calling workflow.
     required: false
     default: ""
 
