@@ -19,9 +19,6 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: check-merge-conflict
-      - id: check-yaml
-        args: [--unsafe] # allow custom YAML tags used in some workflows
-      - id: check-json
 
   # ── Prettier (JSON / YAML) ───────────────────────────────────────────────────
   # Mirrors FIX_JSON_PRETTIER, FIX_YAML_PRETTIER in CI.
