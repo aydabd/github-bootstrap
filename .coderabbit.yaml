@@ -17,8 +17,7 @@ language: en-US
 tone_instructions: >-
   Be professional, concise, and actionable. Focus exclusively on high-impact
   issues such as bugs, security vulnerabilities, performance problems, and
-  critical design flaws. Do not flag stylistic preferences, minor naming
-  suggestions, or trivial improvements — linters handle those.
+  critical design flaws.
 
 early_access: false
 
