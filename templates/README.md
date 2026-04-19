@@ -76,7 +76,11 @@ The repository includes GitHub Super-Linter for consistent code quality:
 5. Run linter and formatter
 6. Submit PR (requires 2 approvals)
 
-See CONTRIBUTING.md and CODEOWNERS for details.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODEOWNERS](.github/CODEOWNERS) for details.
+
+## Security
+
+To report a vulnerability, please see [SECURITY.md](SECURITY.md).
 
 ## Testing Philosophy
 

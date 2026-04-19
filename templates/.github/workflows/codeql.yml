@@ -1,0 +1,63 @@
+---
+# CodeQL Security Analysis
+#
+# Scans code for security vulnerabilities and bugs using GitHub's CodeQL engine.
+# Runs on every PR targeting main, every push to main, and weekly on Monday.
+#
+# The language matrix is configured automatically by the bootstrap workflow based
+# on the languages selected at repository creation time. To add or remove a
+# language, edit the matrix below.
+#
+# Supported CodeQL languages:
+#   javascript-typescript, python, java-kotlin, csharp, go, ruby, cpp
+#
+name: CodeQL Security Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Run weekly on Monday at 02:00 UTC to catch newly-disclosed CVEs.
+    - cron: "0 2 * * 1"
+
+# Cancel superseded runs on the same ref to save resources.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [{ { CODEQL_LANGUAGES } }]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"

@@ -398,6 +398,13 @@ jobs:
           jq --arg rt "$RELEASE_TYPE" '."release-type" = $rt' release-please-config.json > tmp.json && mv tmp.json release-please-config.json
           echo "Release Please configured with release-type: $RELEASE_TYPE" >> $GITHUB_STEP_SUMMARY
 
+      - name: Configure CodeQL for selected languages
+        env:
+          CODEQL_INPUT_LANGUAGES: ${{ github.event.inputs.languages }}
+        run: |
+          cd new-repo
+          python3 "$GITHUB_WORKSPACE/.github/scripts/configure-codeql.py"
+
       - name: Commit and push files
         id: push-files
         run: |
@@ -406,6 +413,27 @@ jobs:
           git commit -m "chore: initialize repository from bootstrap template"
           git push
           echo "✅ Template files pushed" >> $GITHUB_STEP_SUMMARY
+
+      - name: Enable Dependabot security features
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+        run: |
+          OWNER="${{ steps.set-owner.outputs.owner }}"
+          REPO="${{ github.event.inputs.repo_name }}"
+
+          # Enable Dependabot vulnerability alerts
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            /repos/$OWNER/$REPO/vulnerability-alerts
+          echo "✅ Vulnerability alerts enabled" >> $GITHUB_STEP_SUMMARY
+
+          # Enable Dependabot automated security fixes
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            /repos/$OWNER/$REPO/automated-security-fixes
+          echo "✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
 
       - name: Summary
         run: |
@@ -420,9 +448,11 @@ jobs:
           echo "### Created Resources (via Terraform)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ GitHub repository" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Repository settings (squash merge, auto-delete branches)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Vulnerability alerts enabled" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Branch protection ruleset" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Branch protection ruleset (2 required approvals, linear history, code-owner review)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Created Resources (via Template)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ CODEOWNERS" >> $GITHUB_STEP_SUMMARY
@@ -430,8 +460,10 @@ jobs:
           echo "- ✅ .editorconfig (4 spaces code, 2 spaces config)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ .gitignore, .gitattributes" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Documentation templates" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ SECURITY.md (security policy)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ CONTRIBUTING.md (contribution guide)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Super-Linter workflow (auto-fix on PRs)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Super-Linter workflow" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Super-Linter configuration (.super-linter.env)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Conventional commits (commitlint)" >> $GITHUB_STEP_SUMMARY
           case "${{ github.event.inputs.release_tool }}" in

@@ -9,10 +9,12 @@ resource "github_repository" "new_repo" {
   has_wiki     = false
   auto_init    = true
 
-  # Merge strategy: squash merge preferred, rebase allowed, merge commits disabled
+  vulnerability_alerts = true
+
+  # Merge strategy: squash only.
   allow_squash_merge        = true
   allow_merge_commit        = false
-  allow_rebase_merge        = true
+  allow_rebase_merge        = false
   squash_merge_commit_title = "PR_TITLE"
   delete_branch_on_merge    = true
 }
@@ -55,11 +57,12 @@ resource "github_repository_ruleset" "main_protection" {
   }
 
   rules {
-    deletion         = true
-    non_fast_forward = true
+    deletion                = true
+    non_fast_forward        = true
+    required_linear_history = true
 
     pull_request {
-      required_approving_review_count   = 1
+      required_approving_review_count   = 2
       dismiss_stale_reviews_on_push     = true
       require_code_owner_review         = true
       require_last_push_approval        = true
@@ -70,7 +73,7 @@ resource "github_repository_ruleset" "main_protection" {
       strict_required_status_checks_policy = true
 
       required_check {
-        context = "Super-Linter / Lint and Auto-format Code"
+        context = "Super-Linter / Lint Code"
       }
     }
   }
