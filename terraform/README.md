@@ -5,10 +5,11 @@ This Terraform module creates a fully configured GitHub repository with the same
 
 ## Resources Created
 
-- **`github_repository`** - Repository with squash merge, branch deletion, issues, and projects enabled
+- **`github_repository`** - Repository with squash merge, branch deletion, issues, projects enabled,
+  and vulnerability alerts enabled
 - **`github_repository_environment`** - `dev` and `prod` deployment environments
-- **`github_repository_ruleset`** - Branch protection for `main` (optional) requiring 1 approving review,
-  code-owner review, and the Super-Linter status check
+- **`github_repository_ruleset`** - Branch protection for `main` (optional) requiring 2 approving reviews,
+  code-owner review, the Super-Linter status check, and linear history (no merge commits)
 
 ## Usage
 
@@ -109,15 +110,20 @@ terraform {
 
 ## Differences from the GitHub Actions Workflow
 
-| Feature                | GitHub Actions Workflow         | Terraform Module                     |
-| ---------------------- | ------------------------------- | ------------------------------------ |
-| Repository creation    | ✅ GitHub API via `gh` CLI      | ✅ `github_repository` resource      |
-| Repository settings    | ✅ PATCH via `gh api`           | ✅ Inline in `github_repository`     |
-| Environments           | ✅ PUT via `gh api`             | ✅ `github_repository_environment`   |
-| Branch protection      | ✅ POST rulesets via `gh api`   | ✅ `github_repository_ruleset`       |
-| Template files         | ✅ Git clone + copy + push      | ✅ Handled by the wrapper workflow   |
-| Language configuration | ✅ `sed` on `.super-linter.env` | ✅ Handled by the wrapper workflow   |
-| Conventional commits   | ✅ commitlint config + linter   | ✅ Handled by the wrapper workflow   |
-| Release Please         | ✅ Workflow + config files      | ✅ Handled by the wrapper workflow   |
-| State tracking         | ❌ Stateless                    | ✅ Terraform state (drift detection) |
-| Idempotency            | ⚠️ Creates new repo each run    | ✅ Apply is idempotent               |
+| Feature                 | GitHub Actions Workflow         | Terraform Module                     |
+| ----------------------- | ------------------------------- | ------------------------------------ |
+| Repository creation     | ✅ GitHub API via `gh` CLI      | ✅ `github_repository` resource      |
+| Repository settings     | ✅ PATCH via `gh api`           | ✅ Inline in `github_repository`     |
+| Vulnerability alerts    | ✅ PUT via `gh api`             | ✅ `vulnerability_alerts = true`     |
+| Dependabot sec. updates | ✅ PUT via `gh api`             | ⚠️ Not directly in the provider      |
+| Environments            | ✅ PUT via `gh api`             | ✅ `github_repository_environment`   |
+| Branch protection       | ✅ POST rulesets via `gh api`   | ✅ `github_repository_ruleset`       |
+| Template files          | ✅ Git clone + copy + push      | ✅ Handled by the wrapper workflow   |
+| Language configuration  | ✅ `sed` on `.super-linter.env` | ✅ Handled by the wrapper workflow   |
+| CodeQL workflow         | ✅ Configured by wrapper        | ✅ Handled by the wrapper workflow   |
+| SECURITY.md             | ✅ Copied from template         | ✅ Handled by the wrapper workflow   |
+| CONTRIBUTING.md         | ✅ Copied from template         | ✅ Handled by the wrapper workflow   |
+| Conventional commits    | ✅ commitlint config + linter   | ✅ Handled by the wrapper workflow   |
+| Release Please          | ✅ Workflow + config files      | ✅ Handled by the wrapper workflow   |
+| State tracking          | ❌ Stateless                    | ✅ Terraform state (drift detection) |
+| Idempotency             | ⚠️ Creates new repo each run    | ✅ Apply is idempotent               |

@@ -2,31 +2,27 @@
 
 ## [1.2.1](https://github.com/aydabd/github-bootstrap/compare/v1.2.0...v1.2.1) (2026-03-12)
 
-
 ### Bug Fixes
 
-* remove disallowed template expression from composite action input description ([#16](https://github.com/aydabd/github-bootstrap/issues/16)) ([a0a0d46](https://github.com/aydabd/github-bootstrap/commit/a0a0d467d0945c8245f80c873c3b9df9897a6a9e))
+- remove disallowed template expression from composite action input description ([#16](https://github.com/aydabd/github-bootstrap/issues/16)) ([a0a0d46](https://github.com/aydabd/github-bootstrap/commit/a0a0d467d0945c8245f80c873c3b9df9897a6a9e))
 
 ## [1.2.0](https://github.com/aydabd/github-bootstrap/compare/v1.1.0...v1.2.0) (2026-03-11)
 
-
 ### Features
 
-* support user-supplied PAT via workflow input with composite token resolution ([1e72b07](https://github.com/aydabd/github-bootstrap/commit/1e72b072a2ce7e835c4a1885f240743d05a45285))
+- support user-supplied PAT via workflow input with composite token resolution ([1e72b07](https://github.com/aydabd/github-bootstrap/commit/1e72b072a2ce7e835c4a1885f240743d05a45285))
 
 ## [1.1.0](https://github.com/aydabd/github-bootstrap/compare/v1.0.2...v1.1.0) (2026-03-11)
 
-
 ### Features
 
-* add AI code review with CodeRabbit and Claude ([#12](https://github.com/aydabd/github-bootstrap/issues/12)) ([96020be](https://github.com/aydabd/github-bootstrap/commit/96020be682c809ddc63b5a9889bcf02509f45a6e))
+- add AI code review with CodeRabbit and Claude ([#12](https://github.com/aydabd/github-bootstrap/issues/12)) ([96020be](https://github.com/aydabd/github-bootstrap/commit/96020be682c809ddc63b5a9889bcf02509f45a6e))
 
 ## [1.0.2](https://github.com/aydabd/github-bootstrap/compare/v1.0.1...v1.0.2) (2026-03-11)
 
-
 ### Bug Fixes
 
-* remove Markdown from Prettier scope to resolve conflict with markdownlint ([b91c3bf](https://github.com/aydabd/github-bootstrap/commit/b91c3bfc859e6289379667fcdbd1dde42bedba6a))
+- remove Markdown from Prettier scope to resolve conflict with markdownlint ([b91c3bf](https://github.com/aydabd/github-bootstrap/commit/b91c3bfc859e6289379667fcdbd1dde42bedba6a))
 
 ## [1.0.1](https://github.com/aydabd/github-bootstrap/compare/v1.0.0...v1.0.1) (2026-03-11)
 

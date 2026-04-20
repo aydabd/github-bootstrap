@@ -1,16 +1,10 @@
 ---
-# Lint and auto-format code using native tools (no Docker overhead).
+# Lint code using native tools (no Docker overhead).
 #
-# Pull-request runs (two phases):
-#   1. Auto-fix: Prettier + markdownlint (markdownlint-cli) fix formatting,
-#      commit result back with "[skip ci]" so this workflow is NOT re-triggered.
-#   2. Validate: Run all linters; fail the PR if anything is still wrong.
+# Pull-request runs:
+#   1. Validate: Run all linters; fail the PR if anything is still wrong.
 #
 # Push-to-main / workflow_dispatch runs: validate only (no commits).
-#
-# Re-trigger question: auto-fix commits use "[skip ci]" in the subject line,
-# which causes GitHub Actions to skip all workflows for that commit, so there
-# is no infinite loop.  The author's next push will trigger a fresh run.
 name: Super-Linter
 
 on:
@@ -28,13 +22,12 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
   statuses: write
 
 jobs:
-  lint-and-format:
-    name: Lint and Auto-format Code
+  lint:
+    name: Lint Code
     runs-on: ubuntu-latest
 
     steps:
@@ -42,17 +35,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
         with:
-          # Full history so commitlint can walk the full PR range.
           fetch-depth: 0
-          # Check out the actual PR branch so auto-fix commits can be pushed back.
-          ref: ${{ github.head_ref || github.ref_name }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Git Config
-        if: github.event_name == 'pull_request'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       # ── Tool installation ──────────────────────────────────────────────────────
       # Native tools install in ~20 s; no Docker image pull (~72 s) needed.
@@ -80,43 +63,6 @@ jobs:
 
       - name: Install Python tools
         run: pip install --quiet pre-commit
-
-      # ── Auto-fix pass (PR only) ────────────────────────────────────────────────
-      # Formatters run first so the validation pass always sees clean files.
-      # Fixes are committed back with "[skip ci]" to prevent an infinite loop.
-      # The "|| true" on auto-fix steps is intentional: these are best-effort
-      # formatters; unfixable issues (e.g. parse errors) are caught in the
-      # validation pass below, which does NOT use "|| true".
-      - name: Auto-fix Prettier (YAML / JSON)
-        if: github.event_name == 'pull_request'
-        run: |
-          prettier --write "**/*.{yaml,yml,json}" \
-            --ignore-path .gitignore || true
-
-      - name: Auto-fix markdownlint
-        if: github.event_name == 'pull_request'
-        run: |
-          markdownlint --fix "**/*.md" \
-            --ignore CHANGELOG.md \
-            --config .github/linters/.markdownlint.json || true
-
-      - name: Auto-fix Terraform fmt
-        if: github.event_name == 'pull_request'
-        run: |
-          # Only run if the terraform directory exists.
-          [[ -d ./terraform ]] && terraform fmt -recursive ./terraform || true
-
-      - name: Commit Auto-fixes
-        if: github.event_name == 'pull_request'
-        run: |
-          if [[ -n $(git status --short) ]]; then
-            git add -A
-            git commit -m "chore: auto-fix linting issues [skip ci]"
-            git push origin HEAD
-            echo "Auto-fixes committed and pushed."
-          else
-            echo "No linting fixes needed."
-          fi
 
       # ── Validation pass ────────────────────────────────────────────────────────
       - name: Validate Markdown

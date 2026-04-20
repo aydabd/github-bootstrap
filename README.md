@@ -16,9 +16,12 @@ Creates fully configured repositories with:
 - Editor and Git configurations
 - Conventional commits enforcement via commitlint
 - Release Please workflow for automated semantic versioning
-- Super-Linter workflow with autofix for PRs
+- Super-Linter workflow for PR and push linting
 - AI code review with CodeRabbit and Claude (see [AI Code Review](#ai-code-review))
 - Makefile for local linting with Docker
+- SECURITY.md and CONTRIBUTING.md
+- CodeQL security scanning workflow (language-aware)
+- Vulnerability alerts and Dependabot security updates enabled automatically
 
 ## Setup
 
@@ -107,18 +110,18 @@ Your new repository is created with all templates and settings.
 
 ## Workflow Inputs
 
-| Input                      | Required | Default                                               | Description                                                                    |
-| -------------------------- | -------- | ----------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `repo_name`                | Yes      | -                                                     | New repository name                                                            |
-| `repo_owner`               | No       | Current user/org                                      | Repository owner — a GitHub username or organization                           |
-| `repo_description`         | No       | `Repository following SOLID principles…`              | Repository description                                                         |
-| `visibility`               | No       | `public`                                              | `public`, `private`, or `internal` (org only)                                  |
-| `cleanup_on_failure`       | No       | `true`                                                | Delete the created repository automatically if the workflow fails              |
-| `enable_branch_protection` | No       | `true`                                                | Enable branch protection rules                                                 |
-| `team_name`                | No       | `team-leads`                                          | GitHub team for code owners                                                    |
-| `license_holder`           | No       | Current user/org                                      | License copyright holder                                                       |
-| `languages`                | No       | `language-agnostic-only`                              | Comma-separated list of languages (e.g. `javascript,python`) or `all`          |
-| `release_tool`             | No       | `git-cliff`                                           | Release automation tool: `git-cliff`, `release-please`, or `semantic-release`  |
+| Input                      | Required | Default                                  | Description                                                                   |
+| -------------------------- | -------- | ---------------------------------------- | ----------------------------------------------------------------------------- |
+| `repo_name`                | Yes      | -                                        | New repository name                                                           |
+| `repo_owner`               | No       | Current user/org                         | Repository owner — a GitHub username or organization                          |
+| `repo_description`         | No       | `Repository following SOLID principles…` | Repository description                                                        |
+| `visibility`               | No       | `public`                                 | `public`, `private`, or `internal` (org only)                                 |
+| `cleanup_on_failure`       | No       | `true`                                   | Delete the created repository automatically if the workflow fails             |
+| `enable_branch_protection` | No       | `true`                                   | Enable branch protection rules                                                |
+| `team_name`                | No       | `team-leads`                             | GitHub team for code owners                                                   |
+| `license_holder`           | No       | Current user/org                         | License copyright holder                                                      |
+| `languages`                | No       | `language-agnostic-only`                 | Comma-separated list of languages (e.g. `javascript,python`) or `all`         |
+| `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release` |
 
 ## What Gets Created
 
@@ -128,7 +131,9 @@ Editor configurations, Git settings, and ignore patterns that work across all la
 
 ### GitHub Configuration
 
-Code ownership rules, automated dependency updates, and branch protection settings requiring 2 approvals and code owner reviews.
+Code ownership rules, automated dependency updates, and branch protection settings requiring
+2 approvals, linear history, and code owner reviews. Vulnerability alerts and Dependabot
+automated security fixes are enabled on every created repository.
 
 ### Documentation Templates
 
@@ -288,6 +293,21 @@ automatically.
 - Auto-merge enabled
 - Dev environment (no wait, no review)
 - Prod environment (30s wait, reviews required)
+
+### Security
+
+Every bootstrapped repository gets a full security baseline out of the box:
+
+| Feature                            | Details                                                   |
+| ---------------------------------- | --------------------------------------------------------- |
+| Vulnerability alerts               | Enabled automatically via the GitHub API                  |
+| Dependabot security updates        | Enabled automatically — auto-PRs for vulnerable deps      |
+| Dependabot version updates         | Configured in `.github/dependabot.yml` for all ecosystems |
+| CodeQL scanning                    | Workflow generated and scoped to the selected language(s) |
+| Branch protection — linear history | Only squash merges allowed                                |
+| Branch protection — 2 approvals    | Two code-owner approvals required before merging          |
+| SECURITY.md                        | Security policy and vulnerability reporting instructions  |
+| Secret scanning                    | Enabled by GitHub for all public repos automatically      |
 
 ## Core Principles
 

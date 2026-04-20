@@ -1,0 +1,50 @@
+---
+# CodeQL Security Analysis for github-bootstrap
+#
+# This repo contains Python scripts (.github/scripts/) and GitHub Actions
+# YAML workflows. CodeQL scans the Python source only.
+name: CodeQL Security Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Run weekly on Monday at 02:00 UTC to catch newly-disclosed CVEs.
+    - cron: "0 2 * * 1"
+
+# Cancel superseded runs on the same ref to save resources.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (python)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: python
+          queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:python"
