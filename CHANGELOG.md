@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/aydabd/github-bootstrap/compare/v1.2.1...v1.3.0) (2026-04-20)
+
+
+### Features
+
+* security baseline, governance docs, CodeQL, and tightened branch rulesets ([#18](https://github.com/aydabd/github-bootstrap/issues/18)) ([2084d84](https://github.com/aydabd/github-bootstrap/commit/2084d84bfdb83f5360808db0d177ce9b5b8743ad))
+
 ## [1.2.1](https://github.com/aydabd/github-bootstrap/compare/v1.2.0...v1.2.1) (2026-03-12)
 
 ### Bug Fixes
