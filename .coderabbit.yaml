@@ -15,9 +15,9 @@
 language: en-US
 
 tone_instructions: >-
-  Be professional, concise, and actionable. Focus exclusively on high-impact
-  issues such as bugs, security vulnerabilities, performance problems, and
-  critical design flaws.
+  Be concise and actionable. Focus on bugs, security vulnerabilities,
+  performance issues, and design flaws. Skip stylistic preferences,
+  naming suggestions, and trivial improvements.
 
 early_access: false
 
