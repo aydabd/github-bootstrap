@@ -48,16 +48,63 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Detect source files for language
+        id: detect-source
+        shell: bash
+        run: |
+          case "${{ matrix.language }}" in
+            "python")
+              PATTERN='\.py$'
+              ;;
+            "javascript-typescript")
+              PATTERN='\.(js|jsx|ts|tsx|mjs|cjs)$'
+              ;;
+            "java-kotlin")
+              PATTERN='\.(java|kt|kts)$'
+              ;;
+            "csharp")
+              PATTERN='\.cs$'
+              ;;
+            "go")
+              PATTERN='\.go$'
+              ;;
+            "ruby")
+              PATTERN='(^|/)Gemfile$|\.rb$'
+              ;;
+            "cpp")
+              PATTERN='\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$'
+              ;;
+            *)
+              PATTERN='.'
+              ;;
+          esac
+
+          if git ls-files | grep -Eq "$PATTERN"; then
+            echo "has_source=true" >> "$GITHUB_OUTPUT"
+            echo "Found source files for ${{ matrix.language }}"
+          else
+            echo "has_source=false" >> "$GITHUB_OUTPUT"
+            echo "No source files found for ${{ matrix.language }}; CodeQL will be skipped for this language"
+          fi
+
+      - name: Skip CodeQL when no source files are present
+        if: steps.detect-source.outputs.has_source != 'true'
+        run: |
+          echo "Skipping CodeQL for ${{ matrix.language }} because no matching source files were found." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Initialize CodeQL
+        if: steps.detect-source.outputs.has_source == 'true'
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
 
       - name: Autobuild
+        if: steps.detect-source.outputs.has_source == 'true'
         uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
+        if: steps.detect-source.outputs.has_source == 'true'
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
