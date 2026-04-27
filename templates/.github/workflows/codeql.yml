@@ -42,7 +42,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [{ { CODEQL_LANGUAGES } }]
+        language: [{{CODEQL_LANGUAGES}}]
 
     steps:
       - name: Checkout repository

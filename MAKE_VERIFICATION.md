@@ -10,23 +10,26 @@ All `make` commands have been verified to work correctly for local development u
 ## Verification Results
 
 ### Root Makefile
-| Target | Status | Notes |
-|--------|--------|-------|
-| `make help` | ✅ PASS | Displays all targets correctly |
-| `make clean` | ✅ PASS | Removes build artifacts without error |
-| `make lint` (dry-run) | ✅ PASS | Syntax valid, command structure correct |
-| `make install` | ✅ PASS | Would bootstrap micromamba + pre-commit hooks |
-| `make setup-env` | ✅ PASS | Environment setup logic valid |
+
+| Target                | Status  | Notes                                         |
+| --------------------- | ------- | --------------------------------------------- |
+| `make help`           | ✅ PASS | Displays all targets correctly                |
+| `make clean`          | ✅ PASS | Removes build artifacts without error         |
+| `make lint` (dry-run) | ✅ PASS | Syntax valid, command structure correct       |
+| `make install`        | ✅ PASS | Would bootstrap micromamba + pre-commit hooks |
+| `make setup-env`      | ✅ PASS | Environment setup logic valid                 |
 
 ### Language Template Makefiles
 
 #### Agnostic Template
+
 - `make help` ✅ PASS - 6 targets available
 - `make install` ✅ PASS
 - `make lint` ✅ PASS
 - `make clean` ✅ PASS
 
 #### Python Template
+
 - `make help` ✅ PASS - includes coverage/test targets
 - `make install` ✅ PASS
 - `make lint` ✅ PASS
@@ -35,6 +38,7 @@ All `make` commands have been verified to work correctly for local development u
 - `make clean` ✅ PASS
 
 #### Go Template
+
 - `make help` ✅ PASS - includes Go-specific targets
 - `make install` ✅ PASS
 - `make lint` ✅ PASS
@@ -43,6 +47,7 @@ All `make` commands have been verified to work correctly for local development u
 - `make clean` ✅ PASS
 
 #### TypeScript Template
+
 - `make help` ✅ PASS - includes npm integration
 - `make install` ✅ PASS - includes npm install
 - `make lint` ✅ PASS
@@ -51,6 +56,7 @@ All `make` commands have been verified to work correctly for local development u
 - `make clean` ✅ PASS
 
 #### Java Template
+
 - `make help` ✅ PASS - includes Gradle targets
 - `make install` ✅ PASS
 - `make lint` ✅ PASS
@@ -61,9 +67,11 @@ All `make` commands have been verified to work correctly for local development u
 ## Bug Found & Fixed
 
 ### YAML Document Separator Missing
+
 **Issue**: Template `.pre-commit-config.yaml` files were missing the YAML document separator (`---`) at the beginning.
 
 **Files Affected**:
+
 - `templates/languages/agnostic/.pre-commit-config.yaml`
 - `templates/languages/golang/.pre-commit-config.yaml`
 - `templates/languages/java/.pre-commit-config.yaml`

@@ -1,3 +1,4 @@
+---
 # Commitlint configuration for conventional commits
 # See: https://www.conventionalcommits.org/
 extends:

@@ -1,3 +1,4 @@
+---
 name: "{{REPOSITORY_NAME}}"
 channels:
   - conda-forge

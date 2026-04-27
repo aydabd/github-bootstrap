@@ -1,3 +1,51 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+
+# Python / lint / test caches
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.nox/
+.tox/
+.cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Node / JavaScript artifacts
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.eslintcache
+
+# Java / Gradle artifacts
+.gradle/
+out/
+target/
+
+# Go artifacts
+bin/
+*.test
+coverage.out
+
+# Local environment files
+.env
+.env.local
+.venv/
+venv/
+
 # Terraform
 terraform/.terraform/
 terraform/terraform.tfstate
@@ -10,4 +58,10 @@ terraform/override.tf.json
 terraform/*_override.tf
 terraform/*_override.tf.json
 terraform/.terraform.tfstate.lock.info
+
+# Build outputs
+build/
+dist/
 super-linter-output/
+*.tmp
+*.temp
