@@ -109,7 +109,7 @@ Update all call sites accordingly.
 - **No trailing whitespace**
 - **No hardcoded secrets or credentials**
 - **All public APIs must be documented**
-- Linting is enforced automatically by Super-Linter on every PR
+- Linting is enforced automatically by the `lint.yml` workflow on every PR
 
 ## Reporting Issues
 

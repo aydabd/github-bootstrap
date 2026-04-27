@@ -1,6 +1,6 @@
 # {{REPOSITORY_NAME}}
 
-[![Super-Linter](https://github.com/{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}/actions/workflows/super-linter.yml/badge.svg)](https://github.com/{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}/actions/workflows/super-linter.yml)
+[![Lint](https://github.com/{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}/actions/workflows/lint.yml/badge.svg)](https://github.com/{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}/actions/workflows/lint.yml)
 
 ## Overview
 
@@ -45,19 +45,20 @@ make coverage
 ### Linting
 
 ```bash
-# Run super-linter locally (check only)
+# Run linting locally (auto-fix mode)
 make lint
 
-# Run super-linter with autofix
-make lint-fix
+# Run linting in check-only mode (CI-equivalent)
+LINT_MODE=check make lint
 ```
 
-The repository includes GitHub Super-Linter for consistent code quality:
+The repository includes a GitHub lint workflow backed by pre-commit for
+consistent code quality:
 
-- **Automatic formatting** on pull requests
+- **Automatic validation** on pull requests and pushes
 - **Language-agnostic linting** for Markdown, YAML, JSON, XML, and EditorConfig
-- **Programming language validation** configured in `.super-linter.env`
-- **Local linting** with Docker via `make lint` commands
+- **Language-specific checks** from template-specific `.pre-commit-config.yaml`
+- **Local linting** via `make lint` in a micromamba-managed environment
 
 ## Code Standards
 
