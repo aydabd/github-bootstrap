@@ -1,15 +1,16 @@
 # =============================================================================
-# GitHub Bootstrap — Makefile
+# {{REPOSITORY_NAME}} — Makefile
 # =============================================================================
 # Zero manual setup — `make install` bootstraps everything automatically:
-#   1. Installs micromamba env (pre-commit, prettier, yamllint, terraform, etc.)
+#   1. Installs micromamba env (Go, golangci-lint, pre-commit, prettier, etc.)
 #   2. Installs pre-commit Git hooks
 #
 # Quick start:
 #   make install              Bootstrap env + hooks
 #   make lint                 Auto-format + lint (local dev)
 #   LINT_MODE=check make lint Check-only (CI mode, no auto-fix)
-#   make test                 Trigger repository creation tests
+#   make test                 Run tests
+#   make coverage             Tests + coverage report
 #
 # Skip micromamba: USE_MAMBA=0 make lint   (uses system tools)
 # =============================================================================
@@ -18,12 +19,12 @@
 
 SHELL := /bin/bash
 
-.PHONY: help install install-hooks setup-env lint test clean
+.PHONY: help install install-hooks setup-env lint test coverage clean
 
 # =============================================================================
 # Configuration
 # =============================================================================
-MAMBA_ENV  := github-bootstrap
+MAMBA_ENV  := {{REPOSITORY_NAME}}
 MAMBA_SPEC := $(CURDIR)/environment.yml
 
 # LINT_MODE: fix (default, local dev) or check (CI, no auto-fix)
@@ -56,7 +57,7 @@ ENV_STAMP := $(BUILD_DIR)/.env-stamp
 # Help
 # =============================================================================
 help: ## Show available make targets
-	@echo "GitHub Bootstrap — Available Commands:"
+	@echo "{{REPOSITORY_NAME}} — Available Commands:"
 	@echo ""
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -97,7 +98,7 @@ _install-hooks:
 	@$(MAMBA_RUN) pre-commit install --hook-type commit-msg
 ifeq ($(USE_MAMBA),1)
 	@# Prepend conda bin to PATH in generated hooks so language:system hooks
-	@# (ec, prettier, yamllint, etc.) are found when git runs outside the env.
+	@# (ec, golangci-lint, etc.) are found when git runs outside the env.
 	@ENV_BIN="$$(micromamba info -n $(MAMBA_ENV) 2>/dev/null | awk '/env location/{print $$NF}')/bin"; \
 	for hook in pre-commit commit-msg; do \
 		hook_file=".git/hooks/$$hook"; \
@@ -126,13 +127,13 @@ lint: setup-env ## Run all checks via pre-commit (LINT_MODE=fix|check)
 # =============================================================================
 # Testing
 # =============================================================================
-test: ## Trigger repository creation tests via GitHub Actions
-	@echo "Running repository creation tests..."
-	@gh workflow run test-repository-creation.yml \
-		--field test_repo_name="automated-test" \
-		--field primary_language="language-agnostic-only" \
-		--field cleanup_after_test="true"
-	@echo "Test triggered. Check: gh run list --workflow=test-repository-creation.yml"
+test: setup-env ## Run all Go tests
+	$(MAMBA_RUN) go test ./...
+
+coverage: setup-env ## Run Go tests with coverage report
+	$(MAMBA_RUN) go test -coverprofile=$(BUILD_DIR)/coverage.out ./...
+	$(MAMBA_RUN) go tool cover -html=$(BUILD_DIR)/coverage.out -o $(BUILD_DIR)/coverage.html
+	@echo "Coverage report: $(BUILD_DIR)/coverage.html"
 
 # =============================================================================
 # Clean
@@ -140,5 +141,3 @@ test: ## Trigger repository creation tests via GitHub Actions
 clean: ## Remove build artefacts and cache directories
 	find . -name "*.tmp" -delete 2>/dev/null || true
 	rm -rf $(BUILD_DIR)/
-	@find . -name ".DS_Store" -delete
-	@echo "Cleanup complete"

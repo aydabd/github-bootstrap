@@ -1,12 +1,15 @@
----
 # =============================================================================
-# GitHub Bootstrap — Pre-commit hooks (source of truth for all linting)
+# {{REPOSITORY_NAME}} — Pre-commit hooks (source of truth for all linting)
 # =============================================================================
 # All linters run from the micromamba environment — zero extra downloads.
 # Tool versions are managed by conda-forge in environment.yml.
 #
 # Everything uses `repo: local` with `language: system` so pre-commit
 # calls the micromamba-installed binaries directly.
+#
+# PREREQUISITES:
+#   - Run `npm install` once after cloning to install ESLint and TypeScript.
+#   - ESLint is invoked via `npx eslint` using your project's package.json.
 #
 # LINT_MODE:
 #   fix   — auto-fix formatting (default for local development)
@@ -15,6 +18,8 @@
 exclude: |-
   (?x)^(
     build/
+    dist/
+    node_modules/
   )
 repos:
   # ── Standard file hygiene ──────────────────────────────────────────────────
@@ -42,8 +47,46 @@ repos:
         exclude: >
           (?x)^(
             .*\.(png|jpg|jpeg|gif|ico|svg|pdf|lock)|
-            \.git/.*
+            \.git/.*|
+            node_modules/.*
           )$
+
+      # ── TypeScript / JavaScript: ESLint ───────────────────────────────────
+      - id: eslint
+        name: eslint
+        entry: bash
+        args:
+          - -c
+          - |
+            if [ "$LINT_MODE" = "check" ]; then
+              npx eslint --max-warnings=0 "$@"
+            else
+              npx eslint --fix "$@"
+            fi
+          - eslint
+        language: system
+        files: '\.[jt]sx?$'
+        pass_filenames: true
+
+      # ── TypeScript / JavaScript: Prettier formatting ───────────────────────
+      - id: prettier-ts
+        name: prettier (TS/JS)
+        entry: bash
+        args:
+          - -c
+          - |
+            if [ "$LINT_MODE" = "check" ]; then
+              prettier --check --config .prettierrc.yaml --ignore-path .prettierignore "$@" || {
+                echo "Files need formatting. Run: make lint"
+                exit 1
+              }
+            else
+              prettier -w --config .prettierrc.yaml --ignore-path .prettierignore "$@"
+            fi
+          - prettier
+        language: system
+        files: '\.[jt]sx?$'
+        pass_filenames: true
 
       # ── Shell: formatting (shfmt) ─────────────────────────────────────────
       - id: shfmt
@@ -118,7 +161,7 @@ repos:
 
       # ── JSON / YAML / Markdown: formatting (prettier) ─────────────────────
       - id: prettier
-        name: prettier
+        name: prettier (JSON/YAML/Markdown)
         entry: bash
         args:
           - -c
@@ -134,22 +177,6 @@ repos:
           - prettier
         language: system
         types_or: [json, yaml, markdown]
-
-      # ── Terraform: formatting (terraform fmt) ─────────────────────────────
-      - id: terraform-fmt
-        name: terraform fmt
-        entry: bash
-        args:
-          - -c
-          - |
-            if [ "$LINT_MODE" = "check" ]; then
-              terraform fmt -recursive -check ./terraform
-            else
-              terraform fmt -recursive ./terraform
-            fi
-        language: system
-        files: '\.tf$'
-        pass_filenames: false
 
   # ── Commit message: conventional commits ──────────────────────────────────
   - repo: https://github.com/compilerla/conventional-pre-commit

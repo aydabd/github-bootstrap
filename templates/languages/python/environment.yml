@@ -1,0 +1,36 @@
+name: "{{REPOSITORY_NAME}}"
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  # ── Python runtime ──────────────────────────────────────────────────────────
+  - python=3.13
+
+  # ── Pre-commit framework ────────────────────────────────────────────────────
+  - pre-commit
+
+  # ── Linting / formatting tools (used as language: system hooks) ─────────────
+  - prettier # JSON / YAML / Markdown formatter
+  - markdownlint-cli # Markdown linter
+  - yamllint # YAML linter
+  - taplo # TOML formatter + validator
+  - go-shfmt # shell formatter (provides shfmt binary)
+  - shellcheck # shell linter
+  - libxml2 # provides xmllint binary for XML validation
+  - jq # JSON processor
+  - coreutils # GNU coreutils for consistent cross-platform behaviour
+
+  # ── Python linters / formatters (used as language: system hooks) ─────────────
+  - ruff # Python linter + formatter
+  - mypy # Python static type checker
+  - types-pyyaml # mypy stubs for PyYAML
+
+  # ── Test suite ──────────────────────────────────────────────────────────────
+  - pytest
+  - pytest-cov
+  - pytest-mock
+
+  # ── pip extras ────────────────────────────────────────────────────────────────
+  - pip
+  - pip:
+      - editorconfig-checker

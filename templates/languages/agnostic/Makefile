@@ -1,15 +1,15 @@
 # =============================================================================
-# GitHub Bootstrap — Makefile
+# {{REPOSITORY_NAME}} — Makefile
 # =============================================================================
 # Zero manual setup — `make install` bootstraps everything automatically:
-#   1. Installs micromamba env (pre-commit, prettier, yamllint, terraform, etc.)
+#   1. Installs micromamba env (pre-commit, prettier, yamllint, etc.)
 #   2. Installs pre-commit Git hooks
 #
 # Quick start:
 #   make install              Bootstrap env + hooks
 #   make lint                 Auto-format + lint (local dev)
 #   LINT_MODE=check make lint Check-only (CI mode, no auto-fix)
-#   make test                 Trigger repository creation tests
+#   make test                 Run tests
 #
 # Skip micromamba: USE_MAMBA=0 make lint   (uses system tools)
 # =============================================================================
@@ -23,7 +23,7 @@ SHELL := /bin/bash
 # =============================================================================
 # Configuration
 # =============================================================================
-MAMBA_ENV  := github-bootstrap
+MAMBA_ENV  := {{REPOSITORY_NAME}}
 MAMBA_SPEC := $(CURDIR)/environment.yml
 
 # LINT_MODE: fix (default, local dev) or check (CI, no auto-fix)
@@ -56,7 +56,7 @@ ENV_STAMP := $(BUILD_DIR)/.env-stamp
 # Help
 # =============================================================================
 help: ## Show available make targets
-	@echo "GitHub Bootstrap — Available Commands:"
+	@echo "{{REPOSITORY_NAME}} — Available Commands:"
 	@echo ""
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -126,19 +126,18 @@ lint: setup-env ## Run all checks via pre-commit (LINT_MODE=fix|check)
 # =============================================================================
 # Testing
 # =============================================================================
-test: ## Trigger repository creation tests via GitHub Actions
-	@echo "Running repository creation tests..."
-	@gh workflow run test-repository-creation.yml \
-		--field test_repo_name="automated-test" \
-		--field primary_language="language-agnostic-only" \
-		--field cleanup_after_test="true"
-	@echo "Test triggered. Check: gh run list --workflow=test-repository-creation.yml"
+test: setup-env ## Run tests (update this target for your language/framework)
+	@echo "Update this target for your project's test framework."
+	@echo "Examples:"
+	@echo "  Python:     pytest tests/"
+	@echo "  Go:         go test ./..."
+	@echo "  TypeScript: npm test"
+	@echo "  Java:       ./gradlew test"
 
 # =============================================================================
 # Clean
 # =============================================================================
 clean: ## Remove build artefacts and cache directories
-	find . -name "*.tmp" -delete 2>/dev/null || true
+	find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name '.pytest_cache' -exec rm -rf {} + 2>/dev/null || true
 	rm -rf $(BUILD_DIR)/
-	@find . -name ".DS_Store" -delete
-	@echo "Cleanup complete"

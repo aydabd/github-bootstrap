@@ -1,6 +1,5 @@
----
 # =============================================================================
-# GitHub Bootstrap — Pre-commit hooks (source of truth for all linting)
+# {{REPOSITORY_NAME}} — Pre-commit hooks (source of truth for all linting)
 # =============================================================================
 # All linters run from the micromamba environment — zero extra downloads.
 # Tool versions are managed by conda-forge in environment.yml.
@@ -15,6 +14,7 @@
 exclude: |-
   (?x)^(
     build/
+    vendor/
   )
 repos:
   # ── Standard file hygiene ──────────────────────────────────────────────────
@@ -44,6 +44,22 @@ repos:
             .*\.(png|jpg|jpeg|gif|ico|svg|pdf|lock)|
             \.git/.*
           )$
+
+      # ── Go: lint + format (golangci-lint) ─────────────────────────────────
+      - id: golangci-lint
+        name: golangci-lint
+        entry: bash
+        args:
+          - -c
+          - |
+            if [ "$LINT_MODE" = "check" ]; then
+              golangci-lint run ./...
+            else
+              golangci-lint run --fix ./...
+            fi
+        language: system
+        files: '\.go$'
+        pass_filenames: false
 
       # ── Shell: formatting (shfmt) ─────────────────────────────────────────
       - id: shfmt
@@ -134,22 +150,6 @@ repos:
           - prettier
         language: system
         types_or: [json, yaml, markdown]
-
-      # ── Terraform: formatting (terraform fmt) ─────────────────────────────
-      - id: terraform-fmt
-        name: terraform fmt
-        entry: bash
-        args:
-          - -c
-          - |
-            if [ "$LINT_MODE" = "check" ]; then
-              terraform fmt -recursive -check ./terraform
-            else
-              terraform fmt -recursive ./terraform
-            fi
-        language: system
-        files: '\.tf$'
-        pass_filenames: false
 
   # ── Commit message: conventional commits ──────────────────────────────────
   - repo: https://github.com/compilerla/conventional-pre-commit

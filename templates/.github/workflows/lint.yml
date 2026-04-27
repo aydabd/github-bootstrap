@@ -1,0 +1,51 @@
+---
+name: Lint
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up micromamba environment
+        uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-file: environment.yml
+          environment-name: "{{REPOSITORY_NAME}}"
+          cache-environment: true
+          cache-downloads: true
+
+      - name: Cache pre-commit hook environments
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-
+
+      # LINT_MODE=check → all hooks run in check-only mode (no auto-fix).
+      # USE_MAMBA=0 → micromamba env already activated by setup-micromamba.
+      - name: Run lint (check mode)
+        run: USE_MAMBA=0 LINT_MODE=check make lint
+        shell: micromamba-shell {0}

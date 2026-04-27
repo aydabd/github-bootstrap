@@ -1,0 +1,30 @@
+name: "{{REPOSITORY_NAME}}"
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  # ── Python runtime (required by pre-commit) ─────────────────────────────────
+  - python=3.13
+
+  # ── Pre-commit framework ────────────────────────────────────────────────────
+  - pre-commit
+
+  # ── Linting / formatting tools (used as language: system hooks) ─────────────
+  - prettier # JSON / YAML / Markdown formatter
+  - markdownlint-cli # Markdown linter
+  - yamllint # YAML linter
+  - taplo # TOML formatter + validator
+  - go-shfmt # shell formatter (provides shfmt binary)
+  - shellcheck # shell linter
+  - libxml2 # provides xmllint binary for XML validation
+  - jq # JSON processor
+  - coreutils # GNU coreutils for consistent cross-platform behaviour
+
+  # ── Java toolchain ──────────────────────────────────────────────────────────
+  - openjdk # Java Development Kit (latest LTS from conda-forge)
+  - gradle # Build tool (includes Spotless plugin support for Java formatting)
+
+  # ── pip extras ────────────────────────────────────────────────────────────────
+  - pip
+  - pip:
+      - editorconfig-checker

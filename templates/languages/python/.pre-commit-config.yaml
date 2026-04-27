@@ -1,6 +1,5 @@
----
 # =============================================================================
-# GitHub Bootstrap — Pre-commit hooks (source of truth for all linting)
+# {{REPOSITORY_NAME}} — Pre-commit hooks (source of truth for all linting)
 # =============================================================================
 # All linters run from the micromamba environment — zero extra downloads.
 # Tool versions are managed by conda-forge in environment.yml.
@@ -44,6 +43,47 @@ repos:
             .*\.(png|jpg|jpeg|gif|ico|svg|pdf|lock)|
             \.git/.*
           )$
+
+      # ── Python: linting (ruff check) ──────────────────────────────────────
+      - id: ruff-check
+        name: ruff check (lint)
+        entry: bash
+        args:
+          - -c
+          - |
+            if [ "$LINT_MODE" = "check" ]; then
+              ruff check .
+            else
+              ruff check --fix .
+            fi
+        language: system
+        files: '\.py$'
+        pass_filenames: false
+
+      # ── Python: formatting (ruff format) ──────────────────────────────────
+      - id: ruff-format
+        name: ruff format
+        entry: bash
+        args:
+          - -c
+          - |
+            if [ "$LINT_MODE" = "check" ]; then
+              ruff format --check .
+            else
+              ruff format .
+            fi
+        language: system
+        files: '\.py$'
+        pass_filenames: false
+
+      # ── Python: type checking (mypy) ──────────────────────────────────────
+      - id: mypy
+        name: mypy
+        entry: mypy
+        args: [src/]
+        language: system
+        files: '^src/.*\.py$'
+        pass_filenames: false
 
       # ── Shell: formatting (shfmt) ─────────────────────────────────────────
       - id: shfmt
@@ -134,22 +174,6 @@ repos:
           - prettier
         language: system
         types_or: [json, yaml, markdown]
-
-      # ── Terraform: formatting (terraform fmt) ─────────────────────────────
-      - id: terraform-fmt
-        name: terraform fmt
-        entry: bash
-        args:
-          - -c
-          - |
-            if [ "$LINT_MODE" = "check" ]; then
-              terraform fmt -recursive -check ./terraform
-            else
-              terraform fmt -recursive ./terraform
-            fi
-        language: system
-        files: '\.tf$'
-        pass_filenames: false
 
   # ── Commit message: conventional commits ──────────────────────────────────
   - repo: https://github.com/compilerla/conventional-pre-commit

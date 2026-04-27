@@ -73,7 +73,7 @@ resource "github_repository_ruleset" "main_protection" {
       strict_required_status_checks_policy = true
 
       required_check {
-        context = "Super-Linter / Lint Code"
+        context = "lint"
       }
     }
   }

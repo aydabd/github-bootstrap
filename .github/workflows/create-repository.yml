@@ -205,10 +205,11 @@ jobs:
           # Copy root-level dotfiles
           cp templates/.gitignore new-repo/
           cp templates/.gitattributes new-repo/
-          cp templates/.super-linter.env new-repo/
           cp templates/.commitlintrc.yml new-repo/
           cp templates/.release-please-manifest.json new-repo/
           cp templates/.coderabbit.yaml new-repo/
+          cp templates/.prettierrc.yaml new-repo/
+          cp templates/.prettierignore new-repo/
 
           # Copy release-tool specific dotfiles / directories
           cp templates/.releaserc.json new-repo/
@@ -260,128 +261,37 @@ jobs:
           sed -i "s/{{REPOSITORY_OWNER}}/${{ steps.set-owner.outputs.owner }}/g" README.md
           sed -i "s/{{REPOSITORY_NAME}}/${{ github.event.inputs.repo_name }}/g" README.md
 
-      - name: Configure super-linter for selected languages
+      - name: Configure language tooling
         run: |
-          cd new-repo
           LANGUAGES="${{ github.event.inputs.languages }}"
+          REPO_NAME="${{ github.event.inputs.repo_name }}"
 
-          # Helper function to enable a language in .super-linter.env
-          enable_language() {
-            local lang=$1
-            case "$lang" in
-              "javascript")
-                sed -i "s/# VALIDATE_JAVASCRIPT_ES=true/VALIDATE_JAVASCRIPT_ES=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_JAVASCRIPT_PRETTIER=true/VALIDATE_JAVASCRIPT_PRETTIER=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_JSX=true/VALIDATE_JSX=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_JSX_PRETTIER=true/VALIDATE_JSX_PRETTIER=true/g" .super-linter.env
-                sed -i "s/# FIX_JAVASCRIPT_ES=true/FIX_JAVASCRIPT_ES=true/g" .super-linter.env
-                sed -i "s/# FIX_JAVASCRIPT_PRETTIER=true/FIX_JAVASCRIPT_PRETTIER=true/g" .super-linter.env
-                sed -i "s/# FIX_JSX=true/FIX_JSX=true/g" .super-linter.env
-                sed -i "s/# FIX_JSX_PRETTIER=true/FIX_JSX_PRETTIER=true/g" .super-linter.env
-                ;;
-              "typescript")
-                sed -i "s/# VALIDATE_TYPESCRIPT_ES=true/VALIDATE_TYPESCRIPT_ES=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_TYPESCRIPT_PRETTIER=true/VALIDATE_TYPESCRIPT_PRETTIER=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_TSX=true/VALIDATE_TSX=true/g" .super-linter.env
-                sed -i "s/# FIX_TYPESCRIPT_ES=true/FIX_TYPESCRIPT_ES=true/g" .super-linter.env
-                sed -i "s/# FIX_TYPESCRIPT_PRETTIER=true/FIX_TYPESCRIPT_PRETTIER=true/g" .super-linter.env
-                sed -i "s/# FIX_TSX=true/FIX_TSX=true/g" .super-linter.env
-                ;;
-              "python")
-                sed -i "s/# VALIDATE_PYTHON_RUFF=true/VALIDATE_PYTHON_RUFF=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_PYTHON_RUFF_FORMAT=true/VALIDATE_PYTHON_RUFF_FORMAT=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_PYTHON_MYPY=true/VALIDATE_PYTHON_MYPY=true/g" .super-linter.env
-                sed -i "s/# FIX_PYTHON_RUFF=true/FIX_PYTHON_RUFF=true/g" .super-linter.env
-                sed -i "s/# FIX_PYTHON_RUFF_FORMAT=true/FIX_PYTHON_RUFF_FORMAT=true/g" .super-linter.env
-                ;;
-              "java")
-                sed -i "s/# VALIDATE_JAVA=true/VALIDATE_JAVA=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_GOOGLE_JAVA_FORMAT=true/VALIDATE_GOOGLE_JAVA_FORMAT=true/g" .super-linter.env
-                sed -i "s/# FIX_GOOGLE_JAVA_FORMAT=true/FIX_GOOGLE_JAVA_FORMAT=true/g" .super-linter.env
-                ;;
-              "go")
-                sed -i "s/# VALIDATE_GO=true/VALIDATE_GO=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_GO_MODULES=true/VALIDATE_GO_MODULES=true/g" .super-linter.env
-                sed -i "s/# FIX_GO_MODULES=true/FIX_GO_MODULES=true/g" .super-linter.env
-                ;;
-              "rust")
-                sed -i "s/# VALIDATE_RUST_2021=true/VALIDATE_RUST_2021=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_RUST_CLIPPY=true/VALIDATE_RUST_CLIPPY=true/g" .super-linter.env
-                sed -i "s/# FIX_RUST_2021=true/FIX_RUST_2021=true/g" .super-linter.env
-                sed -i "s/# FIX_RUST_CLIPPY=true/FIX_RUST_CLIPPY=true/g" .super-linter.env
-                ;;
-              "ruby")
-                sed -i "s/# VALIDATE_RUBY=true/VALIDATE_RUBY=true/g" .super-linter.env
-                sed -i "s/# FIX_RUBY=true/FIX_RUBY=true/g" .super-linter.env
-                ;;
-              "php")
-                sed -i "s/# VALIDATE_PHP_BUILTIN=true/VALIDATE_PHP_BUILTIN=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_PHP_PHPCS=true/VALIDATE_PHP_PHPCS=true/g" .super-linter.env
-                sed -i "s/# FIX_PHP_PHPCS=true/FIX_PHP_PHPCS=true/g" .super-linter.env
-                ;;
-              "csharp")
-                sed -i "s/# VALIDATE_CSHARP=true/VALIDATE_CSHARP=true/g" .super-linter.env
-                sed -i "s/# FIX_CSHARP=true/FIX_CSHARP=true/g" .super-linter.env
-                ;;
-              "cpp")
-                sed -i "s/# VALIDATE_CPP=true/VALIDATE_CPP=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_CLANG_FORMAT=true/VALIDATE_CLANG_FORMAT=true/g" .super-linter.env
-                sed -i "s/# FIX_CLANG_FORMAT=true/FIX_CLANG_FORMAT=true/g" .super-linter.env
-                ;;
-              "css")
-                sed -i "s/# VALIDATE_CSS=true/VALIDATE_CSS=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_CSS_PRETTIER=true/VALIDATE_CSS_PRETTIER=true/g" .super-linter.env
-                sed -i "s/# FIX_CSS_PRETTIER=true/FIX_CSS_PRETTIER=true/g" .super-linter.env
-                ;;
-              "html")
-                sed -i "s/# VALIDATE_HTML=true/VALIDATE_HTML=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_HTML_PRETTIER=true/VALIDATE_HTML_PRETTIER=true/g" .super-linter.env
-                sed -i "s/# FIX_HTML_PRETTIER=true/FIX_HTML_PRETTIER=true/g" .super-linter.env
-                ;;
-              "docker")
-                sed -i "s/# VALIDATE_DOCKERFILE_HADOLINT=true/VALIDATE_DOCKERFILE_HADOLINT=true/g" .super-linter.env
-                ;;
-              "terraform")
-                sed -i "s/# VALIDATE_TERRAFORM_FMT=true/VALIDATE_TERRAFORM_FMT=true/g" .super-linter.env
-                sed -i "s/# VALIDATE_TERRAFORM_TFLINT=true/VALIDATE_TERRAFORM_TFLINT=true/g" .super-linter.env
-                sed -i "s/# FIX_TERRAFORM_FMT=true/FIX_TERRAFORM_FMT=true/g" .super-linter.env
-                ;;
-              "kotlin")
-                sed -i "s/# VALIDATE_KOTLIN=true/VALIDATE_KOTLIN=true/g" .super-linter.env
-                ;;
-              *)
-                echo "Warning: Unknown language '$lang' - skipping"
-                ;;
-            esac
-          }
+          # Map languages input to template directory.
+          # Use the first language when multiple are specified.
+          # Supported: language-agnostic-only, python, golang, typescript, java
+          FIRST_LANG=$(echo "$LANGUAGES" | cut -d',' -f1 | xargs)
+          case "$FIRST_LANG" in
+            "python")                 LANG_DIR="python" ;;
+            "go"|"golang")            LANG_DIR="golang" ;;
+            "typescript"|"javascript") LANG_DIR="typescript" ;;
+            "java"|"kotlin")          LANG_DIR="java" ;;
+            *)                        LANG_DIR="agnostic" ;;
+          esac
 
-          # Process the languages input
-          if [ "$LANGUAGES" = "all" ]; then
-            # Enable all major languages for monorepo
-            enable_language "javascript"
-            enable_language "typescript"
-            enable_language "python"
-            enable_language "java"
-            enable_language "go"
-            enable_language "rust"
-            enable_language "ruby"
-            enable_language "php"
-            enable_language "csharp"
-            enable_language "cpp"
-            echo "Enabled all major languages" >> $GITHUB_STEP_SUMMARY
-          elif [ "$LANGUAGES" = "language-agnostic-only" ]; then
-            # No changes needed - defaults are already language-agnostic only
-            echo "Using language-agnostic linters only" >> $GITHUB_STEP_SUMMARY
-          else
-            # Split comma-separated languages and enable each one
-            IFS=',' read -ra LANG_ARRAY <<< "$LANGUAGES"
-            for lang in "${LANG_ARRAY[@]}"; do
-              # Trim whitespace
-              lang=$(echo "$lang" | xargs)
-              enable_language "$lang"
-              echo "Enabled language: $lang" >> $GITHUB_STEP_SUMMARY
-            done
-          fi
+          TEMPLATE_DIR="templates/languages/$LANG_DIR"
+          REPO_DIR="new-repo"
+
+          echo "Using language template: $LANG_DIR" >> $GITHUB_STEP_SUMMARY
+
+          # Copy language-specific tooling files
+          cp "$TEMPLATE_DIR/environment.yml" "$REPO_DIR/environment.yml"
+          cp "$TEMPLATE_DIR/.pre-commit-config.yaml" "$REPO_DIR/.pre-commit-config.yaml"
+          cp "$TEMPLATE_DIR/Makefile" "$REPO_DIR/Makefile"
+
+          # Substitute repository name placeholder in all three files
+          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/environment.yml"
+          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/Makefile"
+          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/.github/workflows/lint.yml"
 
       - name: Configure Release Please for selected languages
         if: github.event.inputs.release_tool == 'release-please'
@@ -538,9 +448,10 @@ jobs:
           echo "- ✅ SECURITY.md (security policy)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ CONTRIBUTING.md (contribution guide)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Super-Linter workflow" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Super-Linter configuration (.super-linter.env)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Conventional commits (commitlint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Lint workflow (micromamba + pre-commit)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ environment.yml (language: ${{ github.event.inputs.languages }})" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ .pre-commit-config.yaml (all language: system hooks)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Conventional commits (pre-commit)" >> $GITHUB_STEP_SUMMARY
           case "${{ github.event.inputs.release_tool }}" in
             "release-please")
               echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
