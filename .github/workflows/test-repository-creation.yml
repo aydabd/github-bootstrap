@@ -165,6 +165,13 @@ jobs:
             "README.md"
             "LICENSE"
             "Makefile"
+            "AGENT.md"
+            "CLAUDE.md"
+            ".github/copilot-instructions.md"
+            ".github/instructions/project.instructions.md"
+            ".github/instructions/prompt-quality.instructions.md"
+            ".cursor/rules/project.mdc"
+            ".windsurfrules"
           )
 
           for file in "${REQUIRED_FILES[@]}"; do
@@ -177,6 +184,102 @@ jobs:
           done
 
           echo "🎉 All required files are present!"
+
+      - name: Validate agent kit structure
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+        run: |
+          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          OWNER="${{ github.repository_owner }}"
+          ERRORS=0
+
+          echo "Validating agent kit structure..."
+
+          # Check .github/agents/ has the expected agent files
+          GH_AGENTS=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/agents" --jq '.[].name' 2>/dev/null | wc -l)
+          if [ "$GH_AGENTS" -ge 29 ]; then
+            echo "✅ .github/agents/: ${GH_AGENTS} agent files"
+          else
+            echo "❌ .github/agents/: expected >= 29, found ${GH_AGENTS}"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check .claude/agents/ has the expected agent files
+          CLAUDE_AGENTS=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.claude/agents" --jq '.[].name' 2>/dev/null | wc -l)
+          if [ "$CLAUDE_AGENTS" -ge 29 ]; then
+            echo "✅ .claude/agents/: ${CLAUDE_AGENTS} agent files"
+          else
+            echo "❌ .claude/agents/: expected >= 29, found ${CLAUDE_AGENTS}"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check .github/skills/ has the expected skill directories
+          GH_SKILLS=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/skills" --jq '.[].name' 2>/dev/null | wc -l)
+          if [ "$GH_SKILLS" -ge 32 ]; then
+            echo "✅ .github/skills/: ${GH_SKILLS} skill directories"
+          else
+            echo "❌ .github/skills/: expected >= 32, found ${GH_SKILLS}"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check .claude/skills/ has the expected skill directories
+          CLAUDE_SKILLS=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.claude/skills" --jq '.[].name' 2>/dev/null | wc -l)
+          if [ "$CLAUDE_SKILLS" -ge 32 ]; then
+            echo "✅ .claude/skills/: ${CLAUDE_SKILLS} skill directories"
+          else
+            echo "❌ .claude/skills/: expected >= 32, found ${CLAUDE_SKILLS}"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Spot-check: verify a skill file has real content (not empty symlink artifact)
+          SKILL_CONTENT=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.claude/skills/security-review/SKILL.md" --jq '.size' 2>/dev/null)
+          if [ "$SKILL_CONTENT" -gt 100 ] 2>/dev/null; then
+            echo "✅ .claude/skills/security-review/SKILL.md has content (${SKILL_CONTENT} bytes)"
+          else
+            echo "❌ .claude/skills/security-review/SKILL.md is empty or missing (symlink may not have been preserved)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Spot-check: verify an agent file has real content
+          AGENT_CONTENT=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/agents/security-reviewer.agent.md" --jq '.size' 2>/dev/null)
+          if [ "$AGENT_CONTENT" -gt 100 ] 2>/dev/null; then
+            echo "✅ .github/agents/security-reviewer.agent.md has content (${AGENT_CONTENT} bytes)"
+          else
+            echo "❌ .github/agents/security-reviewer.agent.md is empty or missing"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "❌ Agent kit validation failed with ${ERRORS} error(s)"
+            exit 1
+          fi
+          echo "Agent kit structure verified"
+
+      - name: Verify no stale Super-Linter artifacts
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+        run: |
+          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          OWNER="${{ github.repository_owner }}"
+
+          echo "Checking for stale Super-Linter artifacts..."
+
+          # These files must NOT exist
+          FORBIDDEN_FILES=(
+            ".super-linter.env"
+            ".github/workflows/super-linter.yml"
+          )
+
+          for file in "${FORBIDDEN_FILES[@]}"; do
+            if gh api "/repos/${OWNER}/${REPO_NAME}/contents/${file}" >/dev/null 2>&1; then
+              echo "❌ Stale artifact found: ${file}"
+              exit 1
+            else
+              echo "✅ Absent (correct): ${file}"
+            fi
+          done
+
+          echo "No stale Super-Linter artifacts found"
 
       - name: Check pre-commit configuration
         env:
@@ -207,22 +310,39 @@ jobs:
             exit 1
           fi
 
-      - name: Trigger lint workflow test
+      - name: Trigger and monitor lint workflow
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+        timeout-minutes: 10
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          OWNER="${{ github.repository_owner }}"
 
-          echo "🧪 Triggering lint workflow in test repository..."
+          echo "Triggering lint workflow in test repository..."
 
-          # Trigger the lint workflow in the test repo
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
-            "/repos/${{ github.repository_owner }}/${REPO_NAME}/actions/workflows/lint.yml/dispatches" \
+            "/repos/${OWNER}/${REPO_NAME}/actions/workflows/lint.yml/dispatches" \
             -f ref="main"
 
-          echo "✅ Lint workflow triggered. Check: https://github.com/${{ github.repository_owner }}/${REPO_NAME}/actions"
+          echo "Lint workflow dispatched. Waiting for run to register..."
+          sleep 10
+
+          # Get the run ID of the dispatched workflow
+          RUN_ID=$(gh api \
+            "/repos/${OWNER}/${REPO_NAME}/actions/workflows/lint.yml/runs?per_page=1" \
+            --jq '.workflow_runs[0].id')
+
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "❌ Could not find lint workflow run"
+            exit 1
+          fi
+
+          echo "Watching lint run ${RUN_ID}..."
+          gh run watch "$RUN_ID" --repo "${OWNER}/${REPO_NAME}" --exit-status \
+            && echo "✅ Lint workflow passed" \
+            || { echo "❌ Lint workflow failed"; exit 1; }
 
   cleanup-test-repo:
     name: Cleanup Test Repository
