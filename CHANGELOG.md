@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.1](https://github.com/aydabd/github-bootstrap/compare/v1.3.0...v1.3.1) (2026-05-01)
+
+
+### Bug Fixes
+
+* add YAML document separator to template .pre-commit-config.yaml files ([4cd3f75](https://github.com/aydabd/github-bootstrap/commit/4cd3f750d95fbca32890d068fd5923ab95cd45dc))
+* **templates:** skip codeql when language sources are missing ([2a7131c](https://github.com/aydabd/github-bootstrap/commit/2a7131c9916da0fd213648373c28142e6f9c7196))
+* update coderabbit reveiewer configs ([43a34d2](https://github.com/aydabd/github-bootstrap/commit/43a34d2249e1927f9e1b6689494ce18651fcbc42))
+* update package-ecosystem from 'actions' to 'github-actions' ([29a6ecb](https://github.com/aydabd/github-bootstrap/commit/29a6ecb0187d48ed6aa39254a9676067540af584))
+
 ## [1.3.0](https://github.com/aydabd/github-bootstrap/compare/v1.2.1...v1.3.0) (2026-04-20)
 
 
