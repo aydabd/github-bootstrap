@@ -201,6 +201,7 @@ jobs:
           cp -r templates/* new-repo/
           cp -r templates/.github new-repo/
           cp -r templates/.cursor new-repo/
+          cp -r templates/.claude new-repo/
 
           # Copy root-level dotfiles
           cp templates/.gitignore new-repo/
@@ -210,6 +211,7 @@ jobs:
           cp templates/.coderabbit.yaml new-repo/
           cp templates/.prettierrc.yaml new-repo/
           cp templates/.prettierignore new-repo/
+          cp templates/.windsurfrules new-repo/
 
           # Copy release-tool specific dotfiles / directories
           cp templates/.releaserc.json new-repo/
