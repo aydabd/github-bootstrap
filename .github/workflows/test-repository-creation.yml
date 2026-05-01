@@ -154,10 +154,11 @@ jobs:
 
           # Check essential files exist
           REQUIRED_FILES=(
-            ".github/workflows/super-linter.yml"
+            ".github/workflows/lint.yml"
             ".github/CODEOWNERS"
             ".github/dependabot.yml"
-            ".super-linter.env"
+            ".pre-commit-config.yaml"
+            "environment.yml"
             ".editorconfig"
             ".gitignore"
             ".gitattributes"
@@ -177,101 +178,51 @@ jobs:
 
           echo "🎉 All required files are present!"
 
-      - name: Check super-linter configuration
+      - name: Check pre-commit configuration
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
 
-          echo "🔍 Checking super-linter configuration for languages: ${{ github.event.inputs.languages }}"
+          echo "🔍 Checking pre-commit configuration for languages: ${{ github.event.inputs.languages }}"
 
-          # Get the .super-linter.env content
-          LINTER_CONFIG=$(gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/.super-linter.env" --jq '.content' | base64 -d)
+          # Get the .pre-commit-config.yaml content
+          PRECOMMIT_CONFIG=$(gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/.pre-commit-config.yaml" --jq '.content' | base64 -d)
 
-          echo "Super-linter configuration:"
-          echo "$LINTER_CONFIG"
+          echo "Pre-commit configuration:"
+          echo "$PRECOMMIT_CONFIG"
 
-          # Verify language-specific configuration (check for uncommented VALIDATE_* lines)
-          LANGUAGES="${{ github.event.inputs.languages }}"
-
-          if [ "$LANGUAGES" = "language-agnostic-only" ]; then
-            # Should only have language-agnostic linters enabled
-            if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_EDITORCONFIG=true"; then
-              echo "✅ Language-agnostic linters enabled correctly"
-            else
-              echo "❌ Language-agnostic linters not configured properly"
-              exit 1
-            fi
-          elif [ "$LANGUAGES" = "all" ]; then
-            # Should have many languages enabled
-            ENABLED_COUNT=$(echo "$LINTER_CONFIG" | grep -c "^VALIDATE_.*=true" || true)
-            if [ $ENABLED_COUNT -ge 20 ]; then
-              echo "✅ All languages enabled correctly ($ENABLED_COUNT linters)"
-            else
-              echo "❌ Not enough linters enabled for 'all' option (only $ENABLED_COUNT)"
-              exit 1
-            fi
+          # Verify essential hooks are present
+          if echo "$PRECOMMIT_CONFIG" | grep -q "trailing-whitespace"; then
+            echo "✅ Core pre-commit hooks configured"
           else
-            # Check specific languages from comma-separated list
-            IFS=',' read -ra LANG_ARRAY <<< "$LANGUAGES"
-            for lang in "${LANG_ARRAY[@]}"; do
-              lang=$(echo "$lang" | xargs)  # trim whitespace
-              case "$lang" in
-                "javascript")
-                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_JAVASCRIPT_ES=true"; then
-                    echo "✅ JavaScript linting enabled"
-                  else
-                    echo "❌ JavaScript linting not enabled"
-                    exit 1
-                  fi
-                  ;;
-                "typescript")
-                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_TYPESCRIPT_ES=true"; then
-                    echo "✅ TypeScript linting enabled"
-                  else
-                    echo "❌ TypeScript linting not enabled"
-                    exit 1
-                  fi
-                  ;;
-                "python")
-                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_PYTHON_RUFF=true"; then
-                    echo "✅ Python linting enabled"
-                  else
-                    echo "❌ Python linting not enabled"
-                    exit 1
-                  fi
-                  ;;
-                "go")
-                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_GO=true"; then
-                    echo "✅ Go linting enabled"
-                  else
-                    echo "❌ Go linting not enabled"
-                    exit 1
-                  fi
-                  ;;
-                *)
-                  echo "ℹ️ Validation not implemented for: $lang"
-                  ;;
-              esac
-            done
+            echo "❌ Core pre-commit hooks missing"
+            exit 1
           fi
 
-      - name: Trigger super-linter workflow test
+          if echo "$PRECOMMIT_CONFIG" | grep -q "conventional-pre-commit"; then
+            echo "✅ Conventional commits hook configured"
+          else
+            echo "❌ Conventional commits hook missing"
+            exit 1
+          fi
+
+      - name: Trigger lint workflow test
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
 
-          echo "🧪 Triggering super-linter workflow in test repository..."
+          echo "🧪 Triggering lint workflow in test repository..."
 
-          # Trigger the super-linter workflow in the test repo
+          # Trigger the lint workflow in the test repo
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
-            "/repos/${{ github.repository_owner }}/${REPO_NAME}/actions/workflows/super-linter.yml/dispatches" \
+            "/repos/${{ github.repository_owner }}/${REPO_NAME}/actions/workflows/lint.yml/dispatches" \
             -f ref="main"
 
-          echo "✅ Super-linter workflow triggered. Check: https://github.com/${{ github.repository_owner }}/${REPO_NAME}/actions"
+          echo "✅ Lint workflow triggered. Check: https://github.com/${{ github.repository_owner }}/${REPO_NAME}/actions"
 
   cleanup-test-repo:
     name: Cleanup Test Repository

@@ -1,0 +1,1 @@
+../../../.github/skills/testing-integration/SKILL.md

@@ -1,0 +1,1 @@
+../../../.github/skills/github-comment-resolution/SKILL.md

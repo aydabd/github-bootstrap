@@ -1,0 +1,1 @@
+../../../.github/skills/domain-classification/SKILL.md

@@ -50,12 +50,21 @@ Do **not** update docs for internal refactoring, bug fixes, or performance impro
 Specialised agent skills live in `.github/skills/`.
 Each skill directory contains a `SKILL.md` (≤ 100 lines) covering one focused topic.
 
+### Project skills
+
 | Skill directory        | Purpose                                                 |
 | ---------------------- | ------------------------------------------------------- |
 | `testing-strategy`     | Testing philosophy, value-driven approach, corner cases |
 | `testing-patterns`     | Table-driven tests, mocking, fixtures, assertions       |
 | `testing-integration`  | Integration & E2E testing, test pyramid, traceability   |
 | `development-workflow` | Requirements → implementation → testing → review flow   |
+
+### PR review skills
+
+This repository includes a full PR review agent kit.
+See `.github/agents/` for available agents and `.github/skills/` for the complete skill list.
+
+Key review commands: `full review`, `quick review`, `security review`, `resolve PR comments`.
 
 Add project-specific skills as the codebase grows.
 

@@ -9,7 +9,7 @@ This Terraform module creates a fully configured GitHub repository with the same
   and vulnerability alerts enabled
 - **`github_repository_environment`** - `dev` and `prod` deployment environments
 - **`github_repository_ruleset`** - Branch protection for `main` (optional) requiring 2 approving reviews,
-  code-owner review, the Super-Linter status check, and linear history (no merge commits)
+  code-owner review, the Lint status check, and linear history (no merge commits)
 
 ## Usage
 
@@ -82,7 +82,7 @@ terraform apply \
 | `enable_branch_protection` | No       | `true`                                     | Create branch protection ruleset for `main`                                                                          |
 | `team_name`                | No       | `"team-leads"`                             | GitHub team name used by the wrapper workflow when templating CODEOWNERS (no direct Terraform effect)                |
 | `license_holder`           | No       | `""` (uses `repo_owner`)                   | License copyright holder used only when the wrapper workflow templates the LICENSE file (no direct Terraform effect) |
-| `languages`                | No       | `"language-agnostic-only"`                 | Comma-separated languages used by the wrapper workflow to configure Super-Linter files (no direct Terraform effect)  |
+| `languages`                | No       | `"language-agnostic-only"`                 | Comma-separated languages used by the wrapper workflow to configure linting (no direct Terraform effect)             |
 
 ## Outputs
 
@@ -110,20 +110,20 @@ terraform {
 
 ## Differences from the GitHub Actions Workflow
 
-| Feature                 | GitHub Actions Workflow         | Terraform Module                     |
-| ----------------------- | ------------------------------- | ------------------------------------ |
-| Repository creation     | ✅ GitHub API via `gh` CLI      | ✅ `github_repository` resource      |
-| Repository settings     | ✅ PATCH via `gh api`           | ✅ Inline in `github_repository`     |
-| Vulnerability alerts    | ✅ PUT via `gh api`             | ✅ `vulnerability_alerts = true`     |
-| Dependabot sec. updates | ✅ PUT via `gh api`             | ⚠️ Not directly in the provider      |
-| Environments            | ✅ PUT via `gh api`             | ✅ `github_repository_environment`   |
-| Branch protection       | ✅ POST rulesets via `gh api`   | ✅ `github_repository_ruleset`       |
-| Template files          | ✅ Git clone + copy + push      | ✅ Handled by the wrapper workflow   |
-| Language configuration  | ✅ `sed` on `.super-linter.env` | ✅ Handled by the wrapper workflow   |
-| CodeQL workflow         | ✅ Configured by wrapper        | ✅ Handled by the wrapper workflow   |
-| SECURITY.md             | ✅ Copied from template         | ✅ Handled by the wrapper workflow   |
-| CONTRIBUTING.md         | ✅ Copied from template         | ✅ Handled by the wrapper workflow   |
-| Conventional commits    | ✅ commitlint config + linter   | ✅ Handled by the wrapper workflow   |
-| Release Please          | ✅ Workflow + config files      | ✅ Handled by the wrapper workflow   |
-| State tracking          | ❌ Stateless                    | ✅ Terraform state (drift detection) |
-| Idempotency             | ⚠️ Creates new repo each run    | ✅ Apply is idempotent               |
+| Feature                 | GitHub Actions Workflow               | Terraform Module                     |
+| ----------------------- | ------------------------------------- | ------------------------------------ |
+| Repository creation     | ✅ GitHub API via `gh` CLI            | ✅ `github_repository` resource      |
+| Repository settings     | ✅ PATCH via `gh api`                 | ✅ Inline in `github_repository`     |
+| Vulnerability alerts    | ✅ PUT via `gh api`                   | ✅ `vulnerability_alerts = true`     |
+| Dependabot sec. updates | ✅ PUT via `gh api`                   | ⚠️ Not directly in the provider      |
+| Environments            | ✅ PUT via `gh api`                   | ✅ `github_repository_environment`   |
+| Branch protection       | ✅ POST rulesets via `gh api`         | ✅ `github_repository_ruleset`       |
+| Template files          | ✅ Git clone + copy + push            | ✅ Handled by the wrapper workflow   |
+| Language configuration  | ✅ `sed` on `.pre-commit-config.yaml` | ✅ Handled by the wrapper workflow   |
+| CodeQL workflow         | ✅ Configured by wrapper              | ✅ Handled by the wrapper workflow   |
+| SECURITY.md             | ✅ Copied from template               | ✅ Handled by the wrapper workflow   |
+| CONTRIBUTING.md         | ✅ Copied from template               | ✅ Handled by the wrapper workflow   |
+| Conventional commits    | ✅ commitlint config + linter         | ✅ Handled by the wrapper workflow   |
+| Release Please          | ✅ Workflow + config files            | ✅ Handled by the wrapper workflow   |
+| State tracking          | ❌ Stateless                          | ✅ Terraform state (drift detection) |
+| Idempotency             | ⚠️ Creates new repo each run          | ✅ Apply is idempotent               |

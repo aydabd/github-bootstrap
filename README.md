@@ -1,6 +1,6 @@
 # github-bootstrap
 
-[![Super-Linter](https://github.com/aydabd/github-bootstrap/actions/workflows/super-linter.yml/badge.svg)](https://github.com/aydabd/github-bootstrap/actions/workflows/super-linter.yml)
+[![Lint](https://github.com/aydabd/github-bootstrap/actions/workflows/lint.yml/badge.svg)](https://github.com/aydabd/github-bootstrap/actions/workflows/lint.yml)
 
 Bootstrap new GitHub repositories with best practices, SOLID principles, and language-agnostic templates.
 
@@ -14,11 +14,11 @@ Creates fully configured repositories with:
 - Development and production environments
 - Documentation templates
 - Editor and Git configurations
-- Conventional commits enforcement via commitlint
+- Conventional commits enforcement via pre-commit hooks
 - Release Please workflow for automated semantic versioning
-- Super-Linter workflow for PR and push linting
+- Pre-commit linting workflow for PR and push (micromamba + pre-commit)
 - AI code review with CodeRabbit and Claude (see [AI Code Review](#ai-code-review))
-- Makefile for local linting with Docker
+- Makefile for local linting (`make lint` via micromamba environment)
 - SECURITY.md and CONTRIBUTING.md
 - CodeQL security scanning workflow (language-aware)
 - Vulnerability alerts and Dependabot security updates enabled automatically
@@ -139,27 +139,23 @@ automated security fixes are enabled on every created repository.
 
 Project readme and AI assistant instructions (Agent, Claude, Copilot) following SOLID, TDD, and DDD principles.
 
-### Super-Linter Integration
+### Linting (micromamba + pre-commit)
 
-- **GitHub Actions workflow** — Autoformats code on pull requests and commits fixes back to the PR branch
-- **One linter per file type** — JSON, YAML, and Markdown each use a single tool to avoid
-  rule conflicts and keep runs fast (`VALIDATE_JSON_PRETTIER`, `VALIDATE_YAML_PRETTIER`,
-  `VALIDATE_MARKDOWN` + `FIX_MARKDOWN_PRETTIER`)
-- **Shell scripts** — shellcheck (correctness) + shfmt (formatting) run as complementary tools
-- **Language-specific linters** — Enabled automatically via dropdown when the repository is created;
-  commented-out stubs remain in `.super-linter.env` for easy opt-in later
-- **Local linting** — Makefile with `make lint` and `make lint-fix` commands using Docker
-- **`slim` image** — Only the linters you need; dramatically smaller than the `standard` image
+- **Pre-commit hooks** — All quality checks run via `.pre-commit-config.yaml` as the single source of truth
+- **Isolated environment** — `micromamba` manages all tool versions in `environment.yml` (zero system dependencies)
+- **One linter per file type** — prettier (JSON/YAML/Markdown), shellcheck + shfmt (shell),
+  markdownlint, editorconfig-checker, yamllint, taplo (TOML), terraform fmt
+- **Local and CI** — `make lint` auto-fixes locally; `LINT_MODE=check make lint` fails on violations in CI
+- **Language-specific linters** — Add language linters to `.pre-commit-config.yaml` as needed
 
 ### Conventional Commits
 
 All repositories enforce [conventional commits](https://www.conventionalcommits.org/)
-using commitlint integrated with Super-Linter:
+via pre-commit hooks:
 
 - **Commit format** - `type(scope): description` (e.g., `feat: add login`, `fix(auth): token refresh`)
 - **Allowed types** - `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
-- **Configuration** - `.commitlintrc.yml` at the repository root
-- **Enforcement** - Validated automatically via Super-Linter on every PR and push
+- **Enforcement** - Validated by the `conventional-pre-commit` hook on every commit
 
 ### AI Code Review
 
@@ -205,7 +201,7 @@ Both reviewers are configured to flag only high-impact issues:
 | Critical design flaws | Broken API contracts, missing input validation, SOLID issues |
 
 Style, formatting, and naming concerns are **not** flagged — those are handled by
-Super-Linter and pre-commit hooks.
+pre-commit hooks and the lint workflow.
 
 #### Opting Out
 
@@ -321,13 +317,23 @@ Templates use a **single source of truth** pattern for AI agent instructions:
 - **Canonical file**: `.github/instructions/project.instructions.md`
 - **Thin pointers**: `AGENT.md`, `CLAUDE.md`, `.github/copilot-instructions.md`
 - **Cursor rules**: `.cursor/rules/project.mdc`
+- **Windsurf rules**: `.windsurfrules`
 
 Edit only the canonical file — all agents pick up changes automatically.
+
+### PR Review Agent Kit
+
+Every created repository ships with a reusable PR review agent kit:
+
+- **29 specialist agents** under `.github/agents/` and `.claude/agents/`
+- **37 skills** under `.github/skills/` (symlinked to `.claude/skills/`)
+- Key commands: `full review`, `quick review`, `security review`, `resolve PR comments`
+- Agents use only `git`, `grep`, `gh` — no third-party tools required
 
 ## Customization
 
 All templates are in `templates/`. Modify them to match your team's needs.
-See repository settings, environment configuration, and super-linter options.
+See repository settings, environment configuration, and pre-commit options.
 
 ### Terraform IaC
 
@@ -336,7 +342,7 @@ The Terraform module (in `terraform/`) manages the same infrastructure declarati
 1. Creates the repository with all settings via `github_repository`
 2. Creates `dev` and `prod` environments via `github_repository_environment`
 3. Applies branch protection via `github_repository_ruleset`
-4. The wrapper workflow then copies template files and configures super-linter
+4. The wrapper workflow then copies template files and configures linting
 
 Terraform provides idempotent applies and state tracking, making it suitable for
 managing repositories as long-lived infrastructure.
@@ -346,7 +352,7 @@ managing repositories as long-lived infrastructure.
 - GitHub personal access token (PAT) with `repo` scope (add `admin:org` for organization repositories)
   — stored as a `GH_PAT` repository secret **or** provided via the `gh_token` workflow input
   — see [Setup](#setup)
-- Docker installed for local linting with `make lint` (optional)
+- micromamba for local linting with `make lint` (auto-installed by `make install`)
 
 ## License
 

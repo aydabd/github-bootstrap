@@ -1,0 +1,1 @@
+../../../.github/skills/dependency-review/SKILL.md
