@@ -154,16 +154,24 @@ jobs:
 
           # Check essential files exist
           REQUIRED_FILES=(
-            ".github/workflows/super-linter.yml"
+            ".github/workflows/lint.yml"
             ".github/CODEOWNERS"
             ".github/dependabot.yml"
-            ".super-linter.env"
+            ".pre-commit-config.yaml"
+            "environment.yml"
             ".editorconfig"
             ".gitignore"
             ".gitattributes"
             "README.md"
             "LICENSE"
             "Makefile"
+            "AGENT.md"
+            "CLAUDE.md"
+            ".github/copilot-instructions.md"
+            ".github/instructions/project.instructions.md"
+            ".github/instructions/prompt-quality.instructions.md"
+            ".cursor/rules/project.mdc"
+            ".windsurfrules"
           )
 
           for file in "${REQUIRED_FILES[@]}"; do
@@ -177,101 +185,164 @@ jobs:
 
           echo "🎉 All required files are present!"
 
-      - name: Check super-linter configuration
+      - name: Validate agent kit structure
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          OWNER="${{ github.repository_owner }}"
+          ERRORS=0
 
-          echo "🔍 Checking super-linter configuration for languages: ${{ github.event.inputs.languages }}"
+          echo "Validating agent kit structure..."
 
-          # Get the .super-linter.env content
-          LINTER_CONFIG=$(gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/.super-linter.env" --jq '.content' | base64 -d)
-
-          echo "Super-linter configuration:"
-          echo "$LINTER_CONFIG"
-
-          # Verify language-specific configuration (check for uncommented VALIDATE_* lines)
-          LANGUAGES="${{ github.event.inputs.languages }}"
-
-          if [ "$LANGUAGES" = "language-agnostic-only" ]; then
-            # Should only have language-agnostic linters enabled
-            if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_EDITORCONFIG=true"; then
-              echo "✅ Language-agnostic linters enabled correctly"
-            else
-              echo "❌ Language-agnostic linters not configured properly"
-              exit 1
-            fi
-          elif [ "$LANGUAGES" = "all" ]; then
-            # Should have many languages enabled
-            ENABLED_COUNT=$(echo "$LINTER_CONFIG" | grep -c "^VALIDATE_.*=true" || true)
-            if [ $ENABLED_COUNT -ge 20 ]; then
-              echo "✅ All languages enabled correctly ($ENABLED_COUNT linters)"
-            else
-              echo "❌ Not enough linters enabled for 'all' option (only $ENABLED_COUNT)"
-              exit 1
-            fi
+          # Check .github/agents/ has the expected agent files
+          GH_AGENTS=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/agents" --jq '.[].name' 2>/dev/null | wc -l)
+          if [ "$GH_AGENTS" -ge 29 ]; then
+            echo "✅ .github/agents/: ${GH_AGENTS} agent files"
           else
-            # Check specific languages from comma-separated list
-            IFS=',' read -ra LANG_ARRAY <<< "$LANGUAGES"
-            for lang in "${LANG_ARRAY[@]}"; do
-              lang=$(echo "$lang" | xargs)  # trim whitespace
-              case "$lang" in
-                "javascript")
-                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_JAVASCRIPT_ES=true"; then
-                    echo "✅ JavaScript linting enabled"
-                  else
-                    echo "❌ JavaScript linting not enabled"
-                    exit 1
-                  fi
-                  ;;
-                "typescript")
-                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_TYPESCRIPT_ES=true"; then
-                    echo "✅ TypeScript linting enabled"
-                  else
-                    echo "❌ TypeScript linting not enabled"
-                    exit 1
-                  fi
-                  ;;
-                "python")
-                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_PYTHON_RUFF=true"; then
-                    echo "✅ Python linting enabled"
-                  else
-                    echo "❌ Python linting not enabled"
-                    exit 1
-                  fi
-                  ;;
-                "go")
-                  if echo "$LINTER_CONFIG" | grep -q "^VALIDATE_GO=true"; then
-                    echo "✅ Go linting enabled"
-                  else
-                    echo "❌ Go linting not enabled"
-                    exit 1
-                  fi
-                  ;;
-                *)
-                  echo "ℹ️ Validation not implemented for: $lang"
-                  ;;
-              esac
-            done
+            echo "❌ .github/agents/: expected >= 29, found ${GH_AGENTS}"
+            ERRORS=$((ERRORS + 1))
           fi
 
-      - name: Trigger super-linter workflow test
+          # Check .claude/agents/ has the expected agent files
+          CLAUDE_AGENTS=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.claude/agents" --jq '.[].name' 2>/dev/null | wc -l)
+          if [ "$CLAUDE_AGENTS" -ge 29 ]; then
+            echo "✅ .claude/agents/: ${CLAUDE_AGENTS} agent files"
+          else
+            echo "❌ .claude/agents/: expected >= 29, found ${CLAUDE_AGENTS}"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check .github/skills/ has the expected skill directories
+          GH_SKILLS=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/skills" --jq '.[].name' 2>/dev/null | wc -l)
+          if [ "$GH_SKILLS" -ge 32 ]; then
+            echo "✅ .github/skills/: ${GH_SKILLS} skill directories"
+          else
+            echo "❌ .github/skills/: expected >= 32, found ${GH_SKILLS}"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check .claude/skills/ has the expected skill directories
+          CLAUDE_SKILLS=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.claude/skills" --jq '.[].name' 2>/dev/null | wc -l)
+          if [ "$CLAUDE_SKILLS" -ge 32 ]; then
+            echo "✅ .claude/skills/: ${CLAUDE_SKILLS} skill directories"
+          else
+            echo "❌ .claude/skills/: expected >= 32, found ${CLAUDE_SKILLS}"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Spot-check: verify a skill file has real content (not empty symlink artifact)
+          SKILL_CONTENT=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.claude/skills/security-review/SKILL.md" --jq '.size' 2>/dev/null)
+          if [ "$SKILL_CONTENT" -gt 100 ] 2>/dev/null; then
+            echo "✅ .claude/skills/security-review/SKILL.md has content (${SKILL_CONTENT} bytes)"
+          else
+            echo "❌ .claude/skills/security-review/SKILL.md is empty or missing (symlink may not have been preserved)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Spot-check: verify an agent file has real content
+          AGENT_CONTENT=$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/agents/security-reviewer.agent.md" --jq '.size' 2>/dev/null)
+          if [ "$AGENT_CONTENT" -gt 100 ] 2>/dev/null; then
+            echo "✅ .github/agents/security-reviewer.agent.md has content (${AGENT_CONTENT} bytes)"
+          else
+            echo "❌ .github/agents/security-reviewer.agent.md is empty or missing"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "❌ Agent kit validation failed with ${ERRORS} error(s)"
+            exit 1
+          fi
+          echo "Agent kit structure verified"
+
+      - name: Verify no stale Super-Linter artifacts
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+        run: |
+          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          OWNER="${{ github.repository_owner }}"
+
+          echo "Checking for stale Super-Linter artifacts..."
+
+          # These files must NOT exist
+          FORBIDDEN_FILES=(
+            ".super-linter.env"
+            ".github/workflows/super-linter.yml"
+          )
+
+          for file in "${FORBIDDEN_FILES[@]}"; do
+            if gh api "/repos/${OWNER}/${REPO_NAME}/contents/${file}" >/dev/null 2>&1; then
+              echo "❌ Stale artifact found: ${file}"
+              exit 1
+            else
+              echo "✅ Absent (correct): ${file}"
+            fi
+          done
+
+          echo "No stale Super-Linter artifacts found"
+
+      - name: Check pre-commit configuration
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
 
-          echo "🧪 Triggering super-linter workflow in test repository..."
+          echo "🔍 Checking pre-commit configuration for languages: ${{ github.event.inputs.languages }}"
 
-          # Trigger the super-linter workflow in the test repo
+          # Get the .pre-commit-config.yaml content
+          PRECOMMIT_CONFIG=$(gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/.pre-commit-config.yaml" --jq '.content' | base64 -d)
+
+          echo "Pre-commit configuration:"
+          echo "$PRECOMMIT_CONFIG"
+
+          # Verify essential hooks are present
+          if echo "$PRECOMMIT_CONFIG" | grep -q "trailing-whitespace"; then
+            echo "✅ Core pre-commit hooks configured"
+          else
+            echo "❌ Core pre-commit hooks missing"
+            exit 1
+          fi
+
+          if echo "$PRECOMMIT_CONFIG" | grep -q "conventional-pre-commit"; then
+            echo "✅ Conventional commits hook configured"
+          else
+            echo "❌ Conventional commits hook missing"
+            exit 1
+          fi
+
+      - name: Trigger and monitor lint workflow
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+        timeout-minutes: 10
+        run: |
+          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          OWNER="${{ github.repository_owner }}"
+
+          echo "Triggering lint workflow in test repository..."
+
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
-            "/repos/${{ github.repository_owner }}/${REPO_NAME}/actions/workflows/super-linter.yml/dispatches" \
+            "/repos/${OWNER}/${REPO_NAME}/actions/workflows/lint.yml/dispatches" \
             -f ref="main"
 
-          echo "✅ Super-linter workflow triggered. Check: https://github.com/${{ github.repository_owner }}/${REPO_NAME}/actions"
+          echo "Lint workflow dispatched. Waiting for run to register..."
+          sleep 10
+
+          # Get the run ID of the dispatched workflow
+          RUN_ID=$(gh api \
+            "/repos/${OWNER}/${REPO_NAME}/actions/workflows/lint.yml/runs?per_page=1" \
+            --jq '.workflow_runs[0].id')
+
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo "❌ Could not find lint workflow run"
+            exit 1
+          fi
+
+          echo "Watching lint run ${RUN_ID}..."
+          gh run watch "$RUN_ID" --repo "${OWNER}/${REPO_NAME}" --exit-status \
+            && echo "✅ Lint workflow passed" \
+            || { echo "❌ Lint workflow failed"; exit 1; }
 
   cleanup-test-repo:
     name: Cleanup Test Repository

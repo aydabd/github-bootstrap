@@ -1,0 +1,1 @@
+../../../.github/skills/architecture-review/SKILL.md

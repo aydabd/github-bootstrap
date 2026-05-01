@@ -1,0 +1,1 @@
+../../../.github/skills/findings-contract/SKILL.md

@@ -1,0 +1,1 @@
+../../../.github/skills/pr-diff-analysis/SKILL.md

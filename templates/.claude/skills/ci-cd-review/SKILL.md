@@ -1,0 +1,1 @@
+../../../.github/skills/ci-cd-review/SKILL.md

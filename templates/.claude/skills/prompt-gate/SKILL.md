@@ -1,0 +1,1 @@
+../../../.github/skills/prompt-gate/SKILL.md

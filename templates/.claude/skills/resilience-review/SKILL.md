@@ -1,0 +1,1 @@
+../../../.github/skills/resilience-review/SKILL.md

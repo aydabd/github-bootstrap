@@ -38,5 +38,5 @@ This repository follows these security practices:
 - All PRs require code-owner review before merging
 - Branch protection prevents force-pushes and deletion of `main`
 - GitHub secret scanning is available where supported by repository visibility and GitHub/org settings
-- Super-Linter scans code, shell scripts, YAML, and Terraform on every PR and push
+- Pre-commit hooks lint code, shell scripts, YAML, and Terraform on every commit and PR
 - Conventional commits enforce traceable, reviewable changes

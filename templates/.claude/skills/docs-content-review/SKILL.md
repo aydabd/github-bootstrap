@@ -1,0 +1,1 @@
+../../../.github/skills/docs-content-review/SKILL.md

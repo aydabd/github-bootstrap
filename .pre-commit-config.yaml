@@ -135,6 +135,14 @@ repos:
         language: system
         types_or: [json, yaml, markdown]
 
+      # ── Skill parity: .claude/skills symlinks → .github/skills ─────────────
+      - id: skill-parity
+        name: skill-parity
+        entry: ./scripts/sync-skills.sh --check
+        language: system
+        pass_filenames: false
+        files: '\.github/skills/|\.claude/skills/'
+
       # ── Terraform: formatting (terraform fmt) ─────────────────────────────
       - id: terraform-fmt
         name: terraform fmt
