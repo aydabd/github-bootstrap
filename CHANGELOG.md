@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.0](https://github.com/aydabd/github-bootstrap/compare/v1.3.1...v1.4.0) (2026-05-01)
+
+
+### Features
+
+* add PR review agent kit and remove Super-Linter references ([1a7ec07](https://github.com/aydabd/github-bootstrap/commit/1a7ec0721235a4d134968d7449e482b9a3b40744))
+
+
+### Bug Fixes
+
+* copy .claude/ and .windsurfrules to created repositories ([454cad3](https://github.com/aydabd/github-bootstrap/commit/454cad343f69420c56f6035c638fd1d36f9b24d2))
+* **deps:** bump googleapis/release-please-action from 4.4.0 to 5.0.0 ([#21](https://github.com/aydabd/github-bootstrap/issues/21)) ([439221b](https://github.com/aydabd/github-bootstrap/commit/439221b7138ff0e01bd5b55b456d5c1f05034278))
+
 ## [1.3.1](https://github.com/aydabd/github-bootstrap/compare/v1.3.0...v1.3.1) (2026-05-01)
 
 
