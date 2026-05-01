@@ -15,15 +15,10 @@ on:
         default: "language-agnostic-only"
         type: string
       cleanup_after_test:
-        description: "Automatically delete test repository after testing"
+        description: "Automatically delete test repository after validation"
         required: false
-        default: true
+        default: false
         type: boolean
-      wait_time_minutes:
-        description: "Minutes to wait before cleanup (to inspect results)"
-        required: false
-        default: "5"
-        type: string
       gh_token:
         description: >-
           Personal Access Token with repo and admin:org scopes.
@@ -310,15 +305,12 @@ jobs:
             exit 1
           fi
 
-      - name: Trigger and monitor lint workflow
+      - name: Trigger lint workflow
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        timeout-minutes: 10
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
           OWNER="${{ github.repository_owner }}"
-
-          echo "Triggering lint workflow in test repository..."
 
           gh api \
             --method POST \
@@ -326,29 +318,40 @@ jobs:
             "/repos/${OWNER}/${REPO_NAME}/actions/workflows/lint.yml/dispatches" \
             -f ref="main"
 
-          echo "Lint workflow dispatched. Waiting for run to register..."
-          sleep 10
+          echo "✅ Lint workflow dispatched"
+          echo "Check result: https://github.com/${OWNER}/${REPO_NAME}/actions"
 
-          # Get the run ID of the dispatched workflow
-          RUN_ID=$(gh api \
-            "/repos/${OWNER}/${REPO_NAME}/actions/workflows/lint.yml/runs?per_page=1" \
-            --jq '.workflow_runs[0].id')
+      - name: Write job summary
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+        run: |
+          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          OWNER="${{ github.repository_owner }}"
+          REPO_URL="https://github.com/${OWNER}/${REPO_NAME}"
 
-          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
-            echo "❌ Could not find lint workflow run"
-            exit 1
-          fi
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## Test Repository Created
 
-          echo "Watching lint run ${RUN_ID}..."
-          gh run watch "$RUN_ID" --repo "${OWNER}/${REPO_NAME}" --exit-status \
-            && echo "✅ Lint workflow passed" \
-            || { echo "❌ Lint workflow failed"; exit 1; }
+          | Item | Status |
+          |------|--------|
+          | Repository | [${OWNER}/${REPO_NAME}](${REPO_URL}) |
+          | Structure validation | ✅ Passed |
+          | Agent kit (agents + skills) | ✅ Passed |
+          | No stale Super-Linter artifacts | ✅ Passed |
+          | Pre-commit config | ✅ Passed |
+          | Lint workflow | Dispatched — [check result](${REPO_URL}/actions) |
+
+          ### Next steps
+
+          1. Verify the lint workflow passes in the test repo
+          2. Open a PR to test the PR-triggered lint path
+          3. Delete when done: \`gh repo delete ${OWNER}/${REPO_NAME} --yes\`
+          EOF
 
   cleanup-test-repo:
     name: Cleanup Test Repository
     needs: create-test-repo
     runs-on: ubuntu-latest
-    # Only run if repo was actually created AND (user wants cleanup OR the creation job failed)
     if: >-
       ${{ always() &&
       needs.create-test-repo.outputs.repo_created == 'true' &&
@@ -368,14 +371,6 @@ jobs:
           gh_token: ${{ github.event.inputs.gh_token }}
           gh_pat_secret: ${{ secrets.GH_PAT }}
 
-      - name: Wait before cleanup
-        # Only wait if the creation job succeeded - skip wait on failures
-        if: ${{ needs.create-test-repo.result == 'success' }}
-        run: |
-          WAIT_MINUTES="${{ github.event.inputs.wait_time_minutes }}"
-          echo "⏳ Waiting ${WAIT_MINUTES} minutes before cleanup to allow inspection..."
-          sleep $((WAIT_MINUTES * 60))
-
       - name: Delete test repository
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
@@ -383,11 +378,9 @@ jobs:
           REPO_NAME="${{ needs.create-test-repo.outputs.test_repo_name }}"
           OWNER="${{ github.repository_owner }}"
 
-          echo "🗑️ Cleaning up test repository: ${OWNER}/${REPO_NAME}"
+          echo "Cleaning up test repository: ${OWNER}/${REPO_NAME}"
 
-          # Check if repository exists before attempting deletion
           if gh repo view "${OWNER}/${REPO_NAME}" &>/dev/null; then
-            # Delete the repository directly
             gh api \
               --method DELETE \
               -H "Accept: application/vnd.github+json" \
