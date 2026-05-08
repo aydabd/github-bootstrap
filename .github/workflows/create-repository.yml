@@ -279,6 +279,7 @@ jobs:
 
           # Build a space-separated list of workflow filenames to keep
           KEEP_FILES=""
+          RELEASE_KEPT=false
 
           case "$WORKFLOWS_INPUT" in
             "none") ;;
@@ -291,14 +292,23 @@ jobs:
                   "codeql")         KEEP_FILES="$KEEP_FILES codeql.yml" ;;
                   "ai-code-review") KEEP_FILES="$KEEP_FILES ai-code-review.yml" ;;
                   "release")
+                    RELEASE_KEPT=true
                     case "${{ github.event.inputs.release_tool }}" in
                       "release-please")   KEEP_FILES="$KEEP_FILES release-please.yml" ;;
                       "semantic-release") KEEP_FILES="$KEEP_FILES semantic-release.yml" ;;
                       *)                  KEEP_FILES="$KEEP_FILES git-cliff-release.yml" ;;
                     esac
                     ;;
+                  *)
+                    echo "⚠️ Unknown workflow name: '$name' (valid: lint, codeql, ai-code-review, release)" >> $GITHUB_STEP_SUMMARY
+                    ;;
                 esac
               done
+              # Fail fast if every supplied name was unrecognised
+              if [ -z "$KEEP_FILES" ]; then
+                echo "❌ No valid workflow names found in '$WORKFLOWS_INPUT'. Valid: lint,codeql,ai-code-review,release" >&2
+                exit 1
+              fi
               ;;
           esac
 
@@ -309,6 +319,24 @@ jobs:
             rm -f "$file"
             echo "⏭️ Skipped workflow: $filename" >> $GITHUB_STEP_SUMMARY
           done
+
+          # If the release workflow was not kept, also remove its config files
+          if [ "$RELEASE_KEPT" = "false" ]; then
+            case "${{ github.event.inputs.release_tool }}" in
+              "release-please")
+                rm -f release-please-config.json .release-please-manifest.json
+                echo "⏭️ Removed release-please config files" >> $GITHUB_STEP_SUMMARY
+                ;;
+              "semantic-release")
+                rm -f .releaserc.json
+                echo "⏭️ Removed semantic-release config file" >> $GITHUB_STEP_SUMMARY
+                ;;
+              *)
+                rm -f cliff.toml
+                echo "⏭️ Removed git-cliff config file" >> $GITHUB_STEP_SUMMARY
+                ;;
+            esac
+          fi
 
       - name: Configure CODEOWNERS
         run: |
@@ -366,7 +394,10 @@ jobs:
           # Substitute repository name placeholder in all three files
           sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/environment.yml"
           sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/Makefile"
-          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/.github/workflows/lint.yml"
+          # lint.yml may have been removed by "Remove unselected workflows"; guard accordingly
+          if [ -f "$REPO_DIR/.github/workflows/lint.yml" ]; then
+            sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/.github/workflows/lint.yml"
+          fi
 
       - name: Configure Release Please for selected languages
         run: |
