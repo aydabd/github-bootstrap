@@ -298,7 +298,7 @@ jobs:
             # Delete any workflow file not in the keep list
             for file in .github/workflows/*.yml; do
               filename=$(basename "$file")
-              if ! echo "$KEEP_FILES" | grep -qw "$filename"; then
+              if [[ " $KEEP_FILES " != *" $filename "* ]]; then
                 rm -f "$file"
                 echo "⏭️ Skipped workflow: $filename" >> $GITHUB_STEP_SUMMARY
               fi
