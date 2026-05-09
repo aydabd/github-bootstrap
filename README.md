@@ -110,18 +110,21 @@ Your new repository is created with all templates and settings.
 
 ## Workflow Inputs
 
-| Input                      | Required | Default                                  | Description                                                                   |
-| -------------------------- | -------- | ---------------------------------------- | ----------------------------------------------------------------------------- |
-| `repo_name`                | Yes      | -                                        | New repository name                                                           |
-| `repo_owner`               | No       | Current user/org                         | Repository owner — a GitHub username or organization                          |
-| `repo_description`         | No       | `Repository following SOLID principles…` | Repository description                                                        |
-| `visibility`               | No       | `public`                                 | `public`, `private`, or `internal` (org only)                                 |
-| `cleanup_on_failure`       | No       | `true`                                   | Delete the created repository automatically if the workflow fails             |
-| `enable_branch_protection` | No       | `true`                                   | Enable branch protection rules                                                |
-| `team_name`                | No       | `team-leads`                             | GitHub team for code owners                                                   |
-| `license_holder`           | No       | Current user/org                         | License copyright holder                                                      |
-| `languages`                | No       | `language-agnostic-only`                 | Comma-separated list of languages (e.g. `javascript,python`) or `all`         |
-| `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release` |
+| Input                      | Required | Default                                  | Description                                                                                                   |
+| -------------------------- | -------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `repo_name`                | Yes      | -                                        | New repository name                                                                                           |
+| `repo_owner`               | No       | Current user/org                         | Repository owner — a GitHub username or organization                                                          |
+| `repo_description`         | No       | `Repository following SOLID principles…` | Repository description                                                                                        |
+| `visibility`               | No       | `public`                                 | `public`, `private`, or `internal` (org only)                                                                 |
+| `cleanup_on_failure`       | No       | `true`                                   | Delete the created repository automatically if the workflow fails                                             |
+| `enable_repo_settings`     | No       | `true`                                   | Apply repo settings, create dev/prod environments, enable Dependabot, and apply branch protection             |
+| `enable_branch_protection` | No       | `true`                                   | Enable branch protection rules (only applied when `enable_repo_settings` is also `true`)                      |
+| `enable_codeowners`        | No       | `true`                                   | Add a CODEOWNERS file assigning the chosen team as default reviewer                                           |
+| `workflows`                | No       | `all`                                    | Workflows to include: `all`, `none`, or comma-separated names — `lint`, `codeql`, `ai-code-review`, `release` |
+| `team_name`                | No       | `team-leads`                             | GitHub team for code owners                                                                                   |
+| `license_holder`           | No       | Current user/org                         | License copyright holder                                                                                      |
+| `languages`                | No       | `language-agnostic-only`                 | Comma-separated list of languages (e.g. `javascript,python`) or `all`                                         |
+| `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release`                                 |
 
 ## What Gets Created
 

@@ -55,3 +55,21 @@ variable "languages" {
   type        = string
   default     = "language-agnostic-only"
 }
+
+variable "enable_repo_settings" {
+  description = "Gate creation of dev/prod GitHub repository environments. In the wrapper workflow this also controls Dependabot and branch-protection steps."
+  type        = bool
+  default     = true
+}
+
+variable "enable_codeowners" {
+  description = "Add a CODEOWNERS file assigning the chosen team as default reviewer. Used by the wrapper workflow only — has no direct effect in this Terraform module."
+  type        = bool
+  default     = true
+}
+
+variable "workflows" {
+  description = "Comma-separated list of workflows to include ('all', 'none', or: lint,codeql,ai-code-review,release). Used by the wrapper workflow only — has no direct effect in this Terraform module."
+  type        = string
+  default     = "all"
+}

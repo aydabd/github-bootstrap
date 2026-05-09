@@ -63,6 +63,26 @@ on:
           - git-cliff
           - release-please
           - semantic-release
+      enable_repo_settings:
+        description: >-
+          Apply repository settings, create dev/prod environments, enable
+          Dependabot, and apply branch protection rules.
+        required: false
+        default: true
+        type: boolean
+      enable_codeowners:
+        description: "Add a CODEOWNERS file assigning the chosen team as default reviewer"
+        required: false
+        default: true
+        type: boolean
+      workflows:
+        description: >-
+          Comma-separated list of workflows to include, or 'all' to keep
+          everything, or 'none' to skip all. Valid names: lint, codeql,
+          ai-code-review, release.
+        required: false
+        default: "all"
+        type: string
       gh_token:
         description: >-
           Personal Access Token with repo and admin:org scopes.
@@ -245,10 +265,91 @@ jobs:
               ;;
           esac
 
-      - name: Update CODEOWNERS with team name
+      - name: Remove unselected workflows
         run: |
           cd new-repo
-          sed -i "s/team-leads/${{ github.event.inputs.team_name }}/g" .github/CODEOWNERS
+          WORKFLOWS_INPUT="${{ github.event.inputs.workflows }}"
+
+          case "$WORKFLOWS_INPUT" in
+            "all"|"")
+              echo "Keeping all workflows" >> $GITHUB_STEP_SUMMARY
+              exit 0
+              ;;
+          esac
+
+          # Build a space-separated list of workflow filenames to keep
+          KEEP_FILES=""
+          RELEASE_KEPT=false
+
+          case "$WORKFLOWS_INPUT" in
+            "none") ;;
+            *)
+              IFS=',' read -ra WORKFLOW_NAMES <<< "$WORKFLOWS_INPUT"
+              for name in "${WORKFLOW_NAMES[@]}"; do
+                name=$(echo "$name" | xargs)
+                case "$name" in
+                  "lint")           KEEP_FILES="$KEEP_FILES lint.yml" ;;
+                  "codeql")         KEEP_FILES="$KEEP_FILES codeql.yml" ;;
+                  "ai-code-review") KEEP_FILES="$KEEP_FILES ai-code-review.yml" ;;
+                  "release")
+                    RELEASE_KEPT=true
+                    case "${{ github.event.inputs.release_tool }}" in
+                      "release-please")   KEEP_FILES="$KEEP_FILES release-please.yml" ;;
+                      "semantic-release") KEEP_FILES="$KEEP_FILES semantic-release.yml" ;;
+                      *)                  KEEP_FILES="$KEEP_FILES git-cliff-release.yml" ;;
+                    esac
+                    ;;
+                  *)
+                    echo "⚠️ Unknown workflow name: '$name' (valid: lint, codeql, ai-code-review, release)" >> $GITHUB_STEP_SUMMARY
+                    ;;
+                esac
+              done
+              # Fail fast if every supplied name was unrecognised
+              if [ -z "$KEEP_FILES" ]; then
+                echo "❌ No valid workflow names found in '$WORKFLOWS_INPUT'. Valid: lint,codeql,ai-code-review,release" >&2
+                exit 1
+              fi
+              ;;
+          esac
+
+          # Delete any workflow file not in the keep list
+          for file in .github/workflows/*.yml; do
+            filename=$(basename "$file")
+            [[ " $KEEP_FILES " == *" $filename "* ]] && continue
+            rm -f "$file"
+            echo "⏭️ Skipped workflow: $filename" >> $GITHUB_STEP_SUMMARY
+          done
+
+          # If the release workflow was not kept, also remove its config files
+          if [ "$RELEASE_KEPT" = "false" ]; then
+            case "${{ github.event.inputs.release_tool }}" in
+              "release-please")
+                rm -f release-please-config.json .release-please-manifest.json
+                echo "⏭️ Removed release-please config files" >> $GITHUB_STEP_SUMMARY
+                ;;
+              "semantic-release")
+                rm -f .releaserc.json
+                echo "⏭️ Removed semantic-release config file" >> $GITHUB_STEP_SUMMARY
+                ;;
+              *)
+                rm -f cliff.toml
+                echo "⏭️ Removed git-cliff config file" >> $GITHUB_STEP_SUMMARY
+                ;;
+            esac
+          fi
+
+      - name: Configure CODEOWNERS
+        run: |
+          cd new-repo
+          case "${{ github.event.inputs.enable_codeowners }}" in
+            "true")
+              sed -i "s/team-leads/${{ github.event.inputs.team_name }}/g" .github/CODEOWNERS
+              ;;
+            *)
+              rm -f .github/CODEOWNERS
+              echo "⏭️ CODEOWNERS skipped" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
 
       - name: Update LICENSE with current year and holder
         run: |
@@ -293,12 +394,20 @@ jobs:
           # Substitute repository name placeholder in all three files
           sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/environment.yml"
           sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/Makefile"
-          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/.github/workflows/lint.yml"
+          # lint.yml may have been removed by "Remove unselected workflows"; guard accordingly
+          if [ -f "$REPO_DIR/.github/workflows/lint.yml" ]; then
+            sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/.github/workflows/lint.yml"
+          fi
 
       - name: Configure Release Please for selected languages
-        if: github.event.inputs.release_tool == 'release-please'
         run: |
           cd new-repo
+          RELEASE_TOOL="${{ github.event.inputs.release_tool }}"
+          case "$RELEASE_TOOL" in
+            "release-please") ;;
+            *) exit 0 ;;
+          esac
+
           LANGUAGES="${{ github.event.inputs.languages }}"
 
           # Map language to release-please release-type
@@ -346,12 +455,41 @@ jobs:
           git push
           echo "✅ Template files pushed" >> $GITHUB_STEP_SUMMARY
 
-      - name: Enable Dependabot security features
+      - name: Apply repository settings
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
+          case "${{ github.event.inputs.enable_repo_settings }}" in
+            "true") ;;
+            *)
+              echo "⏭️ Repository settings skipped (enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
+              exit 0
+              ;;
+          esac
+
           OWNER="${{ steps.set-owner.outputs.owner }}"
           REPO="${{ github.event.inputs.repo_name }}"
+
+          # Apply repository settings
+          gh api \
+            --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            /repos/$OWNER/$REPO \
+            --input ".github/config/repo-settings.json"
+
+          # Create dev environment (no wait, no reviewers required)
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            /repos/$OWNER/$REPO/environments/dev
+          echo "✅ Development environment created" >> $GITHUB_STEP_SUMMARY
+
+          # Create prod environment
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            /repos/$OWNER/$REPO/environments/prod
+          echo "✅ Production environment created" >> $GITHUB_STEP_SUMMARY
 
           # Enable Dependabot vulnerability alerts
           gh api \
@@ -367,59 +505,17 @@ jobs:
             /repos/$OWNER/$REPO/automated-security-fixes
           echo "✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
 
-      - name: Verify repository settings
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          REPO_INFO=$(gh api /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }})
-          VISIBILITY=$(echo "$REPO_INFO" | jq -r '.private')
-          HAS_ISSUES=$(echo "$REPO_INFO" | jq -r '.has_issues')
-
-          if [ "$VISIBILITY" = "true" ] && [ "${{ github.event.inputs.visibility }}" = "private" ]; then
-            echo "✅ Visibility: private (correct)" >> $GITHUB_STEP_SUMMARY
-          elif [ "$VISIBILITY" = "false" ] && [ "${{ github.event.inputs.visibility }}" = "public" ]; then
-            echo "✅ Visibility: public (correct)" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ Visibility mismatch detected" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [ "$HAS_ISSUES" = "true" ]; then
-            echo "✅ Issues enabled" >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Configure repository settings
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          gh api \
-            --method PATCH \
-            -H "Accept: application/vnd.github+json" \
-            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }} \
-            --input ".github/config/repo-settings.json"
-
-      - name: Create dev environment
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/environments/dev
-
-      - name: Create prod environment
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}/environments/prod
-
       - name: Apply branch protection rules
-        if: ${{ github.event.inputs.enable_branch_protection }}
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
+          case "${{ github.event.inputs.enable_repo_settings }}/${{ github.event.inputs.enable_branch_protection }}" in
+            "true/true") ;;
+            *)
+              echo "⏭️ Branch protection skipped" >> $GITHUB_STEP_SUMMARY
+              exit 0
+              ;;
+          esac
           sleep 3
           gh api \
             --method POST \
@@ -438,36 +534,67 @@ jobs:
           echo "**Release tool:** ${{ github.event.inputs.release_tool || 'git-cliff' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Created Resources" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ CODEOWNERS" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Vulnerability alerts and Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Branch protection rules (2 required approvals, linear history, code-owner review)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
+
+          case "${{ github.event.inputs.enable_codeowners }}" in
+            "true") echo "- ✅ CODEOWNERS" >> $GITHUB_STEP_SUMMARY ;;
+            *)      echo "- ⏭️ CODEOWNERS (skipped)" >> $GITHUB_STEP_SUMMARY ;;
+          esac
+
+          case "${{ github.event.inputs.enable_repo_settings }}" in
+            "true")
+              echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Vulnerability alerts and Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
+              case "${{ github.event.inputs.enable_branch_protection }}" in
+                "true") echo "- ✅ Branch protection rules (2 required approvals, linear history, code-owner review)" >> $GITHUB_STEP_SUMMARY ;;
+                *)      echo "- ⏭️ Branch protection rules (skipped)" >> $GITHUB_STEP_SUMMARY ;;
+              esac
+              echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              echo "- ⏭️ Dependabot configuration (skipped)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Branch protection rules (skipped)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Development environment (skipped)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Production environment (skipped)" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
+
           echo "- ✅ .editorconfig (4 spaces code, 2 spaces config)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ .gitignore, .gitattributes" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Documentation templates" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ SECURITY.md (security policy)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ CONTRIBUTING.md (contribution guide)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Lint workflow (micromamba + pre-commit)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ environment.yml (language: ${{ github.event.inputs.languages }})" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ .pre-commit-config.yaml (all language: system hooks)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Conventional commits (pre-commit)" >> $GITHUB_STEP_SUMMARY
-          case "${{ github.event.inputs.release_tool }}" in
-            "release-please")
-              echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY
+
+          case "${{ github.event.inputs.workflows }}" in
+            "all"|"")
+              echo "- ✅ Lint workflow (micromamba + pre-commit)" >> $GITHUB_STEP_SUMMARY
+              case "${{ github.event.inputs.release_tool }}" in
+                "release-please")
+                  echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
+                  ;;
+                "semantic-release")
+                  echo "- ✅ semantic-release workflow (push-to-main, fully automated)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ .releaserc.json (semantic-release configuration)" >> $GITHUB_STEP_SUMMARY
+                  ;;
+                *)
+                  echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ cliff.toml (changelog configuration)" >> $GITHUB_STEP_SUMMARY
+                  ;;
+              esac
               ;;
-            "semantic-release")
-              echo "- ✅ semantic-release workflow (push-to-main, fully automated)" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ .releaserc.json (semantic-release configuration)" >> $GITHUB_STEP_SUMMARY
+            "none")
+              echo "- ⏭️ All workflows skipped" >> $GITHUB_STEP_SUMMARY
               ;;
             *)
-              echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ cliff.toml (changelog configuration)" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Selected workflows: ${{ github.event.inputs.workflows }}" >> $GITHUB_STEP_SUMMARY
               ;;
           esac
-          echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY
 
   teardown:
     name: Cleanup Repository
