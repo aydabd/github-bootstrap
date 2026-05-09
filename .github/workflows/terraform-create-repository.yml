@@ -63,6 +63,34 @@ on:
           - git-cliff
           - release-please
           - semantic-release
+      enable_repo_settings:
+        description: >-
+          Apply repository settings, create dev/prod environments, and enable
+          Dependabot. Branch protection is controlled separately by
+          enable_branch_protection.
+        required: false
+        default: true
+        type: boolean
+      enable_codeowners:
+        description: "Add a CODEOWNERS file assigning the chosen team as default reviewer"
+        required: false
+        default: true
+        type: boolean
+      workflows:
+        description: >-
+          Comma-separated list of workflows to include, or 'all' to keep
+          everything, or 'none' to skip all. Valid names: lint, codeql,
+          ai-code-review, release.
+        required: false
+        default: "all"
+        type: string
+      github_host:
+        description: >-
+          GitHub hostname. Use 'github.com' for GitHub.com or your GHES
+          hostname (e.g. 'ghes.example.com') for Enterprise Server.
+        required: false
+        default: "github.com"
+        type: string
       gh_token:
         description: >-
           Personal Access Token with repo and admin:org scopes.
@@ -78,6 +106,8 @@ jobs:
   terraform-create-repository:
     name: Terraform Create Repository
     runs-on: ubuntu-latest
+    env:
+      GH_HOST: ${{ github.event.inputs.github_host || 'github.com' }}
     outputs:
       owner: ${{ steps.set-owner.outputs.owner }}
       repo_created: ${{ steps.check-repo.outputs.repo_created }}
@@ -136,6 +166,8 @@ jobs:
           TF_VAR_repo_description: ${{ github.event.inputs.repo_description }}
           TF_VAR_visibility: ${{ github.event.inputs.visibility }}
           TF_VAR_enable_branch_protection: ${{ github.event.inputs.enable_branch_protection }}
+          TF_VAR_enable_repo_settings: ${{ github.event.inputs.enable_repo_settings }}
+          TF_VAR_github_host: ${{ github.event.inputs.github_host }}
           TF_VAR_team_name: ${{ github.event.inputs.team_name }}
           TF_VAR_license_holder: ${{ steps.set-license.outputs.holder }}
           TF_VAR_languages: ${{ github.event.inputs.languages }}
@@ -152,6 +184,8 @@ jobs:
           TF_VAR_repo_description: ${{ github.event.inputs.repo_description }}
           TF_VAR_visibility: ${{ github.event.inputs.visibility }}
           TF_VAR_enable_branch_protection: ${{ github.event.inputs.enable_branch_protection }}
+          TF_VAR_enable_repo_settings: ${{ github.event.inputs.enable_repo_settings }}
+          TF_VAR_github_host: ${{ github.event.inputs.github_host }}
           TF_VAR_team_name: ${{ github.event.inputs.team_name }}
           TF_VAR_license_holder: ${{ steps.set-license.outputs.holder }}
           TF_VAR_languages: ${{ github.event.inputs.languages }}
@@ -180,7 +214,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
-          git clone https://x-access-token:${GH_TOKEN}@github.com/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}.git new-repo
+          git clone https://x-access-token:${GH_TOKEN}@${GH_HOST}/${{ steps.set-owner.outputs.owner }}/${{ github.event.inputs.repo_name }}.git new-repo
           cd new-repo
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -231,10 +265,19 @@ jobs:
               ;;
           esac
 
-      - name: Update CODEOWNERS with team name
+      - name: Configure CODEOWNERS
         run: |
           cd new-repo
-          sed -i "s/team-leads/${{ github.event.inputs.team_name }}/g" .github/CODEOWNERS
+          case "${{ github.event.inputs.enable_codeowners }}" in
+            "true")
+              sed -i "s/team-leads/${{ github.event.inputs.team_name }}/g" .github/CODEOWNERS
+              echo "✅ CODEOWNERS configured with team: ${{ github.event.inputs.team_name }}" >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              rm -f .github/CODEOWNERS
+              echo "⏭️ CODEOWNERS skipped (enable_codeowners=false)" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
 
       - name: Update LICENSE with current year and holder
         run: |
@@ -279,11 +322,70 @@ jobs:
           # Substitute repository name placeholder in all three files
           sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/environment.yml"
           sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/Makefile"
-          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/.github/workflows/lint.yml"
+          if [ -f "$REPO_DIR/.github/workflows/lint.yml" ]; then
+            sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/.github/workflows/lint.yml"
+          fi
+
+      - name: Remove unselected workflows
+        run: |
+          cd new-repo
+          WORKFLOWS_INPUT="${{ github.event.inputs.workflows }}"
+
+          case "$WORKFLOWS_INPUT" in
+            "all")
+              echo "✅ All workflows kept" >> $GITHUB_STEP_SUMMARY
+              ;;
+            "none")
+              rm -f .github/workflows/lint.yml \
+                .github/workflows/codeql.yml \
+                .github/workflows/ai-code-review.yml
+              case "${{ github.event.inputs.release_tool }}" in
+                "release-please") rm -f .github/workflows/release-please.yml release-please-config.json .release-please-manifest.json ;;
+                "semantic-release") rm -f .github/workflows/semantic-release.yml .releaserc.json ;;
+                *) rm -f .github/workflows/git-cliff-release.yml cliff.toml ;;
+              esac
+              echo "⏭️ All workflows removed (workflows=none)" >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              VALID_NAMES="lint codeql ai-code-review release"
+              KEEP_LIST=""
+              IFS=',' read -ra NAMES <<< "$WORKFLOWS_INPUT"
+              for name in "${NAMES[@]}"; do
+                name=$(echo "$name" | xargs)
+                case "$name" in
+                  lint|codeql|ai-code-review|release) KEEP_LIST="$KEEP_LIST $name" ;;
+                  *) echo "⚠️ Unknown workflow name: $name (ignored)" >> $GITHUB_STEP_SUMMARY ;;
+                esac
+              done
+
+              if [ -z "$KEEP_LIST" ]; then
+                echo "::error::All supplied workflow names are invalid. Valid names: $VALID_NAMES"
+                exit 1
+              fi
+
+              # Remove workflows not in keep list
+              for wf in lint codeql ai-code-review; do
+                if ! echo "$KEEP_LIST" | grep -qw "$wf"; then
+                  rm -f ".github/workflows/${wf}.yml"
+                fi
+              done
+              if ! echo "$KEEP_LIST" | grep -qw "release"; then
+                case "${{ github.event.inputs.release_tool }}" in
+                  "release-please") rm -f .github/workflows/release-please.yml release-please-config.json .release-please-manifest.json ;;
+                  "semantic-release") rm -f .github/workflows/semantic-release.yml .releaserc.json ;;
+                  *) rm -f .github/workflows/git-cliff-release.yml cliff.toml ;;
+                esac
+              fi
+              echo "✅ Selected workflows:$KEEP_LIST" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
 
       - name: Configure Release Please for selected languages
-        if: github.event.inputs.release_tool == 'release-please'
         run: |
+          case "${{ github.event.inputs.release_tool }}" in
+            "release-please") ;;
+            *) echo "⏭️ Release Please configuration skipped (release_tool=${{ github.event.inputs.release_tool }})"; exit 0 ;;
+          esac
           cd new-repo
           LANGUAGES="${{ github.event.inputs.languages }}"
 
@@ -336,6 +438,11 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
+          case "${{ github.event.inputs.enable_repo_settings }}" in
+            "true") ;;
+            *) echo "⏭️ Dependabot skipped (enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY; exit 0 ;;
+          esac
+
           OWNER="${{ steps.set-owner.outputs.owner }}"
           REPO="${{ github.event.inputs.repo_name }}"
 
@@ -361,19 +468,37 @@ jobs:
           echo "**Visibility:** ${{ github.event.inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch Protection:** ${{ github.event.inputs.enable_branch_protection }}" >> $GITHUB_STEP_SUMMARY
           echo "**Languages:** ${{ github.event.inputs.languages }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflows:** ${{ github.event.inputs.workflows }}" >> $GITHUB_STEP_SUMMARY
           echo "**Release tool:** ${{ github.event.inputs.release_tool || 'git-cliff' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Created Resources (via Terraform)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ GitHub repository" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Repository settings (squash merge, auto-delete branches)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Vulnerability alerts enabled" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Branch protection ruleset (2 required approvals, linear history, code-owner review)" >> $GITHUB_STEP_SUMMARY
+          case "${{ github.event.inputs.enable_repo_settings }}" in
+            "true")
+              echo "- ✅ Vulnerability alerts enabled" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              echo "- ⏭️ Environments and Dependabot skipped" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
+          case "${{ github.event.inputs.enable_repo_settings }}/${{ github.event.inputs.enable_branch_protection }}" in
+            "true/true")
+              echo "- ✅ Branch protection ruleset (2 required approvals, linear history, code-owner review)" >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              echo "- ⏭️ Branch protection skipped" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Created Resources (via Template)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ CODEOWNERS" >> $GITHUB_STEP_SUMMARY
+          case "${{ github.event.inputs.enable_codeowners }}" in
+            "true") echo "- ✅ CODEOWNERS" >> $GITHUB_STEP_SUMMARY ;;
+            *) echo "- ⏭️ CODEOWNERS skipped" >> $GITHUB_STEP_SUMMARY ;;
+          esac
           echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ .editorconfig (4 spaces code, 2 spaces config)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ .gitignore, .gitattributes" >> $GITHUB_STEP_SUMMARY
@@ -404,6 +529,8 @@ jobs:
     name: Delete Repository on Failure
     runs-on: ubuntu-latest
     needs: terraform-create-repository
+    env:
+      GH_HOST: ${{ github.event.inputs.github_host || 'github.com' }}
     if: >-
       always() &&
       needs.terraform-create-repository.outputs.repo_created == 'true' &&

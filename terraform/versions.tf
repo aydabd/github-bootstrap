@@ -10,6 +10,7 @@ terraform {
 }
 
 provider "github" {
-  token = var.github_token
-  owner = var.repo_owner != "" ? var.repo_owner : null
+  token    = var.github_token
+  owner    = var.repo_owner != "" ? var.repo_owner : null
+  base_url = var.github_host != "github.com" ? "https://${var.github_host}/api/v3/" : null
 }
