@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/aydabd/github-bootstrap/compare/v1.4.0...v1.5.0) (2026-05-09)
+
+
+### Features
+
+* modular bootstrapping with explicit case-based control flow ([#23](https://github.com/aydabd/github-bootstrap/issues/23)) ([82a650a](https://github.com/aydabd/github-bootstrap/commit/82a650ad5c6e2e9ea18f94a7406521ecd0a93818))
+
 ## [1.4.0](https://github.com/aydabd/github-bootstrap/compare/v1.3.1...v1.4.0) (2026-05-01)
 
 
