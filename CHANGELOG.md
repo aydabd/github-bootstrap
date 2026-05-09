@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/aydabd/github-bootstrap/compare/v1.5.0...v1.6.0) (2026-05-09)
+
+
+### Features
+
+* add GHES support and fix terraform-create-repository parity ([7917fa8](https://github.com/aydabd/github-bootstrap/commit/7917fa8d398fbbd76b101abf20b2640897016164))
+
 ## [1.5.0](https://github.com/aydabd/github-bootstrap/compare/v1.4.0...v1.5.0) (2026-05-09)
 
 
