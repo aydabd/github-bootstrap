@@ -11,7 +11,7 @@ on:
       force:
         description: "Set to true to actually delete the repository. If false, the workflow will run as a dry-run."
         required: false
-        default: "false"
+        default: false
         type: boolean
       gh_token:
         description: >-

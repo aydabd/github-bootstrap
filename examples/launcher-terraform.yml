@@ -1,0 +1,108 @@
+---
+# ============================================================================
+# Bootstrap Launcher — Terraform variant (copy this into your own repository)
+# ============================================================================
+#
+# Use this file instead of launcher-actions.yml when you want Terraform to own
+# the GitHub repository resource (importable, state-tracked IaC).
+#
+# Prerequisites in YOUR launcher repository
+# ──────────────────────────────────────────
+# Secrets:
+#   BOOTSTRAP_APP_PRIVATE_KEY — PEM private key of your GitHub App
+#
+# Variables (Settings → Secrets and variables → Actions → Variables):
+#   BOOTSTRAP_APP_ID          — Numeric App ID (found in the App's settings page)
+#
+# GitHub App requirements:
+#   Same as launcher-actions.yml. See that file for the full list.
+#
+# Cleanup approval environment (only needed if require_cleanup_approval: true):
+#   Create a "bootstrap-cleanup" environment in YOUR repo:
+#     Settings → Environments → New environment → Name: bootstrap-cleanup
+#     Add required reviewers who approve before a failed repo is deleted.
+#
+# Usage
+# ──────
+# 1. Copy this file to .github/workflows/bootstrap-repository-terraform.yml
+# 2. Replace BOOTSTRAP_OWNER with the GitHub user/org that owns github-bootstrap
+# 3. Set BOOTSTRAP_APP_PRIVATE_KEY secret and BOOTSTRAP_APP_ID variable
+# 4. Create the bootstrap-cleanup environment (or set require_cleanup_approval: false)
+# 5. Go to Actions → Bootstrap Repository (Terraform) → Run workflow
+# ============================================================================
+
+name: Bootstrap Repository (Terraform)
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: "New repository name (e.g. my-new-service)"
+        required: true
+        type: string
+      repo_owner:
+        description: "Target owner — GitHub user or org that will own the repo"
+        required: true
+        type: string
+      visibility:
+        description: "Repository visibility"
+        required: false
+        default: "private"
+        type: choice
+        options:
+          - private
+          - public
+      languages:
+        description: "Languages (e.g. golang, python, typescript, java, language-agnostic-only)"
+        required: false
+        default: "language-agnostic-only"
+        type: string
+      release_tool:
+        description: "Release automation tool"
+        required: false
+        default: "git-cliff"
+        type: choice
+        options:
+          - git-cliff
+          - release-please
+          - semantic-release
+      enable_branch_protection:
+        description: "Apply branch protection rules"
+        required: false
+        default: true
+        type: boolean
+      cleanup_on_failure:
+        description: "Delete the repo if creation fails"
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  bootstrap:
+    # ── Replace BOOTSTRAP_OWNER with the owner of the github-bootstrap repo ──
+    uses: BOOTSTRAP_OWNER/github-bootstrap/.github/workflows/terraform-create-repository.yml@main
+    with:
+      repo_name: ${{ inputs.repo_name }}
+      repo_owner: ${{ inputs.repo_owner }}
+      visibility: ${{ inputs.visibility }}
+      languages: ${{ inputs.languages }}
+      release_tool: ${{ inputs.release_tool }}
+      enable_branch_protection: ${{ inputs.enable_branch_protection }}
+      cleanup_on_failure: ${{ inputs.cleanup_on_failure }}
+      # GitHub App auth — recommended over PAT
+      app_id: ${{ vars.BOOTSTRAP_APP_ID }}
+      app_owner: ${{ inputs.repo_owner }}
+      # Restrict which owners this launcher may target.
+      # Use a fixed owner or a repo/org variable — NOT a user-controlled input.
+      # Passing inputs.repo_owner here would defeat the guardrail because the
+      # allowlist would always match whatever the caller typed.
+      # Example: lock to one org:
+      #   allowed_repo_owners: myorg
+      # Example: use an org-managed variable with an approved list:
+      #   allowed_repo_owners: ${{ vars.ALLOWED_REPO_OWNERS }}
+      allowed_repo_owners: ${{ vars.ALLOWED_REPO_OWNERS }}
+      # Require a human to approve before a partial repo is deleted on failure.
+      # Needs a "bootstrap-cleanup" environment in THIS repository.
+      require_cleanup_approval: true
+    secrets:
+      app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}

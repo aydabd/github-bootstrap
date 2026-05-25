@@ -1,9 +1,8 @@
 ---
 name: Resolve GitHub Token
 description: >-
-  Resolves a GitHub Personal Access Token from a workflow_dispatch input or
-  the GH_PAT repository secret, masks it immediately, and exports it as a
-  step output. Fails fast if neither source provides a value.
+  Resolves a GitHub token for bootstrap workflows.
+  Supports GitHub App installation tokens (recommended) with PAT fallback.
 
 inputs:
   gh_token:
@@ -16,26 +15,125 @@ inputs:
       secrets.GH_PAT from the calling workflow.
     required: false
     default: ""
+  app_id:
+    description: Optional GitHub App ID for App-based auth.
+    required: false
+    default: ""
+  app_private_key:
+    description: Optional GitHub App private key (PEM) for App-based auth.
+    required: false
+    default: ""
+  app_owner:
+    description: Optional owner (user/org) to resolve the App installation token for.
+    required: false
+    default: ""
 
 outputs:
   token:
-    description: Resolved and masked GitHub token.
-    value: ${{ steps.resolve.outputs.token }}
+    description: Resolved and masked GitHub token (App installation token or PAT).
+    value: ${{ steps.finalize.outputs.token }}
+  auth_mode:
+    description: Authentication mode used (app or pat).
+    value: ${{ steps.validate-auth-mode.outputs.mode }}
 
 runs:
   using: composite
   steps:
-    - name: Resolve token
-      id: resolve
+    - name: Resolve PAT fallback
+      id: resolve-pat
       shell: bash
       env:
         INPUT_TOKEN: ${{ inputs.gh_token }}
         SECRET_TOKEN: ${{ inputs.gh_pat_secret }}
       run: |
         TOKEN="${INPUT_TOKEN:-$SECRET_TOKEN}"
-        if [ -z "$TOKEN" ]; then
-          echo "::error::No GitHub token available. Provide the 'gh_token' input or set the GH_PAT repository secret."
+        if [ -n "$TOKEN" ]; then
+          echo "::add-mask::$TOKEN"
+        fi
+        echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+    - name: Validate authentication configuration
+      id: validate-auth-mode
+      shell: bash
+      env:
+        APP_ID: ${{ inputs.app_id }}
+        APP_PRIVATE_KEY: ${{ inputs.app_private_key }}
+        APP_OWNER: ${{ inputs.app_owner }}
+        PAT_TOKEN: ${{ steps.resolve-pat.outputs.token }}
+      run: |
+        HAS_APP_ID=false
+        HAS_APP_KEY=false
+        HAS_PAT=false
+
+        if [ -n "$APP_ID" ]; then
+          HAS_APP_ID=true
+        fi
+        if [ -n "$APP_PRIVATE_KEY" ]; then
+          HAS_APP_KEY=true
+        fi
+        if [ -n "$PAT_TOKEN" ]; then
+          HAS_PAT=true
+        fi
+
+        if [ "$HAS_APP_ID" = true ] && [ "$HAS_APP_KEY" = true ]; then
+          if [ -z "$APP_OWNER" ]; then
+            echo "::error::GitHub App authentication requires the 'app_owner' input to scope the installation token to a specific tenant owner. Please provide this value."
+            exit 1
+          fi
+          echo "mode=app" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        # Only fail on partial App config when app_id was explicitly provided.
+        # If only the private key is present (e.g. a repo-level secret always injected
+        # by the caller workflow) but no app_id, fall through to PAT gracefully.
+        if [ "$HAS_APP_ID" = true ] && [ "$HAS_APP_KEY" = false ]; then
+          echo "::error::Incomplete GitHub App auth config: app_id is set but app_private_key is missing. Provide both or neither."
           exit 1
         fi
+
+        if [ "$HAS_PAT" = true ]; then
+          echo "mode=pat" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        if [ "$HAS_APP_KEY" = true ]; then
+          echo "::error::No GitHub credentials available. app_private_key is set but app_id is missing (incomplete App config). Provide app_id to use App auth, or set GH_PAT/pass gh_token for PAT auth."
+        else
+          echo "::error::No GitHub credentials available. Provide GitHub App credentials (recommended) or set GH_PAT/pass gh_token."
+        fi
+        exit 1
+
+    - name: Create GitHub App installation token
+      id: app-token
+      if: steps.validate-auth-mode.outputs.mode == 'app'
+      uses: actions/create-github-app-token@v3
+      with:
+        client-id: ${{ inputs.app_id }}
+        private-key: ${{ inputs.app_private_key }}
+        owner: ${{ inputs.app_owner }}
+
+    - name: Finalize token output
+      id: finalize
+      shell: bash
+      env:
+        AUTH_MODE: ${{ steps.validate-auth-mode.outputs.mode }}
+        PAT_TOKEN: ${{ steps.resolve-pat.outputs.token }}
+        APP_TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
+        case "$AUTH_MODE" in
+          "app") TOKEN="$APP_TOKEN" ;;
+          "pat") TOKEN="$PAT_TOKEN" ;;
+          *)
+            echo "::error::Unknown auth mode '$AUTH_MODE'."
+            exit 1
+            ;;
+        esac
+
+        if [ -z "$TOKEN" ]; then
+          echo "::error::Resolved auth mode '$AUTH_MODE' but no token was produced."
+          exit 1
+        fi
+
         echo "::add-mask::$TOKEN"
         echo "token=$TOKEN" >> $GITHUB_OUTPUT

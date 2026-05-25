@@ -25,24 +25,41 @@ Creates fully configured repositories with:
 
 ## Setup
 
-Before running either workflow you need a GitHub Personal Access Token (PAT). No GitHub App is
-required — the PAT alone is sufficient for both personal accounts and organizations.
+Recommended: use a **tenant-installed GitHub App** (safer, short-lived installation tokens).
+Fallback: use a PAT when App setup is not available.
 
-### 1 — Create a GitHub PAT
+### Option A — GitHub App (recommended)
 
-1. Go to **GitHub** → **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
-2. Click **Generate new token (classic)**
-3. Select the required scopes:
+1. Create or use an existing GitHub App with the following minimum permissions:
 
-   | Scope         | Required for                                              |
-   | ------------- | --------------------------------------------------------- |
-   | `repo`        | Create, clone, and push to repositories                   |
-   | `admin:org`   | Create repositories inside an organization (org use only) |
-   | `delete_repo` | Delete repositories on workflow failure (optional)        |
+   | Permission scope | Level          | Required for                                  |
+   | ---------------- | -------------- | --------------------------------------------- |
+   | `Contents`       | Read and write | Clone template, push initial commits          |
+   | `Administration` | Read and write | Create repos, apply branch protection, delete |
+   | `Metadata`       | Read-only      | Read repository info (auto-granted)           |
 
-4. Copy the generated token (starts with `ghp_…`)
+   For **organization** repositories also add:
 
-### 2 — Provide the PAT to the workflow
+   | Permission scope | Level     | Required for                          |
+   | ---------------- | --------- | ------------------------------------- |
+   | `Members`        | Read-only | Resolve org membership for team setup |
+
+2. Install the App in each target user/org (tenant isolation). The App must be installed
+   on every `app_owner` value you intend to target.
+3. In the repository that runs bootstrap, set:
+   - `BOOTSTRAP_APP_PRIVATE_KEY` (Actions secret — the PEM private key of the App)
+4. When running the workflow, provide:
+   - `app_id` (the numeric App ID, visible in the App's settings)
+   - `app_owner` (target tenant owner)
+
+The workflow mints a short-lived installation token for that owner and uses it for all API calls.
+
+> **Organization targets only:** GitHub App installation tokens (server-to-server) cannot
+> create repositories under a personal user account — this is a GitHub API constraint.
+> The target `repo_owner` must be a GitHub **Organization**.
+> For personal user account targets, use the PAT fallback (Option B) instead.
+
+### Option B — PAT (fallback)
 
 There are two ways to supply the token, listed from most to least recommended:
 
@@ -78,9 +95,63 @@ Use `private` for personal account repositories.
 
 ## Quick Start
 
-Choose one of two methods to bootstrap a new repository:
+Choose one of three methods to bootstrap a new repository:
 
-### Option A — GitHub Actions (no local tools required)
+### Option A — Reusable workflow from a user-owned launcher (recommended)
+
+> **Copy-paste ready launcher files:** [`examples/launcher-actions.yml`](examples/launcher-actions.yml)
+> (Actions) and [`examples/launcher-terraform.yml`](examples/launcher-terraform.yml) (Terraform).
+> Copy one into your repo's `.github/workflows/` and replace `BOOTSTRAP_OWNER`.
+
+Create a minimal launcher workflow in your own repo:
+
+```yaml
+name: Bootstrap Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        required: true
+        type: string
+      repo_owner:
+        required: true
+        type: string
+
+jobs:
+  bootstrap:
+    # Replace {{BOOTSTRAP_OWNER}} with the GitHub user or org that owns this bootstrap repository.
+    uses: {{BOOTSTRAP_OWNER}}/github-bootstrap/.github/workflows/create-repository.yml@main
+    with:
+      repo_name: ${{ inputs.repo_name }}
+      repo_owner: ${{ inputs.repo_owner }}
+      visibility: private
+      app_id: ${{ vars.BOOTSTRAP_APP_ID }}
+      app_owner: ${{ inputs.repo_owner }}
+      allowed_repo_owners: ${{ vars.ALLOWED_REPO_OWNERS }}
+      require_cleanup_approval: true
+    secrets:
+      app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+```
+
+This example calls the standard Actions bootstrap workflow (`create-repository.yml`).
+If you prefer Terraform orchestration, call
+`.github/workflows/terraform-create-repository.yml` instead.
+
+> **Cleanup approval environment (required when `require_cleanup_approval: true`):**
+> The default is `true`. When enabled, the cleanup gate looks for a `bootstrap-cleanup`
+> environment **in your launcher repository** (not in the bootstrap repo).
+> Create it before running:
+>
+> 1. Your repo → **Settings** → **Environments** → **New environment**
+> 2. Name: `bootstrap-cleanup`
+> 3. Add required reviewers who must approve before a failed repo is deleted
+>
+> If this environment does not exist and cleanup is triggered, the `cleanup-approval` job
+> will fail and the partially-created repository will **not** be deleted automatically.
+> Set `require_cleanup_approval: false` to skip approval and delete immediately on failure.
+
+### Option B — Run this repository workflow directly (legacy/simple)
 
 1. Complete the [Setup](#setup) steps above
 2. Go to **Actions** → **Create Bootstrap Repository**
@@ -89,7 +160,7 @@ Choose one of two methods to bootstrap a new repository:
 5. Configure optional settings
 6. Run
 
-### Option B — Terraform IaC
+### Option C — Terraform IaC
 
 1. Complete the [Setup](#setup) steps above
 2. Go to **Actions** → **Terraform Create Repository**
@@ -125,6 +196,11 @@ Your new repository is created with all templates and settings.
 | `license_holder`           | No       | Current user/org                         | License copyright holder                                                                                      |
 | `languages`                | No       | `language-agnostic-only`                 | Comma-separated list of languages (e.g. `javascript,python`) or `all`                                         |
 | `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release`                                 |
+| `app_id`                   | No       | -                                        | GitHub App ID for App-based authentication (recommended)                                                      |
+| `app_owner`                | No       | `repo_owner`                             | Owner/user/org whose App installation token is used                                                           |
+| `allowed_repo_owners`      | No       | -                                        | Optional comma-separated allowlist of owners that can be targeted                                             |
+| `require_cleanup_approval` | No       | `true`                                   | If `cleanup_on_failure=true`, requires environment approval before delete                                     |
+| `gh_token`                 | No       | -                                        | PAT fallback input (less safe than secrets or GitHub App)                                                     |
 
 ## What Gets Created
 
@@ -352,7 +428,8 @@ managing repositories as long-lived infrastructure.
 
 ## Requirements
 
-- GitHub personal access token (PAT) with `repo` scope (add `admin:org` for organization repositories)
+- Recommended: GitHub App credentials (`app_id` + `BOOTSTRAP_APP_PRIVATE_KEY`) installed in each target tenant owner
+- Fallback: GitHub personal access token (PAT) with `repo` scope (add `admin:org` for organization repositories)
   — stored as a `GH_PAT` repository secret **or** provided via the `gh_token` workflow input
   — see [Setup](#setup)
 - micromamba for local linting with `make lint` (auto-installed by `make install`)
