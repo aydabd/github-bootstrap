@@ -15,10 +15,11 @@ This Terraform module creates a fully configured GitHub repository with the same
 
 ### Prerequisites
 
-A GitHub Personal Access Token (PAT) is the only credential required — no GitHub App needed.
+Recommended: a tenant-installed GitHub App with `app_id` + private key.
+Fallback: a GitHub Personal Access Token (PAT).
 Terraform CLI version **1.5 or later** is required (see `versions.tf`).
 
-| Use case                                           | Required PAT scopes                  |
+| Use case                                           | Required PAT scopes (fallback mode)  |
 | -------------------------------------------------- | ------------------------------------ |
 | Personal account repository                        | `repo`                               |
 | Organization repository                            | `repo` + `admin:org`                 |
@@ -64,8 +65,12 @@ terraform apply \
 ### Apply via GitHub Actions
 
 1. Fork this repository **or** click **Use this template** inside your organization
-2. Add a `GH_PAT` repository secret with the token (see [Setup](../README.md#setup))
-3. Trigger the
+2. Recommended App mode:
+   - add `BOOTSTRAP_APP_PRIVATE_KEY` as an Actions secret
+   - pass `app_id` and `app_owner` when running the workflow
+3. PAT fallback mode:
+   - add a `GH_PAT` repository secret (see [Setup](../README.md#setup))
+4. Trigger the
    [**Terraform Create Repository**](../.github/workflows/terraform-create-repository.yml) workflow
    from the **Actions** tab. It runs `terraform apply` and then copies the bootstrap template files
    into the new repository.
