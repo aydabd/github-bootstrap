@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.7.0](https://github.com/aydabd/github-bootstrap/compare/v1.6.0...v1.7.0) (2026-05-25)
+
+
+### Features
+
+* add GitHub App-first reusable bootstrap workflows with PAT fallback ([f712aff](https://github.com/aydabd/github-bootstrap/commit/f712aff4a5d8744c3a249e108ca6497d4e06b09d))
+* add GitHub App-first reusable bootstrap workflows with PAT fallback ([f712aff](https://github.com/aydabd/github-bootstrap/commit/f712aff4a5d8744c3a249e108ca6497d4e06b09d))
+
 ## [1.6.0](https://github.com/aydabd/github-bootstrap/compare/v1.5.0...v1.6.0) (2026-05-09)
 
 
