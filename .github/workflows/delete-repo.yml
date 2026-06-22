@@ -40,7 +40,7 @@ jobs:
           fi
 
       - name: Checkout bootstrap repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Resolve GitHub token
         id: resolve-token
