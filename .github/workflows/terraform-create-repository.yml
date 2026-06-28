@@ -222,7 +222,7 @@ jobs:
           echo "repository=$REPO" >> "$GITHUB_OUTPUT"
 
       - name: Checkout bootstrap repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ${{ steps.bootstrap-repo.outputs.repository }}
           ref: ${{ github.workflow_sha }}
@@ -724,7 +724,7 @@ jobs:
           echo "repository=$REPO" >> "$GITHUB_OUTPUT"
 
       - name: Checkout bootstrap repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ${{ steps.bootstrap-repo.outputs.repository }}
           ref: ${{ github.workflow_sha }}
@@ -781,7 +781,7 @@ jobs:
           echo "repository=$REPO" >> "$GITHUB_OUTPUT"
 
       - name: Checkout bootstrap repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ${{ steps.bootstrap-repo.outputs.repository }}
           ref: ${{ github.workflow_sha }}
