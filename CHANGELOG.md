@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/aydabd/github-bootstrap/compare/v1.7.0...v1.7.1) (2026-06-28)
+
+
+### Bug Fixes
+
+* **deps:** bump actions/checkout from 6 to 7 ([#29](https://github.com/aydabd/github-bootstrap/issues/29)) ([33cbed4](https://github.com/aydabd/github-bootstrap/commit/33cbed49e01ffdccbc12f29b2920ee8969a7d569))
+
 ## [1.7.0](https://github.com/aydabd/github-bootstrap/compare/v1.6.0...v1.7.0) (2026-05-25)
 
 
