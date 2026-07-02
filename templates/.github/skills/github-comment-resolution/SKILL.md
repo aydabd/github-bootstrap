@@ -1,6 +1,6 @@
 ---
 name: github-comment-resolution
-description: Resolve GitHub PR review comments safely: read unresolved comments, validate each issue, make minimal fixes, test, commit, and resolve.
+description: Resolve GitHub PR review comments safely, read unresolved comments, validate each issue, make minimal fixes, test, commit, and resolve.
 license: MIT
 ---
 
