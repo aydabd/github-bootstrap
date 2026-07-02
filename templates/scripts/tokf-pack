@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+budget="${TOKF_REPO_PACK_BUDGET:-30000}"
+output="${1:-repomix-output.xml}"
+
+if ! command -v repomix >/dev/null 2>&1; then
+    echo "repomix is required for repository context packing" >&2
+    exit 127
+fi
+
+repomix --output "${output}" --token-budget "${budget}"

@@ -1,0 +1,99 @@
+---
+version: 1
+
+files:
+  include:
+    - "**/*.py"
+    - "**/*.sh"
+    - "**/*.bash"
+    - "**/*.zsh"
+    - "**/*.ps1"
+    - "**/Dockerfile"
+    - "**/Dockerfile.*"
+    - "**/Makefile"
+    - "**/makefile"
+    - "**/*.toml"
+    - "**/*.tf"
+    - "**/*.rb"
+    - "**/*.php"
+    - "**/*.go"
+    - "**/*.java"
+    - "**/*.kt"
+    - "**/*.ts"
+    - "**/*.tsx"
+    - "**/*.js"
+    - "**/*.json"
+    - "**/*.yaml"
+    - "**/*.yml"
+    - "**/*.md"
+    - "**/*.env.example"
+    - "**/*.env.sample"
+    - "**/*.ini"
+    - "**/*.cfg"
+    - ".github/workflows/*.yml"
+    - ".github/workflows/*.yaml"
+  exclude:
+    - "**/.git/**"
+    - "**/node_modules/**"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/target/**"
+    - "**/.venv/**"
+    - "**/coverage/**"
+    - "**/*.lock"
+    - "**/generated/**"
+    - "**/.terraform/**"
+    - "**/.env"
+    - "**/*.env"
+
+diff:
+  preferred_command: "sem diff --format plain"
+  fallback_command: "git diff --stat && git diff --name-only"
+  max_lines: 180
+  block_raw_full_diff: true
+
+logs:
+  max_lines: 160
+  include_patterns:
+    - ERROR
+    - WARN
+    - Exception
+    - Traceback
+    - "Caused by"
+    - FAILED
+    - AssertionError
+  context_before: 3
+  context_after: 8
+
+json:
+  max_array_items: 20
+  max_string_length: 500
+  redact_keys:
+    - credential
+    - secret
+    - bearer
+    - session
+    - cookie
+    - password
+    - token
+    - api_key
+    - apiKey
+    - authorization
+    - authentication
+    - auth_token
+    - private_key
+    - privateKey
+
+mcp:
+  allowed_default_groups:
+    - ai-default
+    - ai-code
+  blocked_by_default:
+    - ai-browser
+    - ai-data
+    - ai-cloud-write
+    - ai-prod
+
+output:
+  style: caveman
+  max_summary_bullets: 8

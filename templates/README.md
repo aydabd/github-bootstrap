@@ -60,6 +60,38 @@ consistent code quality:
 - **Language-specific checks** from template-specific `.pre-commit-config.yaml`
 - **Local linting** via `make lint` in a micromamba-managed environment
 
+## AI token optimization
+
+Generated repositories include default token optimization for Claude Code,
+GitHub Copilot, VS Code MCP, and ToolHive.
+
+Included files:
+
+- `tokopt.yaml` — shared token optimization defaults
+- `tokf/` — user, profile, file, diff, log, JSON, MCP, and output filters
+- `scripts/tokf-*` — token-safe helpers for diffs, logs, JSON, repo packs, and tool checks
+- `.github/instructions/token-optimization.instructions.md` — agent-wide token policy
+- `.github/skills/token-optimization/SKILL.md` — canonical shared token optimization skill
+- `.github/mcp.json` and `.vscode/mcp.json` — ToolHive vMCP endpoint config
+- `.claude/settings.json` — Claude Code MCP defaults
+
+Useful commands:
+
+```bash
+scripts/tokf-doctor
+scripts/tokf-diff
+scripts/tokf-log app.log
+scripts/tokf-json < large.json
+scripts/tokf-pack
+scripts/thv-profile implementation
+```
+
+The default ToolHive endpoint is:
+
+```text
+http://127.0.0.1:4483/mcp
+```
+
 ## Code Standards
 
 - **Indentation**: 4 spaces (code), 2 spaces (YAML/JSON)

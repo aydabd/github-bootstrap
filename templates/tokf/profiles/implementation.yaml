@@ -1,0 +1,26 @@
+---
+version: 1
+profile: implementation
+
+groups:
+  - ai-default
+  - ai-code
+  - ai-docs
+
+tools:
+  allow_tags:
+    - read
+    - code-search
+    - semantic-edit
+    - docs
+    - git-read
+  deny_tags:
+    - destructive
+    - production
+    - database-write
+    - browser-heavy
+
+limits:
+  max_tool_output_tokens: 8000
+  max_files_read_per_step: 6
+  max_search_results: 8

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+max_lines="${TOKF_DIFF_MAX_LINES:-180}"
+
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "tokf-diff must run inside a git repository" >&2
+    exit 2
+fi
+
+if command -v sem >/dev/null 2>&1; then
+    if sem diff --format plain 2>/dev/null | sed -n "1,${max_lines}p"; then
+        exit 0
+    fi
+fi
+
+{
+    git diff --stat || true
+    printf '\nChanged files:\n'
+    git diff --name-only || true
+} | sed -n "1,${max_lines}p"

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+required=(git grep)
+optional=(jq caveman sem rg fd repomix ccusage thv ast-grep tokscale code2prompt context7)
+
+status=0
+
+echo "Required token tools"
+for tool in "${required[@]}"; do
+    if command -v "${tool}" >/dev/null 2>&1; then
+        echo "  ok      ${tool}"
+    else
+        echo "  missing ${tool}"
+        status=1
+    fi
+done
+
+echo "Optional token tools"
+for tool in "${optional[@]}"; do
+    if command -v "${tool}" >/dev/null 2>&1; then
+        echo "  ok      ${tool}"
+    else
+        echo "  missing ${tool}"
+    fi
+done
+
+exit "${status}"
