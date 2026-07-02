@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v jq >/dev/null 2>&1; then
+    echo "jq is required for JSON filtering" >&2
+    exit 127
+fi
+
+jq '
+    def walk(f):
+        . as $in
+        | if type == "object" then
+            reduce keys_unsorted[] as $key
+                ({}; . + {($key): ($in[$key] | walk(f))}) | f
+        elif type == "array" then
+            map(walk(f)) | f
+        else
+            f
+        end;
+
+    walk(
+        if type == "object" then
+            with_entries(
+                if (.key | test("credential|secret|bearer|session|cookie|pass(word)?|tok(en)?|authorization|authentication|auth[-_]?token|(^|[-_])auth([-_]|$)|api[-_]?key|private[-_]?key"; "i")) then
+                    .value = "***REDACTED***"
+                else
+                    .
+                end
+            )
+        elif type == "array" then
+            .[0:20]
+        elif type == "string" and length > 500 then
+            .[0:500] + "...[truncated]"
+        else
+            .
+        end
+    )
+'

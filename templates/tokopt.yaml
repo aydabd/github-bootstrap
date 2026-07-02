@@ -1,0 +1,48 @@
+---
+version: 1
+
+defaults:
+  profile: implementation
+  user_filter: default
+  project_filter: default
+
+budgets:
+  prompt_tokens_soft: 6000
+  prompt_tokens_hard: 10000
+  tool_output_tokens_soft: 4000
+  tool_output_tokens_hard: 8000
+  repo_pack_tokens_hard: 30000
+
+required_tools:
+  - git
+  - grep
+
+optional_tools:
+  - jq
+  - caveman
+  - sem
+  - rg
+  - fd
+  - repomix
+  - ccusage
+  - thv
+  - ast-grep
+  - tokscale
+  - code2prompt
+  - context7
+
+toolhive:
+  enabled: true
+  optimizer: embedding
+  # Keep default_port and endpoint in sync.
+  default_port: 4483
+  default_group: ai-default
+  endpoint: "http://127.0.0.1:4483/mcp"
+
+agents:
+  claude:
+    enabled: true
+    mcp_endpoint: "http://127.0.0.1:4483/mcp"
+  copilot:
+    enabled: true
+    mcp_endpoint: "http://127.0.0.1:4483/mcp"

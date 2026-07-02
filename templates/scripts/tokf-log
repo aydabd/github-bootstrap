@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+file="${1:-/dev/stdin}"
+max_lines="${TOKF_LOG_MAX_LINES:-160}"
+context_before="${TOKF_LOG_CONTEXT_BEFORE:-3}"
+context_after="${TOKF_LOG_CONTEXT_AFTER:-8}"
+pattern='ERROR|WARN|Exception|Traceback|Caused by|FAILED|AssertionError'
+
+if [ "${file}" = "/dev/stdin" ]; then
+    grep -Ein -B "${context_before}" -A "${context_after}" "${pattern}" 2>/dev/null | sed -n "1,${max_lines}p" || true
+    exit 0
+fi
+
+if [ ! -r "${file}" ]; then
+    echo "Cannot read log file: ${file}" >&2
+    exit 1
+fi
+
+grep -Ein -B "${context_before}" -A "${context_after}" "${pattern}" "${file}" 2>/dev/null | sed -n "1,${max_lines}p" || true

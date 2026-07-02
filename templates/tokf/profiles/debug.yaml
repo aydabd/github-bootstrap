@@ -1,0 +1,30 @@
+---
+version: 1
+profile: debug
+
+groups:
+  - ai-default
+  - ai-code
+  - ai-docs
+
+tools:
+  allow_tags:
+    - read
+    - code-search
+    - semantic-edit
+    - docs
+    - git-read
+    - test-read
+  deny_tags:
+    - destructive
+    - production
+    - database-write
+    - browser-heavy
+    - persistent-store-write
+    - infrastructure-write
+
+limits:
+  max_tool_output_tokens: 10000
+  max_log_lines: 200
+  max_files_read_per_step: 8
+  max_search_results: 10
