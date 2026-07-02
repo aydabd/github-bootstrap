@@ -1,0 +1,34 @@
+---
+version: 1
+user: default
+default_profile: implementation
+
+preferences:
+  code_context:
+    first:
+      - git
+      - grep
+      - sem
+      - rg
+      - fd
+      - ast-grep
+    avoid:
+      - full_file_reads
+      - full_git_diff
+      - full_repo_pack
+
+  output:
+    style: concise
+    include:
+      - changed_files
+      - tests_run
+      - risks
+    exclude:
+      - repeated_explanations
+      - full_logs
+      - markdown_noise
+
+budgets:
+  prompt_tokens_soft: 6000
+  prompt_tokens_hard: 10000
+  tool_output_tokens_hard: 8000

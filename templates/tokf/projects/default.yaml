@@ -1,0 +1,12 @@
+---
+version: 1
+project: default
+
+files:
+  inherit: true
+
+mcp:
+  inherit: true
+
+limits:
+  inherit: true

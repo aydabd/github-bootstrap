@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+profile="${1:-implementation}"
+port="${THV_PROFILE_PORT:-4483}"
+
+case "${profile}" in
+    implementation)
+        group="ai-default"
+        max_output_tokens="8000"
+        ;;
+    code-review)
+        group="ai-github"
+        max_output_tokens="6000"
+        ;;
+    debug)
+        group="ai-code"
+        max_output_tokens="10000"
+        ;;
+    *)
+        echo "Unknown profile: ${profile}" >&2
+        echo "Supported profiles: implementation, code-review, debug" >&2
+        exit 2
+        ;;
+esac
+
+if ! command -v thv >/dev/null 2>&1; then
+    echo "thv is required to start ToolHive profiles" >&2
+    exit 127
+fi
+
+export MAX_MCP_OUTPUT_TOKENS="${MAX_MCP_OUTPUT_TOKENS:-${max_output_tokens}}"
+
+exec thv vmcp serve --group "${group}" --optimizer-embedding --port "${port}"

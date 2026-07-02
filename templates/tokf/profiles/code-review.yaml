@@ -1,0 +1,28 @@
+---
+version: 1
+profile: code-review
+
+groups:
+  - ai-default
+  - ai-code
+  - ai-github
+
+tools:
+  allow_tags:
+    - read
+    - code-search
+    - git-read
+    - pr-read
+    - docs
+  deny_tags:
+    - write
+    - destructive
+    - production
+    - database-write
+    - browser-heavy
+
+limits:
+  max_tool_output_tokens: 6000
+  max_files_read_per_step: 5
+  max_search_results: 6
+  require_findings_only: true
