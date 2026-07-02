@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.8.0](https://github.com/aydabd/github-bootstrap/compare/v1.7.1...v1.8.0) (2026-07-02)
+
+
+### Features
+
+* **token-optimization:** add generated repo optimizer defaults ([#28](https://github.com/aydabd/github-bootstrap/issues/28)) ([cab1574](https://github.com/aydabd/github-bootstrap/commit/cab157478db403b1b119ed93c2c07f4cdce45198))
+* **token-optimization:** add token optimization bootstrap templates ([cab1574](https://github.com/aydabd/github-bootstrap/commit/cab157478db403b1b119ed93c2c07f4cdce45198))
+
+
+### Bug Fixes
+
+* **deps:** bump actions/cache from 5 to 6 ([#31](https://github.com/aydabd/github-bootstrap/issues/31)) ([4b98ee1](https://github.com/aydabd/github-bootstrap/commit/4b98ee1c462f761e20e230758f2330d4526d6cca))
+
 ## [1.7.1](https://github.com/aydabd/github-bootstrap/compare/v1.7.0...v1.7.1) (2026-06-28)
 
 
