@@ -84,6 +84,10 @@ func parseUpdaters(raw string) ([]string, error) {
 }
 
 func Run(cfg Config) ([]string, error) {
+	if cfg.Scope != "repo" && cfg.Scope != "templates" && cfg.Scope != "all" {
+		return nil, fmt.Errorf("invalid scope: %s", cfg.Scope)
+	}
+
 	if cfg.VerifyLayout || cfg.VerifyOnly {
 		if err := toolinglib.VerifyWorkspaceLayout(cfg.Root); err != nil {
 			return nil, err

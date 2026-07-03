@@ -34,6 +34,17 @@ var condaPackages = []string{
 	"coreutils",
 }
 
+func retryBackoff(attempt int) {
+	if attempt <= 0 {
+		return
+	}
+	delay := time.Second * time.Duration(1<<uint(attempt-1))
+	if delay > 8*time.Second {
+		delay = 8 * time.Second
+	}
+	time.Sleep(delay)
+}
+
 func githubAPIToken() string {
 	if token := strings.TrimSpace(os.Getenv("GH_TOKEN")); token != "" {
 		return token
@@ -64,7 +75,8 @@ func newRequest(rawURL string, acceptJSON bool) (*http.Request, error) {
 func readURLBytes(rawURL string, timeoutSeconds int) ([]byte, error) {
 	client := &http.Client{Timeout: time.Duration(timeoutSeconds) * time.Second}
 	var lastErr error
-	for range httpRetries {
+	for attempt := range httpRetries {
+		retryBackoff(attempt)
 		req, err := newRequest(rawURL, true)
 		if err != nil {
 			return nil, err
@@ -108,7 +120,8 @@ func httpGetJSON(rawURL string) (map[string]any, error) {
 func fetchSHA256(rawURL string) (string, error) {
 	client := &http.Client{Timeout: 120 * time.Second}
 	var lastErr error
-	for range httpRetries {
+	for attempt := range httpRetries {
+		retryBackoff(attempt)
 		req, err := newRequest(rawURL, false)
 		if err != nil {
 			return "", err

@@ -1,6 +1,7 @@
 package toolinglib
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var MiseToolSource = map[string]string{
@@ -83,6 +85,14 @@ func ReplaceIfPresent(pattern string, replacement string, text string) (string, 
 	return re.ReplaceAllString(text, replacement), true, nil
 }
 
+func requireVersion(versions map[string]string, key string, source string) (string, error) {
+	value, ok := versions[key]
+	if !ok || strings.TrimSpace(value) == "" {
+		return "", fmt.Errorf("missing %s version for %s", source, key)
+	}
+	return value, nil
+}
+
 func UpdateEnvText(text string, versions map[string]string) (string, error) {
 	updated := text
 	for pkg, version := range versions {
@@ -137,7 +147,11 @@ func UpdateBootstrapScriptText(text string, providerData map[string]ProviderAsse
 func UpdateMiseText(text string, envVersions map[string]string, pythonVersions map[string]string, npmVersions map[string]string, goVersions map[string]string) (string, error) {
 	updated := text
 	for miseKey, condaSource := range MiseToolSource {
-		next, err := UpdateTOMLAssignment(updated, miseKey, envVersions[condaSource])
+		value, err := requireVersion(envVersions, condaSource, "conda")
+		if err != nil {
+			return "", fmt.Errorf("missing conda version for %s (source %s)", miseKey, condaSource)
+		}
+		next, err := UpdateTOMLAssignment(updated, miseKey, value)
 		if err != nil {
 			return "", err
 		}
@@ -146,14 +160,26 @@ func UpdateMiseText(text string, envVersions map[string]string, pythonVersions m
 
 	replacements := make([][2]string, 0)
 	for pkg, pattern := range PipVersionPatterns {
-		replacements = append(replacements, [2]string{pattern, fmt.Sprintf("%s==%s", pkg, pythonVersions[pkg])})
+		value, err := requireVersion(pythonVersions, pkg, "python")
+		if err != nil {
+			return "", err
+		}
+		replacements = append(replacements, [2]string{pattern, fmt.Sprintf("%s==%s", pkg, value)})
 	}
 	for pkg, pattern := range NPMVersionPatterns {
-		replacements = append(replacements, [2]string{pattern, fmt.Sprintf("%s@%s", pkg, npmVersions[pkg])})
+		value, err := requireVersion(npmVersions, pkg, "npm")
+		if err != nil {
+			return "", err
+		}
+		replacements = append(replacements, [2]string{pattern, fmt.Sprintf("%s@%s", pkg, value)})
 	}
 	if goVersions != nil {
 		for pkg, pattern := range GoVersionPatterns {
-			replacement := fmt.Sprintf("%s@%s", pkg, goVersions[pkg])
+			value, err := requireVersion(goVersions, pkg, "go")
+			if err != nil {
+				return "", err
+			}
+			replacement := fmt.Sprintf("%s@%s", pkg, value)
 			next, _, err := ReplaceIfPresent(pattern, replacement, updated)
 			if err != nil {
 				return "", err
@@ -188,23 +214,28 @@ func RunPreCommitAutoupdate(configs []string) ([]string, error) {
 	}
 	changed := make([]string, 0)
 	for _, config := range configs {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		beforeHash, err := fileSHA256(config)
 		if err != nil {
+			cancel()
 			return nil, err
 		}
-		cmd := exec.Command("pre-commit", "autoupdate", "--config", config)
+		cmd := exec.CommandContext(ctx, "pre-commit", "autoupdate", "--config", config)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
+			cancel()
 			return nil, err
 		}
 		afterHash, err := fileSHA256(config)
 		if err != nil {
+			cancel()
 			return nil, err
 		}
 		if beforeHash != afterHash {
 			changed = append(changed, config)
 		}
+		cancel()
 	}
 	return changed, nil
 }
