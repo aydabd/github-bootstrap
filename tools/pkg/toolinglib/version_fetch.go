@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -33,16 +34,41 @@ var condaPackages = []string{
 	"coreutils",
 }
 
+func githubAPIToken() string {
+	if token := strings.TrimSpace(os.Getenv("GH_TOKEN")); token != "" {
+		return token
+	}
+	if token := strings.TrimSpace(os.Getenv("GITHUB_TOKEN")); token != "" {
+		return token
+	}
+	return ""
+}
+
+func newRequest(rawURL string, acceptJSON bool) (*http.Request, error) {
+	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+	if acceptJSON {
+		req.Header.Set("Accept", "application/json")
+	}
+	if strings.HasPrefix(rawURL, "https://api.github.com/") {
+		if token := githubAPIToken(); token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+	}
+	return req, nil
+}
+
 func readURLBytes(rawURL string, timeoutSeconds int) ([]byte, error) {
 	client := &http.Client{Timeout: time.Duration(timeoutSeconds) * time.Second}
 	var lastErr error
 	for range httpRetries {
-		req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+		req, err := newRequest(rawURL, true)
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", userAgent)
 		resp, err := client.Do(req)
 		if err != nil {
 			lastErr = err
@@ -83,11 +109,10 @@ func fetchSHA256(rawURL string) (string, error) {
 	client := &http.Client{Timeout: 120 * time.Second}
 	var lastErr error
 	for range httpRetries {
-		req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+		req, err := newRequest(rawURL, false)
 		if err != nil {
 			return "", err
 		}
-		req.Header.Set("User-Agent", userAgent)
 		resp, err := client.Do(req)
 		if err != nil {
 			lastErr = err
@@ -198,7 +223,22 @@ func latestGitHubReleaseTag(repo string) (string, error) {
 	return tag, nil
 }
 
-func CollectVersions() (Versions, error) {
+func CollectVersions(selectedUpdaters []string) (Versions, error) {
+	needsMicromamba := false
+	needsMise := false
+	for _, updater := range selectedUpdaters {
+		if updater == "micromamba" {
+			needsMicromamba = true
+		}
+		if updater == "mise" {
+			needsMise = true
+		}
+	}
+	if !needsMicromamba && !needsMise {
+		needsMicromamba = true
+		needsMise = true
+	}
+
 	conda := make(map[string]string)
 	for _, pkg := range condaPackages {
 		v, err := latestCondaVersion(pkg)
@@ -209,50 +249,54 @@ func CollectVersions() (Versions, error) {
 	}
 
 	python := map[string]string{}
-	for _, pkg := range []string{"pre-commit", "editorconfig-checker", "yamllint"} {
-		v, err := latestPyPIVersion(pkg)
-		if err != nil {
-			return Versions{}, err
-		}
-		python[pkg] = v
-	}
-
 	npm := map[string]string{}
-	for _, pkg := range []string{"prettier", "markdownlint-cli"} {
-		v, err := latestNPMVersion(pkg)
-		if err != nil {
-			return Versions{}, err
-		}
-		npm[pkg] = v
-	}
-
 	goModules := map[string]string{}
-	for _, module := range []string{"github.com/daixiang0/gci", "github.com/golangci/golangci-lint/cmd/golangci-lint"} {
-		v, err := latestGoModuleVersion(module)
+	if needsMise {
+		for _, pkg := range []string{"pre-commit", "editorconfig-checker", "yamllint"} {
+			v, err := latestPyPIVersion(pkg)
+			if err != nil {
+				return Versions{}, err
+			}
+			python[pkg] = v
+		}
+
+		for _, pkg := range []string{"prettier", "markdownlint-cli"} {
+			v, err := latestNPMVersion(pkg)
+			if err != nil {
+				return Versions{}, err
+			}
+			npm[pkg] = v
+		}
+
+		for _, module := range []string{"github.com/daixiang0/gci", "github.com/golangci/golangci-lint/cmd/golangci-lint"} {
+			v, err := latestGoModuleVersion(module)
+			if err != nil {
+				return Versions{}, err
+			}
+			goModules[module] = v
+		}
+	}
+
+	providerURLs := map[string]string{}
+	if needsMise {
+		miseTag, err := latestGitHubReleaseTag("jdx/mise")
 		if err != nil {
 			return Versions{}, err
 		}
-		goModules[module] = v
+		providerURLs["mise:linux:x64"] = "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-linux-x64"
+		providerURLs["mise:linux:arm64"] = "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-linux-arm64"
+		providerURLs["mise:macos:x64"] = "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-macos-x64"
+		providerURLs["mise:macos:arm64"] = "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-macos-arm64"
 	}
-
-	miseTag, err := latestGitHubReleaseTag("jdx/mise")
-	if err != nil {
-		return Versions{}, err
-	}
-	micromambaTag, err := latestGitHubReleaseTag("mamba-org/micromamba-releases")
-	if err != nil {
-		return Versions{}, err
-	}
-
-	providerURLs := map[string]string{
-		"mise:linux:x64":         "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-linux-x64",
-		"mise:linux:arm64":       "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-linux-arm64",
-		"mise:macos:x64":         "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-macos-x64",
-		"mise:macos:arm64":       "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-macos-arm64",
-		"micromamba:linux:x64":   "https://github.com/mamba-org/micromamba-releases/releases/download/" + micromambaTag + "/micromamba-linux-64",
-		"micromamba:linux:arm64": "https://github.com/mamba-org/micromamba-releases/releases/download/" + micromambaTag + "/micromamba-linux-aarch64",
-		"micromamba:macos:x64":   "https://github.com/mamba-org/micromamba-releases/releases/download/" + micromambaTag + "/micromamba-osx-64",
-		"micromamba:macos:arm64": "https://github.com/mamba-org/micromamba-releases/releases/download/" + micromambaTag + "/micromamba-osx-arm64",
+	if needsMicromamba {
+		micromambaTag, err := latestGitHubReleaseTag("mamba-org/micromamba-releases")
+		if err != nil {
+			return Versions{}, err
+		}
+		providerURLs["micromamba:linux:x64"] = "https://github.com/mamba-org/micromamba-releases/releases/download/" + micromambaTag + "/micromamba-linux-64"
+		providerURLs["micromamba:linux:arm64"] = "https://github.com/mamba-org/micromamba-releases/releases/download/" + micromambaTag + "/micromamba-linux-aarch64"
+		providerURLs["micromamba:macos:x64"] = "https://github.com/mamba-org/micromamba-releases/releases/download/" + micromambaTag + "/micromamba-osx-64"
+		providerURLs["micromamba:macos:arm64"] = "https://github.com/mamba-org/micromamba-releases/releases/download/" + micromambaTag + "/micromamba-osx-arm64"
 	}
 
 	providers := map[string]ProviderAsset{}

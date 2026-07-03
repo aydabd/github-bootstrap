@@ -1,6 +1,8 @@
 package toolinglib
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
@@ -171,19 +173,40 @@ func UpdateMiseText(text string, envVersions map[string]string, pythonVersions m
 	return out, nil
 }
 
-func RunPreCommitAutoupdate(configs []string) error {
-	if err := EnsureCommandAvailable("pre-commit"); err != nil {
-		return err
+func fileSHA256(path string) (string, error) {
+	payload, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
 	}
+	digest := sha256.Sum256(payload)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+func RunPreCommitAutoupdate(configs []string) ([]string, error) {
+	if err := EnsureCommandAvailable("pre-commit"); err != nil {
+		return nil, err
+	}
+	changed := make([]string, 0)
 	for _, config := range configs {
+		beforeHash, err := fileSHA256(config)
+		if err != nil {
+			return nil, err
+		}
 		cmd := exec.Command("pre-commit", "autoupdate", "--config", config)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			return err
+			return nil, err
+		}
+		afterHash, err := fileSHA256(config)
+		if err != nil {
+			return nil, err
+		}
+		if beforeHash != afterHash {
+			changed = append(changed, config)
 		}
 	}
-	return nil
+	return changed, nil
 }
 
 func FilterProviderAssets(providerAssets map[string]ProviderAsset, prefix string) map[string]ProviderAsset {

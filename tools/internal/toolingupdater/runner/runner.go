@@ -108,7 +108,7 @@ func Run(cfg Config) ([]string, error) {
 
 	var versions *toolinglib.Versions
 	if needsVersions {
-		resolved, err := toolinglib.CollectVersions()
+		resolved, err := toolinglib.CollectVersions(selected)
 		if err != nil {
 			return nil, err
 		}

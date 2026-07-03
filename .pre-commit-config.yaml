@@ -167,15 +167,20 @@ repos:
         args:
           - -c
           - |
+            set -euo pipefail
+            files="$(find tools -name '*.go' -type f)"
+            if [ -z "$files" ]; then
+              exit 0
+            fi
             if [ "$LINT_MODE" = "check" ]; then
-              unformatted="$(gofmt -l $(find tools -name '*.go' -type f))"
+              unformatted="$(gofmt -l $files)"
               if [ -n "$unformatted" ]; then
                 echo "Go files need formatting:" >&2
                 echo "$unformatted" >&2
                 exit 1
               fi
             else
-              gofmt -w $(find tools -name '*.go' -type f)
+              gofmt -w $files
             fi
         language: system
         files: '^tools/.*\.go$'
