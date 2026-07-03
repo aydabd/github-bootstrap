@@ -38,8 +38,11 @@ func containsAll(paths []string, want ...string) bool {
 	return true
 }
 
-func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
-	root := t.TempDir()
+// buildTestWorkspace creates a minimal temp workspace and fake pre-commit binary
+// shared by all integration tests. Returns the populated root and versions struct.
+func buildTestWorkspace(t *testing.T) (root string, versions toolinglib.Versions) {
+	t.Helper()
+	root = t.TempDir()
 
 	repoEnv := filepath.Join(root, "environment.yml")
 	tplEnv := filepath.Join(root, "templates", "languages", "go", "providers", "micromamba", "environment.yml")
@@ -64,9 +67,9 @@ func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
 	mustWriteFile(t, repoPre, "repos:\n  - repo: https://example.invalid\n")
 	mustWriteFile(t, tplPre, "repos:\n  - repo: https://example.invalid\n")
 
+	// Fake pre-commit: idempotent — only adds marker when absent.
 	binDir := filepath.Join(root, "bin")
 	preCommitPath := filepath.Join(binDir, "pre-commit")
-	// Idempotent: only appends the marker when it is not already present.
 	fakePreCommit := "#!/bin/sh\nset -eu\nconfig=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"--config\" ]; then\n    shift\n    config=\"$1\"\n  fi\n  shift\ndone\nif ! grep -q '# updated-by-fake-pre-commit' \"$config\"; then\n  echo '# updated-by-fake-pre-commit' >> \"$config\"\nfi\n"
 	mustWriteFile(t, preCommitPath, fakePreCommit)
 	if err := os.Chmod(preCommitPath, 0o755); err != nil {
@@ -74,7 +77,7 @@ func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
 	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	versions := toolinglib.Versions{
+	versions = toolinglib.Versions{
 		Conda: map[string]string{
 			"pre-commit": "4.6.0",
 			"go-shfmt":   "3.13.1",
@@ -100,6 +103,20 @@ func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
 			"micromamba:linux:x64": {URL: "https://new.example/mamba", SHA256: "mamba-sha"},
 		},
 	}
+	return root, versions
+}
+
+func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
+	root, versions := buildTestWorkspace(t)
+
+	repoEnv := filepath.Join(root, "environment.yml")
+	tplEnv := filepath.Join(root, "templates", "languages", "go", "providers", "micromamba", "environment.yml")
+	repoMise := filepath.Join(root, "mise.toml")
+	tplMise := filepath.Join(root, "templates", "languages", "go", "providers", "mise", "mise.toml")
+	repoBootstrap := filepath.Join(root, "scripts", "bootstrap-provider-binary.sh")
+	tplBootstrap := filepath.Join(root, "templates", "scripts", "bootstrap-provider-binary.sh")
+	repoPre := filepath.Join(root, ".pre-commit-config.yaml")
+	tplPre := filepath.Join(root, "templates", "languages", "go", ".pre-commit-config.yaml")
 
 	mambaChanged, err := RunMicromamba(root, "all", versions, true)
 	if err != nil {
@@ -156,5 +173,105 @@ func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
 	}
 	if !strings.Contains(mustReadFile(t, tplPre), "# updated-by-fake-pre-commit") {
 		t.Fatalf("template pre-commit config was not updated by fake pre-commit")
+	}
+}
+
+// TestRunMicromamba_ScopeRepo verifies that scope="repo" updates only the repo
+// environment.yml and bootstrap script, leaving template equivalents untouched.
+func TestRunMicromamba_ScopeRepo(t *testing.T) {
+	root, versions := buildTestWorkspace(t)
+
+	repoEnv := filepath.Join(root, "environment.yml")
+	tplEnv := filepath.Join(root, "templates", "languages", "go", "providers", "micromamba", "environment.yml")
+	tplBootstrap := filepath.Join(root, "templates", "scripts", "bootstrap-provider-binary.sh")
+
+	originalTplEnv := mustReadFile(t, tplEnv)
+	originalTplBootstrap := mustReadFile(t, tplBootstrap)
+
+	changed, err := RunMicromamba(root, "repo", versions, true)
+	if err != nil {
+		t.Fatalf("RunMicromamba scope=repo failed: %v", err)
+	}
+	if len(changed) == 0 {
+		t.Fatal("expected at least one changed file for scope=repo")
+	}
+	if !strings.Contains(mustReadFile(t, repoEnv), "pre-commit=4.6.0") {
+		t.Fatalf("repo environment.yml was not updated")
+	}
+	if mustReadFile(t, tplEnv) != originalTplEnv {
+		t.Fatalf("template environment.yml was modified but should not have been")
+	}
+	if mustReadFile(t, tplBootstrap) != originalTplBootstrap {
+		t.Fatalf("template bootstrap was modified but should not have been")
+	}
+}
+
+// TestRunMicromamba_ScopeTemplates verifies that scope="templates" updates only
+// template files, leaving the repo environment.yml and bootstrap script untouched.
+func TestRunMicromamba_ScopeTemplates(t *testing.T) {
+	root, versions := buildTestWorkspace(t)
+
+	repoEnv := filepath.Join(root, "environment.yml")
+	tplEnv := filepath.Join(root, "templates", "languages", "go", "providers", "micromamba", "environment.yml")
+	repoBootstrap := filepath.Join(root, "scripts", "bootstrap-provider-binary.sh")
+
+	originalRepoEnv := mustReadFile(t, repoEnv)
+	originalRepoBootstrap := mustReadFile(t, repoBootstrap)
+
+	changed, err := RunMicromamba(root, "templates", versions, true)
+	if err != nil {
+		t.Fatalf("RunMicromamba scope=templates failed: %v", err)
+	}
+	if len(changed) == 0 {
+		t.Fatal("expected at least one changed file for scope=templates")
+	}
+	if !strings.Contains(mustReadFile(t, tplEnv), "pre-commit=4.6.0") {
+		t.Fatalf("template environment.yml was not updated")
+	}
+	if mustReadFile(t, repoEnv) != originalRepoEnv {
+		t.Fatalf("repo environment.yml was modified but should not have been")
+	}
+	if mustReadFile(t, repoBootstrap) != originalRepoBootstrap {
+		t.Fatalf("repo bootstrap was modified but should not have been")
+	}
+}
+
+// TestRunMicromamba_DryRun verifies that write=false reports files that would
+// change but does NOT modify them on disk.
+func TestRunMicromamba_DryRun(t *testing.T) {
+	root, versions := buildTestWorkspace(t)
+
+	repoEnv := filepath.Join(root, "environment.yml")
+	originalContent := mustReadFile(t, repoEnv)
+
+	changed, err := RunMicromamba(root, "all", versions, false)
+	if err != nil {
+		t.Fatalf("RunMicromamba dry-run failed: %v", err)
+	}
+	if len(changed) == 0 {
+		t.Fatal("dry-run expected non-empty changed list")
+	}
+	if mustReadFile(t, repoEnv) != originalContent {
+		t.Fatalf("dry-run must not write files: repo environment.yml was modified")
+	}
+}
+
+// TestRunMise_DryRun verifies that write=false reports files that would change
+// but does NOT modify them on disk.
+func TestRunMise_DryRun(t *testing.T) {
+	root, versions := buildTestWorkspace(t)
+
+	repoMise := filepath.Join(root, "mise.toml")
+	originalContent := mustReadFile(t, repoMise)
+
+	changed, err := RunMise(root, "all", versions, false)
+	if err != nil {
+		t.Fatalf("RunMise dry-run failed: %v", err)
+	}
+	if len(changed) == 0 {
+		t.Fatal("dry-run expected non-empty changed list")
+	}
+	if mustReadFile(t, repoMise) != originalContent {
+		t.Fatalf("dry-run must not write files: repo mise.toml was modified")
 	}
 }

@@ -1,6 +1,7 @@
 package toolinglib
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -91,5 +92,37 @@ func TestUpdateBootstrapScriptText(t *testing.T) {
 	}
 	if !strings.Contains(updated, `sha256="abc123"`) {
 		t.Fatalf("expected updated sha256, got: %s", updated)
+	}
+}
+
+func TestUpdateFilePreservesPermissions(t *testing.T) {
+	tmp, err := os.CreateTemp(t.TempDir(), "bootstrap-*.sh")
+	if err != nil {
+		t.Fatalf("CreateTemp: %v", err)
+	}
+	if _, err := tmp.WriteString("#!/bin/sh\necho old\n"); err != nil {
+		t.Fatalf("WriteString: %v", err)
+	}
+	_ = tmp.Close()
+	if err := os.Chmod(tmp.Name(), 0o755); err != nil {
+		t.Fatalf("Chmod: %v", err)
+	}
+
+	changed, err := UpdateFile(tmp.Name(), func(content string) (string, error) {
+		return strings.ReplaceAll(content, "old", "new"), nil
+	}, true)
+	if err != nil {
+		t.Fatalf("UpdateFile failed: %v", err)
+	}
+	if !changed {
+		t.Fatal("expected file to be reported changed")
+	}
+
+	info, err := os.Stat(tmp.Name())
+	if err != nil {
+		t.Fatalf("Stat: %v", err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Fatalf("expected permission 0755, got %o", info.Mode().Perm())
 	}
 }
