@@ -168,11 +168,12 @@ repos:
           - -c
           - |
             set -euo pipefail
+            lint_mode="${LINT_MODE:-fix}"
             files="$(find tools -name '*.go' -type f)"
             if [ -z "$files" ]; then
               exit 0
             fi
-            if [ "$LINT_MODE" = "check" ]; then
+            if [ "$lint_mode" = "check" ]; then
               unformatted="$(gofmt -l $files)"
               if [ -n "$unformatted" ]; then
                 echo "Go files need formatting:" >&2

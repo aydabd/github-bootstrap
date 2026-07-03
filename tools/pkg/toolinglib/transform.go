@@ -47,6 +47,10 @@ func UpdateFile(path string, updater func(string) (string, error), write bool) (
 	if err != nil {
 		return false, err
 	}
+	mode := os.FileMode(0o644)
+	if info, err := os.Stat(path); err == nil {
+		mode = info.Mode().Perm()
+	}
 	original := string(payload)
 	updated, err := updater(original)
 	if err != nil {
@@ -56,7 +60,7 @@ func UpdateFile(path string, updater func(string) (string, error), write bool) (
 		return false, nil
 	}
 	if write {
-		if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
+		if err := os.WriteFile(path, []byte(updated), mode); err != nil {
 			return false, err
 		}
 	}
