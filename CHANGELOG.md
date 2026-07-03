@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.1](https://github.com/aydabd/github-bootstrap/compare/v1.9.0...v1.9.1) (2026-07-03)
+
+
+### Bug Fixes
+
+* address remaining unresolved PR [#33](https://github.com/aydabd/github-bootstrap/issues/33) Copilot comments ([#35](https://github.com/aydabd/github-bootstrap/issues/35)) ([7976a74](https://github.com/aydabd/github-bootstrap/commit/7976a74ca85ecee4a5acda7af61e0b8202ccaf6a))
+* **workflows:** resolve unresolved PR33 provider bootstrap comments ([7976a74](https://github.com/aydabd/github-bootstrap/commit/7976a74ca85ecee4a5acda7af61e0b8202ccaf6a))
+
 ## [1.9.0](https://github.com/aydabd/github-bootstrap/compare/v1.8.0...v1.9.0) (2026-07-03)
 
 
