@@ -33,6 +33,13 @@ MISE ?= $(CURDIR)/.provider/bin/mise
 
 # LINT_MODE: fix (default, local dev) or check (CI, no auto-fix)
 LINT_MODE ?= fix
+SHOW_COMMANDS ?= 1
+
+ifeq ($(SHOW_COMMANDS),1)
+SETUP_TRACE := set -x;
+else
+SETUP_TRACE :=
+endif
 
 # Backward compatibility:
 # USE_MAMBA=0 implies ENV_MANAGER=system.
@@ -77,7 +84,7 @@ help: ## Show available make targets
 # Environment Setup
 # =============================================================================
 setup-env: ## Setup selected environment manager (ENV_MANAGER=micromamba|mise|system)
-	@set -e; \
+	@set -e; $(SETUP_TRACE) \
 	case "$(ENV_MANAGER)" in \
 		micromamba) \
 			if [ -f "$(ENV_STAMP)" ] && $(call mamba_env_exists) 2>/dev/null; then \
@@ -136,15 +143,19 @@ setup-env: ## Setup selected environment manager (ENV_MANAGER=micromamba|mise|sy
 	esac
 
 install: setup-env ## Setup env manager and install pre-commit hooks
+	@echo "+ $(MAKE) --no-print-directory _install-hooks"
 	@$(MAKE) --no-print-directory _install-hooks
 	@echo "Done. Environment manager: $(ENV_MANAGER)"
 
 install-hooks: setup-env ## (Re-)install pre-commit hooks into .git/hooks
+	@echo "+ $(MAKE) --no-print-directory _install-hooks"
 	@$(MAKE) --no-print-directory _install-hooks
 
 # Internal: install hooks and inject conda PATH so git commit finds all tools.
 _install-hooks:
+	@echo "+ $(RUN) pre-commit install"
 	@$(RUN) pre-commit install
+	@echo "+ $(RUN) pre-commit install --hook-type commit-msg"
 	@$(RUN) pre-commit install --hook-type commit-msg
 ifeq ($(ENV_MANAGER),micromamba)
 	@ENV_BIN="$$( $(MICROMAMBA) info -n $(MAMBA_ENV) 2>/dev/null | awk '/env location/{print $$NF}')/bin"; \
@@ -180,7 +191,9 @@ endif
 # LINT_MODE=check → check-only, fail on violations (CI)
 lint: setup-env ## Run all checks via pre-commit (LINT_MODE=fix|check)
 	@echo "Running all checks via pre-commit (LINT_MODE=$(LINT_MODE))..."
+	@echo "+ $(RUN) pre-commit install --install-hooks"
 	@$(RUN) pre-commit install --install-hooks >/dev/null 2>&1 || true
+	@echo "+ LINT_MODE=$(LINT_MODE) $(RUN) pre-commit run --all-files --color=always"
 	@LINT_MODE=$(LINT_MODE) $(RUN) pre-commit run --all-files --color=always
 
 # =============================================================================
@@ -188,6 +201,7 @@ lint: setup-env ## Run all checks via pre-commit (LINT_MODE=fix|check)
 # =============================================================================
 test: ## Trigger repository creation tests via GitHub Actions
 	@echo "Running repository creation tests..."
+	@echo "+ gh workflow run test-repository-creation.yml --field test_repo_name=automated-test --field languages=language-agnostic-only --field cleanup_after_test=true"
 	@gh workflow run test-repository-creation.yml \
 		--field test_repo_name="automated-test" \
 		--field languages="language-agnostic-only" \
