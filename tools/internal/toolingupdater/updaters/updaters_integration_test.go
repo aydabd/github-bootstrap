@@ -66,7 +66,8 @@ func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
 
 	binDir := filepath.Join(root, "bin")
 	preCommitPath := filepath.Join(binDir, "pre-commit")
-	fakePreCommit := "#!/bin/sh\nset -eu\nconfig=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"--config\" ]; then\n    shift\n    config=\"$1\"\n  fi\n  shift\ndone\necho \"# updated-by-fake-pre-commit\" >> \"$config\"\n"
+	// Idempotent: only appends the marker when it is not already present.
+	fakePreCommit := "#!/bin/sh\nset -eu\nconfig=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"--config\" ]; then\n    shift\n    config=\"$1\"\n  fi\n  shift\ndone\nif ! grep -q '# updated-by-fake-pre-commit' \"$config\"; then\n  echo '# updated-by-fake-pre-commit' >> \"$config\"\nfi\n"
 	mustWriteFile(t, preCommitPath, fakePreCommit)
 	if err := os.Chmod(preCommitPath, 0o755); err != nil {
 		t.Fatalf("failed to chmod fake pre-commit: %v", err)
@@ -124,8 +125,12 @@ func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
 		t.Fatalf("RunPreCommit changed mismatch: %v", preChanged)
 	}
 
-	if changed, err := RunPreCommit(root, "all", false); err != nil || len(changed) != 0 {
-		t.Fatalf("RunPreCommit dry-run expected no changes, got %v err=%v", changed, err)
+	// Dry-run: the fake pre-commit already appended its marker in the write pass above,
+	// so autoupdate on the temp copy produces no further change — expect empty result.
+	if dryChanged, err := RunPreCommit(root, "all", false); err != nil {
+		t.Fatalf("RunPreCommit dry-run failed: %v", err)
+	} else if len(dryChanged) != 0 {
+		t.Fatalf("RunPreCommit dry-run expected no changes, got %v", dryChanged)
 	}
 
 	if !strings.Contains(mustReadFile(t, repoEnv), "pre-commit=4.6.0") {

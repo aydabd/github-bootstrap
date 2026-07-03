@@ -41,7 +41,6 @@ repos:
         language: system
         exclude: >
           (?x)^(
-            .*\.go$|
             .*\.(png|jpg|jpeg|gif|ico|svg|pdf|lock)|
             \.git/.*
           )$

@@ -188,16 +188,13 @@ func latestPyPIVersion(pkg string) (string, error) {
 }
 
 func latestNPMVersion(pkg string) (string, error) {
+	// Use the /latest endpoint to avoid fetching the full package document.
 	encoded := strings.ReplaceAll(url.PathEscape(pkg), "%2F", "/")
-	data, err := httpGetJSON("https://registry.npmjs.org/" + encoded)
+	data, err := httpGetJSON("https://registry.npmjs.org/" + encoded + "/latest")
 	if err != nil {
 		return "", err
 	}
-	distTags, ok := data["dist-tags"].(map[string]any)
-	if !ok {
-		return "", fmt.Errorf("unable to parse npm response for %s", pkg)
-	}
-	version, ok := distTags["latest"].(string)
+	version, ok := data["version"].(string)
 	if !ok || version == "" {
 		return "", fmt.Errorf("unable to resolve npm latest version for %s", pkg)
 	}

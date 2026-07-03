@@ -1,9 +1,8 @@
 package toolinglib
 
 import (
+	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
@@ -203,43 +202,64 @@ func UpdateMiseText(text string, envVersions map[string]string, pythonVersions m
 	return out, nil
 }
 
-func fileSHA256(path string) (string, error) {
-	payload, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	digest := sha256.Sum256(payload)
-	return hex.EncodeToString(digest[:]), nil
-}
-
-func RunPreCommitAutoupdate(configs []string) ([]string, error) {
+// RunPreCommitAutoupdate runs "pre-commit autoupdate" on each config via a temp
+// copy, preventing partial writes to the originals on failure. When write is
+// false (dry-run) the originals are not modified; the returned list still
+// contains every config that would have changed.
+func RunPreCommitAutoupdate(configs []string, write bool) ([]string, error) {
 	if err := EnsureCommandAvailable("pre-commit"); err != nil {
 		return nil, err
 	}
 	changed := make([]string, 0)
 	for _, config := range configs {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		beforeHash, err := fileSHA256(config)
+		original, err := os.ReadFile(config)
 		if err != nil {
-			cancel()
-			return nil, err
+			return changed, err
 		}
-		cmd := exec.CommandContext(ctx, "pre-commit", "autoupdate", "--config", config)
+
+		tmp, err := os.CreateTemp("", "pre-commit-autoupdate-*.yaml")
+		if err != nil {
+			return changed, err
+		}
+		tmpPath := tmp.Name()
+		if _, err := tmp.Write(original); err != nil {
+			_ = tmp.Close()
+			_ = os.Remove(tmpPath)
+			return changed, err
+		}
+		_ = tmp.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		cmd := exec.CommandContext(ctx, "pre-commit", "autoupdate", "--config", tmpPath)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			cancel()
-			return nil, err
-		}
-		afterHash, err := fileSHA256(config)
-		if err != nil {
-			cancel()
-			return nil, err
-		}
-		if beforeHash != afterHash {
-			changed = append(changed, config)
-		}
+		runErr := cmd.Run()
 		cancel()
+
+		if runErr != nil {
+			_ = os.Remove(tmpPath)
+			return changed, runErr
+		}
+
+		updated, err := os.ReadFile(tmpPath)
+		_ = os.Remove(tmpPath)
+		if err != nil {
+			return changed, err
+		}
+
+		if bytes.Equal(original, updated) {
+			continue
+		}
+		changed = append(changed, config)
+		if write {
+			mode := os.FileMode(0o644)
+			if info, err := os.Stat(config); err == nil {
+				mode = info.Mode().Perm()
+			}
+			if err := os.WriteFile(config, updated, mode); err != nil {
+				return changed, err
+			}
+		}
 	}
 	return changed, nil
 }

@@ -21,7 +21,7 @@ func runScopedProviderUpdater(root string, scope string, write bool, cfg scopedP
 		repoPath := filepath.Join(root, cfg.repoFile)
 		ok, err := toolinglib.UpdateFile(repoPath, cfg.repoUpdate, write)
 		if err != nil {
-			return nil, err
+			return changed, err
 		}
 		if ok {
 			changed = append(changed, repoPath)
@@ -32,7 +32,7 @@ func runScopedProviderUpdater(root string, scope string, write bool, cfg scopedP
 			return toolinglib.UpdateBootstrapScriptText(content, cfg.providerAssets)
 		}, write)
 		if err != nil {
-			return nil, err
+			return changed, err
 		}
 		if ok {
 			changed = append(changed, repoBootstrap)
@@ -43,7 +43,7 @@ func runScopedProviderUpdater(root string, scope string, write bool, cfg scopedP
 		for _, templateFile := range cfg.templateFiles {
 			ok, err := toolinglib.UpdateFile(templateFile, cfg.templateUpdate, write)
 			if err != nil {
-				return nil, err
+				return changed, err
 			}
 			if ok {
 				changed = append(changed, templateFile)
@@ -55,7 +55,7 @@ func runScopedProviderUpdater(root string, scope string, write bool, cfg scopedP
 			return toolinglib.UpdateBootstrapScriptText(content, cfg.providerAssets)
 		}, write)
 		if err != nil {
-			return nil, err
+			return changed, err
 		}
 		if ok {
 			changed = append(changed, templateBootstrap)
