@@ -237,6 +237,37 @@ Project readme and AI assistant instructions (Agent, Claude, Copilot) following 
 - **Local and CI** — `make lint` auto-fixes locally; `LINT_MODE=check make lint` fails on violations in CI
 - **Language-specific linters** — Add language linters to `.pre-commit-config.yaml` as needed
 
+### Weekly Tooling Updates (non-Dependabot)
+
+Dependabot does not cover every tooling surface in this repository. For pinned tooling files
+such as `mise.toml`, micromamba `environment.yml`, provider bootstrap binaries, and
+pre-commit hook revisions, use:
+
+- `make tooling-update-repo` — update tooling pins for this repository
+- `make tooling-update-templates` — update tooling pins under `templates/` for generated repos
+- `make tooling-update-all` — run both update paths
+- `make tooling-verify` — verify layout assumptions and run updater unit tests before merging changes
+- `make tooling-update-micromamba` / `make tooling-update-mise` / `make tooling-update-system` / `make tooling-update-precommit` — run explicit modular updaters
+
+Tooling commands automatically build the updater binary from latest source before execution,
+so users and AI agents always run the current implementation.
+
+If Go is not installed on your machine, use `ENV_MANAGER=micromamba` or `ENV_MANAGER=mise`
+and `make` will provision Go/tooling for you. `ENV_MANAGER=system` expects host tools to be
+already installed.
+
+The updater CLI also supports `--verify-only` for fast offline validation of expected
+repository/template layout.
+It also supports `--updaters` to run one or more decoupled updater modules.
+Implementation lives in the monorepo tools module under `tools/cmd/tooling-updater` + `tools/internal/` + `tools/pkg/` and is built/executed from Make targets.
+
+Automation is provided by `.github/workflows/weekly-tooling-updates.yml`:
+
+- runs weekly and on manual dispatch
+- opens or updates one PR with all non-Dependabot tooling updates
+- enables PR auto-merge so GitHub merges only after required checks, required approvals,
+  and branch protection rules are satisfied
+
 ### Conventional Commits
 
 All repositories enforce [conventional commits](https://www.conventionalcommits.org/)

@@ -7,6 +7,9 @@ dependencies:
   # ── Python runtime (required by pre-commit) ─────────────────────────────────
   - python=3.13
 
+  # ── Go runtime (required by tooling updater CLI) ─────────────────────────────
+  - go=1.26
+
   # ── Pre-commit framework ────────────────────────────────────────────────────
   - pre-commit=4.6.0
   # ── Linting / formatting tools (used as language: system hooks) ─────────────

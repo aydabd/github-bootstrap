@@ -159,6 +159,45 @@ repos:
         files: '\.tf$'
         pass_filenames: false
 
+      # ── Go tools module: formatting (gofmt) ───────────────────────────────
+      - id: tools-go-fmt
+        name: tools go fmt
+        entry: bash
+        args:
+          - -c
+          - |
+            if [ "$LINT_MODE" = "check" ]; then
+              unformatted="$(gofmt -l $$(find tools -name '*.go' -type f))"
+              if [ -n "$unformatted" ]; then
+                echo "Go files need formatting:" >&2
+                echo "$unformatted" >&2
+                exit 1
+              fi
+            else
+              gofmt -w $$(find tools -name '*.go' -type f)
+            fi
+        language: system
+        files: '^tools/.*\.go$'
+        pass_filenames: false
+
+      # ── Go tools module: static analysis (go vet) ─────────────────────────
+      - id: tools-go-vet
+        name: tools go vet
+        entry: go
+        args: [vet, ./tools/...]
+        language: system
+        files: '^tools/.*\.go$'
+        pass_filenames: false
+
+      # ── Go tools module: unit tests (go test) ─────────────────────────────
+      - id: tools-go-test
+        name: tools go test
+        entry: go
+        args: [test, ./tools/...]
+        language: system
+        files: '^tools/.*\.go$'
+        pass_filenames: false
+
   # ── Commit message: conventional commits ──────────────────────────────────
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.4.0
