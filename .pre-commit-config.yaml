@@ -159,6 +159,55 @@ repos:
         files: '\.tf$'
         pass_filenames: false
 
+      # ── Go tools module: formatting (gofmt) ───────────────────────────────
+      - id: tools-go-fmt
+        name: tools go fmt
+        entry: bash
+        args:
+          - -c
+          - |
+            set -euo pipefail
+            lint_mode="${LINT_MODE:-fix}"
+            files="$(find tools -name '*.go' -type f)"
+            if [ -z "$files" ]; then
+              exit 0
+            fi
+            if [ "$lint_mode" = "check" ]; then
+              unformatted="$(gofmt -l $files)"
+              if [ -n "$unformatted" ]; then
+                echo "Go files need formatting:" >&2
+                echo "$unformatted" >&2
+                exit 1
+              fi
+            else
+              gofmt -w $files
+            fi
+        language: system
+        files: '^tools/.*\.go$'
+        pass_filenames: false
+
+      # ── Go tools module: static analysis (go vet) ─────────────────────────
+      - id: tools-go-vet
+        name: tools go vet
+        entry: bash
+        args:
+          - -c
+          - CGO_ENABLED=0 go vet ./tools/...
+        language: system
+        files: '^tools/.*\.go$'
+        pass_filenames: false
+
+      # ── Go tools module: unit tests (go test) ─────────────────────────────
+      - id: tools-go-test
+        name: tools go test
+        entry: bash
+        args:
+          - -c
+          - CGO_ENABLED=0 go test ./tools/...
+        language: system
+        files: '^tools/.*\.go$'
+        pass_filenames: false
+
   # ── Commit message: conventional commits ──────────────────────────────────
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.4.0

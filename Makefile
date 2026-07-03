@@ -21,7 +21,7 @@
 
 SHELL := /bin/bash
 
-.PHONY: help install install-hooks setup-env lint test clean
+.PHONY: help install install-hooks setup-env lint test clean tooling-updater-build tooling-update-repo tooling-update-templates tooling-update-all tooling-update-micromamba tooling-update-mise tooling-update-system tooling-update-precommit tooling-verify
 
 # =============================================================================
 # Configuration
@@ -65,6 +65,7 @@ endif
 
 # Build directory for stamp files
 BUILD_DIR := build
+TOOLING_UPDATER_BIN := $(BUILD_DIR)/bin/tooling-updater
 
 define mamba_env_exists
 	$(MICROMAMBA) env list --json 2>/dev/null | grep -q '/$(MAMBA_ENV)"'
@@ -90,7 +91,10 @@ setup-env: ## Setup selected environment manager (ENV_MANAGER=micromamba|mise|sy
 	case "$(ENV_MANAGER)" in \
 		micromamba) \
 			if [ -f "$(ENV_STAMP)" ] && $(call mamba_env_exists) 2>/dev/null; then \
-				: ; \
+				if ! $(MICROMAMBA) run -n $(MAMBA_ENV) -- go version >/dev/null 2>&1; then \
+					echo "Go is missing from micromamba environment; refreshing environment..."; \
+					$(MICROMAMBA) env update -n $(MAMBA_ENV) -f $(MAMBA_SPEC); \
+				fi; \
 			else \
 				if [ ! -x "$(MICROMAMBA)" ]; then \
 					echo "Bootstrapping project-local micromamba binary..."; \
@@ -126,7 +130,7 @@ setup-env: ## Setup selected environment manager (ENV_MANAGER=micromamba|mise|sy
 			;; \
 		system) \
 			missing=0; \
-			for tool in pre-commit ec shellcheck shfmt xmllint taplo yamllint markdownlint prettier terraform; do \
+			for tool in pre-commit ec shellcheck shfmt xmllint taplo yamllint markdownlint prettier terraform go; do \
 				if ! command -v $$tool >/dev/null 2>&1; then \
 					echo "Missing required tool: $$tool"; \
 					missing=1; \
@@ -209,6 +213,38 @@ test: ## Trigger repository creation tests via GitHub Actions
 		--field languages="language-agnostic-only" \
 		--field cleanup_after_test="true"
 	@echo "Test triggered. Check: gh run list --workflow=test-repository-creation.yml"
+
+# =============================================================================
+# Tooling Updates (non-Dependabot-managed)
+# =============================================================================
+tooling-updater-build: setup-env ## Build tooling updater CLI binary from latest source
+	@mkdir -p $(BUILD_DIR)/bin
+	@$(RUN) env CGO_ENABLED=0 go build -o $(TOOLING_UPDATER_BIN) ./tools/cmd/tooling-updater
+
+tooling-update-repo: tooling-updater-build ## Update repo tooling pins (pre-commit, mise/micromamba, lint toolchain)
+	@$(RUN) $(TOOLING_UPDATER_BIN) --scope repo --updaters all
+
+tooling-update-templates: tooling-updater-build ## Update template tooling pins for generated repositories
+	@$(RUN) $(TOOLING_UPDATER_BIN) --scope templates --updaters all
+
+tooling-update-all: tooling-updater-build ## Update repo + template tooling pins
+	@$(RUN) $(TOOLING_UPDATER_BIN) --scope all --updaters all
+
+tooling-update-micromamba: tooling-updater-build ## Update micromamba-managed tooling (env files + provider binary pins)
+	@$(RUN) $(TOOLING_UPDATER_BIN) --scope all --updaters micromamba
+
+tooling-update-mise: tooling-updater-build ## Update mise-managed tooling (mise.toml files + provider binary pins)
+	@$(RUN) $(TOOLING_UPDATER_BIN) --scope all --updaters mise
+
+tooling-update-system: tooling-updater-build ## Run system updater (reserved no-op updater for explicit extension point)
+	@$(RUN) $(TOOLING_UPDATER_BIN) --scope all --updaters system
+
+tooling-update-precommit: tooling-updater-build ## Update pre-commit hook revisions for repo and templates
+	@$(RUN) $(TOOLING_UPDATER_BIN) --scope all --updaters pre-commit
+
+tooling-verify: tooling-updater-build ## Verify updater layout assumptions and run updater unit tests
+	@$(RUN) $(TOOLING_UPDATER_BIN) --verify-only
+	@$(RUN) env CGO_ENABLED=0 go test ./tools/...
 
 # =============================================================================
 # Clean

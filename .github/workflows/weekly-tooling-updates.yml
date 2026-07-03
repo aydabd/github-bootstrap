@@ -1,0 +1,93 @@
+name: Weekly Tooling Updates
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-tooling-updates
+  cancel-in-progress: false
+
+jobs:
+  update-tooling:
+    name: Update non-Dependabot tooling
+    runs-on: ubuntu-latest
+    # Required to commit/push changes and create/edit/merge the weekly PR.
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.14"
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "1.26"
+
+      - name: Install updater dependencies
+        shell: bash
+        run: python -m pip install --upgrade pip pre-commit
+
+      - name: Update repository and template tooling
+        shell: bash
+        run: |
+          ENV_MANAGER=micromamba make tooling-update-repo
+          ENV_MANAGER=micromamba make tooling-update-templates
+
+      - name: Create or update tooling update PR (gh CLI)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          branch="chore/weekly-tooling-updates"
+          title="chore(deps): weekly tooling updates"
+          commit_msg="chore(deps): update non-dependabot tooling pins"
+
+          cat > /tmp/weekly-tooling-pr-body.md <<'EOF'
+          ## Summary
+          - update non-Dependabot-managed tooling versions for this repository
+          - update tooling versions in templates used for generated repositories
+          - refresh pre-commit hook revisions via `pre-commit autoupdate`
+
+          ## Auto-merge
+          Auto-merge is enabled for this PR. GitHub will merge only after all required checks,
+          CodeRabbit review requirements, and approval rules are satisfied.
+          EOF
+
+          if git diff --quiet --exit-code && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo "No tooling updates detected; skipping PR creation."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          git checkout -B "$branch"
+          git add -A
+          git commit -m "$commit_msg"
+          git push --force-with-lease origin "$branch"
+
+          pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
+
+          if [ -z "$pr_number" ]; then
+            pr_url="$(gh pr create --base main --head "$branch" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md --label dependencies --label automation)"
+            pr_number="$(gh pr view "$pr_url" --json number --jq '.number')"
+          else
+            gh pr edit "$pr_number" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md --add-label dependencies --add-label automation
+          fi
+
+          gh pr merge "$pr_number" --auto --squash
