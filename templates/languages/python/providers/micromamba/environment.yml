@@ -5,21 +5,20 @@ channels:
   - nodefaults
 dependencies:
   # ── Python runtime ──────────────────────────────────────────────────────────
-  - python=3.13
+  - python={{PYTHON_VERSION}}
 
   # ── Pre-commit framework ────────────────────────────────────────────────────
-  - pre-commit
-
+  - pre-commit=4.6.0
   # ── Linting / formatting tools (used as language: system hooks) ─────────────
-  - prettier # JSON / YAML / Markdown formatter
-  - markdownlint-cli # Markdown linter
-  - yamllint # YAML linter
-  - taplo # TOML formatter + validator
-  - go-shfmt # shell formatter (provides shfmt binary)
-  - shellcheck # shell linter
-  - libxml2 # provides xmllint binary for XML validation
-  - jq # JSON processor
-  - coreutils # GNU coreutils for consistent cross-platform behaviour
+  - prettier=3.9.3 # JSON / YAML / Markdown formatter
+  - markdownlint-cli=0.49.0 # Markdown linter
+  - yamllint=1.38.0 # YAML linter
+  - taplo=0.9.3 # TOML formatter + validator
+  - go-shfmt=3.13.1 # shell formatter (provides shfmt binary)
+  - shellcheck=0.11.0 # shell linter
+  - libxml2=2.15.3 # provides xmllint binary for XML validation
+  - jq=1.8.2 # JSON processor
+  - coreutils=9.5 # GNU coreutils for consistent cross-platform behaviour
 
   # ── Python linters / formatters (used as language: system hooks) ─────────────
   - ruff # Python linter + formatter

@@ -1,4 +1,3 @@
----
 name: Create Bootstrap Repository
 
 on:
@@ -46,9 +45,37 @@ on:
         required: false
         type: string
       languages:
-        description: "Programming languages (comma-separated: javascript,typescript,python or 'all' for monorepo)"
+        description: "Programming languages. For tooling templates, the first language is used (e.g. python,typescript). Use 'all' for monorepo metadata/workflow configuration."
         required: false
         default: "language-agnostic-only"
+        type: string
+      env_manager:
+        description: "Environment manager for local tooling"
+        required: true
+        type: choice
+        options:
+          - micromamba
+          - mise
+          - system
+      python_version:
+        description: "Python runtime version for generated tooling (default: latest stable)"
+        required: false
+        default: "3.13"
+        type: string
+      node_version:
+        description: "Node.js major LTS version for generated tooling"
+        required: false
+        default: "24"
+        type: string
+      go_version:
+        description: "Go stable version for generated tooling"
+        required: false
+        default: "1.25"
+        type: string
+      java_version:
+        description: "Java LTS version for generated tooling"
+        required: false
+        default: "25"
         type: string
       release_tool:
         description: >-
@@ -153,6 +180,25 @@ on:
         required: false
         default: "language-agnostic-only"
         type: string
+      env_manager:
+        required: true
+        type: string
+      python_version:
+        required: false
+        default: "3.13"
+        type: string
+      node_version:
+        required: false
+        default: "24"
+        type: string
+      go_version:
+        required: false
+        default: "1.25"
+        type: string
+      java_version:
+        required: false
+        default: "25"
+        type: string
       release_tool:
         required: false
         default: "git-cliff"
@@ -244,6 +290,50 @@ jobs:
           else
             echo "holder=${{ inputs.license_holder }}" >> $GITHUB_OUTPUT
           fi
+
+      - name: Validate bootstrap inputs
+        id: validate-inputs
+        shell: bash
+        env:
+          LANGUAGES: ${{ inputs.languages }}
+          ENV_MANAGER: ${{ inputs.env_manager }}
+          PYTHON_VERSION: ${{ inputs.python_version }}
+          NODE_VERSION: ${{ inputs.node_version }}
+          GO_VERSION: ${{ inputs.go_version }}
+          JAVA_VERSION: ${{ inputs.java_version }}
+        run: |
+          if ! [[ "$ENV_MANAGER" =~ ^(micromamba|mise|system)$ ]]; then
+            echo "::error::Invalid env_manager '$ENV_MANAGER'. Allowed: micromamba, mise, system"
+            exit 1
+          fi
+
+          if ! [[ "$LANGUAGES" =~ ^[a-zA-Z0-9,_-]+$ ]]; then
+            echo "::error::Invalid languages input '$LANGUAGES'. Use comma-separated language identifiers."
+            exit 1
+          fi
+          if ! [[ "$PYTHON_VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
+            echo "::error::Invalid python_version '$PYTHON_VERSION'"
+            exit 1
+          fi
+          if ! [[ "$NODE_VERSION" =~ ^[0-9]+$ ]]; then
+            echo "::error::Invalid node_version '$NODE_VERSION'"
+            exit 1
+          fi
+          if ! [[ "$GO_VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
+            echo "::error::Invalid go_version '$GO_VERSION'"
+            exit 1
+          fi
+          if ! [[ "$JAVA_VERSION" =~ ^[0-9]+$ ]]; then
+            echo "::error::Invalid java_version '$JAVA_VERSION'"
+            exit 1
+          fi
+
+          echo "languages=$LANGUAGES" >> "$GITHUB_OUTPUT"
+          echo "env_manager=$ENV_MANAGER" >> "$GITHUB_OUTPUT"
+          echo "python_version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
+          echo "node_version=$NODE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "go_version=$GO_VERSION" >> "$GITHUB_OUTPUT"
+          echo "java_version=$JAVA_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Validate target owner against allowlist
         run: |
@@ -521,14 +611,22 @@ jobs:
           sed -i "s/{{REPOSITORY_NAME}}/${{ inputs.repo_name }}/g" README.md
 
       - name: Configure language tooling
+        env:
+          LANGUAGES: ${{ steps.validate-inputs.outputs.languages }}
+          ENV_MANAGER: ${{ steps.validate-inputs.outputs.env_manager }}
+          REPO_NAME: ${{ inputs.repo_name }}
+          PYTHON_VERSION: ${{ steps.validate-inputs.outputs.python_version }}
+          NODE_VERSION: ${{ steps.validate-inputs.outputs.node_version }}
+          GO_VERSION: ${{ steps.validate-inputs.outputs.go_version }}
+          JAVA_VERSION: ${{ steps.validate-inputs.outputs.java_version }}
         run: |
-          LANGUAGES="${{ inputs.languages }}"
-          REPO_NAME="${{ inputs.repo_name }}"
-
           # Map languages input to template directory.
           # Use the first language when multiple are specified.
           # Supported: language-agnostic-only, python, golang, typescript, java
           FIRST_LANG=$(echo "$LANGUAGES" | cut -d',' -f1 | xargs)
+          if echo "$LANGUAGES" | grep -q ','; then
+            echo "⚠️ Multiple languages provided ($LANGUAGES). Tooling template uses first language: $FIRST_LANG" >> $GITHUB_STEP_SUMMARY
+          fi
           case "$FIRST_LANG" in
             "python")                 LANG_DIR="python" ;;
             "go"|"golang")            LANG_DIR="golang" ;;
@@ -538,17 +636,65 @@ jobs:
           esac
 
           TEMPLATE_DIR="templates/languages/$LANG_DIR"
+          PROVIDER_DIR="$TEMPLATE_DIR/providers/$ENV_MANAGER"
+          LINT_WORKFLOW_TEMPLATE="templates/.github/workflows/providers/lint-$ENV_MANAGER.yml"
+          PROVIDER_SCRIPT_TEMPLATE="templates/providers/$ENV_MANAGER/provider-run.sh"
           REPO_DIR="new-repo"
 
           echo "Using language template: $LANG_DIR" >> $GITHUB_STEP_SUMMARY
+          echo "Using environment manager: $ENV_MANAGER" >> $GITHUB_STEP_SUMMARY
 
           # Copy language-specific tooling files
-          cp "$TEMPLATE_DIR/environment.yml" "$REPO_DIR/environment.yml"
           cp "$TEMPLATE_DIR/.pre-commit-config.yaml" "$REPO_DIR/.pre-commit-config.yaml"
-          cp "$TEMPLATE_DIR/Makefile" "$REPO_DIR/Makefile"
+          if [ ! -d "$PROVIDER_DIR" ]; then
+            echo "::error::Missing provider config directory: $PROVIDER_DIR"
+            exit 1
+          fi
+          if [ ! -f "$PROVIDER_DIR/Makefile" ]; then
+            echo "::error::Missing provider Makefile: $PROVIDER_DIR/Makefile"
+            exit 1
+          fi
+          if [ ! -f "$LINT_WORKFLOW_TEMPLATE" ]; then
+            echo "::error::Missing provider lint workflow template: $LINT_WORKFLOW_TEMPLATE"
+            exit 1
+          fi
+          if [ ! -f "$PROVIDER_SCRIPT_TEMPLATE" ]; then
+            echo "::error::Missing provider helper script template: $PROVIDER_SCRIPT_TEMPLATE"
+            exit 1
+          fi
 
-          # Substitute repository name placeholder in all three files
-          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/environment.yml"
+          cp "$PROVIDER_DIR/Makefile" "$REPO_DIR/Makefile"
+          rm -f "$REPO_DIR/environment.yml" "$REPO_DIR/mise.toml"
+          [ -f "$PROVIDER_DIR/environment.yml" ] && cp "$PROVIDER_DIR/environment.yml" "$REPO_DIR/environment.yml"
+          [ -f "$PROVIDER_DIR/mise.toml" ] && cp "$PROVIDER_DIR/mise.toml" "$REPO_DIR/mise.toml"
+          cp "$LINT_WORKFLOW_TEMPLATE" "$REPO_DIR/.github/workflows/lint.yml"
+          cp "templates/.github/bootstrap-provider.yml" "$REPO_DIR/.github/bootstrap-provider.yml"
+          mkdir -p "$REPO_DIR/scripts"
+          cp "$PROVIDER_SCRIPT_TEMPLATE" "$REPO_DIR/scripts/provider-run.sh"
+          chmod +x "$REPO_DIR/scripts/provider-run.sh"
+
+          # Substitute repository placeholders in generated tooling files
+          if [ -f "$REPO_DIR/environment.yml" ]; then
+            sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/environment.yml"
+            sed -i "s/{{PYTHON_VERSION}}/$PYTHON_VERSION/g" "$REPO_DIR/environment.yml"
+            sed -i "s/{{NODE_VERSION}}/$NODE_VERSION/g" "$REPO_DIR/environment.yml"
+            sed -i "s/{{GO_VERSION}}/$GO_VERSION/g" "$REPO_DIR/environment.yml"
+            sed -i "s/{{JAVA_VERSION}}/$JAVA_VERSION/g" "$REPO_DIR/environment.yml"
+          fi
+          if [ -f "$REPO_DIR/mise.toml" ]; then
+            sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/mise.toml"
+            sed -i "s/{{PYTHON_VERSION}}/$PYTHON_VERSION/g" "$REPO_DIR/mise.toml"
+            sed -i "s/{{NODE_VERSION}}/$NODE_VERSION/g" "$REPO_DIR/mise.toml"
+            sed -i "s/{{GO_VERSION}}/$GO_VERSION/g" "$REPO_DIR/mise.toml"
+            sed -i "s/{{JAVA_VERSION}}/$JAVA_VERSION/g" "$REPO_DIR/mise.toml"
+          fi
+          if [ -f "$REPO_DIR/.github/bootstrap-provider.yml" ]; then
+            sed -i "s/{{ENV_MANAGER}}/$ENV_MANAGER/g" "$REPO_DIR/.github/bootstrap-provider.yml"
+            sed -i "s/{{LANG_DIR}}/$LANG_DIR/g" "$REPO_DIR/.github/bootstrap-provider.yml"
+          fi
+          if [ -f "$REPO_DIR/scripts/provider-run.sh" ]; then
+            sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/scripts/provider-run.sh"
+          fi
           sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/Makefile"
           # lint.yml may have been removed by "Remove unselected workflows"; guard accordingly
           if [ -f "$REPO_DIR/.github/workflows/lint.yml" ]; then
@@ -695,7 +841,9 @@ jobs:
           echo "**Repository:** https://github.com/${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Visibility:** ${{ inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
           echo "**Branch Protection:** ${{ inputs.enable_branch_protection }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Languages:** ${{ inputs.languages }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Languages:** ${{ steps.validate-inputs.outputs.languages }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment manager:** ${{ steps.validate-inputs.outputs.env_manager }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Runtime versions:** python=${{ steps.validate-inputs.outputs.python_version }}, node=${{ steps.validate-inputs.outputs.node_version }}, go=${{ steps.validate-inputs.outputs.go_version }}, java=${{ steps.validate-inputs.outputs.java_version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Release tool:** ${{ inputs.release_tool || 'git-cliff' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Created Resources" >> $GITHUB_STEP_SUMMARY
@@ -731,14 +879,20 @@ jobs:
           echo "- ✅ SECURITY.md (security policy)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ CONTRIBUTING.md (contribution guide)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ environment.yml (language: ${{ inputs.languages }})" >> $GITHUB_STEP_SUMMARY
+          if [ -f new-repo/environment.yml ]; then
+            echo "- ✅ provider/micromamba config selected (environment.yml)" >> $GITHUB_STEP_SUMMARY
+          elif [ -f new-repo/mise.toml ]; then
+            echo "- ✅ provider/mise config selected (mise.toml)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ✅ provider/system config selected (Makefile only)" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "- ✅ .pre-commit-config.yaml (all language: system hooks)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Conventional commits (pre-commit)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY
 
           case "${{ inputs.workflows }}" in
             "all"|"")
-              echo "- ✅ Lint workflow (micromamba + pre-commit)" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Lint workflow (${{ steps.validate-inputs.outputs.env_manager }} + pre-commit)" >> $GITHUB_STEP_SUMMARY
               case "${{ inputs.release_tool }}" in
                 "release-please")
                   echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY

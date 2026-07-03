@@ -1,4 +1,3 @@
----
 # AI-powered code review using Claude.
 #
 # This workflow provides AI code review on pull requests using Anthropic's

@@ -45,6 +45,7 @@ coverage.out
 .env.local
 .venv/
 venv/
+.provider/
 
 # Terraform
 terraform/.terraform/

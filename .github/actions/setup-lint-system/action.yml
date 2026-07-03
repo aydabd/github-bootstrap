@@ -1,0 +1,18 @@
+name: Setup Lint (system)
+description: Install system-level lint dependencies
+runs:
+  using: composite
+  steps:
+    - name: Set up terraform
+      uses: hashicorp/setup-terraform@v4
+      with:
+        terraform_version: "1.15.6"
+        terraform_wrapper: false
+    - name: Install system tools
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y shellcheck shfmt libxml2-utils jq
+        python3 -m pip install --user pre-commit==4.6.0 yamllint==1.38.0 editorconfig-checker==3.6.1
+        npm install -g prettier@3.9.3 markdownlint-cli@0.49.0 @taplo/cli@0.7.0
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"

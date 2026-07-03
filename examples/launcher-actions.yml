@@ -60,6 +60,34 @@ on:
         required: false
         default: "language-agnostic-only"
         type: string
+      env_manager:
+        description: "Environment manager"
+        required: true
+        type: choice
+        options:
+          - micromamba
+          - mise
+          - system
+      python_version:
+        description: "Python version (default latest stable)"
+        required: false
+        default: "3.13"
+        type: string
+      node_version:
+        description: "Node.js major LTS version"
+        required: false
+        default: "24"
+        type: string
+      go_version:
+        description: "Go stable version"
+        required: false
+        default: "1.25"
+        type: string
+      java_version:
+        description: "Java LTS version"
+        required: false
+        default: "25"
+        type: string
       release_tool:
         description: "Release automation tool"
         required: false
@@ -89,6 +117,11 @@ jobs:
       repo_owner: ${{ inputs.repo_owner }}
       visibility: ${{ inputs.visibility }}
       languages: ${{ inputs.languages }}
+      env_manager: ${{ inputs.env_manager }}
+      python_version: ${{ inputs.python_version }}
+      node_version: ${{ inputs.node_version }}
+      go_version: ${{ inputs.go_version }}
+      java_version: ${{ inputs.java_version }}
       release_tool: ${{ inputs.release_tool }}
       enable_branch_protection: ${{ inputs.enable_branch_protection }}
       cleanup_on_failure: ${{ inputs.cleanup_on_failure }}

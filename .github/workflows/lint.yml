@@ -1,4 +1,3 @@
----
 name: Lint
 
 on:
@@ -18,17 +17,18 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    name: lint
+  lint-micromamba:
+    name: lint (micromamba)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Set up micromamba environment
+      - name: Setup provider (micromamba)
         uses: mamba-org/setup-micromamba@v3
         with:
           environment-file: environment.yml
@@ -37,15 +37,65 @@ jobs:
           cache-downloads: true
 
       - name: Cache pre-commit hook environments
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
           restore-keys: |
             pre-commit-${{ runner.os }}-
 
-      # LINT_MODE=check → all hooks run in check-only mode (no auto-fix).
-      # USE_MAMBA=0 → micromamba env already activated by setup-micromamba.
       - name: Run lint (check mode)
-        run: USE_MAMBA=0 LINT_MODE=check make lint
-        shell: micromamba-shell {0}
+        shell: bash
+        run: LINT_MODE=check ENV_MANAGER=micromamba MICROMAMBA="$(command -v micromamba)" make lint
+
+  lint-mise:
+    name: lint (mise)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup provider (mise)
+        uses: ./.github/actions/setup-lint-mise
+
+      - name: Cache pre-commit hook environments
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-
+
+      - name: Run lint (check mode)
+        shell: bash
+        run: LINT_MODE=check ENV_MANAGER=mise make lint
+
+  lint-system:
+    name: lint (system)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup provider (system)
+        uses: ./.github/actions/setup-lint-system
+
+      - name: Cache pre-commit hook environments
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-
+
+      - name: Run lint (check mode)
+        shell: bash
+        run: LINT_MODE=check ENV_MANAGER=system make lint

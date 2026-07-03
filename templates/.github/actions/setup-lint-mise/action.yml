@@ -1,0 +1,15 @@
+name: Setup Lint (mise)
+description: Prepare mise environment and required OS dependencies for linting
+runs:
+  using: composite
+  steps:
+    - name: Set up mise
+      uses: jdx/mise-action@v4
+      with:
+        install: true
+    - name: Install mise task tools
+      shell: bash
+      run: |
+        mise tasks run install-tools
+        sudo apt-get update
+        sudo apt-get install -y libxml2-utils jq

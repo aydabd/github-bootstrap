@@ -13,6 +13,11 @@ updates:
     labels:
       - "dependencies"
       - "automation"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "docker"
     directory: "/"
@@ -26,6 +31,11 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -39,6 +49,11 @@ updates:
     labels:
       - "dependencies"
       - "nodejs"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "maven"
     directory: "/"
@@ -52,6 +67,11 @@ updates:
     labels:
       - "dependencies"
       - "java"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "gradle"
     directory: "/"
@@ -65,6 +85,11 @@ updates:
     labels:
       - "dependencies"
       - "java"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "pip"
     directory: "/"
@@ -78,6 +103,11 @@ updates:
     labels:
       - "dependencies"
       - "python"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "poetry"
     directory: "/"
@@ -91,6 +121,11 @@ updates:
     labels:
       - "dependencies"
       - "python"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "cargo"
     directory: "/"
@@ -104,6 +139,11 @@ updates:
     labels:
       - "dependencies"
       - "rust"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "composer"
     directory: "/"
@@ -117,6 +157,11 @@ updates:
     labels:
       - "dependencies"
       - "php"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "bundler"
     directory: "/"
@@ -130,6 +175,11 @@ updates:
     labels:
       - "dependencies"
       - "ruby"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "nuget"
     directory: "/"
@@ -143,6 +193,11 @@ updates:
     labels:
       - "dependencies"
       - "dotnet"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "gomod"
     directory: "/"
@@ -156,6 +211,11 @@ updates:
     labels:
       - "dependencies"
       - "go"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "terraform"
     directory: "/"
@@ -169,6 +229,11 @@ updates:
     labels:
       - "dependencies"
       - "terraform"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   - package-ecosystem: "helm"
     directory: "/"
@@ -182,3 +247,8 @@ updates:
     labels:
       - "dependencies"
       - "kubernetes"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
