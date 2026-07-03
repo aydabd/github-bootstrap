@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.10.0](https://github.com/aydabd/github-bootstrap/compare/v1.9.1...v1.10.0) (2026-07-03)
+
+
+### Features
+
+* improve make command visibility ([#39](https://github.com/aydabd/github-bootstrap/issues/39)) ([fc6356c](https://github.com/aydabd/github-bootstrap/commit/fc6356c30aeb89d83a54b55dc49307543b621ffe))
+* **tools:** add tooling updater to Go workspace module ([#40](https://github.com/aydabd/github-bootstrap/issues/40)) ([1a354d0](https://github.com/aydabd/github-bootstrap/commit/1a354d0da2058a584397214a298a2f42e50cf630))
+
+
+### Bug Fixes
+
+* make mise bootstrap work without global PATH ([#37](https://github.com/aydabd/github-bootstrap/issues/37)) ([17bf103](https://github.com/aydabd/github-bootstrap/commit/17bf103b6508ed4ba7cc70046525e460fbf383b8))
+* **mise:** make local bootstrap work without global PATH ([17bf103](https://github.com/aydabd/github-bootstrap/commit/17bf103b6508ed4ba7cc70046525e460fbf383b8))
+
 ## [1.9.1](https://github.com/aydabd/github-bootstrap/compare/v1.9.0...v1.9.1) (2026-07-03)
 
 
