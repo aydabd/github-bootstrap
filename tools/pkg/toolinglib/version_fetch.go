@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -46,13 +45,7 @@ func retryBackoff(attempt int) {
 }
 
 func githubAPIToken() string {
-	if token := strings.TrimSpace(os.Getenv("GH_TOKEN")); token != "" {
-		return token
-	}
-	if token := strings.TrimSpace(os.Getenv("GITHUB_TOKEN")); token != "" {
-		return token
-	}
-	return ""
+	return strings.TrimSpace(FirstNonEmptyEnv(EnvGitHubTokenPrimary, EnvGitHubTokenFallback))
 }
 
 func newRequest(rawURL string, acceptJSON bool) (*http.Request, error) {

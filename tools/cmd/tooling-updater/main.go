@@ -3,18 +3,38 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
+	"strings"
 
 	"github-bootstrap/tools/internal/toolingupdater/runner"
+	"github-bootstrap/tools/pkg/toolinglib"
 )
 
+func parseLogLevel() slog.Level {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(toolinglib.EnvLogLevel))) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
+
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: parseLogLevel()}))
+
 	scope := flag.String("scope", "all", "scope: repo|templates|all")
 	updatersRaw := flag.String("updaters", "all", "comma-separated updaters or 'all'")
 	dryRun := flag.Bool("dry-run", false, "calculate updates without writing files")
 	verifyLayout := flag.Bool("verify-layout", false, "verify workspace layout before updates")
 	verifyOnly := flag.Bool("verify-only", false, "verify workspace layout and exit")
 	flag.Parse()
+
+	logger.Info("tooling updater started", "scope", *scope, "updaters", *updatersRaw, "dry_run", *dryRun, "verify_only", *verifyOnly)
 
 	if *scope != "repo" && *scope != "templates" && *scope != "all" {
 		fmt.Fprintln(os.Stderr, "invalid scope, expected repo|templates|all")
@@ -41,6 +61,7 @@ func main() {
 	}
 
 	if *verifyOnly {
+		logger.Info("workspace layout verification passed")
 		fmt.Println("Workspace layout verification passed")
 		return
 	}
@@ -53,4 +74,5 @@ func main() {
 	for _, path := range changed {
 		fmt.Printf("- %s\n", path)
 	}
+	logger.Info("tooling updater completed", "changed_files", len(changed))
 }
