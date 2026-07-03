@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -45,7 +46,12 @@ func retryBackoff(attempt int) {
 }
 
 func githubAPIToken() string {
-	return strings.TrimSpace(FirstNonEmptyEnv(EnvGitHubTokenPrimary, EnvGitHubTokenFallback))
+	for _, name := range []string{EnvGitHubTokenPrimary, EnvGitHubTokenFallback} {
+		if value := strings.TrimSpace(os.Getenv(name)); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func newRequest(rawURL string, acceptJSON bool) (*http.Request, error) {

@@ -275,3 +275,38 @@ func TestRunMise_DryRun(t *testing.T) {
 		t.Fatalf("dry-run must not write files: repo mise.toml was modified")
 	}
 }
+
+func TestRunPreCommitAutoupdate_ReturnsPartialChangesOnLaterError(t *testing.T) {
+	root, _ := buildTestWorkspace(t)
+
+	first := filepath.Join(root, ".pre-commit-config.yaml")
+	missing := filepath.Join(root, "templates", "languages", "missing", ".pre-commit-config.yaml")
+
+	changed, err := toolinglib.RunPreCommitAutoupdate([]string{first, missing}, true)
+	if err == nil {
+		t.Fatal("expected error for missing second config, got nil")
+	}
+	if !slices.Contains(changed, first) {
+		t.Fatalf("expected changed to include first successful config, got %v", changed)
+	}
+}
+
+func TestRunMicromamba_ReturnsPartialChangesOnLaterError(t *testing.T) {
+	root, versions := buildTestWorkspace(t)
+
+	templateBootstrap := filepath.Join(root, "templates", "scripts", "bootstrap-provider-binary.sh")
+	if err := os.Chmod(templateBootstrap, 0o444); err != nil {
+		t.Fatalf("failed to chmod template bootstrap: %v", err)
+	}
+
+	changed, err := RunMicromamba(root, "all", versions, true)
+	if err == nil {
+		t.Fatal("expected error when template bootstrap is not writable")
+	}
+
+	repoEnv := filepath.Join(root, "environment.yml")
+	repoBootstrap := filepath.Join(root, "scripts", "bootstrap-provider-binary.sh")
+	if !containsAll(changed, repoEnv, repoBootstrap) {
+		t.Fatalf("expected partial changed set to keep earlier repo updates, got %v", changed)
+	}
+}
