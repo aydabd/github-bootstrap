@@ -27,8 +27,8 @@ setup-env: ## Setup isolated environment with mise
 		echo "Failed to bootstrap mise binary at $(MISE)."; \
 		exit 1; \
 	fi
-	@$(MISE) install
-	@$(MISE) tasks run install-tools
+	@PATH="$(dir $(MISE)):$$PATH" $(MISE) install
+	@PATH="$(dir $(MISE)):$$PATH" $(MISE) tasks run install-tools
 	@if ! command -v xmllint >/dev/null 2>&1; then \
 		echo "Missing required tool: xmllint"; \
 		echo "Install libxml2-utils (or equivalent package) and retry."; \
