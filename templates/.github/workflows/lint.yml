@@ -1,4 +1,3 @@
----
 name: Lint
 
 on:
@@ -21,14 +20,17 @@ jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
+    env:
+      ENV_MANAGER: "{{ENV_MANAGER}}"
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up micromamba environment
+        if: env.ENV_MANAGER == 'micromamba'
         uses: mamba-org/setup-micromamba@v3
         with:
           environment-file: environment.yml
@@ -36,8 +38,32 @@ jobs:
           cache-environment: true
           cache-downloads: true
 
+      - name: Set up mise
+        if: env.ENV_MANAGER == 'mise'
+        uses: jdx/mise-action@v4
+        with:
+          install: true
+
+      - name: Install mise task tools
+        if: env.ENV_MANAGER == 'mise'
+        shell: bash
+        run: |
+          mise tasks run install-tools
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils jq
+
+      - name: Set up system tools
+        if: env.ENV_MANAGER == 'system'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck shfmt libxml2-utils jq
+          python3 -m pip install --user pre-commit==4.6.0 yamllint==1.38.0 editorconfig-checker==3.6.1
+          npm install -g prettier@3.9.3 markdownlint-cli@0.49.0 @taplo/cli@0.7.0
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Cache pre-commit hook environments
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
@@ -45,7 +71,6 @@ jobs:
             pre-commit-${{ runner.os }}-
 
       # LINT_MODE=check → all hooks run in check-only mode (no auto-fix).
-      # USE_MAMBA=0 → micromamba env already activated by setup-micromamba.
       - name: Run lint (check mode)
-        run: USE_MAMBA=0 LINT_MODE=check make lint
-        shell: micromamba-shell {0}
+        shell: bash
+        run: LINT_MODE=check make lint

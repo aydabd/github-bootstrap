@@ -16,9 +16,9 @@ Creates fully configured repositories with:
 - Editor and Git configurations
 - Conventional commits enforcement via pre-commit hooks
 - Release Please workflow for automated semantic versioning
-- Pre-commit linting workflow for PR and push (micromamba + pre-commit)
+- Pre-commit linting workflow for PR and push (provider-aware: micromamba, mise, or system)
 - AI code review with CodeRabbit and Claude (see [AI Code Review](#ai-code-review))
-- Makefile for local linting (`make lint` via micromamba environment)
+- Makefile for local linting (`make lint` via selected environment provider)
 - SECURITY.md and CONTRIBUTING.md
 - CodeQL security scanning workflow (language-aware)
 - Vulnerability alerts and Dependabot security updates enabled automatically
@@ -125,6 +125,9 @@ jobs:
     with:
       repo_name: ${{ inputs.repo_name }}
       repo_owner: ${{ inputs.repo_owner }}
+      env_manager: micromamba
+      node_version: "24"
+      java_version: "25"
       visibility: private
       app_id: ${{ vars.BOOTSTRAP_APP_ID }}
       app_owner: ${{ inputs.repo_owner }}
@@ -195,6 +198,11 @@ Your new repository is created with all templates and settings.
 | `team_name`                | No       | `team-leads`                             | GitHub team for code owners                                                                                   |
 | `license_holder`           | No       | Current user/org                         | License copyright holder                                                                                      |
 | `languages`                | No       | `language-agnostic-only`                 | Comma-separated list of languages (e.g. `javascript,python`) or `all`                                         |
+| `env_manager`              | Yes      | -                                        | Environment manager: `micromamba`, `mise`, or `system`                                                        |
+| `python_version`           | No       | `3.13`                                   | Python runtime version used by generated tooling files                                                        |
+| `node_version`             | No       | `24`                                     | Node.js major LTS version used by generated tooling files                                                     |
+| `go_version`               | No       | `1.25`                                   | Go stable version used by generated tooling files                                                             |
+| `java_version`             | No       | `25`                                     | Java LTS version used by generated tooling files                                                              |
 | `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release`                                 |
 | `app_id`                   | No       | -                                        | GitHub App ID for App-based authentication (recommended)                                                      |
 | `app_owner`                | No       | `repo_owner`                             | Owner/user/org whose App installation token is used                                                           |
@@ -218,10 +226,12 @@ automated security fixes are enabled on every created repository.
 
 Project readme and AI assistant instructions (Agent, Claude, Copilot) following SOLID, TDD, and DDD principles.
 
-### Linting (micromamba + pre-commit)
+### Linting (provider-aware + pre-commit)
 
 - **Pre-commit hooks** — All quality checks run via `.pre-commit-config.yaml` as the single source of truth
-- **Isolated environment** — `micromamba` manages all tool versions in `environment.yml` (zero system dependencies)
+- **Selectable provider** — choose `micromamba`, `mise`, or `system` when creating repositories
+- **Config file by provider** — `environment.yml` (micromamba), `mise.toml` (mise), or direct machine tooling (system)
+- **Template layout (for maintainers)** — provider assets live in `templates/languages/<language>/providers/<provider>/`
 - **One linter per file type** — prettier (JSON/YAML/Markdown), shellcheck + shfmt (shell),
   markdownlint, editorconfig-checker, yamllint, taplo (TOML), terraform fmt
 - **Local and CI** — `make lint` auto-fixes locally; `LINT_MODE=check make lint` fails on violations in CI
@@ -432,7 +442,7 @@ managing repositories as long-lived infrastructure.
 - Fallback: GitHub personal access token (PAT) with `repo` scope (add `admin:org` for organization repositories)
   — stored as a `GH_PAT` repository secret **or** provided via the `gh_token` workflow input
   — see [Setup](#setup)
-- micromamba for local linting with `make lint` (auto-installed by `make install`)
+- One of: `micromamba`, `mise`, or system-installed tooling for local linting with `make lint`
 
 ## License
 

@@ -1,4 +1,3 @@
----
 # CodeQL Security Analysis
 #
 # Scans code for security vulnerabilities and bugs using GitHub's CodeQL engine.
@@ -10,7 +9,6 @@
 #
 # Supported CodeQL languages:
 #   javascript-typescript, python, java-kotlin, csharp, go, ruby, cpp
-#
 name: CodeQL Security Scan
 
 on:
@@ -46,7 +44,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Detect source files for language
         id: detect-source

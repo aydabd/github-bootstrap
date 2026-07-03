@@ -2,7 +2,7 @@
 # {{REPOSITORY_NAME}} — Makefile
 # =============================================================================
 # Zero manual setup — `make install` bootstraps everything automatically:
-#   1. Installs micromamba env (OpenJDK, Gradle, pre-commit, prettier, etc.)
+#   1. Installs micromamba env (Go, golangci-lint, pre-commit, prettier, etc.)
 #   2. Installs pre-commit Git hooks
 #
 # Quick start:
@@ -10,7 +10,7 @@
 #   make lint                 Auto-format + lint (local dev)
 #   LINT_MODE=check make lint Check-only (CI mode, no auto-fix)
 #   make test                 Run tests
-#   make build                Build the project
+#   make coverage             Tests + coverage report
 #
 # Skip micromamba: USE_MAMBA=0 make lint   (uses system tools)
 # =============================================================================
@@ -19,13 +19,14 @@
 
 SHELL := /bin/bash
 
-.PHONY: help install install-hooks setup-env lint test build clean
+.PHONY: help install install-hooks setup-env lint test coverage clean
 
 # =============================================================================
 # Configuration
 # =============================================================================
 MAMBA_ENV  := {{REPOSITORY_NAME}}
 MAMBA_SPEC := $(CURDIR)/environment.yml
+MICROMAMBA := $(CURDIR)/.provider/bin/micromamba
 
 # LINT_MODE: fix (default, local dev) or check (CI, no auto-fix)
 LINT_MODE ?= fix
@@ -37,7 +38,7 @@ USE_MAMBA ?= 1
 ifeq ($(USE_MAMBA),0)
 MAMBA_RUN :=
 else
-MAMBA_RUN := micromamba run -n $(MAMBA_ENV)
+MAMBA_RUN := $(MICROMAMBA) run -n $(MAMBA_ENV)
 endif
 
 # Build directory for stamp files
@@ -47,7 +48,7 @@ BUILD_DIR := build
 # Helper: Check if micromamba environment exists
 # =============================================================================
 define mamba_env_exists
-	micromamba env list --json 2>/dev/null | grep -q '/$(MAMBA_ENV)"'
+	$(MICROMAMBA) env list --json 2>/dev/null | grep -q '/$(MAMBA_ENV)"'
 endef
 
 # Stamp file prevents redundant setup-env re-checks within a single make invocation
@@ -71,15 +72,19 @@ setup-env: ## Setup isolated environment with micromamba (skip with USE_MAMBA=0)
 	elif [ -f "$(ENV_STAMP)" ] && $(call mamba_env_exists) 2>/dev/null; then \
 		: ; \
 	else \
-		if ! command -v micromamba >/dev/null 2>&1; then \
-			echo "Installing micromamba..."; \
-			set -o pipefail; curl -L micro.mamba.pm/install.sh | $(SHELL); \
+		if [ ! -x "$(MICROMAMBA)" ]; then \
+			echo "Bootstrapping project-local micromamba binary..."; \
+			bash scripts/bootstrap-provider-binary.sh micromamba "$(MICROMAMBA)"; \
 		fi; \
+		if ! command -v $(MICROMAMBA) >/dev/null 2>&1; then \
+				echo "micromamba is required but not installed. Install it from an official package source before running make."; \
+				exit 1; \
+			fi; \
 		if ! $(call mamba_env_exists); then \
 			echo "Creating environment '$(MAMBA_ENV)'..."; \
-			micromamba create -y -f $(MAMBA_SPEC); \
+			$(MICROMAMBA) create -y -f $(MAMBA_SPEC); \
 		elif [ "$(CI)" != "true" ]; then \
-			micromamba env update -n $(MAMBA_ENV) -f $(MAMBA_SPEC); \
+			$(MICROMAMBA) env update -n $(MAMBA_ENV) -f $(MAMBA_SPEC); \
 		fi; \
 		echo "Micromamba environment '$(MAMBA_ENV)' is ready."; \
 		mkdir -p $(BUILD_DIR) && touch $(ENV_STAMP); \
@@ -87,7 +92,7 @@ setup-env: ## Setup isolated environment with micromamba (skip with USE_MAMBA=0)
 
 install: setup-env ## Create the micromamba env and install pre-commit hooks
 	@$(MAKE) --no-print-directory _install-hooks
-	@echo "Done. Activate with: micromamba activate $(MAMBA_ENV)"
+	@echo "Done. Activate with: $(MICROMAMBA) activate $(MAMBA_ENV)"
 
 install-hooks: setup-env ## (Re-)install pre-commit hooks into .git/hooks
 	@$(MAKE) --no-print-directory _install-hooks
@@ -98,8 +103,8 @@ _install-hooks:
 	@$(MAMBA_RUN) pre-commit install --hook-type commit-msg
 ifeq ($(USE_MAMBA),1)
 	@# Prepend conda bin to PATH in generated hooks so language:system hooks
-	@# (ec, prettier, gradle, etc.) are found when git runs outside the env.
-	@ENV_BIN="$$(micromamba info -n $(MAMBA_ENV) 2>/dev/null | awk '/env location/{print $$NF}')/bin"; \
+	@# (ec, golangci-lint, etc.) are found when git runs outside the env.
+	@ENV_BIN="$$( $(MICROMAMBA) info -n $(MAMBA_ENV) 2>/dev/null | awk '/env location/{print $$NF}')/bin"; \
 	for hook in pre-commit commit-msg; do \
 		hook_file=".git/hooks/$$hook"; \
 		if [ -f "$$hook_file" ] && ! grep -q 'conda-env-path' "$$hook_file"; then \
@@ -122,21 +127,21 @@ lint: setup-env ## Run all checks via pre-commit (LINT_MODE=fix|check)
 	@echo "Running all checks via pre-commit (LINT_MODE=$(LINT_MODE))..."
 	@$(MAMBA_RUN) pre-commit install --install-hooks >/dev/null 2>&1 || true
 	@LINT_MODE=$(LINT_MODE) $(MAMBA_RUN) pre-commit run --all-files --color=always
-	@echo "All checks passed"
 
 # =============================================================================
-# Build & Test
+# Testing
 # =============================================================================
-build: setup-env ## Build the project with Gradle
-	$(MAMBA_RUN) ./gradlew build
+test: setup-env ## Run all Go tests
+	$(MAMBA_RUN) go test ./...
 
-test: setup-env ## Run the test suite with Gradle
-	$(MAMBA_RUN) ./gradlew test
+coverage: setup-env ## Run Go tests with coverage report
+	$(MAMBA_RUN) go test -coverprofile=$(BUILD_DIR)/coverage.out ./...
+	$(MAMBA_RUN) go tool cover -html=$(BUILD_DIR)/coverage.out -o $(BUILD_DIR)/coverage.html
+	@echo "Coverage report: $(BUILD_DIR)/coverage.html"
 
 # =============================================================================
 # Clean
 # =============================================================================
 clean: ## Remove build artefacts and cache directories
-	$(MAMBA_RUN) ./gradlew clean 2>/dev/null || true
 	find . -name "*.tmp" -delete 2>/dev/null || true
 	rm -rf $(BUILD_DIR)/

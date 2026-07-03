@@ -1,4 +1,3 @@
----
 name: Test Repository Creation
 
 on:
@@ -14,6 +13,15 @@ on:
         required: false
         default: "language-agnostic-only"
         type: string
+      env_manager:
+        description: "Environment manager to validate"
+        required: false
+        default: "micromamba"
+        type: choice
+        options:
+          - micromamba
+          - mise
+          - system
       cleanup_after_test:
         description: "Automatically delete test repository after validation"
         required: false
@@ -61,6 +69,19 @@ jobs:
           gh_token: ${{ github.event.inputs.gh_token }}
           gh_pat_secret: ${{ secrets.GH_PAT }}
 
+      - name: Validate test inputs
+        id: validate-inputs
+        shell: bash
+        run: |
+          ENV_MANAGER="${{ github.event.inputs.env_manager }}"
+          LANGUAGES="${{ github.event.inputs.languages }}"
+          if ! [[ "$ENV_MANAGER" =~ ^(micromamba|mise|system)$ ]]; then
+            echo "::error::Invalid env_manager '$ENV_MANAGER'. Allowed: micromamba, mise, system"
+            exit 1
+          fi
+          echo "env_manager=$ENV_MANAGER" >> "$GITHUB_OUTPUT"
+          echo "languages=$LANGUAGES" >> "$GITHUB_OUTPUT"
+
       - name: Trigger repository creation workflow
         id: trigger-workflow
         env:
@@ -73,7 +94,8 @@ jobs:
             --field enable_branch_protection="false" \
             --field team_name="* @${{ github.repository_owner }}" \
             --field license_holder="${{ github.repository_owner }}" \
-            --field languages="${{ github.event.inputs.languages }}" \
+            --field languages="${{ steps.validate-inputs.outputs.languages }}" \
+            --field env_manager="${{ steps.validate-inputs.outputs.env_manager }}" \
             --field cleanup_on_failure="true"
 
           echo "workflow_triggered=$(date +%s)" >> $GITHUB_OUTPUT
@@ -144,6 +166,8 @@ jobs:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          ENV_MANAGER="${{ steps.validate-inputs.outputs.env_manager }}"
+          LANGUAGES="${{ steps.validate-inputs.outputs.languages }}"
 
           echo "🔍 Validating repository structure..."
 
@@ -153,7 +177,6 @@ jobs:
             ".github/CODEOWNERS"
             ".github/dependabot.yml"
             ".pre-commit-config.yaml"
-            "environment.yml"
             ".editorconfig"
             ".gitignore"
             ".gitattributes"
@@ -175,6 +198,39 @@ jobs:
             else
               echo "❌ Missing: ${file}"
               exit 1
+            fi
+          done
+
+          FIRST_LANG=$(echo "$LANGUAGES" | cut -d',' -f1 | xargs)
+          case "$FIRST_LANG" in
+            "python")                 LANG_DIR="python" ;;
+            "go"|"golang")            LANG_DIR="golang" ;;
+            "typescript"|"javascript") LANG_DIR="typescript" ;;
+            "java"|"kotlin")          LANG_DIR="java" ;;
+            *)                         LANG_DIR="agnostic" ;;
+          esac
+
+          PROVIDER_DIR="templates/languages/$LANG_DIR/providers/$ENV_MANAGER"
+          if [ ! -d "$PROVIDER_DIR" ]; then
+            echo "❌ Missing provider template directory: $PROVIDER_DIR"
+            exit 1
+          fi
+
+          if gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/Makefile" >/dev/null 2>&1; then
+            echo "✅ Found provider Makefile"
+          else
+            echo "❌ Missing provider Makefile"
+            exit 1
+          fi
+
+          for tooling_file in environment.yml mise.toml; do
+            if [ -f "$PROVIDER_DIR/$tooling_file" ]; then
+              if gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/${tooling_file}" >/dev/null 2>&1; then
+                echo "✅ Found provider file for ${ENV_MANAGER}: ${tooling_file}"
+              else
+                echo "❌ Missing provider file for ${ENV_MANAGER}: ${tooling_file}"
+                exit 1
+              fi
             fi
           done
 

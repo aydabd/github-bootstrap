@@ -1,4 +1,3 @@
----
 # Release Please workflow for automated releases with semantic versioning
 # Uses Google's release-please to create release PRs based on conventional commits
 # See: https://github.com/googleapis/release-please
@@ -20,7 +19,7 @@ jobs:
 
     steps:
       - name: Run Release Please
-        uses: googleapis/release-please-action@v4.4.0
+        uses: googleapis/release-please-action@v5.0.0
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

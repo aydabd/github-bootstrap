@@ -27,6 +27,14 @@ applyTo: "**"
 - **Formatting**: 4 spaces for code, 2 spaces for YAML/JSON.
 - No trailing whitespace.
 
+## Provider-Aware Commands
+
+- Generated repositories include `.github/bootstrap-provider.yml` with the selected provider (`micromamba`, `mise`, or `system`) and language template.
+- Prefer `make` targets first (`make lint`, `make test`, `make install`).
+- For direct tool commands (for example `prettier`, `yamllint`, `shellcheck`), run through `scripts/provider-run.sh` so commands execute in the correct provider environment.
+- Provider binaries are bootstrapped into `.provider/bin` via `scripts/bootstrap-provider-binary.sh` using pinned versions and SHA256 checksum verification.
+- Do not assume tools are installed globally; provider environments are the source of truth.
+
 ## Testing
 
 - Write tests alongside new code (TDD).

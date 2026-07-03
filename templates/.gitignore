@@ -76,6 +76,7 @@ coverage.out
 # Local environments
 .venv/
 venv/
+.provider/
 
 # Terraform local state
 .terraform/

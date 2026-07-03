@@ -10,3 +10,16 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "automation"
+    pull-request-branch-name:
+      separator: "-"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
