@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.0](https://github.com/aydabd/github-bootstrap/compare/v1.8.0...v1.9.0) (2026-07-03)
+
+
+### Features
+
+* add tri-mode env manager support ([#33](https://github.com/aydabd/github-bootstrap/issues/33)) ([bf82b09](https://github.com/aydabd/github-bootstrap/commit/bf82b09b01409ed89effaad155b2884cf2ed4d9f))
+* harden bootstrap provider workflows ([bf82b09](https://github.com/aydabd/github-bootstrap/commit/bf82b09b01409ed89effaad155b2884cf2ed4d9f))
+
 ## [1.8.0](https://github.com/aydabd/github-bootstrap/compare/v1.7.1...v1.8.0) (2026-07-02)
 
 
