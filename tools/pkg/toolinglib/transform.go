@@ -70,12 +70,23 @@ func ReplaceOrFail(pattern string, replacement string, text string) (string, err
 	return re.ReplaceAllString(text, replacement), nil
 }
 
+func ReplaceIfPresent(pattern string, replacement string, text string) (string, bool, error) {
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return "", false, err
+	}
+	if !re.MatchString(text) {
+		return text, false, nil
+	}
+	return re.ReplaceAllString(text, replacement), true, nil
+}
+
 func UpdateEnvText(text string, versions map[string]string) (string, error) {
 	updated := text
 	for pkg, version := range versions {
 		pattern := fmt.Sprintf(`(?m)(^\s*-\s*%s=)[^ \n#]+`, regexp.QuoteMeta(pkg))
 		replacement := fmt.Sprintf(`${1}%s`, version)
-		next, err := ReplaceOrFail(pattern, replacement, updated)
+		next, _, err := ReplaceIfPresent(pattern, replacement, updated)
 		if err != nil {
 			return "", err
 		}
@@ -140,7 +151,12 @@ func UpdateMiseText(text string, envVersions map[string]string, pythonVersions m
 	}
 	if goVersions != nil {
 		for pkg, pattern := range GoVersionPatterns {
-			replacements = append(replacements, [2]string{pattern, fmt.Sprintf("%s@%s", pkg, goVersions[pkg])})
+			replacement := fmt.Sprintf("%s@%s", pkg, goVersions[pkg])
+			next, _, err := ReplaceIfPresent(pattern, replacement, updated)
+			if err != nil {
+				return "", err
+			}
+			updated = next
 		}
 	}
 

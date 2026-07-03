@@ -19,6 +19,17 @@ func TestUpdateEnvText(t *testing.T) {
 	}
 }
 
+func TestUpdateEnvTextIgnoresMissingPackage(t *testing.T) {
+	source := "dependencies:\n  - pre-commit=4.0.0\n"
+	updated, err := UpdateEnvText(source, map[string]string{"pre-commit": "4.6.0", "terraform": "1.2.3"})
+	if err != nil {
+		t.Fatalf("UpdateEnvText returned error: %v", err)
+	}
+	if !strings.Contains(updated, "pre-commit=4.6.0") {
+		t.Fatalf("expected updated pre-commit version, got: %s", updated)
+	}
+}
+
 func TestUpdateMiseTextKeepsTemplatePlaceholders(t *testing.T) {
 	source := "[tools]\npython = \"{{PYTHON_VERSION}}\"\nshellcheck = \"0.10.0\"\nshfmt = \"3.0.0\"\nterraform = \"1.0.0\"\ntaplo = \"0.1.0\"\n\n[tasks.install-tools]\nrun = [\n  \"python -m pip install pre-commit==1.0.0 editorconfig-checker==1.0.0 yamllint==1.0.0\",\n  \"npm install -g prettier@1.0.0 markdownlint-cli@1.0.0\",\n]\n"
 	updated, err := UpdateMiseText(
@@ -47,6 +58,23 @@ func TestUpdateMiseTextKeepsTemplatePlaceholders(t *testing.T) {
 		if !strings.Contains(updated, expected) {
 			t.Fatalf("expected %q in output", expected)
 		}
+	}
+}
+
+func TestUpdateMiseTextIgnoresMissingGoModulePatterns(t *testing.T) {
+	source := "[tools]\npython = \"{{PYTHON_VERSION}}\"\nshellcheck = \"0.10.0\"\nshfmt = \"3.0.0\"\nterraform = \"1.0.0\"\ntaplo = \"0.1.0\"\n\n[tasks.install-tools]\nrun = [\n  \"python -m pip install pre-commit==1.0.0 editorconfig-checker==1.0.0 yamllint==1.0.0\",\n  \"npm install -g prettier@1.0.0 markdownlint-cli@1.0.0\",\n]\n"
+	updated, err := UpdateMiseText(
+		source,
+		map[string]string{"shellcheck": "0.11.0", "go-shfmt": "3.13.1", "terraform": "1.15.6", "taplo": "0.9.3"},
+		map[string]string{"pre-commit": "4.6.0", "editorconfig-checker": "3.6.1", "yamllint": "1.38.0"},
+		map[string]string{"prettier": "3.9.3", "markdownlint-cli": "0.49.0"},
+		map[string]string{"github.com/daixiang0/gci": "v0.1.0", "github.com/golangci/golangci-lint/cmd/golangci-lint": "v1.2.3"},
+	)
+	if err != nil {
+		t.Fatalf("UpdateMiseText returned error: %v", err)
+	}
+	if !strings.Contains(updated, "pre-commit==4.6.0") {
+		t.Fatalf("expected updated pre-commit version, got: %s", updated)
 	}
 }
 
