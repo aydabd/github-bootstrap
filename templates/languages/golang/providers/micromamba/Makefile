@@ -76,7 +76,7 @@ setup-env: ## Setup isolated environment with micromamba (skip with USE_MAMBA=0)
 			echo "Bootstrapping project-local micromamba binary..."; \
 			bash scripts/bootstrap-provider-binary.sh micromamba "$(MICROMAMBA)"; \
 		fi; \
-		if ! command -v $(MICROMAMBA) >/dev/null 2>&1; then \
+			if [ ! -x "$(MICROMAMBA)" ]; then \
 				echo "micromamba is required but not installed. Install it from an official package source before running make."; \
 				exit 1; \
 			fi; \
