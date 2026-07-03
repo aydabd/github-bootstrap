@@ -16,9 +16,9 @@ var MiseToolSource = map[string]string{
 }
 
 var PipVersionPatterns = map[string]string{
-	"pre-commit":          `pre-commit==[0-9A-Za-z.\-]+`,
+	"pre-commit":           `pre-commit==[0-9A-Za-z.\-]+`,
 	"editorconfig-checker": `editorconfig-checker==[0-9A-Za-z.\-]+`,
-	"yamllint":            `yamllint==[0-9A-Za-z.\-]+`,
+	"yamllint":             `yamllint==[0-9A-Za-z.\-]+`,
 }
 
 var NPMVersionPatterns = map[string]string{
@@ -27,7 +27,7 @@ var NPMVersionPatterns = map[string]string{
 }
 
 var GoVersionPatterns = map[string]string{
-	"github.com/daixiang0/gci":                               `github.com/daixiang0/gci@[0-9A-Za-z.\-]+`,
+	"github.com/daixiang0/gci":                            `github.com/daixiang0/gci@[0-9A-Za-z.\-]+`,
 	"github.com/golangci/golangci-lint/cmd/golangci-lint": `github.com/golangci/golangci-lint/cmd/golangci-lint@[0-9A-Za-z.\-]+`,
 }
 

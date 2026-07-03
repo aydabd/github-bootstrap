@@ -219,7 +219,7 @@ test: ## Trigger repository creation tests via GitHub Actions
 # =============================================================================
 tooling-updater-build: setup-env ## Build tooling updater CLI binary from latest source
 	@mkdir -p $(BUILD_DIR)/bin
-	@$(RUN) go build -o $(TOOLING_UPDATER_BIN) ./tools/cmd/tooling-updater
+	@$(RUN) env CGO_ENABLED=0 go build -o $(TOOLING_UPDATER_BIN) ./tools/cmd/tooling-updater
 
 tooling-update-repo: tooling-updater-build ## Update repo tooling pins (pre-commit, mise/micromamba, lint toolchain)
 	@$(RUN) $(TOOLING_UPDATER_BIN) --scope repo --updaters all
@@ -244,7 +244,7 @@ tooling-update-precommit: tooling-updater-build ## Update pre-commit hook revisi
 
 tooling-verify: tooling-updater-build ## Verify updater layout assumptions and run updater unit tests
 	@$(RUN) $(TOOLING_UPDATER_BIN) --verify-only
-	@$(RUN) go test ./tools/...
+	@$(RUN) env CGO_ENABLED=0 go test ./tools/...
 
 # =============================================================================
 # Clean

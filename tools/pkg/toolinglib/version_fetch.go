@@ -245,10 +245,10 @@ func CollectVersions() (Versions, error) {
 	}
 
 	providerURLs := map[string]string{
-		"mise:linux:x64":       "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-linux-x64",
-		"mise:linux:arm64":     "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-linux-arm64",
-		"mise:macos:x64":       "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-macos-x64",
-		"mise:macos:arm64":     "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-macos-arm64",
+		"mise:linux:x64":         "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-linux-x64",
+		"mise:linux:arm64":       "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-linux-arm64",
+		"mise:macos:x64":         "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-macos-x64",
+		"mise:macos:arm64":       "https://github.com/jdx/mise/releases/download/" + miseTag + "/mise-" + miseTag + "-macos-arm64",
 		"micromamba:linux:x64":   "https://github.com/mamba-org/micromamba-releases/releases/download/" + micromambaTag + "/micromamba-linux-64",
 		"micromamba:linux:arm64": "https://github.com/mamba-org/micromamba-releases/releases/download/" + micromambaTag + "/micromamba-linux-aarch64",
 		"micromamba:macos:x64":   "https://github.com/mamba-org/micromamba-releases/releases/download/" + micromambaTag + "/micromamba-osx-64",
