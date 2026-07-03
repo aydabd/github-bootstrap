@@ -67,7 +67,7 @@ jobs:
           CodeRabbit review requirements, and approval rules are satisfied.
           EOF
 
-          if git diff --quiet --exit-code; then
+          if git diff --quiet --exit-code && [ -z "$(git ls-files --others --exclude-standard)" ]; then
             echo "No tooling updates detected; skipping PR creation."
             exit 0
           fi
@@ -81,7 +81,7 @@ jobs:
           git commit -m "$commit_msg"
           git push --force-with-lease origin "$branch"
 
-          pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')"
+          pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
 
           if [ -z "$pr_number" ]; then
             pr_url="$(gh pr create --base main --head "$branch" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md --label dependencies --label automation)"
