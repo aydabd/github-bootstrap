@@ -227,7 +227,10 @@ func RunPreCommitAutoupdate(configs []string, write bool) ([]string, error) {
 			_ = os.Remove(tmpPath)
 			return changed, err
 		}
-		_ = tmp.Close()
+		if err := tmp.Close(); err != nil {
+			_ = os.Remove(tmpPath)
+			return changed, err
+		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		cmd := exec.CommandContext(ctx, "pre-commit", "autoupdate", "--config", tmpPath)
