@@ -597,7 +597,9 @@ jobs:
           cp "templates/.github/bootstrap-provider.yml" "$REPO_DIR/.github/bootstrap-provider.yml"
           mkdir -p "$REPO_DIR/scripts"
           cp "$PROVIDER_SCRIPT_TEMPLATE" "$REPO_DIR/scripts/provider-run.sh"
+          cp "templates/scripts/bootstrap-provider-binary.sh" "$REPO_DIR/scripts/bootstrap-provider-binary.sh"
           chmod +x "$REPO_DIR/scripts/provider-run.sh"
+          chmod +x "$REPO_DIR/scripts/bootstrap-provider-binary.sh"
 
           # Substitute repository placeholders in generated tooling files
           if [ -f "$REPO_DIR/environment.yml" ]; then
