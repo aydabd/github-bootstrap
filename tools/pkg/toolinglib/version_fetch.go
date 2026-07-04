@@ -21,8 +21,9 @@ const (
 )
 
 // condaRuntimePackages lists language runtime packages fetched from conda-forge.
-// Add new language runtimes here — UpdateEnvText and UpdateMiseText will
-// pick them up automatically for any env/toml file that contains a matching pin.
+// Add new language runtimes here — UpdateEnvText will pick them up automatically
+// for any env file that contains a matching pin. For mise.toml keys, also add a
+// mapping in MiseToolSource / MisePrefixedToolSource.
 var condaRuntimePackages = []string{
 	"python",
 	"go",
