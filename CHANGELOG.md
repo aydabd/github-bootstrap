@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.11.0](https://github.com/aydabd/github-bootstrap/compare/v1.10.0...v1.11.0) (2026-07-04)
+
+
+### Features
+
+* **tools:** decouple runtime/tool updater and extend runtime coverage ([#44](https://github.com/aydabd/github-bootstrap/issues/44)) ([213dd85](https://github.com/aydabd/github-bootstrap/commit/213dd852ab2326f4959b81710d82027ca2ca765d))
+
+
+### Bug Fixes
+
+* **ci:** repair tooling updater fetch and refresh action/dependabot config ([61b7192](https://github.com/aydabd/github-bootstrap/commit/61b719251c2c659b1ddf59c44963aeb35cacb8ba))
+* **ci:** run gh pr comment without local git checkout ([f006f4b](https://github.com/aydabd/github-bootstrap/commit/f006f4ba47eed607127a422425ea9845c05f82e1))
+* **ci:** tolerate missing optional automation label ([fd83405](https://github.com/aydabd/github-bootstrap/commit/fd83405a37112a9fdcf3cb421977059e5405ad1b))
+
 ## [1.10.0](https://github.com/aydabd/github-bootstrap/compare/v1.9.1...v1.10.0) (2026-07-03)
 
 
