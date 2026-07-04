@@ -96,6 +96,27 @@ func TestUpdateMiseTextIgnoresMissingGoModulePatterns(t *testing.T) {
 	}
 }
 
+func TestUpdateMiseTextPlaceholderWithMissingCondaVersion(t *testing.T) {
+	// When a key has a {{...}} placeholder and the corresponding conda version
+	// is absent from envVersions, UpdateMiseText must succeed and leave the
+	// placeholder intact instead of erroring.
+	source := "[tools]\npython = \"{{PYTHON_VERSION}}\"\nshellcheck = \"0.10.0\"\nshfmt = \"3.0.0\"\nterraform = \"1.0.0\"\ntaplo = \"0.1.0\"\n\n[tasks.install-tools]\nrun = [\n  \"python -m pip install pre-commit==1.0.0 editorconfig-checker==1.0.0 yamllint==1.0.0\",\n  \"npm install -g prettier@1.0.0 markdownlint-cli@1.0.0\",\n]\n"
+	updated, err := UpdateMiseText(
+		source,
+		// python deliberately absent — key is placeholder-only in source
+		map[string]string{"shellcheck": "0.11.0", "go-shfmt": "3.13.1", "terraform": "1.15.6", "taplo": "0.10.0"},
+		map[string]string{"pre-commit": "4.6.0", "editorconfig-checker": "3.6.1", "yamllint": "1.38.0"},
+		map[string]string{"prettier": "3.9.3", "markdownlint-cli": "0.49.0"},
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("UpdateMiseText returned error: %v", err)
+	}
+	if !strings.Contains(updated, `python = "{{PYTHON_VERSION}}"`) {
+		t.Fatalf("expected python placeholder to be preserved, got: %s", updated)
+	}
+}
+
 func TestUpdateMiseTextUpdatesJavaTemurinPrefix(t *testing.T) {
 	source := "[tools]\njava = \"temurin-21\"\npython = \"3.12\"\n\n[tasks.install-tools]\nrun = [\n  \"python -m pip install pre-commit==1.0.0 editorconfig-checker==1.0.0 yamllint==1.0.0\",\n  \"npm install -g prettier@1.0.0 markdownlint-cli@1.0.0\",\n]\n"
 	updated, err := UpdateMiseText(

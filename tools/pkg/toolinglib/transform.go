@@ -162,14 +162,14 @@ func UpdateTOMLAssignment(text string, key string, value string) (string, error)
 	return updated, nil
 }
 
-func UpdateTOMLAssignmentIfPresent(text string, key string, value string) (string, bool, error) {
+func UpdateTOMLAssignmentIfPresent(text string, key string, value string) (string, error) {
 	pattern := fmt.Sprintf(`(?m)(^\s*%s\s*=\s*")([^"]+)("\s*$)`, regexp.QuoteMeta(key))
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 	if !re.MatchString(text) {
-		return text, false, nil
+		return text, nil
 	}
 	updated := re.ReplaceAllStringFunc(text, func(match string) string {
 		sub := re.FindStringSubmatch(match)
@@ -181,7 +181,7 @@ func UpdateTOMLAssignmentIfPresent(text string, key string, value string) (strin
 		}
 		return sub[1] + value + sub[3]
 	})
-	return updated, true, nil
+	return updated, nil
 }
 
 func HasTOMLAssignment(text string, key string) (bool, error) {
@@ -220,11 +220,12 @@ func UpdateMiseText(text string, envVersions map[string]string, pythonVersions m
 		if !hasKey {
 			continue
 		}
-		value, err := requireVersion(envVersions, condaSource, "conda")
-		if err != nil {
-			return "", fmt.Errorf("missing conda version for %s (source %s)", miseKey, condaSource)
+		value, ok := envVersions[condaSource]
+		if !ok || strings.TrimSpace(value) == "" {
+			// Version not collected (e.g. runtime-only template with placeholder) — skip.
+			continue
 		}
-		next, _, err := UpdateTOMLAssignmentIfPresent(updated, miseKey, value)
+		next, err := UpdateTOMLAssignmentIfPresent(updated, miseKey, value)
 		if err != nil {
 			return "", err
 		}
