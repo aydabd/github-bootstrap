@@ -36,5 +36,5 @@ jobs:
             exit 0
           fi
 
-          gh pr comment "${PR_NUMBER}" --body "@coderabbitai review"
+          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body "@coderabbitai review"
           echo "Posted CodeRabbit review request comment on PR #${PR_NUMBER}."
