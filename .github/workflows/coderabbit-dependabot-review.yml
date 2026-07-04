@@ -1,0 +1,40 @@
+name: CodeRabbit Review for Dependabot
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  request-coderabbit-review:
+    name: Request CodeRabbit review for Dependabot PRs
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Request CodeRabbit review comment (idempotent)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          existing_comment_id="$({
+            gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+              --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("@coderabbitai review"))) | .id'
+          } | head -n 1 || true)"
+
+          if [ -n "${existing_comment_id}" ]; then
+            echo "CodeRabbit review request comment already exists: ${existing_comment_id}"
+            exit 0
+          fi
+
+          gh pr comment "${PR_NUMBER}" --body "@coderabbitai review"
+          echo "Posted CodeRabbit review request comment on PR #${PR_NUMBER}."

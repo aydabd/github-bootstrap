@@ -21,7 +21,7 @@ updates:
     pull-request-branch-name:
       separator: "-"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"
 
   - package-ecosystem: "gomod"
@@ -35,7 +35,7 @@ updates:
     pull-request-branch-name:
       separator: "-"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"
 
   - package-ecosystem: "terraform"
@@ -49,5 +49,5 @@ updates:
     pull-request-branch-name:
       separator: "-"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore"
       include: "scope"

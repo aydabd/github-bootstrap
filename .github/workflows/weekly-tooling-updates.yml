@@ -82,12 +82,22 @@ jobs:
           git push --force-with-lease origin "$branch"
 
           pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
+          label_names="$(gh label list --limit 200 --json name --jq '.[].name')"
+
+          create_label_args=(--label dependencies)
+          edit_label_args=(--add-label dependencies)
+          if printf '%s\n' "$label_names" | grep -Fxq automation; then
+            create_label_args+=(--label automation)
+            edit_label_args+=(--add-label automation)
+          else
+            echo "Label 'automation' not found; continuing with 'dependencies' only."
+          fi
 
           if [ -z "$pr_number" ]; then
-            pr_url="$(gh pr create --base main --head "$branch" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md --label dependencies --label automation)"
+            pr_url="$(gh pr create --base main --head "$branch" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md "${create_label_args[@]}")"
             pr_number="$(gh pr view "$pr_url" --json number --jq '.number')"
           else
-            gh pr edit "$pr_number" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md --add-label dependencies --add-label automation
+            gh pr edit "$pr_number" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md "${edit_label_args[@]}"
           fi
 
           gh pr merge "$pr_number" --auto --squash
