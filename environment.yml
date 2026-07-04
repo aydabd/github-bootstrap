@@ -16,7 +16,7 @@ dependencies:
   - prettier=3.9.3 # JSON / YAML / Markdown formatter
   - markdownlint-cli=0.49.0 # Markdown linter
   - yamllint=1.38.0 # YAML linter
-  - taplo=0.9.3 # TOML formatter + validator
+  - taplo=0.10.0 # TOML formatter + validator
   - go-shfmt=3.13.1 # shell formatter (provides shfmt binary)
   - shellcheck=0.11.0 # shell linter
   - libxml2=2.15.3 # provides xmllint binary for XML validation
