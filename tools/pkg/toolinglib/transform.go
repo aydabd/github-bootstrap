@@ -11,11 +11,31 @@ import (
 	"time"
 )
 
+// MiseToolSource maps mise.toml tool keys to their conda-forge package names.
+// Tool value in TOML is a plain version string (e.g. python = "3.13.1").
+// Add new entries here to extend runtime version management to new languages.
 var MiseToolSource = map[string]string{
+	"python":     "python",
+	"node":       "nodejs",
+	"go":         "go",
+	"rust":       "rust",
+	"ruby":       "ruby",
 	"shellcheck": "shellcheck",
 	"shfmt":      "go-shfmt",
 	"terraform":  "terraform",
 	"taplo":      "taplo",
+}
+
+// MisePrefixedToolSource maps mise.toml tool keys whose value carries a
+// non-version prefix to their conda-forge package names.
+// Example: java = "temurin-21" — prefix "temurin-" is preserved, only the
+// numeric version part is updated.
+// Add new entries here for languages with prefixed mise version strings.
+var MisePrefixedToolSource = map[string]struct {
+	CondaPackage string
+	Prefix       string
+}{
+	"java": {CondaPackage: "openjdk", Prefix: "temurin-"},
 }
 
 var PipVersionPatterns = map[string]string{
@@ -99,12 +119,22 @@ func requireVersion(versions map[string]string, key string, source string) (stri
 func UpdateEnvText(text string, versions map[string]string) (string, error) {
 	updated := text
 	for pkg, version := range versions {
-		pattern := fmt.Sprintf(`(?m)(^\s*-\s*%s=)[^ \n#]+`, regexp.QuoteMeta(pkg))
-		replacement := fmt.Sprintf(`${1}%s`, version)
-		next, _, err := ReplaceIfPresent(pattern, replacement, updated)
+		pattern := fmt.Sprintf(`(?m)(^\s*-\s*%s=)([^ \n#]+)`, regexp.QuoteMeta(pkg))
+		re, err := regexp.Compile(pattern)
 		if err != nil {
 			return "", err
 		}
+		next := re.ReplaceAllStringFunc(updated, func(match string) string {
+			sub := re.FindStringSubmatch(match)
+			if len(sub) != 3 {
+				return match
+			}
+			// Keep template placeholders intact in template provider files.
+			if strings.Contains(sub[2], "{{") {
+				return match
+			}
+			return sub[1] + version
+		})
 		updated = next
 	}
 	return updated, nil
@@ -132,6 +162,37 @@ func UpdateTOMLAssignment(text string, key string, value string) (string, error)
 	return updated, nil
 }
 
+func UpdateTOMLAssignmentIfPresent(text string, key string, value string) (string, bool, error) {
+	pattern := fmt.Sprintf(`(?m)(^\s*%s\s*=\s*")([^"]+)("\s*$)`, regexp.QuoteMeta(key))
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return "", false, err
+	}
+	if !re.MatchString(text) {
+		return text, false, nil
+	}
+	updated := re.ReplaceAllStringFunc(text, func(match string) string {
+		sub := re.FindStringSubmatch(match)
+		if len(sub) != 4 {
+			return match
+		}
+		if strings.Contains(sub[2], "{{") {
+			return match
+		}
+		return sub[1] + value + sub[3]
+	})
+	return updated, true, nil
+}
+
+func HasTOMLAssignment(text string, key string) (bool, error) {
+	pattern := fmt.Sprintf(`(?m)^\s*%s\s*=\s*"[^"]+"\s*$`, regexp.QuoteMeta(key))
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return false, err
+	}
+	return re.MatchString(text), nil
+}
+
 func UpdateBootstrapScriptText(text string, providerData map[string]ProviderAsset) (string, error) {
 	updated := text
 	for key, values := range providerData {
@@ -149,16 +210,52 @@ func UpdateBootstrapScriptText(text string, providerData map[string]ProviderAsse
 
 func UpdateMiseText(text string, envVersions map[string]string, pythonVersions map[string]string, npmVersions map[string]string, goVersions map[string]string) (string, error) {
 	updated := text
+
+	// Plain version tools: mise key → conda package, e.g. python = "3.13.1"
 	for miseKey, condaSource := range MiseToolSource {
+		hasKey, err := HasTOMLAssignment(updated, miseKey)
+		if err != nil {
+			return "", err
+		}
+		if !hasKey {
+			continue
+		}
 		value, err := requireVersion(envVersions, condaSource, "conda")
 		if err != nil {
 			return "", fmt.Errorf("missing conda version for %s (source %s)", miseKey, condaSource)
 		}
-		next, err := UpdateTOMLAssignment(updated, miseKey, value)
+		next, _, err := UpdateTOMLAssignmentIfPresent(updated, miseKey, value)
 		if err != nil {
 			return "", err
 		}
 		updated = next
+	}
+
+	// Prefixed version tools: mise key → conda package with a preserved prefix,
+	// e.g. java = "temurin-21" — only the numeric portion is updated.
+	for miseKey, spec := range MisePrefixedToolSource {
+		version, ok := envVersions[spec.CondaPackage]
+		if !ok || strings.TrimSpace(version) == "" {
+			continue
+		}
+		pattern := fmt.Sprintf(`(?m)(^\s*%s\s*=\s*"%s)([^"]+)("\s*$)`, regexp.QuoteMeta(miseKey), regexp.QuoteMeta(spec.Prefix))
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			return "", err
+		}
+		if !re.MatchString(updated) {
+			continue
+		}
+		updated = re.ReplaceAllStringFunc(updated, func(match string) string {
+			sub := re.FindStringSubmatch(match)
+			if len(sub) != 4 {
+				return match
+			}
+			if strings.Contains(sub[2], "{{") {
+				return match
+			}
+			return sub[1] + version + sub[3]
+		})
 	}
 
 	replacements := make([][2]string, 0)

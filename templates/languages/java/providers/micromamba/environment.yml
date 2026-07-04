@@ -7,6 +7,9 @@ dependencies:
   # ── Python runtime (required by pre-commit) ─────────────────────────────────
   - python={{PYTHON_VERSION}}
 
+  # ── Node.js runtime (required by npm tooling tasks) ───────────────────────
+  - nodejs={{NODE_VERSION}}
+
   # ── Pre-commit framework ────────────────────────────────────────────────────
   - pre-commit=4.6.0
   # ── Linting / formatting tools (used as language: system hooks) ─────────────

@@ -7,6 +7,9 @@ dependencies:
   # ── Python runtime (required by pre-commit) ─────────────────────────────────
   - python=3.13
 
+  # ── Node.js runtime (required by npm tooling tasks) ───────────────────────
+  - nodejs=24
+
   # ── Go runtime (required by tooling updater CLI) ─────────────────────────────
   - go=1.26
 

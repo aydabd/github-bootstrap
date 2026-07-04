@@ -20,7 +20,19 @@ const (
 	hashChunkSize      = 1024 * 1024
 )
 
-var condaPackages = []string{
+// condaRuntimePackages lists language runtime packages fetched from conda-forge.
+// Add new language runtimes here — UpdateEnvText and UpdateMiseText will
+// pick them up automatically for any env/toml file that contains a matching pin.
+var condaRuntimePackages = []string{
+	"python",
+	"go",
+	"nodejs",
+	"openjdk",
+	"rust",
+	"ruby",
+}
+
+var condaToolPackages = []string{
 	"pre-commit",
 	"prettier",
 	"markdownlint-cli",
@@ -32,6 +44,13 @@ var condaPackages = []string{
 	"terraform",
 	"jq",
 	"coreutils",
+}
+
+func allCondaPackages() []string {
+	packages := make([]string, 0, len(condaRuntimePackages)+len(condaToolPackages))
+	packages = append(packages, condaRuntimePackages...)
+	packages = append(packages, condaToolPackages...)
+	return packages
 }
 
 func retryBackoff(attempt int) {
@@ -249,7 +268,7 @@ func CollectVersions(selectedUpdaters []string) (Versions, error) {
 	}
 
 	conda := make(map[string]string)
-	for _, pkg := range condaPackages {
+	for _, pkg := range allCondaPackages() {
 		v, err := latestCondaVersion(pkg)
 		if err != nil {
 			return Versions{}, err
