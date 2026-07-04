@@ -4,7 +4,7 @@ runs:
   using: composite
   steps:
     - name: Set up mise
-      uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d
+      uses: jdx/mise-action@v4
       with:
         install: true
     - name: Install mise task tools

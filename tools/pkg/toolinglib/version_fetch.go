@@ -261,6 +261,11 @@ func CollectVersions(selectedUpdaters []string) (Versions, error) {
 	npm := map[string]string{}
 	goModules := map[string]string{}
 	if needsMise {
+		goModuleLookup := map[string]string{
+			"github.com/daixiang0/gci":                            "github.com/daixiang0/gci",
+			"github.com/golangci/golangci-lint/cmd/golangci-lint": "github.com/golangci/golangci-lint",
+		}
+
 		for _, pkg := range []string{"pre-commit", "editorconfig-checker", "yamllint"} {
 			v, err := latestPyPIVersion(pkg)
 			if err != nil {
@@ -277,12 +282,12 @@ func CollectVersions(selectedUpdaters []string) (Versions, error) {
 			npm[pkg] = v
 		}
 
-		for _, module := range []string{"github.com/daixiang0/gci", "github.com/golangci/golangci-lint/cmd/golangci-lint"} {
-			v, err := latestGoModuleVersion(module)
+		for replacementModule, lookupModule := range goModuleLookup {
+			v, err := latestGoModuleVersion(lookupModule)
 			if err != nil {
 				return Versions{}, err
 			}
-			goModules[module] = v
+			goModules[replacementModule] = v
 		}
 	}
 
