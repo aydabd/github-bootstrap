@@ -427,8 +427,7 @@ Every bootstrapped repository gets a full security baseline out of the box:
 | Dependabot security updates        | Enabled automatically — auto-PRs for vulnerable deps      |
 | Dependabot version updates         | Configured in `.github/dependabot.yml` for all ecosystems |
 | CodeQL scanning                    | Workflow generated and scoped to the selected language(s) |
-| Branch protection — linear history | Only squash merges allowed                                |
-| Branch protection — 2 approvals    | Two code-owner approvals required before merging          |
+| Branch protection / rulesets       | Configure manually in repository settings as needed       |
 | SECURITY.md                        | Security policy and vulnerability reporting instructions  |
 | Secret scanning                    | Enabled by GitHub for all public repos automatically      |
 
