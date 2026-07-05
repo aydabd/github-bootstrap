@@ -234,6 +234,48 @@ jobs:
             fi
           done
 
+          normalize_lang() {
+            case "$(echo "$1" | xargs | tr '[:upper:]' '[:lower:]')" in
+              go|golang) echo "golang" ;;
+              python) echo "python" ;;
+              typescript|javascript|node|nodejs) echo "typescript" ;;
+              java|kotlin) echo "java" ;;
+              all) echo "all" ;;
+              *) echo "agnostic" ;;
+            esac
+          }
+
+          SELECTED_LANGS=()
+          IFS=',' read -ra LANG_INPUTS <<< "$LANGUAGES"
+          for raw_lang in "${LANG_INPUTS[@]}"; do
+            normalized=$(normalize_lang "$raw_lang")
+            if [ "$normalized" = "all" ]; then
+              for every in golang python typescript java; do
+                SELECTED_LANGS+=("$every")
+              done
+            elif [ "$normalized" != "agnostic" ]; then
+              SELECTED_LANGS+=("$normalized")
+            fi
+          done
+
+          # De-duplicate while preserving order.
+          UNIQUE_LANGS=()
+          for lang in "${SELECTED_LANGS[@]}"; do
+            if [[ ! " ${UNIQUE_LANGS[*]} " =~ " ${lang} " ]]; then
+              UNIQUE_LANGS+=("$lang")
+            fi
+          done
+
+          for lang in "${UNIQUE_LANGS[@]}"; do
+            lang_config_path=".pre-commit/languages/${lang}.yaml"
+            if gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/${lang_config_path}" >/dev/null 2>&1; then
+              echo "✅ Found language pre-commit config: ${lang_config_path}"
+            else
+              echo "❌ Missing language pre-commit config: ${lang_config_path}"
+              exit 1
+            fi
+          done
+
           FORBIDDEN_TEMPLATE_PATHS=(
             "languages"
             "providers"

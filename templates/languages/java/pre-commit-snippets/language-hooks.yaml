@@ -1,0 +1,41 @@
+
+      # ── Java: formatting (Spotless via Gradle) ────────────────────────────
+      - id: spotless
+        name: spotless (Java formatting)
+        entry: bash
+        args:
+          - -c
+          - |
+            if [ "$LINT_MODE" = "check" ]; then
+              ./gradlew spotlessCheck
+            else
+              ./gradlew spotlessApply
+            fi
+        language: system
+        files: '\.java$'
+        pass_filenames: false
+
+      # ── Java: style checks (Checkstyle if configured) ─────────────────────
+      - id: checkstyle
+        name: checkstyle
+        entry: bash
+        args:
+          - -c
+          - |
+            if ./gradlew -q tasks --all | grep -q '^checkstyleMain'; then
+              ./gradlew checkstyleMain checkstyleTest
+            else
+              echo "Checkstyle plugin not configured; skipping."
+            fi
+        language: system
+        files: '\.java$'
+        pass_filenames: false
+
+      # ── Java: unit tests (pre-push) ───────────────────────────────────────
+      - id: gradle-test
+        name: gradle test
+        entry: ./gradlew
+        args: [test]
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

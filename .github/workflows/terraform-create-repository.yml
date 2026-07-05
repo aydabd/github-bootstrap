@@ -569,13 +569,31 @@ jobs:
           PROVIDER_DIR="$TEMPLATE_DIR/providers/$ENV_MANAGER"
           LINT_WORKFLOW_TEMPLATE="templates/.github/workflows/providers/lint-$ENV_MANAGER.yml"
           PROVIDER_SCRIPT_TEMPLATE="templates/providers/$ENV_MANAGER/provider-run.sh"
+          PRECOMMIT_BASE_TEMPLATE="templates/languages/agnostic/pre-commit-snippets/base.yaml"
+          PRECOMMIT_SNIPPETS_ROOT="templates/languages"
           REPO_DIR="new-repo"
 
           echo "Using language template: $LANG_DIR" >> $GITHUB_STEP_SUMMARY
           echo "Using environment manager: $ENV_MANAGER" >> $GITHUB_STEP_SUMMARY
 
+          # Render root + per-language pre-commit configs from snippets.
+          if [ ! -f "$PRECOMMIT_BASE_TEMPLATE" ]; then
+            echo "::error::Missing pre-commit base template: $PRECOMMIT_BASE_TEMPLATE"
+            exit 1
+          fi
+          if [ ! -d "$PRECOMMIT_SNIPPETS_ROOT" ]; then
+            echo "::error::Missing pre-commit snippets root: $PRECOMMIT_SNIPPETS_ROOT"
+            exit 1
+          fi
+          mkdir -p "$REPO_DIR/.pre-commit/languages"
+          go run ./tools/cmd/precommit-renderer \
+            --base "$PRECOMMIT_BASE_TEMPLATE" \
+            --snippets-root "$PRECOMMIT_SNIPPETS_ROOT" \
+            --languages "$LANGUAGES" \
+            --output "$REPO_DIR/.pre-commit-config.yaml" \
+            --emit-language-files-dir "$REPO_DIR/.pre-commit/languages"
+
           # Copy language-specific tooling files
-          cp "$TEMPLATE_DIR/.pre-commit-config.yaml" "$REPO_DIR/.pre-commit-config.yaml"
           if [ ! -d "$PROVIDER_DIR" ]; then
             echo "::error::Missing provider config directory: $PROVIDER_DIR"
             exit 1
