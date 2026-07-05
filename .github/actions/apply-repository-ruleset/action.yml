@@ -35,6 +35,13 @@ runs:
           exit 1
         fi
 
+        RULESET_NAME=$(jq -r '.name // "default"' "$RULESET_FILE")
+
+        if gh api /repos/"$OWNER"/"$REPO"/rulesets --jq '.[]?.name' 2>/dev/null | grep -Fxq "$RULESET_NAME"; then
+          echo "✅ Repository ruleset already exists: $RULESET_NAME (skipping create)" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
         RESPONSE=$(gh api \
           --method POST \
           -H "Accept: application/vnd.github+json" \

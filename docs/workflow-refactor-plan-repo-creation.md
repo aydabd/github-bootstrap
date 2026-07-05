@@ -111,6 +111,7 @@ Introduce composable units under `.github/actions/`:
 - `configure-release-tool`
 - `configure-codeql`
 - `apply-repo-settings`
+- `apply-repository-ruleset`
 
 Each action:
 
@@ -187,14 +188,17 @@ Exit criteria:
 3. [x] Move release/configuration steps into dedicated actions.
 4. [x] Move CodeQL configuration into `configure-codeql` action.
 5. [x] Move repo settings and Dependabot handling into `apply-repo-settings`
-       action; remove branch-protection automation from workflows.
+  action; remove classic branch-protection automation from workflows.
+6. [x] Add `apply-repository-ruleset` action to apply default ruleset payload
+  during repository bootstrap.
 
 Exit criteria:
 
 - [x] top-level workflows mostly linear and readable
 - [x] each extracted action has input/output contract
-- [x] repo settings handling extracted and wired into both workflows; branch
-      protection automation removed
+- [x] repo settings handling extracted and wired into both workflows
+- [x] ruleset bootstrap extracted and wired into both workflows via
+  `apply-repository-ruleset`
 
 ### Phase 3: Test workflow parity and reliability
 
