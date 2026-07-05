@@ -338,7 +338,7 @@ jobs:
                 has_all=true
                 lang_count=$((lang_count + 1))
                 ;;
-              go|golang|python|typescript|javascript|node|nodejs|java|kotlin|rust|ruby|php|terraform)
+              go|golang|python|typescript|javascript|node|nodejs|java|kotlin)
                 lang_count=$((lang_count + 1))
                 ;;
               *)
@@ -681,7 +681,7 @@ jobs:
           case "$FIRST_LANG" in
             "python")                 LANG_DIR="python" ;;
             "go"|"golang")            LANG_DIR="golang" ;;
-            "typescript"|"javascript") LANG_DIR="typescript" ;;
+            "typescript"|"javascript"|"node"|"nodejs") LANG_DIR="typescript" ;;
             "java"|"kotlin")          LANG_DIR="java" ;;
             *)                        LANG_DIR="agnostic" ;;
           esac
