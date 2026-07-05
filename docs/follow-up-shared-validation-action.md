@@ -25,11 +25,11 @@ This follow-up is implemented on branch `chore/bootstrap-validation-actions`.
 - [x] Updated `terraform-create-repository.yml` to call both shared actions
 - [x] Preserved allowlist validation before token resolution
 - [x] Ran `LINT_MODE=check make lint`
-- [ ] Run the manual E2E PAT test, or accept that it is deferred to PR/CI review
+- [x] Ran manual E2E PAT tests for both `create-repository.yml` and
+      `terraform-create-repository.yml`
 
-This follow-up can be considered complete when the branch is reviewed and either
-the manual E2E PAT test passes or the reviewer explicitly accepts deferring that
-test because it creates real repositories.
+This follow-up is implemented and validated. It can be considered ready to merge
+once the branch is pushed and the required checks have passed.
 
 ## Background
 
@@ -120,7 +120,7 @@ for the owner type check.
 
 - [x] Both `create-repository.yml` and `terraform-create-repository.yml` call the
       shared actions instead of duplicating the bash
-- [ ] E2E PAT test still passes after extraction
+- [x] E2E PAT test still passes after extraction
 - [x] Allowlist validation still runs before token resolution
 - [x] All existing guards (allowlist, App-vs-User, audit log) behave identically
       by code inspection and local workflow linting
