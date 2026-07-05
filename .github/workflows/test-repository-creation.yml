@@ -126,11 +126,16 @@ jobs:
       - name: Validate test inputs
         id: validate-inputs
         shell: bash
+        env:
+          ENV_MANAGER_INPUT: ${{ github.event.inputs.env_manager }}
+          LANGUAGES_INPUT: ${{ github.event.inputs.languages }}
+          TARGET_WORKFLOW_INPUT: ${{ github.event.inputs.target_workflow }}
+          TARGET_REF_INPUT: ${{ github.event.inputs.target_ref }}
         run: |
-          ENV_MANAGER="${{ github.event.inputs.env_manager }}"
-          LANGUAGES="${{ github.event.inputs.languages }}"
-          TARGET_WORKFLOW="${{ github.event.inputs.target_workflow }}"
-          TARGET_REF="${{ github.event.inputs.target_ref }}"
+          ENV_MANAGER="$ENV_MANAGER_INPUT"
+          LANGUAGES="$LANGUAGES_INPUT"
+          TARGET_WORKFLOW="$TARGET_WORKFLOW_INPUT"
+          TARGET_REF="$TARGET_REF_INPUT"
           if ! [[ "$ENV_MANAGER" =~ ^(micromamba|mise|system)$ ]]; then
             echo "::error::Invalid env_manager '$ENV_MANAGER'. Allowed: micromamba, mise, system"
             exit 1
@@ -143,6 +148,10 @@ jobs:
             echo "::error::target_ref must not be empty"
             exit 1
           fi
+          if ! [[ "$TARGET_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "$TARGET_REF" == *".."* ]] || [[ "$TARGET_REF" == /* ]] || [[ "$TARGET_REF" == */ ]]; then
+            echo "::error::Invalid target_ref '$TARGET_REF'."
+            exit 1
+          fi
           echo "env_manager=$ENV_MANAGER" >> "$GITHUB_OUTPUT"
           echo "languages=$LANGUAGES" >> "$GITHUB_OUTPUT"
           echo "target_workflow=$TARGET_WORKFLOW" >> "$GITHUB_OUTPUT"
@@ -152,22 +161,33 @@ jobs:
         id: trigger-workflow
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          TARGET_WORKFLOW: ${{ steps.validate-inputs.outputs.target_workflow }}
+          TARGET_REF: ${{ steps.validate-inputs.outputs.target_ref }}
+          REPO_NAME: ${{ steps.generate-name.outputs.repo_name }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          LANGUAGES: ${{ steps.validate-inputs.outputs.languages }}
+          ENV_MANAGER: ${{ steps.validate-inputs.outputs.env_manager }}
+          PYTHON_VERSION: ${{ github.event.inputs.python_version }}
+          NODE_VERSION: ${{ github.event.inputs.node_version }}
+          GO_VERSION: ${{ github.event.inputs.go_version }}
+          JAVA_VERSION: ${{ github.event.inputs.java_version }}
+          RELEASE_TOOL: ${{ github.event.inputs.release_tool }}
         run: |
-          gh workflow run "${{ steps.validate-inputs.outputs.target_workflow }}" \
-            --ref "${{ steps.validate-inputs.outputs.target_ref }}" \
-            --field repo_name="${{ steps.generate-name.outputs.repo_name }}" \
+          gh workflow run "$TARGET_WORKFLOW" \
+            --ref "$TARGET_REF" \
+            --field repo_name="$REPO_NAME" \
             --field repo_description="Test repository for bootstrap validation - created $(date)" \
             --field visibility="public" \
             --field enable_branch_protection="false" \
-            --field team_name="* @${{ github.repository_owner }}" \
-            --field license_holder="${{ github.repository_owner }}" \
-            --field languages="${{ steps.validate-inputs.outputs.languages }}" \
-            --field env_manager="${{ steps.validate-inputs.outputs.env_manager }}" \
-            --field python_version="${{ github.event.inputs.python_version }}" \
-            --field node_version="${{ github.event.inputs.node_version }}" \
-            --field go_version="${{ github.event.inputs.go_version }}" \
-            --field java_version="${{ github.event.inputs.java_version }}" \
-            --field release_tool="${{ github.event.inputs.release_tool }}" \
+            --field team_name="* @$REPO_OWNER" \
+            --field license_holder="$REPO_OWNER" \
+            --field languages="$LANGUAGES" \
+            --field env_manager="$ENV_MANAGER" \
+            --field python_version="$PYTHON_VERSION" \
+            --field node_version="$NODE_VERSION" \
+            --field go_version="$GO_VERSION" \
+            --field java_version="$JAVA_VERSION" \
+            --field release_tool="$RELEASE_TOOL" \
             --field cleanup_on_failure="true"
 
           echo "workflow_triggered=$(date +%s)" >> $GITHUB_OUTPUT
@@ -175,11 +195,11 @@ jobs:
       - name: Monitor workflow execution
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          WORKFLOW_FILE: ${{ steps.validate-inputs.outputs.target_workflow }}
+          TARGET_REF: ${{ steps.validate-inputs.outputs.target_ref }}
+          REPOSITORY: ${{ github.repository }}
         timeout-minutes: 10
         run: |
-          WORKFLOW_FILE="${{ steps.validate-inputs.outputs.target_workflow }}"
-          TARGET_REF="${{ steps.validate-inputs.outputs.target_ref }}"
-
           echo "⏳ Monitoring ${WORKFLOW_FILE} on ref ${TARGET_REF}..."
 
           # Wait a moment for the workflow to be registered
@@ -189,7 +209,7 @@ jobs:
           for i in {1..60}; do
             # Get the latest workflow run for selected workflow
             RUN_STATUS=$(gh api \
-              "/repos/${{ github.repository }}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=1&event=workflow_dispatch&branch=${TARGET_REF}" \
+              "/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=1&event=workflow_dispatch&branch=${TARGET_REF}" \
               --jq '.workflow_runs[0] | {status: .status, conclusion: .conclusion, html_url: .html_url}')
 
             STATUS=$(echo "$RUN_STATUS" | jq -r '.status')
