@@ -173,6 +173,8 @@ jobs:
           JAVA_VERSION: ${{ github.event.inputs.java_version }}
           RELEASE_TOOL: ${{ github.event.inputs.release_tool }}
         run: |
+          TRIGGERED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
           gh workflow run "$TARGET_WORKFLOW" \
             --ref "$TARGET_REF" \
             --field repo_name="$REPO_NAME" \
@@ -189,8 +191,7 @@ jobs:
             --field java_version="$JAVA_VERSION" \
             --field release_tool="$RELEASE_TOOL" \
             --field cleanup_on_failure="true"
-
-          echo "workflow_triggered=$(date +%s)" >> $GITHUB_OUTPUT
+          echo "workflow_triggered_at=$TRIGGERED_AT" >> $GITHUB_OUTPUT
 
       - name: Monitor workflow execution
         env:
@@ -198,6 +199,7 @@ jobs:
           WORKFLOW_FILE: ${{ steps.validate-inputs.outputs.target_workflow }}
           TARGET_REF: ${{ steps.validate-inputs.outputs.target_ref }}
           REPOSITORY: ${{ github.repository }}
+          TRIGGERED_AT: ${{ steps.trigger-workflow.outputs.workflow_triggered_at }}
         timeout-minutes: 10
         run: |
           echo "⏳ Monitoring ${WORKFLOW_FILE} on ref ${TARGET_REF}..."
@@ -207,10 +209,22 @@ jobs:
 
           # Poll for the workflow run
           for i in {1..60}; do
-            # Get the latest workflow run for selected workflow
+            # Find a workflow_dispatch run started after this job triggered the dispatch.
+            # This avoids relying on branch-only filtering so tag refs are supported.
             RUN_STATUS=$(gh api \
-              "/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=1&event=workflow_dispatch&branch=${TARGET_REF}" \
-              --jq '.workflow_runs[0] | {status: .status, conclusion: .conclusion, html_url: .html_url}')
+              "/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=20&event=workflow_dispatch" \
+              --jq --arg actor "$GITHUB_ACTOR" --arg since "$TRIGGERED_AT" '
+                [.workflow_runs[]
+                | select(.actor.login == $actor)
+                | select(.created_at >= $since)
+                | {status: .status, conclusion: .conclusion, html_url: .html_url}]
+                | first // {}')
+
+            if [ "$RUN_STATUS" = "{}" ]; then
+              echo "⏳ Waiting for matching workflow run to appear... (check $i/60)"
+              sleep 10
+              continue
+            fi
 
             STATUS=$(echo "$RUN_STATUS" | jq -r '.status')
             CONCLUSION=$(echo "$RUN_STATUS" | jq -r '.conclusion')

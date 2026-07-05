@@ -679,6 +679,7 @@ jobs:
             echo "⚠️ Multiple languages provided ($LANGUAGES). Tooling template uses first language: $FIRST_LANG" >> $GITHUB_STEP_SUMMARY
           fi
           case "$FIRST_LANG" in
+            "all")                    LANG_DIR="agnostic" ;;
             "python")                 LANG_DIR="python" ;;
             "go"|"golang")            LANG_DIR="golang" ;;
             "typescript"|"javascript"|"node"|"nodejs") LANG_DIR="typescript" ;;

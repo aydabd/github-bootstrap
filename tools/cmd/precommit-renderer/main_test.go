@@ -136,6 +136,26 @@ func TestRunEmitLanguagesRequiresEmitDir(t *testing.T) {
 	}
 }
 
+func TestRenderConfigUsesRegexAlternationForExcludes(t *testing.T) {
+	root := t.TempDir()
+	basePath := filepath.Join(root, "templates", "languages", "agnostic", "pre-commit-snippets", "base.tmpl")
+	snippetsRoot := filepath.Join(root, "templates", "languages")
+
+	mustWrite(t, basePath, "exclude:\n  |-\n    build/\n{{EXCLUDE_BLOCK}}hooks:\n  - repo: local\n    hooks:\n{{LANGUAGE_HOOKS}}")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "vendor/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "language-hooks.txt"), "- id: golangci-lint\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "exclude-block.txt"), "node_modules/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "language-hooks.txt"), "- id: biome\n")
+
+	rendered, err := renderConfig(basePath, snippetsRoot, []string{"golang", "typescript"})
+	if err != nil {
+		t.Fatalf("renderConfig failed: %v", err)
+	}
+	if !strings.Contains(rendered, "|vendor/") || !strings.Contains(rendered, "|node_modules/") {
+		t.Fatalf("exclude alternation not rendered correctly: %s", rendered)
+	}
+}
+
 func mustWrite(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

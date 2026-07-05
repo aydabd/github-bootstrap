@@ -219,6 +219,9 @@ func collectSnippets(snippetsRoot string, languages []string) (string, string, e
 			if line == "" || seenExclude[line] {
 				continue
 			}
+			if !strings.HasPrefix(line, "|") {
+				line = "|" + line
+			}
 			seenExclude[line] = true
 			excludes = append(excludes, line)
 		}
