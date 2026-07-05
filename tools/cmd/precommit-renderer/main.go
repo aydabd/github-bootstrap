@@ -219,10 +219,11 @@ func collectSnippets(snippetsRoot string, languages []string) (string, string, e
 			if line == "" || seenExclude[line] {
 				continue
 			}
-			if !strings.HasPrefix(line, "|") {
-				line = "|" + line
+			canonical := strings.TrimPrefix(line, "|")
+			if seenExclude[canonical] {
+				continue
 			}
-			seenExclude[line] = true
+			seenExclude[canonical] = true
 			excludes = append(excludes, line)
 		}
 		hooks = append(hooks, strings.TrimSuffix(string(hkData), "\n"))

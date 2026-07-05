@@ -351,10 +351,6 @@ jobs:
             echo "::error::No valid language tokens in '$LANGUAGES'."
             exit 1
           fi
-          if [ "$has_all" = true ] && [ "$lang_count" -gt 1 ]; then
-            echo "::error::'all' cannot be combined with other language tokens."
-            exit 1
-          fi
           if [ "$has_agnostic" = true ] && [ "$lang_count" -gt 1 ]; then
             echo "::error::'language-agnostic-only' cannot be combined with other language tokens."
             exit 1

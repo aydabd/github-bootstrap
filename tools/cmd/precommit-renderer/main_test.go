@@ -51,9 +51,9 @@ func TestRunRendersCombinedAndPerLanguageFiles(t *testing.T) {
 	emitDir := filepath.Join(root, "out", ".pre-commit", "languages")
 
 	mustWrite(t, basePath, "exclude:\n  |-\n    build/\n{{EXCLUDE_BLOCK}}hooks:\n  - repo: local\n    hooks:\n{{LANGUAGE_HOOKS}}")
-	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "vendor/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "|vendor/\n")
 	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "language-hooks.txt"), "- id: golangci-lint\n")
-	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "exclude-block.txt"), "node_modules/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "exclude-block.txt"), "|node_modules/\n")
 	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "language-hooks.txt"), "- id: biome\n")
 
 	cfg := config{
@@ -69,7 +69,7 @@ func TestRunRendersCombinedAndPerLanguageFiles(t *testing.T) {
 	}
 
 	combined := mustRead(t, outPath)
-	if !strings.Contains(combined, "vendor/") || strings.Contains(combined, "node_modules/") {
+	if !strings.Contains(combined, "|vendor/") || strings.Contains(combined, "|node_modules/") {
 		t.Fatalf("combined output exclude set mismatch: %s", combined)
 	}
 	if !strings.Contains(combined, "golangci-lint") || strings.Contains(combined, "biome") {
@@ -117,7 +117,7 @@ func TestRunEmitLanguagesRequiresEmitDir(t *testing.T) {
 	outPath := filepath.Join(root, "out", ".pre-commit-config.yaml")
 
 	mustWrite(t, basePath, "exclude:\n  |-\n    build/\n{{EXCLUDE_BLOCK}}hooks:\n  - repo: local\n    hooks:\n{{LANGUAGE_HOOKS}}")
-	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "vendor/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "|vendor/\n")
 	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "language-hooks.txt"), "- id: golangci-lint\n")
 
 	cfg := config{
@@ -142,9 +142,9 @@ func TestRenderConfigUsesRegexAlternationForExcludes(t *testing.T) {
 	snippetsRoot := filepath.Join(root, "templates", "languages")
 
 	mustWrite(t, basePath, "exclude:\n  |-\n    build/\n{{EXCLUDE_BLOCK}}hooks:\n  - repo: local\n    hooks:\n{{LANGUAGE_HOOKS}}")
-	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "vendor/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "|vendor/\n")
 	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "language-hooks.txt"), "- id: golangci-lint\n")
-	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "exclude-block.txt"), "node_modules/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "exclude-block.txt"), "|node_modules/\n")
 	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "language-hooks.txt"), "- id: biome\n")
 
 	rendered, err := renderConfig(basePath, snippetsRoot, []string{"golang", "typescript"})
@@ -153,6 +153,26 @@ func TestRenderConfigUsesRegexAlternationForExcludes(t *testing.T) {
 	}
 	if !strings.Contains(rendered, "|vendor/") || !strings.Contains(rendered, "|node_modules/") {
 		t.Fatalf("exclude alternation not rendered correctly: %s", rendered)
+	}
+}
+
+func TestRenderConfigDedupesDuplicateExcludePatterns(t *testing.T) {
+	root := t.TempDir()
+	basePath := filepath.Join(root, "templates", "languages", "agnostic", "pre-commit-snippets", "base.tmpl")
+	snippetsRoot := filepath.Join(root, "templates", "languages")
+
+	mustWrite(t, basePath, "exclude:\n  |-\n    build/\n{{EXCLUDE_BLOCK}}hooks:\n  - repo: local\n    hooks:\n{{LANGUAGE_HOOKS}}")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "|vendor/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "language-hooks.txt"), "- id: golangci-lint\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "exclude-block.txt"), "|node_modules/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "language-hooks.txt"), "- id: biome\n")
+
+	rendered, err := renderConfig(basePath, snippetsRoot, []string{"golang", "typescript"})
+	if err != nil {
+		t.Fatalf("renderConfig failed: %v", err)
+	}
+	if strings.Count(rendered, "|vendor/") != 1 {
+		t.Fatalf("expected duplicate exclude to be deduped, got: %s", rendered)
 	}
 }
 
