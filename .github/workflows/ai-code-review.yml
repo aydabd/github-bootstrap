@@ -28,7 +28,7 @@ on:
 # which is misleading when the job would have simply skipped (no API key).
 # This workflow completes in seconds whether it runs or skips.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}-${{ github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: false
 
 permissions:
