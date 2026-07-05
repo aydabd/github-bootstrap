@@ -477,6 +477,10 @@ If you run Terraform directly, you can also manage rulesets through Terraform
 inputs (for example, `enable_branch_protection=true`) or configure them
 manually in repository settings.
 
+Avoid enabling both approaches for the same repository at the same time.
+Applying both the bootstrap default ruleset and Terraform ruleset management
+can create overlapping/conflicting rules on `main`.
+
 Terraform provides idempotent applies and state tracking, making it suitable for
 managing repositories as long-lived infrastructure.
 

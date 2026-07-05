@@ -37,24 +37,31 @@ runs:
 
         RULESET_NAME=$(jq -r '.name // "default"' "$RULESET_FILE")
 
-        if gh api --paginate /repos/"$OWNER"/"$REPO"/rulesets --jq '.[]?.name' 2>/dev/null | grep -Fxq "$RULESET_NAME"; then
-          echo "✅ Repository ruleset already exists: $RULESET_NAME (skipping create)" >> "$GITHUB_STEP_SUMMARY"
-          exit 0
+        EXISTING_RULESET_ID=$(gh api --paginate /repos/"$OWNER"/"$REPO"/rulesets --jq '.[] | select(.name == "'"$RULESET_NAME"'") | .id' 2>/dev/null | head -n1)
+
+        if [ -n "$EXISTING_RULESET_ID" ]; then
+          METHOD="PATCH"
+          ENDPOINT="/repos/$OWNER/$REPO/rulesets/$EXISTING_RULESET_ID"
+          ACTION_TEXT="updated"
+        else
+          METHOD="POST"
+          ENDPOINT="/repos/$OWNER/$REPO/rulesets"
+          ACTION_TEXT="applied"
         fi
 
         RESPONSE=$(gh api \
-          --method POST \
+          --method "$METHOD" \
           -H "Accept: application/vnd.github+json" \
-          /repos/"$OWNER"/"$REPO"/rulesets \
+          "$ENDPOINT" \
           --input "$RULESET_FILE" 2>&1) || {
           EXIT_CODE=$?
-          if echo "$RESPONSE" | grep -Eiq "Upgrade to GitHub Pro|public repositories with GitHub Free|rulesets are available"; then
-            echo "⚠️ Ruleset setup skipped: repository plan does not support this ruleset operation." >> "$GITHUB_STEP_SUMMARY"
-            echo "::warning::Ruleset setup skipped due to GitHub plan limitations."
+          if echo "$RESPONSE" | grep -Eiq "Upgrade to GitHub Pro|public repositories with GitHub Free|rulesets are available|Invalid request\. Invalid property /rules/|data matches no possible input|code_scanning|copilot_code_review|Advanced Security must be enabled|Copilot"; then
+            echo "⚠️ Ruleset setup skipped: repository plan/features do not support this ruleset payload." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Ruleset setup skipped due to unsupported plan/features for one or more rules."
             exit 0
           fi
           echo "$RESPONSE"
           exit "$EXIT_CODE"
         }
 
-        echo "✅ Repository ruleset applied" >> "$GITHUB_STEP_SUMMARY"
+        echo "✅ Repository ruleset $ACTION_TEXT" >> "$GITHUB_STEP_SUMMARY"
