@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+var expectedAllLanguages = append([]string{}, supportedLanguages...)
+
 func TestNormalizeLanguages(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -15,12 +17,18 @@ func TestNormalizeLanguages(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "default agnostic", input: "", want: []string{"agnostic"}},
+		{name: "explicit agnostic", input: "agnostic", want: []string{"agnostic"}},
+		{name: "language agnostic only", input: "language-agnostic-only", want: []string{"agnostic"}},
 		{name: "single alias", input: "go", want: []string{"golang"}},
+		{name: "node alias", input: "node", want: []string{"typescript"}},
+		{name: "nodejs alias", input: "nodejs", want: []string{"typescript"}},
+		{name: "kotlin alias", input: "kotlin", want: []string{"java"}},
 		{name: "multiple dedupe", input: "go,typescript,javascript,python", want: []string{"golang", "typescript", "python"}},
-		{name: "all", input: "all", want: []string{"golang", "python", "typescript", "java"}},
-		{name: "mixed all token", input: "python,all", want: []string{"golang", "python", "typescript", "java"}},
+		{name: "all", input: "all", want: expectedAllLanguages},
+		{name: "mixed all token", input: "python,all", want: expectedAllLanguages},
 		{name: "invalid agnostic with all", input: "agnostic,all", wantErr: true},
-		{name: "invalid fallback", input: "unknown", want: []string{"agnostic"}},
+		// Current drift: workflows reject unknown tokens, but the renderer falls back to agnostic.
+		{name: "current unknown token drift", input: "unknown", want: []string{"agnostic"}},
 		{name: "invalid mixed agnostic", input: "language-agnostic-only,go", wantErr: true},
 	}
 
@@ -40,6 +48,110 @@ func TestNormalizeLanguages(t *testing.T) {
 				t.Fatalf("normalizeLanguages mismatch: got %v want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestRepositoryTemplateSnapshots(t *testing.T) {
+	repoRoot := findRepoRoot(t)
+	basePath := filepath.Join(repoRoot, "templates", "languages", "agnostic", "pre-commit-snippets", "base.tmpl")
+	snippetsRoot := filepath.Join(repoRoot, "templates", "languages")
+
+	tests := []struct {
+		name             string
+		languages        []string
+		wantPresent      []string
+		wantAbsent       []string
+		wantExcludeCount map[string]int
+	}{
+		{
+			name:      "agnostic root",
+			languages: []string{"agnostic"},
+			wantAbsent: []string{
+				"id: golangci-lint",
+				"id: ruff-check",
+				"id: biome",
+				"id: spotless",
+			},
+			wantExcludeCount: map[string]int{
+				"|vendor/":       0,
+				"|dist/":         0,
+				"|node_modules/": 0,
+				"|\\.gradle/":    0,
+			},
+		},
+		{
+			name:      "all language root",
+			languages: expectedAllLanguages,
+			wantPresent: []string{
+				"id: golangci-lint",
+				"id: ruff-check",
+				"id: ruff-format",
+				"id: mypy",
+				"id: biome",
+				"id: spotless",
+				"id: checkstyle",
+			},
+			wantExcludeCount: map[string]int{
+				"|vendor/":       1,
+				"|dist/":         1,
+				"|node_modules/": 1,
+				"|\\.gradle/":    1,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rendered, err := renderConfig(basePath, snippetsRoot, tt.languages)
+			if err != nil {
+				t.Fatalf("renderConfig failed: %v", err)
+			}
+
+			for _, want := range tt.wantPresent {
+				if !strings.Contains(rendered, want) {
+					t.Fatalf("rendered config missing %q:\n%s", want, rendered)
+				}
+			}
+			for _, forbidden := range tt.wantAbsent {
+				if strings.Contains(rendered, forbidden) {
+					t.Fatalf("rendered config unexpectedly contains %q:\n%s", forbidden, rendered)
+				}
+			}
+			for pattern, wantCount := range tt.wantExcludeCount {
+				if gotCount := strings.Count(rendered, pattern); gotCount != wantCount {
+					t.Fatalf("exclude count for %q mismatch: got %d want %d", pattern, gotCount, wantCount)
+				}
+			}
+		})
+	}
+}
+
+func TestRunWithRepositoryTemplatesEmitsAllLanguageFiles(t *testing.T) {
+	repoRoot := findRepoRoot(t)
+	outputRoot := t.TempDir()
+	emitDir := filepath.Join(outputRoot, ".pre-commit", "languages")
+
+	cfg := config{
+		basePath:       filepath.Join(repoRoot, "templates", "languages", "agnostic", "pre-commit-snippets", "base.tmpl"),
+		snippetsRoot:   filepath.Join(repoRoot, "templates", "languages"),
+		languagesInput: "agnostic",
+		emitLanguages:  "all",
+		outputPath:     filepath.Join(outputRoot, ".pre-commit-config.yaml"),
+		emitDir:        emitDir,
+	}
+	if err := run(cfg); err != nil {
+		t.Fatalf("run() failed: %v", err)
+	}
+
+	for _, lang := range expectedAllLanguages {
+		if _, err := os.Stat(filepath.Join(emitDir, lang+".yaml")); err != nil {
+			t.Fatalf("expected emitted language file for %s: %v", lang, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(emitDir, "agnostic.yaml")); err == nil {
+		t.Fatal("agnostic language file should not be emitted")
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("unexpected error statting agnostic language file: %v", err)
 	}
 }
 
@@ -193,4 +305,23 @@ func mustRead(t *testing.T, path string) string {
 		t.Fatalf("read failed: %v", err)
 	}
 	return string(data)
+}
+
+func findRepoRoot(t *testing.T) string {
+	t.Helper()
+
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("get working directory: %v", err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "templates", "languages")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatal("repository root not found")
+		}
+		dir = parent
+	}
 }

@@ -23,8 +23,8 @@ low-risk PR, then this refactor can proceed in phases.
 ## Progress tracking
 
 - Phase 0: In progress. Shared request validation and the behavior contract are
-  implemented on `chore/bootstrap-validation-actions`; baseline and snapshot
-  tests still remain.
+  implemented; baseline renderer tests are started, and broader workflow/snapshot
+  coverage still remains.
 - Phase 1: Not started. Start after the Phase 0 changes land on `main`.
 - Phase 2: Not started. Depends on the normalization contract from Phase 1.
 - Phase 3: Not started. Can start after production workflow behavior is stable.
@@ -144,7 +144,13 @@ align with production behavior:
 
 1. [x] Extract exact duplicated request validation into small composite actions.
 2. [ ] Freeze behavior with tests for current accepted inputs.
+   - [x] Add pre-commit renderer baseline tests for language aliases and current
+         unknown-token drift.
+   - [ ] Add workflow-level input validation characterization tests.
 3. [ ] Add snapshot tests for generated key files.
+   - [x] Add snapshot-style assertions for pre-commit config generated from real
+         language snippets.
+   - [ ] Add file snapshots for generated repository key files.
 4. [x] Document behavior contract in one markdown file.
 
 Exit criteria:
