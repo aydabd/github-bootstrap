@@ -52,7 +52,7 @@ func TestValidateBootstrapInputsContract(t *testing.T) {
 				"LANGUAGES": "python,rust",
 			}),
 			wantErr:    true,
-			wantStderr: "Unknown language token 'rust'",
+			wantStderr: "unknown language token \"rust\"",
 		},
 		{
 			name: "language agnostic cannot combine",
@@ -60,7 +60,7 @@ func TestValidateBootstrapInputsContract(t *testing.T) {
 				"LANGUAGES": "language-agnostic-only,go",
 			}),
 			wantErr:    true,
-			wantStderr: "language-agnostic-only' cannot be combined",
+			wantStderr: "language-agnostic-only cannot be combined",
 		},
 		{
 			name: "languages cannot contain spaces",
@@ -76,7 +76,7 @@ func TestValidateBootstrapInputsContract(t *testing.T) {
 				"PYTHON_VERSION": "3",
 			}),
 			wantErr:    true,
-			wantStderr: "Invalid python_version '3'",
+			wantStderr: "invalid python_version \"3\"",
 		},
 		{
 			name: "invalid node version",
@@ -84,7 +84,7 @@ func TestValidateBootstrapInputsContract(t *testing.T) {
 				"NODE_VERSION": "24.1",
 			}),
 			wantErr:    true,
-			wantStderr: "Invalid node_version '24.1'",
+			wantStderr: "invalid node_version \"24.1\"",
 		},
 		{
 			name: "invalid go version",
@@ -92,7 +92,7 @@ func TestValidateBootstrapInputsContract(t *testing.T) {
 				"GO_VERSION": "1",
 			}),
 			wantErr:    true,
-			wantStderr: "Invalid go_version '1'",
+			wantStderr: "invalid go_version \"1\"",
 		},
 		{
 			name: "invalid java version",
@@ -100,7 +100,7 @@ func TestValidateBootstrapInputsContract(t *testing.T) {
 				"JAVA_VERSION": "25.0",
 			}),
 			wantErr:    true,
-			wantStderr: "Invalid java_version '25.0'",
+			wantStderr: "invalid java_version \"25.0\"",
 		},
 	}
 
