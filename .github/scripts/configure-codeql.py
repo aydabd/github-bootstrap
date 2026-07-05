@@ -14,10 +14,13 @@ from pathlib import Path
 LANGUAGE_MAP = {
     "javascript": "javascript-typescript",
     "typescript": "javascript-typescript",
+    "javascript-typescript": "javascript-typescript",
     "python": "python",
     "java": "java-kotlin",
     "kotlin": "java-kotlin",
+    "java-kotlin": "java-kotlin",
     "go": "go",
+    "golang": "go",
     "csharp": "csharp",
     "cpp": "cpp",
     "ruby": "ruby",

@@ -329,54 +329,33 @@ jobs:
             echo "::error::Invalid languages input '$LANGUAGES'. Use comma-separated language identifiers."
             exit 1
           fi
-          IFS=',' read -ra LANG_PARTS <<< "$LANGUAGES"
-          has_agnostic=false
-          lang_count=0
-          for lang in "${LANG_PARTS[@]}"; do
-            normalized=$(echo "$lang" | xargs | tr '[:upper:]' '[:lower:]')
-            case "$normalized" in
-              language-agnostic-only|agnostic)
-                has_agnostic=true
-                lang_count=$((lang_count + 1))
-                ;;
-              all)
-                lang_count=$((lang_count + 1))
-                ;;
-              go|golang|python|typescript|javascript|node|nodejs|java|kotlin)
-                lang_count=$((lang_count + 1))
-                ;;
-              *)
-                echo "::error::Unknown language token '$normalized' in '$LANGUAGES'."
-                exit 1
-                ;;
-            esac
-          done
-          if [ "$lang_count" -eq 0 ]; then
-            echo "::error::No valid language tokens in '$LANGUAGES'."
-            exit 1
-          fi
-          if [ "$has_agnostic" = true ] && [ "$lang_count" -gt 1 ]; then
-            echo "::error::'language-agnostic-only' cannot be combined with other language tokens."
-            exit 1
-          fi
-          if ! [[ "$PYTHON_VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
-            echo "::error::Invalid python_version '$PYTHON_VERSION'"
-            exit 1
-          fi
-          if ! [[ "$NODE_VERSION" =~ ^[0-9]+$ ]]; then
-            echo "::error::Invalid node_version '$NODE_VERSION'"
-            exit 1
-          fi
-          if ! [[ "$GO_VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
-            echo "::error::Invalid go_version '$GO_VERSION'"
-            exit 1
-          fi
-          if ! [[ "$JAVA_VERSION" =~ ^[0-9]+$ ]]; then
-            echo "::error::Invalid java_version '$JAVA_VERSION'"
+
+          if ! NORMALIZED_JSON=$(go run ./tools/cmd/bootstrap-inputs \
+            --mode validate \
+            --languages "$LANGUAGES" \
+            --python-version "$PYTHON_VERSION" \
+            --node-version "$NODE_VERSION" \
+            --go-version "$GO_VERSION" \
+            --java-version "$JAVA_VERSION" 2>/tmp/bootstrap-inputs-validate.err.json); then
+            if [ -s /tmp/bootstrap-inputs-validate.err.json ]; then
+              ERROR_MESSAGE=$(jq -r '.message // "bootstrap input validation failed"' /tmp/bootstrap-inputs-validate.err.json 2>/dev/null || echo "bootstrap input validation failed")
+              echo "::error::$ERROR_MESSAGE"
+            else
+              echo "::error::bootstrap input validation failed"
+            fi
             exit 1
           fi
 
+          NORMALIZED_LANGUAGES=$(echo "$NORMALIZED_JSON" | jq -r '.languages | join(",")')
+          ROOT_LANGUAGE=$(echo "$NORMALIZED_JSON" | jq -r '.root_language')
+          RELEASE_TYPE=$(echo "$NORMALIZED_JSON" | jq -r '.release_type')
+          CODEQL_LANGUAGES=$(echo "$NORMALIZED_JSON" | jq -r '.codeql_languages | join(",")')
+
           echo "languages=$LANGUAGES" >> "$GITHUB_OUTPUT"
+          echo "normalized_languages=$NORMALIZED_LANGUAGES" >> "$GITHUB_OUTPUT"
+          echo "root_language=$ROOT_LANGUAGE" >> "$GITHUB_OUTPUT"
+          echo "release_type=$RELEASE_TYPE" >> "$GITHUB_OUTPUT"
+          echo "codeql_languages=$CODEQL_LANGUAGES" >> "$GITHUB_OUTPUT"
           echo "env_manager=$ENV_MANAGER" >> "$GITHUB_OUTPUT"
           echo "python_version=$PYTHON_VERSION" >> "$GITHUB_OUTPUT"
           echo "node_version=$NODE_VERSION" >> "$GITHUB_OUTPUT"
@@ -554,7 +533,9 @@ jobs:
 
       - name: Configure language tooling
         env:
-          LANGUAGES: ${{ steps.validate-inputs.outputs.languages }}
+          LANGUAGES: ${{ steps.validate-inputs.outputs.normalized_languages }}
+          RAW_LANGUAGES: ${{ steps.validate-inputs.outputs.languages }}
+          ROOT_LANGUAGE: ${{ steps.validate-inputs.outputs.root_language }}
           ENV_MANAGER: ${{ steps.validate-inputs.outputs.env_manager }}
           REPO_NAME: ${{ inputs.repo_name }}
           PYTHON_VERSION: ${{ steps.validate-inputs.outputs.python_version }}
@@ -562,21 +543,10 @@ jobs:
           GO_VERSION: ${{ steps.validate-inputs.outputs.go_version }}
           JAVA_VERSION: ${{ steps.validate-inputs.outputs.java_version }}
         run: |
-          # Map languages input to template directory.
-          # Use the first language when multiple are specified.
-          # Supported: language-agnostic-only, python, golang, typescript, java
-          FIRST_LANG=$(echo "$LANGUAGES" | cut -d',' -f1 | xargs)
-          if echo "$LANGUAGES" | grep -q ','; then
-            echo "⚠️ Multiple languages provided ($LANGUAGES). Tooling template uses first language: $FIRST_LANG" >> $GITHUB_STEP_SUMMARY
+          LANG_DIR="$ROOT_LANGUAGE"
+          if echo "$RAW_LANGUAGES" | grep -q ','; then
+            echo "⚠️ Multiple languages provided ($RAW_LANGUAGES). Tooling template uses first language policy: $LANG_DIR" >> $GITHUB_STEP_SUMMARY
           fi
-          case "$FIRST_LANG" in
-            "all")                    LANG_DIR="agnostic" ;;
-            "python")                 LANG_DIR="python" ;;
-            "go"|"golang")            LANG_DIR="golang" ;;
-            "typescript"|"javascript"|"node"|"nodejs") LANG_DIR="typescript" ;;
-            "java"|"kotlin")          LANG_DIR="java" ;;
-            *)                        LANG_DIR="agnostic" ;;
-          esac
 
           TEMPLATE_DIR="templates/languages/$LANG_DIR"
           PROVIDER_DIR="$TEMPLATE_DIR/providers/$ENV_MANAGER"
@@ -721,38 +691,14 @@ jobs:
           esac
 
       - name: Configure Release Please for selected languages
+        env:
+          RELEASE_TYPE: ${{ steps.validate-inputs.outputs.release_type }}
         run: |
           case "${{ inputs.release_tool }}" in
             "release-please") ;;
             *) echo "⏭️ Release Please configuration skipped (release_tool=${{ inputs.release_tool }})"; exit 0 ;;
           esac
           cd new-repo
-          LANGUAGES="${{ inputs.languages }}"
-
-          # Map language to release-please release-type
-          # See: https://github.com/googleapis/release-please#supported-release-types
-          get_release_type() {
-            local lang=$1
-            case "$lang" in
-              "javascript"|"typescript") echo "node" ;;
-              "python")                  echo "python" ;;
-              "go")                      echo "go" ;;
-              "rust")                    echo "rust" ;;
-              "java"|"kotlin")           echo "java" ;;
-              "ruby")                    echo "ruby" ;;
-              "php")                     echo "php" ;;
-              "terraform")              echo "terraform-module" ;;
-              *)                         echo "simple" ;;
-            esac
-          }
-
-          RELEASE_TYPE="simple"
-
-          if [ "$LANGUAGES" != "all" ] && [ "$LANGUAGES" != "language-agnostic-only" ]; then
-            # Use the first language in the comma-separated list to determine release type
-            FIRST_LANG=$(echo "$LANGUAGES" | cut -d',' -f1 | xargs)
-            RELEASE_TYPE=$(get_release_type "$FIRST_LANG")
-          fi
 
           # Update release-please-config.json with the correct release type
           jq --arg rt "$RELEASE_TYPE" '."release-type" = $rt' release-please-config.json > tmp.json && mv tmp.json release-please-config.json
@@ -760,7 +706,7 @@ jobs:
 
       - name: Configure CodeQL for selected languages
         env:
-          CODEQL_INPUT_LANGUAGES: ${{ inputs.languages }}
+          CODEQL_INPUT_LANGUAGES: ${{ steps.validate-inputs.outputs.codeql_languages }}
         run: |
           cd new-repo
           python3 "$GITHUB_WORKSPACE/.github/scripts/configure-codeql.py"
