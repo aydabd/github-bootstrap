@@ -213,12 +213,12 @@ jobs:
             # This avoids relying on branch-only filtering so tag refs are supported.
             RUN_STATUS=$(gh api \
               "/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=20&event=workflow_dispatch" \
-              --jq --arg actor "$GITHUB_ACTOR" --arg since "$TRIGGERED_AT" '
-                [.workflow_runs[]
-                | select(.actor.login == $actor)
-                | select(.created_at >= $since)
-                | {status: .status, conclusion: .conclusion, html_url: .html_url}]
-                | first // {}')
+              | jq -c --arg ref "$TARGET_REF" --arg since "$TRIGGERED_AT" '
+                  [.workflow_runs[]
+                  | select(.head_branch == $ref)
+                  | select(.created_at >= $since)
+                  | {status: .status, conclusion: .conclusion, html_url: .html_url}]
+                  | first // {}')
 
             if [ "$RUN_STATUS" = "{}" ]; then
               echo "⏳ Waiting for matching workflow run to appear... (check $i/60)"
