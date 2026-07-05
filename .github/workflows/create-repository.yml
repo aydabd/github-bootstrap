@@ -61,22 +61,34 @@ on:
         description: "Python runtime version for generated tooling (default: latest stable)"
         required: false
         default: "3.13"
-        type: string
+        type: choice
+        options:
+          - "3.13"
+          - "3.12"
       node_version:
         description: "Node.js major LTS version for generated tooling"
         required: false
         default: "24"
-        type: string
+        type: choice
+        options:
+          - "24"
+          - "22"
       go_version:
         description: "Go stable version for generated tooling"
         required: false
-        default: "1.25"
-        type: string
+        default: "1.26"
+        type: choice
+        options:
+          - "1.26"
+          - "1.25"
       java_version:
         description: "Java LTS version for generated tooling"
         required: false
         default: "25"
-        type: string
+        type: choice
+        options:
+          - "25"
+          - "21"
       release_tool:
         description: >-
           Release automation tool:
@@ -193,7 +205,7 @@ on:
         type: string
       go_version:
         required: false
-        default: "1.25"
+        default: "1.26"
         type: string
       java_version:
         required: false
@@ -309,6 +321,42 @@ jobs:
 
           if ! [[ "$LANGUAGES" =~ ^[a-zA-Z0-9,_-]+$ ]]; then
             echo "::error::Invalid languages input '$LANGUAGES'. Use comma-separated language identifiers."
+            exit 1
+          fi
+          IFS=',' read -ra LANG_PARTS <<< "$LANGUAGES"
+          has_all=false
+          has_agnostic=false
+          lang_count=0
+          for lang in "${LANG_PARTS[@]}"; do
+            normalized=$(echo "$lang" | xargs | tr '[:upper:]' '[:lower:]')
+            case "$normalized" in
+              language-agnostic-only|agnostic)
+                has_agnostic=true
+                lang_count=$((lang_count + 1))
+                ;;
+              all)
+                has_all=true
+                lang_count=$((lang_count + 1))
+                ;;
+              go|golang|python|typescript|javascript|node|nodejs|java|kotlin)
+                lang_count=$((lang_count + 1))
+                ;;
+              *)
+                echo "::error::Unknown language token '$normalized' in '$LANGUAGES'."
+                exit 1
+                ;;
+            esac
+          done
+          if [ "$lang_count" -eq 0 ]; then
+            echo "::error::No valid language tokens in '$LANGUAGES'."
+            exit 1
+          fi
+          if [ "$has_all" = true ] && [ "$lang_count" -gt 1 ]; then
+            echo "::error::'all' cannot be combined with other language tokens."
+            exit 1
+          fi
+          if [ "$has_agnostic" = true ] && [ "$lang_count" -gt 1 ]; then
+            echo "::error::'language-agnostic-only' cannot be combined with other language tokens."
             exit 1
           fi
           if ! [[ "$PYTHON_VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
@@ -664,7 +712,7 @@ jobs:
           go run ./tools/cmd/precommit-renderer \
             --base "$PRECOMMIT_BASE_TEMPLATE" \
             --snippets-root "$PRECOMMIT_SNIPPETS_ROOT" \
-            --languages "$FIRST_LANG" \
+            --languages "$LANG_DIR" \
             --emit-languages "$LANGUAGES" \
             --output "$REPO_DIR/.pre-commit-config.yaml" \
             --emit-language-files-dir "$REPO_DIR/.pre-commit/languages"

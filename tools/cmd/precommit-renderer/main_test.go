@@ -18,6 +18,7 @@ func TestNormalizeLanguages(t *testing.T) {
 		{name: "single alias", input: "go", want: []string{"golang"}},
 		{name: "multiple dedupe", input: "go,typescript,javascript,python", want: []string{"golang", "typescript", "python"}},
 		{name: "all", input: "all", want: []string{"golang", "python", "typescript", "java"}},
+		{name: "mixed all token", input: "python,all", want: []string{"golang", "python", "typescript", "java"}},
 		{name: "invalid fallback", input: "unknown", want: []string{"agnostic"}},
 		{name: "invalid mixed agnostic", input: "language-agnostic-only,go", wantErr: true},
 	}

@@ -201,7 +201,7 @@ Your new repository is created with all templates and settings.
 | `env_manager`              | Yes      | -                                        | Environment manager: `micromamba`, `mise`, or `system`                                                        |
 | `python_version`           | No       | `3.13`                                   | Python runtime version used by generated tooling files                                                        |
 | `node_version`             | No       | `24`                                     | Node.js major LTS version used by generated tooling files                                                     |
-| `go_version`               | No       | `1.25`                                   | Go stable version used by generated tooling files                                                             |
+| `go_version`               | No       | `1.26`                                   | Go stable version used by generated tooling files                                                             |
 | `java_version`             | No       | `25`                                     | Java LTS version used by generated tooling files                                                              |
 | `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release`                                 |
 | `app_id`                   | No       | -                                        | GitHub App ID for App-based authentication (recommended)                                                      |

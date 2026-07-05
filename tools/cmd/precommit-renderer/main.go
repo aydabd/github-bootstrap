@@ -109,16 +109,25 @@ func normalizeLanguages(input string) ([]string, error) {
 	raw := strings.Split(trimmed, ",")
 	seen := map[string]bool{}
 	langs := make([]string, 0, len(raw))
+	hasAll := false
 
 	for _, item := range raw {
 		normalized := normalizeAlias(item)
 		if normalized == "" {
 			continue
 		}
+		if normalized == "all" {
+			hasAll = true
+			continue
+		}
 		if !seen[normalized] {
 			langs = append(langs, normalized)
 			seen[normalized] = true
 		}
+	}
+
+	if hasAll {
+		return append([]string{}, supportedLanguages...), nil
 	}
 
 	if len(langs) == 0 {
@@ -149,6 +158,8 @@ func normalizeAlias(value string) string {
 		return "typescript"
 	case "java", "kotlin":
 		return "java"
+	case "all":
+		return "all"
 	default:
 		return ""
 	}
