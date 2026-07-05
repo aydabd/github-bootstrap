@@ -16,8 +16,8 @@
 exclude: |-
   (?x)^(
     build/
-    dist/
-    node_modules/
+    |dist/
+    |node_modules/
   )
 repos:
   # ── Standard file hygiene ──────────────────────────────────────────────────

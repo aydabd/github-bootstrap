@@ -16,7 +16,7 @@
 exclude: |-
   (?x)^(
     build/
-    vendor/
+    |vendor/
   )
 repos:
   # ── Standard file hygiene ──────────────────────────────────────────────────
