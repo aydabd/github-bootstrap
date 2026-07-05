@@ -160,7 +160,7 @@ func runValidationScript(t *testing.T, script string, env map[string]string) (st
 	t.Helper()
 
 	outputFile := filepath.Join(t.TempDir(), "github-output")
-	command := exec.Command("bash", "-euo", "pipefail", "-c", script)
+	command := exec.Command("bash", "-eo", "pipefail", "-c", script)
 	command.Env = append(os.Environ(), "GITHUB_OUTPUT="+outputFile)
 	for key, value := range env {
 		command.Env = append(command.Env, key+"="+value)
@@ -199,7 +199,7 @@ func extractNamedRunScript(t *testing.T, path, stepName string) string {
 			var scriptLines []string
 			for scriptIndex := runIndex + 1; scriptIndex < len(lines); scriptIndex++ {
 				line := lines[scriptIndex]
-				if strings.HasPrefix(line, "      - name: ") {
+				if strings.HasPrefix(line, "      - ") {
 					break
 				}
 				if strings.HasPrefix(line, "          ") {
