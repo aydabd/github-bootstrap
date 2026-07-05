@@ -745,11 +745,9 @@ jobs:
           echo "Release Please configured with release-type: $RELEASE_TYPE" >> $GITHUB_STEP_SUMMARY
 
       - name: Configure CodeQL for selected languages
-        env:
-          CODEQL_INPUT_LANGUAGES: ${{ steps.validate-inputs.outputs.codeql_languages }}
-        run: |
-          cd new-repo
-          python3 "$GITHUB_WORKSPACE/.github/scripts/configure-codeql.py"
+        uses: ./.github/actions/configure-codeql
+        with:
+          codeql_input_languages: ${{ steps.validate-inputs.outputs.codeql_languages }}
 
       - name: Commit and push files
         id: push-files

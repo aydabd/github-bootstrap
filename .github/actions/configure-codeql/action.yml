@@ -1,0 +1,24 @@
+---
+name: Configure CodeQL
+description: Configure the CodeQL workflow for the selected languages.
+
+inputs:
+  codeql_input_languages:
+    description: Normalized CodeQL language identifiers from bootstrap input validation.
+    required: true
+  working_directory:
+    description: Working directory containing the generated repository to configure.
+    required: false
+    default: new-repo
+
+runs:
+  using: composite
+  steps:
+    - name: Configure CodeQL for selected languages
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        CODEQL_INPUT_LANGUAGES: ${{ inputs.codeql_input_languages }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+      run: |
+        python3 "$GITHUB_WORKSPACE/.github/scripts/configure-codeql.py"
