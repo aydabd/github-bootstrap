@@ -284,6 +284,11 @@ jobs:
           repository: ${{ steps.bootstrap-repo.outputs.repository }}
           ref: ${{ github.workflow_sha }}
 
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: tools/go.mod
+
       - name: Set repository owner
         id: set-owner
         run: |
