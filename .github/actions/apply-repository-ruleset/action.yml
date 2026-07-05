@@ -1,0 +1,53 @@
+---
+name: Apply Repository Ruleset
+description: >-
+  Apply the default repository ruleset JSON to the target repository.
+  Uses a skip-with-warning path for known plan limitations on rulesets.
+
+inputs:
+  owner:
+    description: Repository owner (user or organization).
+    required: true
+  repo_name:
+    description: Target repository name.
+    required: true
+  gh_token:
+    description: GitHub token with repository administration permissions.
+    required: true
+  ruleset_file:
+    description: Path to the ruleset JSON payload.
+    required: false
+    default: .github/config/ruleset-default.json
+
+runs:
+  using: composite
+  steps:
+    - name: Apply default repository ruleset
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+        OWNER: ${{ inputs.owner }}
+        REPO: ${{ inputs.repo_name }}
+        RULESET_FILE: ${{ inputs.ruleset_file }}
+      run: |
+        if [ ! -f "$RULESET_FILE" ]; then
+          echo "::error::Ruleset file not found: $RULESET_FILE"
+          exit 1
+        fi
+
+        RESPONSE=$(gh api \
+          --method POST \
+          -H "Accept: application/vnd.github+json" \
+          /repos/"$OWNER"/"$REPO"/rulesets \
+          --input "$RULESET_FILE" 2>&1) || {
+          EXIT_CODE=$?
+          if echo "$RESPONSE" | grep -Eiq "Upgrade to GitHub Pro|public repositories with GitHub Free|rulesets are available"; then
+            echo "⚠️ Ruleset setup skipped: repository plan does not support this ruleset operation." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Ruleset setup skipped due to GitHub plan limitations."
+            exit 0
+          fi
+          echo "$RESPONSE"
+          exit "$EXIT_CODE"
+        }
+
+        echo "✅ Repository ruleset applied" >> "$GITHUB_STEP_SUMMARY"

@@ -669,6 +669,13 @@ jobs:
           enable_repo_settings: ${{ inputs.enable_repo_settings }}
           gh_token: ${{ steps.resolve-token.outputs.token }}
 
+      - name: Apply repository ruleset
+        uses: ./.github/actions/apply-repository-ruleset
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          repo_name: ${{ inputs.repo_name }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
+
       - name: Summary
         run: |
           echo "✅ Repository created successfully!" >> $GITHUB_STEP_SUMMARY
@@ -691,12 +698,14 @@ jobs:
             "true")
               echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Vulnerability alerts and Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
               ;;
             *)
               echo "- ⏭️ Dependabot configuration (skipped)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped)" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Development environment (skipped)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Production environment (skipped)" >> $GITHUB_STEP_SUMMARY
               ;;

@@ -46,7 +46,7 @@ resource "github_repository_environment" "prod" {
 resource "github_repository_ruleset" "main_protection" {
   count = var.enable_repo_settings && var.enable_branch_protection ? 1 : 0
 
-  name        = "main-protection"
+  name        = "default"
   repository  = github_repository.new_repo.name
   target      = "branch"
   enforcement = "active"

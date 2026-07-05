@@ -653,6 +653,13 @@ jobs:
           enable_dependabot: "true"
           gh_token: ${{ steps.resolve-token.outputs.token }}
 
+      - name: Apply repository ruleset
+        uses: ./.github/actions/apply-repository-ruleset
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          repo_name: ${{ inputs.repo_name }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
+
       - name: Summary
         run: |
           echo "✅ Repository created successfully via Terraform!" >> $GITHUB_STEP_SUMMARY
@@ -672,11 +679,13 @@ jobs:
             "true")
               echo "- ✅ Vulnerability alerts enabled" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Development environment (Terraform-managed; not modified here)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Production environment (Terraform-managed; not modified here)" >> $GITHUB_STEP_SUMMARY
               ;;
             *)
               echo "- ⏭️ Environments and Dependabot skipped" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
               ;;
           esac
           echo "" >> $GITHUB_STEP_SUMMARY
