@@ -82,7 +82,7 @@ func TestRunValidateSuccess(t *testing.T) {
 	if !result.Valid {
 		t.Fatal("expected valid result")
 	}
-	if result.ReleaseType != "simple" {
+	if result.ReleaseType != "go" {
 		t.Fatalf("unexpected release type in validate mode: %s", result.ReleaseType)
 	}
 }
