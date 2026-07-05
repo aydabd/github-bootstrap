@@ -22,10 +22,10 @@ low-risk PR, then this refactor can proceed in phases.
 
 ## Progress tracking
 
-- Phase 0: In progress. Shared request validation and the behavior contract are
-  implemented; baseline renderer/workflow validation and generated-file snapshot
-  tests are implemented, and only CI confirmation remains.
-- Phase 1: Not started. Start after the Phase 0 changes land on `main`.
+- Phase 0: Completed. Validation extraction, behavior contract, baseline tests,
+  generated-file snapshots, and CI confirmation are all complete on `main`.
+- Phase 1: In progress. Shared normalization package and command wrapper are
+  implemented with tests; renderer and workflow migrations are next.
 - Phase 2: Not started. Depends on the normalization contract from Phase 1.
 - Phase 3: Not started. Can start after production workflow behavior is stable.
 - Phase 4: Not started. Final documentation pass after the implementation phases.
@@ -143,11 +143,11 @@ align with production behavior:
 ### Phase 0: Baseline and guardrails
 
 - [x] Extract exact duplicated request validation into small composite actions.
-- [ ] Freeze behavior with tests for current accepted inputs.
+- [x] Freeze behavior with tests for current accepted inputs.
   - [x] Add pre-commit renderer baseline tests for language aliases and current
         unknown-token drift.
   - [x] Add workflow-level input validation characterization tests.
-- [ ] Add snapshot tests for generated key files.
+- [x] Add snapshot tests for generated key files.
   - [x] Add snapshot-style assertions for pre-commit config generated from real
         language snippets.
   - [x] Add file snapshots for generated repository key files.
@@ -157,17 +157,17 @@ Exit criteria:
 
 - [x] duplicated allowlist/audit/App-vs-User shell is removed from both creation
       workflows
-- [ ] green CI
+- [x] green CI
 - [x] baseline snapshots committed
 - [x] current accepted and rejected language/runtime inputs are documented in
       `docs/repository-creation-behavior-contract.md`
 
 ### Phase 1: Canonical input normalization
 
-1. [ ] Implement `tools/pkg/bootstrapinputs` with tests covering aliases, `all`,
+1. [x] Implement `tools/pkg/bootstrapinputs` with tests covering aliases, `all`,
        `language-agnostic-only`, invalid tokens, runtime pins, root language policy,
        and release type mapping.
-2. [ ] Implement `tools/cmd/bootstrap-inputs` as a thin CLI over the package.
+2. [x] Implement `tools/cmd/bootstrap-inputs` as a thin CLI over the package.
 3. [ ] Migrate `tools/cmd/precommit-renderer` to use the shared package.
 4. [ ] Migrate `create-repository.yml` to consume normalized outputs.
 5. [ ] Migrate `terraform-create-repository.yml` to consume normalized outputs.
