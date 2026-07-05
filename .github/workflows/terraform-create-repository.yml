@@ -652,31 +652,13 @@ jobs:
           git push
           echo "✅ Template files pushed" >> $GITHUB_STEP_SUMMARY
 
-      - name: Enable Dependabot security features
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          case "${{ inputs.enable_repo_settings }}" in
-            "true") ;;
-            *) echo "⏭️ Dependabot skipped (enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY; exit 0 ;;
-          esac
-
-          OWNER="${{ steps.set-owner.outputs.owner }}"
-          REPO="${{ inputs.repo_name }}"
-
-          # Enable Dependabot vulnerability alerts
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/vulnerability-alerts
-          echo "✅ Vulnerability alerts enabled" >> $GITHUB_STEP_SUMMARY
-
-          # Enable Dependabot automated security fixes
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/automated-security-fixes
-          echo "✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
+      - name: Apply repository settings
+        uses: ./.github/actions/apply-repo-settings
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          repo_name: ${{ inputs.repo_name }}
+          enable_repo_settings: ${{ inputs.enable_repo_settings }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
 
       - name: Summary
         run: |

@@ -672,81 +672,21 @@ jobs:
           echo "✅ Template files pushed" >> $GITHUB_STEP_SUMMARY
 
       - name: Apply repository settings
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          case "${{ inputs.enable_repo_settings }}" in
-            "true") ;;
-            *)
-              echo "⏭️ Repository settings skipped (enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
-              exit 0
-              ;;
-          esac
-
-          OWNER="${{ steps.set-owner.outputs.owner }}"
-          REPO="${{ inputs.repo_name }}"
-
-          # Apply repository settings
-          gh api \
-            --method PATCH \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO \
-            --input ".github/config/repo-settings.json"
-
-          # Create dev environment (no wait, no reviewers required)
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/environments/dev
-          echo "✅ Development environment created" >> $GITHUB_STEP_SUMMARY
-
-          # Create prod environment
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/environments/prod
-          echo "✅ Production environment created" >> $GITHUB_STEP_SUMMARY
-
-          # Enable Dependabot vulnerability alerts
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/vulnerability-alerts
-          echo "✅ Vulnerability alerts enabled" >> $GITHUB_STEP_SUMMARY
-
-          # Enable Dependabot automated security fixes
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/automated-security-fixes
-          echo "✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
+        uses: ./.github/actions/apply-repo-settings
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          repo_name: ${{ inputs.repo_name }}
+          enable_repo_settings: ${{ inputs.enable_repo_settings }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
 
       - name: Apply branch protection rules
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          case "${{ inputs.enable_repo_settings }}/${{ inputs.enable_branch_protection }}" in
-            "true/true") ;;
-            *)
-              echo "⏭️ Branch protection skipped" >> $GITHUB_STEP_SUMMARY
-              exit 0
-              ;;
-          esac
-          sleep 3
-          RESPONSE=$(gh api \
-            --method POST \
-            -H "Accept: application/vnd.github+json" \
-            /repos/${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}/rulesets \
-            --input ".github/config/branch-protection.json" 2>&1) || {
-            EXIT_CODE=$?
-            if echo "$RESPONSE" | grep -q "Upgrade to GitHub Pro"; then
-              echo "⚠️ Branch protection rulesets require GitHub Pro or a public repository. Skipping." >> $GITHUB_STEP_SUMMARY
-              echo "::warning::Branch protection skipped: rulesets require GitHub Pro or a public repository."
-              exit 0
-            fi
-            echo "$RESPONSE"
-            exit $EXIT_CODE
-          }
+        uses: ./.github/actions/apply-branch-protection
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          repo_name: ${{ inputs.repo_name }}
+          enable_repo_settings: ${{ inputs.enable_repo_settings }}
+          enable_branch_protection: ${{ inputs.enable_branch_protection }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
 
       - name: Summary
         run: |
