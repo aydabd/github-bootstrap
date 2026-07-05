@@ -14,6 +14,18 @@ inputs:
   enable_repo_settings:
     description: Whether to apply repository settings and Dependabot configuration.
     required: true
+  apply_repository_settings:
+    description: Whether to PATCH repository settings JSON.
+    required: false
+    default: "true"
+  manage_environments:
+    description: Whether to create dev/prod environments when missing.
+    required: false
+    default: "true"
+  enable_dependabot:
+    description: Whether to enable Dependabot vulnerability and security updates.
+    required: false
+    default: "true"
   gh_token:
     description: GitHub token with repository administration permissions.
     required: true
@@ -28,6 +40,9 @@ runs:
         OWNER: ${{ inputs.owner }}
         REPO: ${{ inputs.repo_name }}
         ENABLE: ${{ inputs.enable_repo_settings }}
+        APPLY_REPO_SETTINGS: ${{ inputs.apply_repository_settings }}
+        MANAGE_ENVIRONMENTS: ${{ inputs.manage_environments }}
+        ENABLE_DEPENDABOT: ${{ inputs.enable_dependabot }}
       run: |
         case "$ENABLE" in
           "true") ;;
@@ -37,37 +52,61 @@ runs:
             ;;
         esac
 
-        # Apply repository settings from config file
-        gh api \
-          --method PATCH \
-          -H "Accept: application/vnd.github+json" \
-          /repos/"$OWNER"/"$REPO" \
-          --input ".github/config/repo-settings.json"
+        case "$APPLY_REPO_SETTINGS" in
+          "true")
+            gh api \
+              --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              /repos/"$OWNER"/"$REPO" \
+              --input ".github/config/repo-settings.json"
+            ;;
+          *)
+            echo "⏭️ Repository settings PATCH skipped (apply_repository_settings=false)" >> "$GITHUB_STEP_SUMMARY"
+            ;;
+        esac
 
-        # Create dev environment (no wait, no reviewers required)
-        gh api \
-          --method PUT \
-          -H "Accept: application/vnd.github+json" \
-          /repos/"$OWNER"/"$REPO"/environments/dev
-        echo "✅ Development environment created" >> "$GITHUB_STEP_SUMMARY"
+        case "$MANAGE_ENVIRONMENTS" in
+          "true")
+            if gh api /repos/"$OWNER"/"$REPO"/environments/dev >/dev/null 2>&1; then
+              echo "✅ Development environment already exists" >> "$GITHUB_STEP_SUMMARY"
+            else
+              gh api \
+                --method PUT \
+                -H "Accept: application/vnd.github+json" \
+                /repos/"$OWNER"/"$REPO"/environments/dev
+              echo "✅ Development environment created" >> "$GITHUB_STEP_SUMMARY"
+            fi
 
-        # Create prod environment
-        gh api \
-          --method PUT \
-          -H "Accept: application/vnd.github+json" \
-          /repos/"$OWNER"/"$REPO"/environments/prod
-        echo "✅ Production environment created" >> "$GITHUB_STEP_SUMMARY"
+            if gh api /repos/"$OWNER"/"$REPO"/environments/prod >/dev/null 2>&1; then
+              echo "✅ Production environment already exists" >> "$GITHUB_STEP_SUMMARY"
+            else
+              gh api \
+                --method PUT \
+                -H "Accept: application/vnd.github+json" \
+                /repos/"$OWNER"/"$REPO"/environments/prod
+              echo "✅ Production environment created" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            ;;
+          *)
+            echo "⏭️ Environment management skipped (manage_environments=false)" >> "$GITHUB_STEP_SUMMARY"
+            ;;
+        esac
 
-        # Enable Dependabot vulnerability alerts
-        gh api \
-          --method PUT \
-          -H "Accept: application/vnd.github+json" \
-          /repos/"$OWNER"/"$REPO"/vulnerability-alerts
-        echo "✅ Vulnerability alerts enabled" >> "$GITHUB_STEP_SUMMARY"
+        case "$ENABLE_DEPENDABOT" in
+          "true")
+            gh api \
+              --method PUT \
+              -H "Accept: application/vnd.github+json" \
+              /repos/"$OWNER"/"$REPO"/vulnerability-alerts
+            echo "✅ Vulnerability alerts enabled" >> "$GITHUB_STEP_SUMMARY"
 
-        # Enable Dependabot automated security fixes
-        gh api \
-          --method PUT \
-          -H "Accept: application/vnd.github+json" \
-          /repos/"$OWNER"/"$REPO"/automated-security-fixes
-        echo "✅ Dependabot security updates enabled" >> "$GITHUB_STEP_SUMMARY"
+            gh api \
+              --method PUT \
+              -H "Accept: application/vnd.github+json" \
+              /repos/"$OWNER"/"$REPO"/automated-security-fixes
+            echo "✅ Dependabot security updates enabled" >> "$GITHUB_STEP_SUMMARY"
+            ;;
+          *)
+            echo "⏭️ Dependabot updates skipped (enable_dependabot=false)" >> "$GITHUB_STEP_SUMMARY"
+            ;;
+        esac

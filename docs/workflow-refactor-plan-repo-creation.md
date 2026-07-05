@@ -110,7 +110,6 @@ Introduce composable units under `.github/actions/`:
 - `configure-release-tool`
 - `configure-codeql`
 - `apply-repo-settings`
-- `apply-branch-protection`
 
 Each action:
 
@@ -186,14 +185,15 @@ Exit criteria:
        `configure-provider-tooling-files` action.
 3. [x] Move release/configuration steps into dedicated actions.
 4. [x] Move CodeQL configuration into `configure-codeql` action.
-5. [x] Move repo settings and branch protection into `apply-repo-settings` and
-       `apply-branch-protection` actions.
+5. [x] Move repo settings and Dependabot handling into `apply-repo-settings`
+       action; branch protection automation deprecated and disabled.
 
 Exit criteria:
 
 - [x] top-level workflows mostly linear and readable
 - [x] each extracted action has input/output contract
-- [x] repo settings and branch protection extracted and wired into both workflows
+- [x] repo settings handling extracted and wired into both workflows; branch
+      protection automation removed/disabled
 
 ### Phase 3: Test workflow parity and reliability
 

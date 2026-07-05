@@ -679,22 +679,13 @@ jobs:
           enable_repo_settings: ${{ inputs.enable_repo_settings }}
           gh_token: ${{ steps.resolve-token.outputs.token }}
 
-      - name: Apply branch protection rules
-        uses: ./.github/actions/apply-branch-protection
-        with:
-          owner: ${{ steps.set-owner.outputs.owner }}
-          repo_name: ${{ inputs.repo_name }}
-          enable_repo_settings: ${{ inputs.enable_repo_settings }}
-          enable_branch_protection: ${{ inputs.enable_branch_protection }}
-          gh_token: ${{ steps.resolve-token.outputs.token }}
-
       - name: Summary
         run: |
           echo "✅ Repository created successfully!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Repository:** https://github.com/${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Visibility:** ${{ inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch Protection:** ${{ inputs.enable_branch_protection }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch Protection:** disabled (deprecated)" >> $GITHUB_STEP_SUMMARY
           echo "**Languages:** ${{ steps.validate-inputs.outputs.languages }}" >> $GITHUB_STEP_SUMMARY
           echo "**Environment manager:** ${{ steps.validate-inputs.outputs.env_manager }}" >> $GITHUB_STEP_SUMMARY
           echo "**Runtime versions:** python=${{ steps.validate-inputs.outputs.python_version }}, node=${{ steps.validate-inputs.outputs.node_version }}, go=${{ steps.validate-inputs.outputs.go_version }}, java=${{ steps.validate-inputs.outputs.java_version }}" >> $GITHUB_STEP_SUMMARY
@@ -711,17 +702,14 @@ jobs:
             "true")
               echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Vulnerability alerts and Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
-              case "${{ inputs.enable_branch_protection }}" in
-                "true") echo "- ✅ Branch protection rules (2 required approvals, linear history, code-owner review)" >> $GITHUB_STEP_SUMMARY ;;
-                *)      echo "- ⏭️ Branch protection rules (skipped)" >> $GITHUB_STEP_SUMMARY ;;
-              esac
+              echo "- ⏭️ Branch protection rules (deprecated and disabled)" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
               ;;
             *)
               echo "- ⏭️ Dependabot configuration (skipped)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped)" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Branch protection rules (skipped)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Branch protection rules (deprecated and disabled)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Development environment (skipped)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Production environment (skipped)" >> $GITHUB_STEP_SUMMARY
               ;;
