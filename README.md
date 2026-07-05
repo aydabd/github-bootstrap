@@ -419,7 +419,7 @@ automatically.
 
 ### Security
 
-Every bootstrapped repository gets a full security baseline out of the box:
+Every bootstrapped repository gets a core security baseline out of the box:
 
 | Feature                      | Details                                                   |
 | ---------------------------- | --------------------------------------------------------- |
@@ -472,7 +472,8 @@ The Terraform module (in `terraform/`) manages the same infrastructure declarati
 4. The wrapper workflow then copies template files and configures linting
 
 Branch protection/rulesets are not configured by the bootstrap workflows.
-If you run Terraform directly, you can still manage rulesets through Terraform
+Bootstrap workflows pin this off by default. If you run Terraform directly,
+you can still manage rulesets through Terraform
 inputs (for example, `enable_branch_protection=true`) or configure them
 manually in repository settings.
 
