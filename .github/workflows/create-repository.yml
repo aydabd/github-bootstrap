@@ -30,11 +30,6 @@ on:
         required: false
         default: true
         type: boolean
-      enable_branch_protection:
-        description: "Enable branch protection rules"
-        required: false
-        default: true
-        type: boolean
       team_name:
         description: "GitHub team for code owners (e.g., org/team-leads)"
         required: false
@@ -105,8 +100,7 @@ on:
       enable_repo_settings:
         description: >-
           Apply repository settings, create dev/prod environments, and enable
-          Dependabot. Branch protection is controlled separately by
-          enable_branch_protection.
+          Dependabot.
         required: false
         default: true
         type: boolean
@@ -174,10 +168,6 @@ on:
         default: "public"
         type: string
       cleanup_on_failure:
-        required: false
-        default: true
-        type: boolean
-      enable_branch_protection:
         required: false
         default: true
         type: boolean
@@ -685,7 +675,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Repository:** https://github.com/${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Visibility:** ${{ inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch Protection:** disabled (deprecated)" >> $GITHUB_STEP_SUMMARY
           echo "**Languages:** ${{ steps.validate-inputs.outputs.languages }}" >> $GITHUB_STEP_SUMMARY
           echo "**Environment manager:** ${{ steps.validate-inputs.outputs.env_manager }}" >> $GITHUB_STEP_SUMMARY
           echo "**Runtime versions:** python=${{ steps.validate-inputs.outputs.python_version }}, node=${{ steps.validate-inputs.outputs.node_version }}, go=${{ steps.validate-inputs.outputs.go_version }}, java=${{ steps.validate-inputs.outputs.java_version }}" >> $GITHUB_STEP_SUMMARY
@@ -702,14 +691,12 @@ jobs:
             "true")
               echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Vulnerability alerts and Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Branch protection rules (deprecated and disabled)" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
               ;;
             *)
               echo "- ⏭️ Dependabot configuration (skipped)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped)" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Branch protection rules (deprecated and disabled)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Development environment (skipped)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Production environment (skipped)" >> $GITHUB_STEP_SUMMARY
               ;;

@@ -26,7 +26,8 @@ low-risk PR, then this refactor can proceed in phases.
   and both workflow migrations now consume the same normalization contract.
 - Phase 2: Completed. All composite actions extracted: pre-commit rendering,
   provider tooling files, release-tool configuration, CodeQL configuration,
-  repository settings, and branch protection. Both creation workflows updated.
+  and repository settings. Branch protection automation removed from workflows.
+  Both creation workflows updated.
 - Phase 3: Not started. Can start after production workflow behavior is stable.
 - Phase 4: Not started. Final documentation pass after the implementation phases.
 
@@ -186,14 +187,14 @@ Exit criteria:
 3. [x] Move release/configuration steps into dedicated actions.
 4. [x] Move CodeQL configuration into `configure-codeql` action.
 5. [x] Move repo settings and Dependabot handling into `apply-repo-settings`
-       action; branch protection automation deprecated and disabled.
+       action; remove branch-protection automation from workflows.
 
 Exit criteria:
 
 - [x] top-level workflows mostly linear and readable
 - [x] each extracted action has input/output contract
 - [x] repo settings handling extracted and wired into both workflows; branch
-      protection automation removed/disabled
+      protection automation removed
 
 ### Phase 3: Test workflow parity and reliability
 

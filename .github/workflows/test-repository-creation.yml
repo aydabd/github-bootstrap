@@ -228,7 +228,6 @@ jobs:
             --field repo_name="$REPO_NAME" \
             --field repo_description="Test repository for bootstrap validation - created $(date)" \
             --field visibility="public" \
-            --field enable_branch_protection="false" \
             --field team_name="* @$REPO_OWNER" \
             --field license_holder="$REPO_OWNER" \
             --field languages="$LANGUAGES" \
