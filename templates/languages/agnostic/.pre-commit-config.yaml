@@ -2,7 +2,8 @@
 # =============================================================================
 # {{REPOSITORY_NAME}} — Pre-commit hooks (source of truth for all linting)
 # =============================================================================
-# All linters run from the selected environment manager — zero extra downloads.
+# Linters run from the selected environment manager when available.
+# Some hooks (for example, npx-invoked tools) may download dependencies if not preinstalled.
 # Tool versions are managed by environment.yml / mise.toml.
 #
 # Everything uses `repo: local` with `language: system` so pre-commit

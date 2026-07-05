@@ -586,6 +586,8 @@ jobs:
             exit 1
           fi
           mkdir -p "$REPO_DIR/.pre-commit/languages"
+          # Root config uses FIRST_LANG so hooks align with the provisioned toolchain.
+          # Per-language files use full LANGUAGES for monorepo subproject opt-in.
           go run ./tools/cmd/precommit-renderer \
             --base "$PRECOMMIT_BASE_TEMPLATE" \
             --snippets-root "$PRECOMMIT_SNIPPETS_ROOT" \
