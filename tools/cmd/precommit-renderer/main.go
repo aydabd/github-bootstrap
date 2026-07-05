@@ -52,6 +52,9 @@ func parseFlags() (config, error) {
 	if cfg.basePath == "" || cfg.snippetsRoot == "" || cfg.outputPath == "" {
 		return config{}, errors.New("--base, --snippets-root, and --output are required")
 	}
+	if strings.TrimSpace(cfg.languagesInput) == "" {
+		return config{}, errors.New("--languages is required")
+	}
 	return cfg, nil
 }
 

@@ -50,6 +50,16 @@ func TestNormalizeLanguages(t *testing.T) {
 	}
 }
 
+func TestParseFlagsMissingLanguages(t *testing.T) {
+	oldArgs := os.Args
+	t.Cleanup(func() { os.Args = oldArgs })
+	os.Args = []string{"precommit-renderer", "--base", "base.tmpl", "--snippets-root", "templates", "--output", "out.yaml"}
+	_, err := parseFlags()
+	if err == nil {
+		t.Fatal("expected missing languages error, got nil")
+	}
+}
+
 func TestRepositoryTemplateSnapshots(t *testing.T) {
 	repoRoot := findRepoRoot(t)
 	basePath := filepath.Join(repoRoot, "templates", "languages", "agnostic", "pre-commit-snippets", "base.tmpl")

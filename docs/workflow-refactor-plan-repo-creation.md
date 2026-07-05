@@ -3,11 +3,9 @@
 ## Review status
 
 This plan remains the right long-term direction, but it is larger than one safe
-PR. The current repository already has a Go tooling module under `tools/` and a
-`precommit-renderer` command with its own language normalization. That existing
-normalization is not yet a safe source of truth for workflow inputs because it
-silently falls back to `agnostic` for unknown tokens, while the workflows fail
-early for unsupported language values.
+PR. The current repository already has a Go tooling module under `tools/`, and
+the shared `bootstrapinputs` package now provides the canonical normalization
+contract for the renderer and the future workflow migrations.
 
 Recommended rollout:
 
