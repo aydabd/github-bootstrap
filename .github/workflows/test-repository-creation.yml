@@ -234,6 +234,21 @@ jobs:
             fi
           done
 
+          FORBIDDEN_TEMPLATE_PATHS=(
+            "languages"
+            "providers"
+            ".github/workflows/providers"
+          )
+
+          for path in "${FORBIDDEN_TEMPLATE_PATHS[@]}"; do
+            if gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/${path}" >/dev/null 2>&1; then
+              echo "❌ Unexpected template-only path found: ${path}"
+              exit 1
+            else
+              echo "✅ Absent template-only path: ${path}"
+            fi
+          done
+
           echo "🎉 All required files are present!"
 
       - name: Validate agent kit structure

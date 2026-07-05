@@ -469,6 +469,9 @@ jobs:
           cp -r templates/.cursor new-repo/
           cp -r templates/.claude new-repo/
 
+          # Remove template-only helper trees that should not ship in generated repositories.
+          rm -rf new-repo/languages new-repo/providers new-repo/.github/workflows/providers
+
           # Copy root-level dotfiles
           cp templates/.gitignore new-repo/
           cp templates/.gitattributes new-repo/
