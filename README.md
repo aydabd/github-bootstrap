@@ -421,15 +421,15 @@ automatically.
 
 Every bootstrapped repository gets a full security baseline out of the box:
 
-| Feature                            | Details                                                   |
-| ---------------------------------- | --------------------------------------------------------- |
-| Vulnerability alerts               | Enabled automatically via the GitHub API                  |
-| Dependabot security updates        | Enabled automatically — auto-PRs for vulnerable deps      |
-| Dependabot version updates         | Configured in `.github/dependabot.yml` for all ecosystems |
-| CodeQL scanning                    | Workflow generated and scoped to the selected language(s) |
-| Branch protection / rulesets       | Configure manually in repository settings as needed       |
-| SECURITY.md                        | Security policy and vulnerability reporting instructions  |
-| Secret scanning                    | Enabled by GitHub for all public repos automatically      |
+| Feature                      | Details                                                   |
+| ---------------------------- | --------------------------------------------------------- |
+| Vulnerability alerts         | Enabled automatically via the GitHub API                  |
+| Dependabot security updates  | Enabled automatically — auto-PRs for vulnerable deps      |
+| Dependabot version updates   | Configured in `.github/dependabot.yml` for all ecosystems |
+| CodeQL scanning              | Workflow generated and scoped to the selected language(s) |
+| Branch protection / rulesets | Configure manually in repository settings as needed       |
+| SECURITY.md                  | Security policy and vulnerability reporting instructions  |
+| Secret scanning              | Enabled by GitHub for all public repos automatically      |
 
 ## Core Principles
 
