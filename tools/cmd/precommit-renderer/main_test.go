@@ -16,7 +16,7 @@ func TestNormalizeLanguages(t *testing.T) {
 		want    []string
 		wantErr bool
 	}{
-		{name: "default agnostic", input: "", want: []string{"agnostic"}},
+		{name: "default agnostic fails", input: "", wantErr: true},
 		{name: "explicit agnostic", input: "agnostic", want: []string{"agnostic"}},
 		{name: "language agnostic only", input: "language-agnostic-only", want: []string{"agnostic"}},
 		{name: "single alias", input: "go", want: []string{"golang"}},
@@ -27,8 +27,7 @@ func TestNormalizeLanguages(t *testing.T) {
 		{name: "all", input: "all", want: expectedAllLanguages},
 		{name: "mixed all token", input: "python,all", want: expectedAllLanguages},
 		{name: "invalid agnostic with all", input: "agnostic,all", wantErr: true},
-		// Current drift: workflows reject unknown tokens, but the renderer falls back to agnostic.
-		{name: "current unknown token drift", input: "unknown", want: []string{"agnostic"}},
+		{name: "unknown token fails", input: "unknown", wantErr: true},
 		{name: "invalid mixed agnostic", input: "language-agnostic-only,go", wantErr: true},
 	}
 
@@ -48,6 +47,16 @@ func TestNormalizeLanguages(t *testing.T) {
 				t.Fatalf("normalizeLanguages mismatch: got %v want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestParseFlagsMissingLanguages(t *testing.T) {
+	oldArgs := os.Args
+	t.Cleanup(func() { os.Args = oldArgs })
+	os.Args = []string{"precommit-renderer", "--base", "base.tmpl", "--snippets-root", "templates", "--output", "out.yaml"}
+	_, err := parseFlags()
+	if err == nil {
+		t.Fatal("expected missing languages error, got nil")
 	}
 }
 

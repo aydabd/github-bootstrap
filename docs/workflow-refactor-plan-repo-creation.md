@@ -3,11 +3,9 @@
 ## Review status
 
 This plan remains the right long-term direction, but it is larger than one safe
-PR. The current repository already has a Go tooling module under `tools/` and a
-`precommit-renderer` command with its own language normalization. That existing
-normalization is not yet a safe source of truth for workflow inputs because it
-silently falls back to `agnostic` for unknown tokens, while the workflows fail
-early for unsupported language values.
+PR. The current repository already has a Go tooling module under `tools/`, and
+the shared `bootstrapinputs` package now provides the canonical normalization
+contract for the renderer and the future workflow migrations.
 
 Recommended rollout:
 
@@ -24,8 +22,8 @@ low-risk PR, then this refactor can proceed in phases.
 
 - Phase 0: Completed. Validation extraction, behavior contract, baseline tests,
   generated-file snapshots, and CI confirmation are all complete on `main`.
-- Phase 1: In progress. Shared normalization package and command wrapper are
-  implemented with tests; renderer and workflow migrations are next.
+- Phase 1: In progress. Shared normalization package, command wrapper, and
+  renderer migration are implemented with tests; workflow migrations are next.
 - Phase 2: Not started. Depends on the normalization contract from Phase 1.
 - Phase 3: Not started. Can start after production workflow behavior is stable.
 - Phase 4: Not started. Final documentation pass after the implementation phases.
@@ -168,7 +166,7 @@ Exit criteria:
        `language-agnostic-only`, invalid tokens, runtime pins, root language policy,
        and release type mapping.
 2. [x] Implement `tools/cmd/bootstrap-inputs` as a thin CLI over the package.
-3. [ ] Migrate `tools/cmd/precommit-renderer` to use the shared package.
+3. [x] Migrate `tools/cmd/precommit-renderer` to use the shared package.
 4. [ ] Migrate `create-repository.yml` to consume normalized outputs.
 5. [ ] Migrate `terraform-create-repository.yml` to consume normalized outputs.
 6. [ ] Remove duplicated shell parsing blocks.
