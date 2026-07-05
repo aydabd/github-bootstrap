@@ -32,23 +32,23 @@ Fallback: use a PAT when App setup is not available.
 
 1. Create or use an existing GitHub App with the following minimum permissions:
 
-   | Permission scope | Level          | Required for                                  |
-   | ---------------- | -------------- | --------------------------------------------- |
-   | `Contents`       | Read and write | Clone template, push initial commits          |
-   | `Administration` | Read and write | Create repos, apply branch protection, delete |
-   | `Metadata`       | Read-only      | Read repository info (auto-granted)           |
+| Permission scope | Level          | Required for                                   |
+| ---------------- | -------------- | ---------------------------------------------- |
+| `Contents`       | Read and write | Clone template, push initial commits           |
+| `Administration` | Read and write | Create repos, configure settings, delete repos |
+| `Metadata`       | Read-only      | Read repository info (auto-granted)            |
 
-   For **organization** repositories also add:
+For **organization** repositories also add:
 
-   | Permission scope | Level     | Required for                          |
-   | ---------------- | --------- | ------------------------------------- |
-   | `Members`        | Read-only | Resolve org membership for team setup |
+| Permission scope | Level     | Required for                          |
+| ---------------- | --------- | ------------------------------------- |
+| `Members`        | Read-only | Resolve org membership for team setup |
 
-2. Install the App in each target user/org (tenant isolation). The App must be installed
+1. Install the App in each target user/org (tenant isolation). The App must be installed
    on every `app_owner` value you intend to target.
-3. In the repository that runs bootstrap, set:
+2. In the repository that runs bootstrap, set:
    - `BOOTSTRAP_APP_PRIVATE_KEY` (Actions secret — the PEM private key of the App)
-4. When running the workflow, provide:
+3. When running the workflow, provide:
    - `app_id` (the numeric App ID, visible in the App's settings)
    - `app_owner` (target tenant owner)
 
@@ -191,8 +191,7 @@ Your new repository is created with all templates and settings.
 | `repo_description`         | No       | `Repository following SOLID principles…` | Repository description                                                                                        |
 | `visibility`               | No       | `public`                                 | `public`, `private`, or `internal` (org only)                                                                 |
 | `cleanup_on_failure`       | No       | `true`                                   | Delete the created repository automatically if the workflow fails                                             |
-| `enable_repo_settings`     | No       | `true`                                   | Apply repo settings, create dev/prod environments, enable Dependabot, and apply branch protection             |
-| `enable_branch_protection` | No       | `true`                                   | Enable branch protection rules (only applied when `enable_repo_settings` is also `true`)                      |
+| `enable_repo_settings`     | No       | `true`                                   | Apply repo settings, create dev/prod environments, and enable Dependabot                                      |
 | `enable_codeowners`        | No       | `true`                                   | Add a CODEOWNERS file assigning the chosen team as default reviewer                                           |
 | `workflows`                | No       | `all`                                    | Workflows to include: `all`, `none`, or comma-separated names — `lint`, `codeql`, `ai-code-review`, `release` |
 | `team_name`                | No       | `team-leads`                             | GitHub team for code owners                                                                                   |
@@ -218,8 +217,7 @@ Editor configurations, Git settings, and ignore patterns that work across all la
 
 ### GitHub Configuration
 
-Code ownership rules, automated dependency updates, and branch protection settings requiring
-2 approvals, linear history, and code owner reviews. Vulnerability alerts and Dependabot
+Code ownership rules and automated dependency updates. Vulnerability alerts and Dependabot
 automated security fixes are enabled on every created repository.
 
 ### Documentation Templates
@@ -275,7 +273,7 @@ Automation is provided by `.github/workflows/weekly-tooling-updates.yml`:
 - runs weekly and on manual dispatch
 - opens or updates one PR with all non-Dependabot tooling updates
 - enables PR auto-merge so GitHub merges only after required checks, required approvals,
-  and branch protection rules are satisfied
+  and repository merge requirements are satisfied
 
 ### Conventional Commits
 
@@ -470,8 +468,10 @@ The Terraform module (in `terraform/`) manages the same infrastructure declarati
 
 1. Creates the repository with all settings via `github_repository`
 2. Creates `dev` and `prod` environments via `github_repository_environment`
-3. Applies branch protection via `github_repository_ruleset`
-4. The wrapper workflow then copies template files and configures linting
+3. The wrapper workflow then copies template files and configures linting
+
+Branch protection/rulesets are not configured by the bootstrap workflows. Configure
+rulesets directly in repository settings as needed.
 
 Terraform provides idempotent applies and state tracking, making it suitable for
 managing repositories as long-lived infrastructure.
