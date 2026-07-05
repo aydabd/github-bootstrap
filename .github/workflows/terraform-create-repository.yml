@@ -550,110 +550,33 @@ jobs:
           sed -i "s/{{REPOSITORY_OWNER}}/${{ steps.set-owner.outputs.owner }}/g" README.md
           sed -i "s/{{REPOSITORY_NAME}}/${{ inputs.repo_name }}/g" README.md
 
-      - name: Configure language tooling
-        env:
-          LANGUAGES: ${{ steps.validate-inputs.outputs.normalized_languages }}
-          RAW_LANGUAGES: ${{ steps.validate-inputs.outputs.languages }}
-          ROOT_LANGUAGE: ${{ steps.validate-inputs.outputs.root_language }}
-          ENV_MANAGER: ${{ steps.validate-inputs.outputs.env_manager }}
-          REPO_NAME: ${{ inputs.repo_name }}
-          PYTHON_VERSION: ${{ steps.validate-inputs.outputs.python_version }}
-          NODE_VERSION: ${{ steps.validate-inputs.outputs.node_version }}
-          GO_VERSION: ${{ steps.validate-inputs.outputs.go_version }}
-          JAVA_VERSION: ${{ steps.validate-inputs.outputs.java_version }}
+      - name: Log language tooling selection
         run: |
-          LANG_DIR="$ROOT_LANGUAGE"
+          ROOT_LANGUAGE="${{ steps.validate-inputs.outputs.root_language }}"
+          RAW_LANGUAGES="${{ steps.validate-inputs.outputs.languages }}"
+          ENV_MANAGER="${{ steps.validate-inputs.outputs.env_manager }}"
           if echo "$RAW_LANGUAGES" | grep -q ','; then
-            echo "⚠️ Multiple languages provided ($RAW_LANGUAGES). Tooling template uses first language policy: $LANG_DIR" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Multiple languages provided ($RAW_LANGUAGES). Tooling template uses first language policy: $ROOT_LANGUAGE" >> "$GITHUB_STEP_SUMMARY"
           fi
+          echo "Using language template: $ROOT_LANGUAGE" >> "$GITHUB_STEP_SUMMARY"
+          echo "Using environment manager: $ENV_MANAGER" >> "$GITHUB_STEP_SUMMARY"
 
-          TEMPLATE_DIR="templates/languages/$LANG_DIR"
-          PROVIDER_DIR="$TEMPLATE_DIR/providers/$ENV_MANAGER"
-          LINT_WORKFLOW_TEMPLATE="templates/.github/workflows/providers/lint-$ENV_MANAGER.yml"
-          PROVIDER_SCRIPT_TEMPLATE="templates/providers/$ENV_MANAGER/provider-run.sh"
-          PRECOMMIT_BASE_TEMPLATE="templates/languages/agnostic/pre-commit-snippets/base.tmpl"
-          PRECOMMIT_SNIPPETS_ROOT="templates/languages"
-          REPO_DIR="new-repo"
+      - name: Render pre-commit configs
+        uses: ./.github/actions/render-precommit-configs
+        with:
+          root_language: ${{ steps.validate-inputs.outputs.root_language }}
+          languages: ${{ steps.validate-inputs.outputs.normalized_languages }}
 
-          echo "Using language template: $LANG_DIR" >> $GITHUB_STEP_SUMMARY
-          echo "Using environment manager: $ENV_MANAGER" >> $GITHUB_STEP_SUMMARY
-
-          # Render root + per-language pre-commit configs from snippets.
-          if [ ! -f "$PRECOMMIT_BASE_TEMPLATE" ]; then
-            echo "::error::Missing pre-commit base template: $PRECOMMIT_BASE_TEMPLATE"
-            exit 1
-          fi
-          if [ ! -d "$PRECOMMIT_SNIPPETS_ROOT" ]; then
-            echo "::error::Missing pre-commit snippets root: $PRECOMMIT_SNIPPETS_ROOT"
-            exit 1
-          fi
-          mkdir -p "$REPO_DIR/.pre-commit/languages"
-          # Root config uses FIRST_LANG so hooks align with the provisioned toolchain.
-          # Per-language files use full LANGUAGES for monorepo subproject opt-in.
-          go run ./tools/cmd/precommit-renderer \
-            --base "$PRECOMMIT_BASE_TEMPLATE" \
-            --snippets-root "$PRECOMMIT_SNIPPETS_ROOT" \
-            --languages "$LANG_DIR" \
-            --emit-languages "$LANGUAGES" \
-            --output "$REPO_DIR/.pre-commit-config.yaml" \
-            --emit-language-files-dir "$REPO_DIR/.pre-commit/languages"
-
-          # Copy language-specific tooling files
-          if [ ! -d "$PROVIDER_DIR" ]; then
-            echo "::error::Missing provider config directory: $PROVIDER_DIR"
-            exit 1
-          fi
-          if [ ! -f "$PROVIDER_DIR/Makefile" ]; then
-            echo "::error::Missing provider Makefile: $PROVIDER_DIR/Makefile"
-            exit 1
-          fi
-          if [ ! -f "$LINT_WORKFLOW_TEMPLATE" ]; then
-            echo "::error::Missing provider lint workflow template: $LINT_WORKFLOW_TEMPLATE"
-            exit 1
-          fi
-          if [ ! -f "$PROVIDER_SCRIPT_TEMPLATE" ]; then
-            echo "::error::Missing provider helper script template: $PROVIDER_SCRIPT_TEMPLATE"
-            exit 1
-          fi
-
-          cp "$PROVIDER_DIR/Makefile" "$REPO_DIR/Makefile"
-          rm -f "$REPO_DIR/environment.yml" "$REPO_DIR/mise.toml"
-          [ -f "$PROVIDER_DIR/environment.yml" ] && cp "$PROVIDER_DIR/environment.yml" "$REPO_DIR/environment.yml"
-          [ -f "$PROVIDER_DIR/mise.toml" ] && cp "$PROVIDER_DIR/mise.toml" "$REPO_DIR/mise.toml"
-          cp "$LINT_WORKFLOW_TEMPLATE" "$REPO_DIR/.github/workflows/lint.yml"
-          cp "templates/.github/bootstrap-provider.yml" "$REPO_DIR/.github/bootstrap-provider.yml"
-          mkdir -p "$REPO_DIR/scripts"
-          cp "$PROVIDER_SCRIPT_TEMPLATE" "$REPO_DIR/scripts/provider-run.sh"
-          cp "templates/scripts/bootstrap-provider-binary.sh" "$REPO_DIR/scripts/bootstrap-provider-binary.sh"
-          chmod +x "$REPO_DIR/scripts/provider-run.sh"
-          chmod +x "$REPO_DIR/scripts/bootstrap-provider-binary.sh"
-
-          # Substitute repository placeholders in generated tooling files
-          if [ -f "$REPO_DIR/environment.yml" ]; then
-            sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/environment.yml"
-            sed -i "s/{{PYTHON_VERSION}}/$PYTHON_VERSION/g" "$REPO_DIR/environment.yml"
-            sed -i "s/{{NODE_VERSION}}/$NODE_VERSION/g" "$REPO_DIR/environment.yml"
-            sed -i "s/{{GO_VERSION}}/$GO_VERSION/g" "$REPO_DIR/environment.yml"
-            sed -i "s/{{JAVA_VERSION}}/$JAVA_VERSION/g" "$REPO_DIR/environment.yml"
-          fi
-          if [ -f "$REPO_DIR/mise.toml" ]; then
-            sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/mise.toml"
-            sed -i "s/{{PYTHON_VERSION}}/$PYTHON_VERSION/g" "$REPO_DIR/mise.toml"
-            sed -i "s/{{NODE_VERSION}}/$NODE_VERSION/g" "$REPO_DIR/mise.toml"
-            sed -i "s/{{GO_VERSION}}/$GO_VERSION/g" "$REPO_DIR/mise.toml"
-            sed -i "s/{{JAVA_VERSION}}/$JAVA_VERSION/g" "$REPO_DIR/mise.toml"
-          fi
-          if [ -f "$REPO_DIR/.github/bootstrap-provider.yml" ]; then
-            sed -i "s/{{ENV_MANAGER}}/$ENV_MANAGER/g" "$REPO_DIR/.github/bootstrap-provider.yml"
-            sed -i "s/{{LANG_DIR}}/$LANG_DIR/g" "$REPO_DIR/.github/bootstrap-provider.yml"
-          fi
-          if [ -f "$REPO_DIR/scripts/provider-run.sh" ]; then
-            sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/scripts/provider-run.sh"
-          fi
-          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/Makefile"
-          if [ -f "$REPO_DIR/.github/workflows/lint.yml" ]; then
-            sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/.github/workflows/lint.yml"
-          fi
+      - name: Configure provider tooling files
+        uses: ./.github/actions/configure-provider-tooling-files
+        with:
+          root_language: ${{ steps.validate-inputs.outputs.root_language }}
+          env_manager: ${{ steps.validate-inputs.outputs.env_manager }}
+          repo_name: ${{ inputs.repo_name }}
+          python_version: ${{ steps.validate-inputs.outputs.python_version }}
+          node_version: ${{ steps.validate-inputs.outputs.node_version }}
+          go_version: ${{ steps.validate-inputs.outputs.go_version }}
+          java_version: ${{ steps.validate-inputs.outputs.java_version }}
 
       - name: Remove unselected workflows
         run: |
@@ -710,19 +633,10 @@ jobs:
           esac
 
       - name: Configure Release Please for selected languages
-        env:
-          RELEASE_TYPE: ${{ steps.validate-inputs.outputs.release_type }}
-          RELEASE_TOOL: ${{ inputs.release_tool }}
-        run: |
-          case "$RELEASE_TOOL" in
-            "release-please") ;;
-            *) echo "⏭️ Release Please configuration skipped (release_tool=$RELEASE_TOOL)"; exit 0 ;;
-          esac
-          cd new-repo
-
-          # Update release-please-config.json with the correct release type
-          jq --arg rt "$RELEASE_TYPE" '."release-type" = $rt' release-please-config.json > tmp.json && mv tmp.json release-please-config.json
-          echo "Release Please configured with release-type: $RELEASE_TYPE" >> $GITHUB_STEP_SUMMARY
+        uses: ./.github/actions/configure-release-tool
+        with:
+          release_tool: ${{ inputs.release_tool }}
+          release_type: ${{ steps.validate-inputs.outputs.release_type }}
 
       - name: Configure CodeQL for selected languages
         uses: ./.github/actions/configure-codeql

@@ -1,0 +1,114 @@
+---
+name: Configure Provider Tooling Files
+description: >-
+  Copy language/provider-specific tooling files (Makefile, environment.yml,
+  mise.toml, scripts, lint workflow) into the generated repository and
+  substitute repository placeholders.
+
+inputs:
+  root_language:
+    description: Normalized root language directory name.
+    required: true
+  env_manager:
+    description: Environment manager (micromamba, mise, system).
+    required: true
+  repo_name:
+    description: Target repository name used for placeholder substitution.
+    required: true
+  python_version:
+    description: Python version for placeholder substitution.
+    required: true
+  node_version:
+    description: Node version for placeholder substitution.
+    required: true
+  go_version:
+    description: Go version for placeholder substitution.
+    required: true
+  java_version:
+    description: Java version for placeholder substitution.
+    required: true
+  output_dir:
+    description: Working directory of the generated repository to write files into.
+    required: false
+    default: new-repo
+
+runs:
+  using: composite
+  steps:
+    - name: Copy provider tooling files
+      shell: bash
+      env:
+        LANG_DIR: ${{ inputs.root_language }}
+        ENV_MANAGER: ${{ inputs.env_manager }}
+        REPO_NAME: ${{ inputs.repo_name }}
+        PYTHON_VERSION: ${{ inputs.python_version }}
+        NODE_VERSION: ${{ inputs.node_version }}
+        GO_VERSION: ${{ inputs.go_version }}
+        JAVA_VERSION: ${{ inputs.java_version }}
+        REPO_DIR: ${{ inputs.output_dir }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+      run: |
+        TEMPLATE_DIR="$GITHUB_WORKSPACE/templates/languages/$LANG_DIR"
+        PROVIDER_DIR="$TEMPLATE_DIR/providers/$ENV_MANAGER"
+        LINT_WORKFLOW_TEMPLATE="$GITHUB_WORKSPACE/templates/.github/workflows/providers/lint-$ENV_MANAGER.yml"
+        PROVIDER_SCRIPT_TEMPLATE="$GITHUB_WORKSPACE/templates/providers/$ENV_MANAGER/provider-run.sh"
+
+        if [ ! -d "$PROVIDER_DIR" ]; then
+          echo "::error::Missing provider config directory: $PROVIDER_DIR"
+          exit 1
+        fi
+        if [ ! -f "$PROVIDER_DIR/Makefile" ]; then
+          echo "::error::Missing provider Makefile: $PROVIDER_DIR/Makefile"
+          exit 1
+        fi
+        if [ ! -f "$LINT_WORKFLOW_TEMPLATE" ]; then
+          echo "::error::Missing provider lint workflow template: $LINT_WORKFLOW_TEMPLATE"
+          exit 1
+        fi
+        if [ ! -f "$PROVIDER_SCRIPT_TEMPLATE" ]; then
+          echo "::error::Missing provider helper script template: $PROVIDER_SCRIPT_TEMPLATE"
+          exit 1
+        fi
+
+        cp "$PROVIDER_DIR/Makefile" "$REPO_DIR/Makefile"
+        rm -f "$REPO_DIR/environment.yml" "$REPO_DIR/mise.toml"
+        [ -f "$PROVIDER_DIR/environment.yml" ] && cp "$PROVIDER_DIR/environment.yml" "$REPO_DIR/environment.yml"
+        [ -f "$PROVIDER_DIR/mise.toml" ] && cp "$PROVIDER_DIR/mise.toml" "$REPO_DIR/mise.toml"
+        # Only overwrite lint.yml when it already exists in the repo — it may
+        # have been intentionally removed by the "Remove unselected workflows"
+        # step when the workflows input excluded lint.
+        if [ -f "$REPO_DIR/.github/workflows/lint.yml" ]; then
+          cp "$LINT_WORKFLOW_TEMPLATE" "$REPO_DIR/.github/workflows/lint.yml"
+        fi
+        cp "$GITHUB_WORKSPACE/templates/.github/bootstrap-provider.yml" "$REPO_DIR/.github/bootstrap-provider.yml"
+        mkdir -p "$REPO_DIR/scripts"
+        cp "$PROVIDER_SCRIPT_TEMPLATE" "$REPO_DIR/scripts/provider-run.sh"
+        cp "$GITHUB_WORKSPACE/templates/scripts/bootstrap-provider-binary.sh" "$REPO_DIR/scripts/bootstrap-provider-binary.sh"
+        chmod +x "$REPO_DIR/scripts/provider-run.sh"
+        chmod +x "$REPO_DIR/scripts/bootstrap-provider-binary.sh"
+
+        if [ -f "$REPO_DIR/environment.yml" ]; then
+          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/environment.yml"
+          sed -i "s/{{PYTHON_VERSION}}/$PYTHON_VERSION/g" "$REPO_DIR/environment.yml"
+          sed -i "s/{{NODE_VERSION}}/$NODE_VERSION/g" "$REPO_DIR/environment.yml"
+          sed -i "s/{{GO_VERSION}}/$GO_VERSION/g" "$REPO_DIR/environment.yml"
+          sed -i "s/{{JAVA_VERSION}}/$JAVA_VERSION/g" "$REPO_DIR/environment.yml"
+        fi
+        if [ -f "$REPO_DIR/mise.toml" ]; then
+          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/mise.toml"
+          sed -i "s/{{PYTHON_VERSION}}/$PYTHON_VERSION/g" "$REPO_DIR/mise.toml"
+          sed -i "s/{{NODE_VERSION}}/$NODE_VERSION/g" "$REPO_DIR/mise.toml"
+          sed -i "s/{{GO_VERSION}}/$GO_VERSION/g" "$REPO_DIR/mise.toml"
+          sed -i "s/{{JAVA_VERSION}}/$JAVA_VERSION/g" "$REPO_DIR/mise.toml"
+        fi
+        if [ -f "$REPO_DIR/.github/bootstrap-provider.yml" ]; then
+          sed -i "s/{{ENV_MANAGER}}/$ENV_MANAGER/g" "$REPO_DIR/.github/bootstrap-provider.yml"
+          sed -i "s/{{LANG_DIR}}/$LANG_DIR/g" "$REPO_DIR/.github/bootstrap-provider.yml"
+        fi
+        if [ -f "$REPO_DIR/scripts/provider-run.sh" ]; then
+          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/scripts/provider-run.sh"
+        fi
+        sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/Makefile"
+        if [ -f "$REPO_DIR/.github/workflows/lint.yml" ]; then
+          sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/.github/workflows/lint.yml"
+        fi

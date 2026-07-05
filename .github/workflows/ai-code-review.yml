@@ -24,10 +24,12 @@ on:
   issue_comment:
     types: [created]
 
-# Cancel superseded runs on the same PR to save resources.
+# Do NOT cancel in-progress runs. Cancellation shows as a failed check in GitHub,
+# which is misleading when the job would have simply skipped (no API key).
+# This workflow completes in seconds whether it runs or skips.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
