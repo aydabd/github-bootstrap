@@ -16,7 +16,7 @@
 exclude: |-
   (?x)^(
     build/
-    \.gradle/
+    |\.gradle/
   )
 repos:
   # ── Standard file hygiene ──────────────────────────────────────────────────

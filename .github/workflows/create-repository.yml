@@ -324,7 +324,6 @@ jobs:
             exit 1
           fi
           IFS=',' read -ra LANG_PARTS <<< "$LANGUAGES"
-          has_all=false
           has_agnostic=false
           lang_count=0
           for lang in "${LANG_PARTS[@]}"; do
@@ -335,7 +334,6 @@ jobs:
                 lang_count=$((lang_count + 1))
                 ;;
               all)
-                has_all=true
                 lang_count=$((lang_count + 1))
                 ;;
               go|golang|python|typescript|javascript|node|nodejs|java|kotlin)

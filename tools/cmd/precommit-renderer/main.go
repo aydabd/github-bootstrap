@@ -216,11 +216,8 @@ func collectSnippets(snippetsRoot string, languages []string) (string, string, e
 
 		for _, line := range strings.Split(strings.TrimSuffix(string(exData), "\n"), "\n") {
 			line = strings.TrimRight(line, " ")
-			if line == "" || seenExclude[line] {
-				continue
-			}
 			canonical := strings.TrimPrefix(line, "|")
-			if seenExclude[canonical] {
+			if canonical == "" || seenExclude[canonical] {
 				continue
 			}
 			seenExclude[canonical] = true
