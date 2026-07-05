@@ -349,7 +349,7 @@ jobs:
           NORMALIZED_LANGUAGES=$(echo "$NORMALIZED_JSON" | jq -r '.languages | join(",")')
           ROOT_LANGUAGE=$(echo "$NORMALIZED_JSON" | jq -r '.root_language')
           RELEASE_TYPE=$(echo "$NORMALIZED_JSON" | jq -r '.release_type')
-          CODEQL_LANGUAGES=$(echo "$NORMALIZED_JSON" | jq -r '.codeql_languages | join(",")')
+          CODEQL_LANGUAGES=$(echo "$NORMALIZED_JSON" | jq -r '(.codeql_languages // []) | join(",")')
 
           echo "languages=$LANGUAGES" >> "$GITHUB_OUTPUT"
           echo "normalized_languages=$NORMALIZED_LANGUAGES" >> "$GITHUB_OUTPUT"
