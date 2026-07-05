@@ -61,22 +61,34 @@ on:
         description: "Python runtime version for generated tooling (default: latest stable)"
         required: false
         default: "3.13"
-        type: string
+        type: choice
+        options:
+          - "3.13"
+          - "3.12"
       node_version:
         description: "Node.js major LTS version for generated tooling"
         required: false
         default: "24"
-        type: string
+        type: choice
+        options:
+          - "24"
+          - "22"
       go_version:
         description: "Go stable version for generated tooling"
         required: false
-        default: "1.25"
-        type: string
+        default: "1.26"
+        type: choice
+        options:
+          - "1.26"
+          - "1.25"
       java_version:
         description: "Java LTS version for generated tooling"
         required: false
         default: "25"
-        type: string
+        type: choice
+        options:
+          - "25"
+          - "21"
       release_tool:
         description: >-
           Release automation tool:
@@ -193,7 +205,7 @@ on:
         type: string
       go_version:
         required: false
-        default: "1.25"
+        default: "1.26"
         type: string
       java_version:
         required: false
@@ -315,6 +327,38 @@ jobs:
 
           if ! [[ "$LANGUAGES" =~ ^[a-zA-Z0-9,_-]+$ ]]; then
             echo "::error::Invalid languages input '$LANGUAGES'. Use comma-separated language identifiers."
+            exit 1
+          fi
+          IFS=',' read -ra LANG_PARTS <<< "$LANGUAGES"
+          has_all=false
+          has_agnostic=false
+          lang_count=0
+          for lang in "${LANG_PARTS[@]}"; do
+            normalized=$(echo "$lang" | xargs | tr '[:upper:]' '[:lower:]')
+            case "$normalized" in
+              language-agnostic-only|agnostic)
+                has_agnostic=true
+                lang_count=$((lang_count + 1))
+                ;;
+              all)
+                has_all=true
+                lang_count=$((lang_count + 1))
+                ;;
+              go|golang|python|typescript|javascript|node|nodejs|java|kotlin)
+                lang_count=$((lang_count + 1))
+                ;;
+              *)
+                echo "::error::Unknown language token '$normalized' in '$LANGUAGES'."
+                exit 1
+                ;;
+            esac
+          done
+          if [ "$lang_count" -eq 0 ]; then
+            echo "::error::No valid language tokens in '$LANGUAGES'."
+            exit 1
+          fi
+          if [ "$has_agnostic" = true ] && [ "$lang_count" -gt 1 ]; then
+            echo "::error::'language-agnostic-only' cannot be combined with other language tokens."
             exit 1
           fi
           if ! [[ "$PYTHON_VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
@@ -558,9 +602,10 @@ jobs:
             echo "⚠️ Multiple languages provided ($LANGUAGES). Tooling template uses first language: $FIRST_LANG" >> $GITHUB_STEP_SUMMARY
           fi
           case "$FIRST_LANG" in
+            "all")                    LANG_DIR="agnostic" ;;
             "python")                 LANG_DIR="python" ;;
             "go"|"golang")            LANG_DIR="golang" ;;
-            "typescript"|"javascript") LANG_DIR="typescript" ;;
+            "typescript"|"javascript"|"node"|"nodejs") LANG_DIR="typescript" ;;
             "java"|"kotlin")          LANG_DIR="java" ;;
             *)                        LANG_DIR="agnostic" ;;
           esac
@@ -569,13 +614,34 @@ jobs:
           PROVIDER_DIR="$TEMPLATE_DIR/providers/$ENV_MANAGER"
           LINT_WORKFLOW_TEMPLATE="templates/.github/workflows/providers/lint-$ENV_MANAGER.yml"
           PROVIDER_SCRIPT_TEMPLATE="templates/providers/$ENV_MANAGER/provider-run.sh"
+          PRECOMMIT_BASE_TEMPLATE="templates/languages/agnostic/pre-commit-snippets/base.tmpl"
+          PRECOMMIT_SNIPPETS_ROOT="templates/languages"
           REPO_DIR="new-repo"
 
           echo "Using language template: $LANG_DIR" >> $GITHUB_STEP_SUMMARY
           echo "Using environment manager: $ENV_MANAGER" >> $GITHUB_STEP_SUMMARY
 
+          # Render root + per-language pre-commit configs from snippets.
+          if [ ! -f "$PRECOMMIT_BASE_TEMPLATE" ]; then
+            echo "::error::Missing pre-commit base template: $PRECOMMIT_BASE_TEMPLATE"
+            exit 1
+          fi
+          if [ ! -d "$PRECOMMIT_SNIPPETS_ROOT" ]; then
+            echo "::error::Missing pre-commit snippets root: $PRECOMMIT_SNIPPETS_ROOT"
+            exit 1
+          fi
+          mkdir -p "$REPO_DIR/.pre-commit/languages"
+          # Root config uses FIRST_LANG so hooks align with the provisioned toolchain.
+          # Per-language files use full LANGUAGES for monorepo subproject opt-in.
+          go run ./tools/cmd/precommit-renderer \
+            --base "$PRECOMMIT_BASE_TEMPLATE" \
+            --snippets-root "$PRECOMMIT_SNIPPETS_ROOT" \
+            --languages "$LANG_DIR" \
+            --emit-languages "$LANGUAGES" \
+            --output "$REPO_DIR/.pre-commit-config.yaml" \
+            --emit-language-files-dir "$REPO_DIR/.pre-commit/languages"
+
           # Copy language-specific tooling files
-          cp "$TEMPLATE_DIR/.pre-commit-config.yaml" "$REPO_DIR/.pre-commit-config.yaml"
           if [ ! -d "$PROVIDER_DIR" ]; then
             echo "::error::Missing provider config directory: $PROVIDER_DIR"
             exit 1

@@ -201,7 +201,7 @@ Your new repository is created with all templates and settings.
 | `env_manager`              | Yes      | -                                        | Environment manager: `micromamba`, `mise`, or `system`                                                        |
 | `python_version`           | No       | `3.13`                                   | Python runtime version used by generated tooling files                                                        |
 | `node_version`             | No       | `24`                                     | Node.js major LTS version used by generated tooling files                                                     |
-| `go_version`               | No       | `1.25`                                   | Go stable version used by generated tooling files                                                             |
+| `go_version`               | No       | `1.26`                                   | Go stable version used by generated tooling files                                                             |
 | `java_version`             | No       | `25`                                     | Java LTS version used by generated tooling files                                                              |
 | `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release`                                 |
 | `app_id`                   | No       | -                                        | GitHub App ID for App-based authentication (recommended)                                                      |
@@ -232,10 +232,19 @@ Project readme and AI assistant instructions (Agent, Claude, Copilot) following 
 - **Selectable provider** — choose `micromamba`, `mise`, or `system` when creating repositories
 - **Config file by provider** — `environment.yml` (micromamba), `mise.toml` (mise), or direct machine tooling (system)
 - **Template layout (for maintainers)** — provider assets live in `templates/languages/<language>/providers/<provider>/`
+- **Template composition (for maintainers)** — pre-commit source templates live in `templates/languages/*/pre-commit-snippets/` and are rendered by `tools/cmd/precommit-renderer`
+- **Root config behavior** — generated root `.pre-commit-config.yaml` follows the first selected language so hooks match the provisioned toolchain
+- **Monorepo behavior** — generated `.pre-commit/languages/*.yaml` files are emitted for all selected languages for explicit per-project opt-in
 - **One linter per file type** — prettier (JSON/YAML/Markdown), shellcheck + shfmt (shell),
   markdownlint, editorconfig-checker, yamllint, taplo (TOML), terraform fmt
 - **Local and CI** — `make lint` auto-fixes locally; `LINT_MODE=check make lint` fails on violations in CI
 - **Language-specific linters** — Add language linters to `.pre-commit-config.yaml` as needed
+
+To regenerate language template pre-commit files after snippet changes:
+
+```bash
+make render-precommit
+```
 
 ### Weekly Tooling Updates (non-Dependabot)
 

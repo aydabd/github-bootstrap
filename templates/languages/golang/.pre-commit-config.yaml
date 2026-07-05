@@ -2,11 +2,12 @@
 # =============================================================================
 # {{REPOSITORY_NAME}} — Pre-commit hooks (source of truth for all linting)
 # =============================================================================
-# All linters run from the micromamba environment — zero extra downloads.
-# Tool versions are managed by conda-forge in environment.yml.
+# Linters run from the selected environment manager when available.
+# Some hooks (for example, npx-invoked tools) may download dependencies if not preinstalled.
+# Tool versions are managed by environment.yml / mise.toml.
 #
 # Everything uses `repo: local` with `language: system` so pre-commit
-# calls the micromamba-installed binaries directly.
+# calls environment-installed binaries directly.
 #
 # LINT_MODE:
 #   fix   — auto-fix formatting (default for local development)
@@ -32,7 +33,7 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
 
-  # ── All local hooks use language: system (tools from micromamba env) ────────
+  # ── All local hooks use language: system ───────────────────────────────────
   - repo: local
     hooks:
       # ── EditorConfig compliance ────────────────────────────────────────────
@@ -45,7 +46,6 @@ repos:
             .*\.(png|jpg|jpeg|gif|ico|svg|pdf|lock)|
             \.git/.*
           )$
-
       # ── Go: lint + format (golangci-lint) ─────────────────────────────────
       - id: golangci-lint
         name: golangci-lint
@@ -61,6 +61,15 @@ repos:
         language: system
         files: '\.go$'
         pass_filenames: false
+
+      # ── Go: unit tests (pre-push) ──────────────────────────────────────────
+      - id: go-test
+        name: go test
+        entry: go
+        args: [test, ./...]
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
 
       # ── Shell: formatting (shfmt) ─────────────────────────────────────────
       - id: shfmt
@@ -78,7 +87,7 @@ repos:
         language: system
         types: [shell]
 
-      # ── Shell: linting (shellcheck) ────────────────────────────────────────
+      # ── Shell: linting (shellcheck) ───────────────────────────────────────
       - id: shellcheck
         name: shellcheck
         entry: shellcheck

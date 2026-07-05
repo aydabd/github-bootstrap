@@ -13,6 +13,19 @@ on:
         required: false
         default: "language-agnostic-only"
         type: string
+      target_workflow:
+        description: "Creation workflow to test"
+        required: false
+        default: "create-repository.yml"
+        type: choice
+        options:
+          - create-repository.yml
+          - terraform-create-repository.yml
+      target_ref:
+        description: "Branch or tag ref for the target workflow run"
+        required: false
+        default: "main"
+        type: string
       env_manager:
         description: "Environment manager to validate"
         required: false
@@ -27,6 +40,47 @@ on:
         required: false
         default: false
         type: boolean
+      python_version:
+        description: "Python runtime version used by target workflow"
+        required: false
+        default: "3.13"
+        type: choice
+        options:
+          - "3.13"
+          - "3.12"
+      node_version:
+        description: "Node.js major LTS version used by target workflow"
+        required: false
+        default: "24"
+        type: choice
+        options:
+          - "24"
+          - "22"
+      go_version:
+        description: "Go stable version used by target workflow"
+        required: false
+        default: "1.26"
+        type: choice
+        options:
+          - "1.26"
+          - "1.25"
+      java_version:
+        description: "Java LTS version used by target workflow"
+        required: false
+        default: "25"
+        type: choice
+        options:
+          - "25"
+          - "21"
+      release_tool:
+        description: "Release workflow mode used by target workflow"
+        required: false
+        default: "git-cliff"
+        type: choice
+        options:
+          - git-cliff
+          - release-please
+          - semantic-release
       gh_token:
         description: >-
           Personal Access Token with repo and admin:org scopes.
@@ -72,50 +126,105 @@ jobs:
       - name: Validate test inputs
         id: validate-inputs
         shell: bash
+        env:
+          ENV_MANAGER_INPUT: ${{ github.event.inputs.env_manager }}
+          LANGUAGES_INPUT: ${{ github.event.inputs.languages }}
+          TARGET_WORKFLOW_INPUT: ${{ github.event.inputs.target_workflow }}
+          TARGET_REF_INPUT: ${{ github.event.inputs.target_ref }}
         run: |
-          ENV_MANAGER="${{ github.event.inputs.env_manager }}"
-          LANGUAGES="${{ github.event.inputs.languages }}"
+          ENV_MANAGER="$ENV_MANAGER_INPUT"
+          LANGUAGES="$LANGUAGES_INPUT"
+          TARGET_WORKFLOW="$TARGET_WORKFLOW_INPUT"
+          TARGET_REF="$TARGET_REF_INPUT"
           if ! [[ "$ENV_MANAGER" =~ ^(micromamba|mise|system)$ ]]; then
             echo "::error::Invalid env_manager '$ENV_MANAGER'. Allowed: micromamba, mise, system"
             exit 1
           fi
+          if ! [[ "$TARGET_WORKFLOW" =~ ^(create-repository.yml|terraform-create-repository.yml)$ ]]; then
+            echo "::error::Invalid target_workflow '$TARGET_WORKFLOW'."
+            exit 1
+          fi
+          if [ -z "$TARGET_REF" ]; then
+            echo "::error::target_ref must not be empty"
+            exit 1
+          fi
+          if ! [[ "$TARGET_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "$TARGET_REF" == *".."* ]] || [[ "$TARGET_REF" == /* ]] || [[ "$TARGET_REF" == */ ]]; then
+            echo "::error::Invalid target_ref '$TARGET_REF'."
+            exit 1
+          fi
           echo "env_manager=$ENV_MANAGER" >> "$GITHUB_OUTPUT"
           echo "languages=$LANGUAGES" >> "$GITHUB_OUTPUT"
+          echo "target_workflow=$TARGET_WORKFLOW" >> "$GITHUB_OUTPUT"
+          echo "target_ref=$TARGET_REF" >> "$GITHUB_OUTPUT"
 
       - name: Trigger repository creation workflow
         id: trigger-workflow
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          TARGET_WORKFLOW: ${{ steps.validate-inputs.outputs.target_workflow }}
+          TARGET_REF: ${{ steps.validate-inputs.outputs.target_ref }}
+          REPO_NAME: ${{ steps.generate-name.outputs.repo_name }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          LANGUAGES: ${{ steps.validate-inputs.outputs.languages }}
+          ENV_MANAGER: ${{ steps.validate-inputs.outputs.env_manager }}
+          PYTHON_VERSION: ${{ github.event.inputs.python_version }}
+          NODE_VERSION: ${{ github.event.inputs.node_version }}
+          GO_VERSION: ${{ github.event.inputs.go_version }}
+          JAVA_VERSION: ${{ github.event.inputs.java_version }}
+          RELEASE_TOOL: ${{ github.event.inputs.release_tool }}
         run: |
-          gh workflow run create-repository.yml \
-            --field repo_name="${{ steps.generate-name.outputs.repo_name }}" \
+          TRIGGERED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          gh workflow run "$TARGET_WORKFLOW" \
+            --ref "$TARGET_REF" \
+            --field repo_name="$REPO_NAME" \
             --field repo_description="Test repository for bootstrap validation - created $(date)" \
             --field visibility="public" \
             --field enable_branch_protection="false" \
-            --field team_name="* @${{ github.repository_owner }}" \
-            --field license_holder="${{ github.repository_owner }}" \
-            --field languages="${{ steps.validate-inputs.outputs.languages }}" \
-            --field env_manager="${{ steps.validate-inputs.outputs.env_manager }}" \
+            --field team_name="* @$REPO_OWNER" \
+            --field license_holder="$REPO_OWNER" \
+            --field languages="$LANGUAGES" \
+            --field env_manager="$ENV_MANAGER" \
+            --field python_version="$PYTHON_VERSION" \
+            --field node_version="$NODE_VERSION" \
+            --field go_version="$GO_VERSION" \
+            --field java_version="$JAVA_VERSION" \
+            --field release_tool="$RELEASE_TOOL" \
             --field cleanup_on_failure="true"
-
-          echo "workflow_triggered=$(date +%s)" >> $GITHUB_OUTPUT
+          echo "workflow_triggered_at=$TRIGGERED_AT" >> $GITHUB_OUTPUT
 
       - name: Monitor workflow execution
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          WORKFLOW_FILE: ${{ steps.validate-inputs.outputs.target_workflow }}
+          TARGET_REF: ${{ steps.validate-inputs.outputs.target_ref }}
+          REPOSITORY: ${{ github.repository }}
+          TRIGGERED_AT: ${{ steps.trigger-workflow.outputs.workflow_triggered_at }}
         timeout-minutes: 10
         run: |
-          echo "⏳ Monitoring create-repository workflow..."
+          echo "⏳ Monitoring ${WORKFLOW_FILE} on ref ${TARGET_REF}..."
 
           # Wait a moment for the workflow to be registered
           sleep 5
 
           # Poll for the workflow run
           for i in {1..60}; do
-            # Get the latest workflow run for create-repository.yml
+            # Find a workflow_dispatch run started after this job triggered the dispatch.
+            # This avoids relying on branch-only filtering so tag refs are supported.
             RUN_STATUS=$(gh api \
-              "/repos/${{ github.repository }}/actions/workflows/create-repository.yml/runs?per_page=1" \
-              --jq '.workflow_runs[0] | {status: .status, conclusion: .conclusion, html_url: .html_url}')
+              "/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=20&event=workflow_dispatch" \
+              --jq --arg actor "$GITHUB_ACTOR" --arg since "$TRIGGERED_AT" '
+                [.workflow_runs[]
+                | select(.actor.login == $actor)
+                | select(.created_at >= $since)
+                | {status: .status, conclusion: .conclusion, html_url: .html_url}]
+                | first // {}')
+
+            if [ "$RUN_STATUS" = "{}" ]; then
+              echo "⏳ Waiting for matching workflow run to appear... (check $i/60)"
+              sleep 10
+              continue
+            fi
 
             STATUS=$(echo "$RUN_STATUS" | jq -r '.status')
             CONCLUSION=$(echo "$RUN_STATUS" | jq -r '.conclusion')
@@ -231,6 +340,48 @@ jobs:
                 echo "❌ Missing provider file for ${ENV_MANAGER}: ${tooling_file}"
                 exit 1
               fi
+            fi
+          done
+
+          normalize_lang() {
+            case "$(echo "$1" | xargs | tr '[:upper:]' '[:lower:]')" in
+              go|golang) echo "golang" ;;
+              python) echo "python" ;;
+              typescript|javascript|node|nodejs) echo "typescript" ;;
+              java|kotlin) echo "java" ;;
+              all) echo "all" ;;
+              *) echo "agnostic" ;;
+            esac
+          }
+
+          SELECTED_LANGS=()
+          IFS=',' read -ra LANG_INPUTS <<< "$LANGUAGES"
+          for raw_lang in "${LANG_INPUTS[@]}"; do
+            normalized=$(normalize_lang "$raw_lang")
+            if [ "$normalized" = "all" ]; then
+              for every in golang python typescript java; do
+                SELECTED_LANGS+=("$every")
+              done
+            elif [ "$normalized" != "agnostic" ]; then
+              SELECTED_LANGS+=("$normalized")
+            fi
+          done
+
+          # De-duplicate while preserving order.
+          UNIQUE_LANGS=()
+          for lang in "${SELECTED_LANGS[@]}"; do
+            if [[ ! " ${UNIQUE_LANGS[*]} " =~ " ${lang} " ]]; then
+              UNIQUE_LANGS+=("$lang")
+            fi
+          done
+
+          for lang in "${UNIQUE_LANGS[@]}"; do
+            lang_config_path=".pre-commit/languages/${lang}.yaml"
+            if gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/${lang_config_path}" >/dev/null 2>&1; then
+              echo "✅ Found language pre-commit config: ${lang_config_path}"
+            else
+              echo "❌ Missing language pre-commit config: ${lang_config_path}"
+              exit 1
             fi
           done
 

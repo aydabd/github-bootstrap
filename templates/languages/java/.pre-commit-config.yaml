@@ -2,15 +2,12 @@
 # =============================================================================
 # {{REPOSITORY_NAME}} — Pre-commit hooks (source of truth for all linting)
 # =============================================================================
-# All linters run from the micromamba environment — zero extra downloads.
-# Tool versions are managed by conda-forge in environment.yml.
+# Linters run from the selected environment manager when available.
+# Some hooks (for example, npx-invoked tools) may download dependencies if not preinstalled.
+# Tool versions are managed by environment.yml / mise.toml.
 #
 # Everything uses `repo: local` with `language: system` so pre-commit
-# calls the micromamba-installed binaries directly.
-#
-# PREREQUISITES:
-#   - Add the Spotless plugin to your build.gradle to enable Java formatting.
-#     See: https://github.com/diffplug/spotless/tree/main/plugin-gradle
+# calls environment-installed binaries directly.
 #
 # LINT_MODE:
 #   fix   — auto-fix formatting (default for local development)
@@ -19,7 +16,7 @@
 exclude: |-
   (?x)^(
     build/
-    .gradle/
+    \.gradle/
   )
 repos:
   # ── Standard file hygiene ──────────────────────────────────────────────────
@@ -36,7 +33,7 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
 
-  # ── All local hooks use language: system (tools from micromamba env) ────────
+  # ── All local hooks use language: system ───────────────────────────────────
   - repo: local
     hooks:
       # ── EditorConfig compliance ────────────────────────────────────────────
@@ -47,10 +44,8 @@ repos:
         exclude: >
           (?x)^(
             .*\.(png|jpg|jpeg|gif|ico|svg|pdf|lock)|
-            \.git/.*|
-            \.gradle/.*
+            \.git/.*
           )$
-
       # ── Java: formatting (Spotless via Gradle) ────────────────────────────
       - id: spotless
         name: spotless (Java formatting)
@@ -66,6 +61,35 @@ repos:
         language: system
         files: '\.java$'
         pass_filenames: false
+
+      # ── Java: style checks (Checkstyle if configured) ─────────────────────
+      - id: checkstyle
+        name: checkstyle
+        entry: bash
+        args:
+          - -c
+          - |
+            task_probe_output=$(./gradlew -q help --task checkstyleMain 2>&1) || {
+              if echo "$task_probe_output" | grep -q "Task 'checkstyleMain' not found"; then
+                echo "Checkstyle plugin not configured; skipping."
+                exit 0
+              fi
+              echo "$task_probe_output"
+              exit 1
+            }
+            ./gradlew checkstyleMain checkstyleTest
+        language: system
+        files: '\.java$'
+        pass_filenames: false
+
+      # ── Java: unit tests (pre-push) ───────────────────────────────────────
+      - id: gradle-test
+        name: gradle test
+        entry: ./gradlew
+        args: [test]
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
 
       # ── Shell: formatting (shfmt) ─────────────────────────────────────────
       - id: shfmt
@@ -83,7 +107,7 @@ repos:
         language: system
         types: [shell]
 
-      # ── Shell: linting (shellcheck) ────────────────────────────────────────
+      # ── Shell: linting (shellcheck) ───────────────────────────────────────
       - id: shellcheck
         name: shellcheck
         entry: shellcheck

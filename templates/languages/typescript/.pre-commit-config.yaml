@@ -2,15 +2,12 @@
 # =============================================================================
 # {{REPOSITORY_NAME}} — Pre-commit hooks (source of truth for all linting)
 # =============================================================================
-# All linters run from the micromamba environment — zero extra downloads.
-# Tool versions are managed by conda-forge in environment.yml.
+# Linters run from the selected environment manager when available.
+# Some hooks (for example, npx-invoked tools) may download dependencies if not preinstalled.
+# Tool versions are managed by environment.yml / mise.toml.
 #
 # Everything uses `repo: local` with `language: system` so pre-commit
-# calls the micromamba-installed binaries directly.
-#
-# PREREQUISITES:
-#   - Run `npm install` once after cloning to install ESLint and TypeScript.
-#   - ESLint is invoked via `npx eslint` using your project's package.json.
+# calls environment-installed binaries directly.
 #
 # LINT_MODE:
 #   fix   — auto-fix formatting (default for local development)
@@ -37,7 +34,7 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
 
-  # ── All local hooks use language: system (tools from micromamba env) ────────
+  # ── All local hooks use language: system ───────────────────────────────────
   - repo: local
     hooks:
       # ── EditorConfig compliance ────────────────────────────────────────────
@@ -48,45 +45,23 @@ repos:
         exclude: >
           (?x)^(
             .*\.(png|jpg|jpeg|gif|ico|svg|pdf|lock)|
-            \.git/.*|
-            node_modules/.*
+            \.git/.*
           )$
-
-      # ── TypeScript / JavaScript: ESLint ───────────────────────────────────
-      - id: eslint
-        name: eslint
+      # ── TypeScript / JavaScript: Biome (lint + format) ────────────────────
+      - id: biome
+        name: biome (lint + format)
         entry: bash
         args:
           - -c
           - |
             if [ "$LINT_MODE" = "check" ]; then
-              npx eslint --max-warnings=0 "$@"
+              npx --yes @biomejs/biome@2.2.4 check --error-on-warnings "$@"
             else
-              npx eslint --fix "$@"
+              npx --yes @biomejs/biome@2.2.4 check --write "$@"
             fi
-          - eslint
+          - biome
         language: system
-        files: '\.[jt]sx?$'
-        pass_filenames: true
-
-      # ── TypeScript / JavaScript: Prettier formatting ───────────────────────
-      - id: prettier-ts
-        name: prettier (TS/JS)
-        entry: bash
-        args:
-          - -c
-          - |
-            if [ "$LINT_MODE" = "check" ]; then
-              prettier --check --config .prettierrc.yaml --ignore-path .prettierignore "$@" || {
-                echo "Files need formatting. Run: make lint"
-                exit 1
-              }
-            else
-              prettier -w --config .prettierrc.yaml --ignore-path .prettierignore "$@"
-            fi
-          - prettier
-        language: system
-        files: '\.[jt]sx?$'
+        files: '\.[cm]?[jt]sx?$'
         pass_filenames: true
 
       # ── Shell: formatting (shfmt) ─────────────────────────────────────────
@@ -105,7 +80,7 @@ repos:
         language: system
         types: [shell]
 
-      # ── Shell: linting (shellcheck) ────────────────────────────────────────
+      # ── Shell: linting (shellcheck) ───────────────────────────────────────
       - id: shellcheck
         name: shellcheck
         entry: shellcheck
@@ -162,7 +137,7 @@ repos:
 
       # ── JSON / YAML / Markdown: formatting (prettier) ─────────────────────
       - id: prettier
-        name: prettier (JSON/YAML/Markdown)
+        name: prettier
         entry: bash
         args:
           - -c

@@ -2,11 +2,12 @@
 # =============================================================================
 # {{REPOSITORY_NAME}} — Pre-commit hooks (source of truth for all linting)
 # =============================================================================
-# All linters run from the micromamba environment — zero extra downloads.
-# Tool versions are managed by conda-forge in environment.yml.
+# Linters run from the selected environment manager when available.
+# Some hooks (for example, npx-invoked tools) may download dependencies if not preinstalled.
+# Tool versions are managed by environment.yml / mise.toml.
 #
 # Everything uses `repo: local` with `language: system` so pre-commit
-# calls the micromamba-installed binaries directly.
+# calls environment-installed binaries directly.
 #
 # LINT_MODE:
 #   fix   — auto-fix formatting (default for local development)
@@ -31,7 +32,7 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
 
-  # ── All local hooks use language: system (tools from micromamba env) ────────
+  # ── All local hooks use language: system ───────────────────────────────────
   - repo: local
     hooks:
       # ── EditorConfig compliance ────────────────────────────────────────────
@@ -61,7 +62,7 @@ repos:
         language: system
         types: [shell]
 
-      # ── Shell: linting (shellcheck) ────────────────────────────────────────
+      # ── Shell: linting (shellcheck) ───────────────────────────────────────
       - id: shellcheck
         name: shellcheck
         entry: shellcheck
