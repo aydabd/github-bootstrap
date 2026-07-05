@@ -167,7 +167,9 @@ jobs:
           fi
 
           ERR_FILE=$(mktemp)
-          if ! NORMALIZED_JSON=$(go run ./tools/cmd/bootstrap-inputs \
+          REPO_ROOT="${GITHUB_WORKSPACE:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+          BOOTSTRAP_INPUTS_PATH="$REPO_ROOT/tools/cmd/bootstrap-inputs"
+          if ! NORMALIZED_JSON=$(go run "$BOOTSTRAP_INPUTS_PATH" \
             --mode validate \
             --languages "$LANGUAGES" \
             --python-version "$PYTHON_VERSION" \
