@@ -32,17 +32,17 @@ Fallback: use a PAT when App setup is not available.
 
 1. Create or use an existing GitHub App with the following minimum permissions:
 
-  | Permission scope | Level          | Required for                                   |
-  | ---------------- | -------------- | ---------------------------------------------- |
-  | `Contents`       | Read and write | Clone template, push initial commits           |
-  | `Administration` | Read and write | Create repos, configure settings, delete repos |
-  | `Metadata`       | Read-only      | Read repository info (auto-granted)            |
+   | Permission scope | Level          | Required for                                   |
+   | ---------------- | -------------- | ---------------------------------------------- |
+   | `Contents`       | Read and write | Clone template, push initial commits           |
+   | `Administration` | Read and write | Create repos, configure settings, delete repos |
+   | `Metadata`       | Read-only      | Read repository info (auto-granted)            |
 
-  For **organization** repositories also add:
+   For **organization** repositories also add:
 
-  | Permission scope | Level     | Required for                          |
-  | ---------------- | --------- | ------------------------------------- |
-  | `Members`        | Read-only | Resolve org membership for team setup |
+   | Permission scope | Level     | Required for                          |
+   | ---------------- | --------- | ------------------------------------- |
+   | `Members`        | Read-only | Resolve org membership for team setup |
 
 2. Install the App in each target user/org (tenant isolation). The App must be installed
    on every `app_owner` value you intend to target.
