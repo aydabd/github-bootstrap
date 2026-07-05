@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github-bootstrap/tools/pkg/bootstrapinputs"
 )
 
 const (
@@ -101,79 +103,7 @@ func run(cfg config) error {
 }
 
 func normalizeLanguages(input string) ([]string, error) {
-	trimmed := strings.TrimSpace(input)
-	if trimmed == "" || trimmed == "language-agnostic-only" {
-		return []string{"agnostic"}, nil
-	}
-
-	if trimmed == "all" {
-		return append([]string{}, supportedLanguages...), nil
-	}
-
-	raw := strings.Split(trimmed, ",")
-	seen := map[string]bool{}
-	langs := make([]string, 0, len(raw))
-	hasAll := false
-	hasAgnostic := false
-
-	for _, item := range raw {
-		normalized := normalizeAlias(item)
-		if normalized == "" {
-			continue
-		}
-		if normalized == "all" {
-			hasAll = true
-			continue
-		}
-		if normalized == "agnostic" {
-			hasAgnostic = true
-		}
-		if !seen[normalized] {
-			langs = append(langs, normalized)
-			seen[normalized] = true
-		}
-	}
-
-	if hasAll {
-		if hasAgnostic {
-			return nil, errors.New("language-agnostic-only cannot be combined with other languages")
-		}
-		return append([]string{}, supportedLanguages...), nil
-	}
-
-	if len(langs) == 0 {
-		return []string{"agnostic"}, nil
-	}
-
-	for _, lang := range langs {
-		if lang == "agnostic" {
-			if len(langs) == 1 {
-				return langs, nil
-			}
-			return nil, errors.New("language-agnostic-only cannot be combined with other languages")
-		}
-	}
-
-	return langs, nil
-}
-
-func normalizeAlias(value string) string {
-	switch strings.TrimSpace(strings.ToLower(value)) {
-	case "language-agnostic-only", "agnostic":
-		return "agnostic"
-	case "go", "golang":
-		return "golang"
-	case "python":
-		return "python"
-	case "typescript", "javascript", "node", "nodejs":
-		return "typescript"
-	case "java", "kotlin":
-		return "java"
-	case "all":
-		return "all"
-	default:
-		return ""
-	}
+	return bootstrapinputs.NormalizeLanguagesStrict(input)
 }
 
 func renderConfig(basePath, snippetsRoot string, languages []string) (string, error) {
