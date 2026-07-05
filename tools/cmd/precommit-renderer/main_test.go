@@ -148,8 +148,10 @@ func TestRunWithRepositoryTemplatesEmitsAllLanguageFiles(t *testing.T) {
 			t.Fatalf("expected emitted language file for %s: %v", lang, err)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(emitDir, "agnostic.yaml")); !os.IsNotExist(err) {
-		t.Fatalf("agnostic language file should not be emitted, stat error: %v", err)
+	if _, err := os.Stat(filepath.Join(emitDir, "agnostic.yaml")); err == nil {
+		t.Fatal("agnostic language file should not be emitted")
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("unexpected error statting agnostic language file: %v", err)
 	}
 }
 
