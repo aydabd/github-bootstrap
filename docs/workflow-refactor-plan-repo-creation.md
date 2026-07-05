@@ -23,8 +23,8 @@ low-risk PR, then this refactor can proceed in phases.
 ## Progress tracking
 
 - Phase 0: In progress. Shared request validation and the behavior contract are
-  implemented; baseline renderer and workflow validation tests are started, and
-  broader generated-file snapshot coverage still remains.
+  implemented; baseline renderer/workflow validation and generated-file snapshot
+  tests are implemented, and only CI confirmation remains.
 - Phase 1: Not started. Start after the Phase 0 changes land on `main`.
 - Phase 2: Not started. Depends on the normalization contract from Phase 1.
 - Phase 3: Not started. Can start after production workflow behavior is stable.
@@ -150,7 +150,7 @@ align with production behavior:
 - [ ] Add snapshot tests for generated key files.
   - [x] Add snapshot-style assertions for pre-commit config generated from real
         language snippets.
-  - [ ] Add file snapshots for generated repository key files.
+  - [x] Add file snapshots for generated repository key files.
 - [x] Document behavior contract in one markdown file.
 
 Exit criteria:
@@ -158,7 +158,7 @@ Exit criteria:
 - [x] duplicated allowlist/audit/App-vs-User shell is removed from both creation
       workflows
 - [ ] green CI
-- [ ] baseline snapshots committed
+- [x] baseline snapshots committed
 - [x] current accepted and rejected language/runtime inputs are documented in
       `docs/repository-creation-behavior-contract.md`
 
