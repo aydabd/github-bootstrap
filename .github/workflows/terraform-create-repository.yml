@@ -650,7 +650,7 @@ jobs:
           enable_repo_settings: ${{ inputs.enable_repo_settings }}
           apply_repository_settings: "false"
           manage_environments: "false"
-          enable_dependabot: "true"
+          enable_dependabot: ${{ inputs.enable_repo_settings }}
           gh_token: ${{ steps.resolve-token.outputs.token }}
 
       - name: Apply repository ruleset
@@ -684,8 +684,7 @@ jobs:
               echo "- ⏭️ Production environment (Terraform-managed; not modified here)" >> $GITHUB_STEP_SUMMARY
               ;;
             *)
-              echo "- ✅ Vulnerability alerts enabled" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Development environment (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
               echo "- ⏭️ Production environment (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
@@ -704,7 +703,17 @@ jobs:
           echo "- ✅ SECURITY.md (security policy)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ CONTRIBUTING.md (contribution guide)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Lint workflow (${{ steps.validate-inputs.outputs.env_manager }} + pre-commit)" >> $GITHUB_STEP_SUMMARY
+          case "${{ inputs.workflows }}" in
+            "all"|"")
+              echo "- ✅ Lint workflow (${{ steps.validate-inputs.outputs.env_manager }} + pre-commit)" >> $GITHUB_STEP_SUMMARY
+              ;;
+            "none")
+              echo "- ⏭️ All workflows skipped" >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              echo "- ✅ Selected workflows: ${{ inputs.workflows }}" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
           if [ -f new-repo/environment.yml ]; then
             echo "- ✅ provider/micromamba config selected (environment.yml)" >> $GITHUB_STEP_SUMMARY
           elif [ -f new-repo/mise.toml ]; then
@@ -714,17 +723,22 @@ jobs:
           fi
           echo "- ✅ .pre-commit-config.yaml (all language: system hooks)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Conventional commits (pre-commit)" >> $GITHUB_STEP_SUMMARY
-          case "${{ inputs.release_tool }}" in
-            "release-please")
-              echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
-              ;;
-            "semantic-release")
-              echo "- ✅ semantic-release workflow (push-to-main, fully automated)" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ .releaserc.json (semantic-release configuration)" >> $GITHUB_STEP_SUMMARY
-              ;;
+          case "${{ inputs.workflows }}" in
+            "none") ;;
             *)
-              echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ cliff.toml (changelog configuration)" >> $GITHUB_STEP_SUMMARY
+              case "${{ inputs.release_tool }}" in
+                "release-please")
+                  echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
+                  ;;
+                "semantic-release")
+                  echo "- ✅ semantic-release workflow (push-to-main, fully automated)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ .releaserc.json (semantic-release configuration)" >> $GITHUB_STEP_SUMMARY
+                  ;;
+                *)
+                  echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ cliff.toml (changelog configuration)" >> $GITHUB_STEP_SUMMARY
+                  ;;
+              esac
               ;;
           esac
           echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY

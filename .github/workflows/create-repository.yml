@@ -696,20 +696,20 @@ jobs:
 
           case "${{ inputs.enable_repo_settings }}" in
             "true")
-              echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Vulnerability alerts and Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
               ;;
             *)
-              echo "- ⏭️ Dependabot configuration (skipped)" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Development environment (skipped)" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Production environment (skipped)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Development environment (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Production environment (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
               ;;
           esac
+
+          echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
 
           echo "- ✅ .editorconfig (4 spaces code, 2 spaces config)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ .gitignore, .gitattributes" >> $GITHUB_STEP_SUMMARY
