@@ -131,11 +131,19 @@ jobs:
           LANGUAGES_INPUT: ${{ github.event.inputs.languages }}
           TARGET_WORKFLOW_INPUT: ${{ github.event.inputs.target_workflow }}
           TARGET_REF_INPUT: ${{ github.event.inputs.target_ref }}
+          PYTHON_VERSION_INPUT: ${{ github.event.inputs.python_version }}
+          NODE_VERSION_INPUT: ${{ github.event.inputs.node_version }}
+          GO_VERSION_INPUT: ${{ github.event.inputs.go_version }}
+          JAVA_VERSION_INPUT: ${{ github.event.inputs.java_version }}
         run: |
           ENV_MANAGER="$ENV_MANAGER_INPUT"
           LANGUAGES="$LANGUAGES_INPUT"
           TARGET_WORKFLOW="$TARGET_WORKFLOW_INPUT"
           TARGET_REF="$TARGET_REF_INPUT"
+          PYTHON_VERSION="$PYTHON_VERSION_INPUT"
+          NODE_VERSION="$NODE_VERSION_INPUT"
+          GO_VERSION="$GO_VERSION_INPUT"
+          JAVA_VERSION="$JAVA_VERSION_INPUT"
           if ! [[ "$ENV_MANAGER" =~ ^(micromamba|mise|system)$ ]]; then
             echo "::error::Invalid env_manager '$ENV_MANAGER'. Allowed: micromamba, mise, system"
             exit 1
@@ -152,8 +160,29 @@ jobs:
             echo "::error::Invalid target_ref '$TARGET_REF'."
             exit 1
           fi
+
+          if ! NORMALIZED_JSON=$(go run ./tools/cmd/bootstrap-inputs \
+            --mode validate \
+            --languages "$LANGUAGES" \
+            --python-version "$PYTHON_VERSION" \
+            --node-version "$NODE_VERSION" \
+            --go-version "$GO_VERSION" \
+            --java-version "$JAVA_VERSION" 2>/tmp/bootstrap-inputs-test-validate.err.json); then
+            if [ -s /tmp/bootstrap-inputs-test-validate.err.json ]; then
+              ERROR_MESSAGE=$(jq -r '.message // "test input validation failed"' /tmp/bootstrap-inputs-test-validate.err.json 2>/dev/null || echo "test input validation failed")
+              echo "::error::$ERROR_MESSAGE"
+            else
+              echo "::error::test input validation failed"
+            fi
+            exit 1
+          fi
+
+          NORMALIZED_LANGUAGES=$(echo "$NORMALIZED_JSON" | jq -r '.languages | join(",")')
+          ROOT_LANGUAGE=$(echo "$NORMALIZED_JSON" | jq -r '.root_language')
           echo "env_manager=$ENV_MANAGER" >> "$GITHUB_OUTPUT"
           echo "languages=$LANGUAGES" >> "$GITHUB_OUTPUT"
+          echo "normalized_languages=$NORMALIZED_LANGUAGES" >> "$GITHUB_OUTPUT"
+          echo "root_language=$ROOT_LANGUAGE" >> "$GITHUB_OUTPUT"
           echo "target_workflow=$TARGET_WORKFLOW" >> "$GITHUB_OUTPUT"
           echo "target_ref=$TARGET_REF" >> "$GITHUB_OUTPUT"
 
@@ -276,7 +305,9 @@ jobs:
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
           ENV_MANAGER="${{ steps.validate-inputs.outputs.env_manager }}"
-          LANGUAGES="${{ steps.validate-inputs.outputs.languages }}"
+          RAW_LANGUAGES="${{ steps.validate-inputs.outputs.languages }}"
+          LANGUAGES="${{ steps.validate-inputs.outputs.normalized_languages }}"
+          LANG_DIR="${{ steps.validate-inputs.outputs.root_language }}"
 
           echo "🔍 Validating repository structure..."
 
@@ -310,14 +341,9 @@ jobs:
             fi
           done
 
-          FIRST_LANG=$(echo "$LANGUAGES" | cut -d',' -f1 | xargs)
-          case "$FIRST_LANG" in
-            "python")                 LANG_DIR="python" ;;
-            "go"|"golang")            LANG_DIR="golang" ;;
-            "typescript"|"javascript") LANG_DIR="typescript" ;;
-            "java"|"kotlin")          LANG_DIR="java" ;;
-            *)                         LANG_DIR="agnostic" ;;
-          esac
+          if echo "$RAW_LANGUAGES" | grep -q ','; then
+            echo "ℹ️ Multiple languages requested ($RAW_LANGUAGES). Root template uses first-language policy: $LANG_DIR"
+          fi
 
           PROVIDER_DIR="templates/languages/$LANG_DIR/providers/$ENV_MANAGER"
           if [ ! -d "$PROVIDER_DIR" ]; then
@@ -343,28 +369,14 @@ jobs:
             fi
           done
 
-          normalize_lang() {
-            case "$(echo "$1" | xargs | tr '[:upper:]' '[:lower:]')" in
-              go|golang) echo "golang" ;;
-              python) echo "python" ;;
-              typescript|javascript|node|nodejs) echo "typescript" ;;
-              java|kotlin) echo "java" ;;
-              all) echo "all" ;;
-              *) echo "agnostic" ;;
-            esac
-          }
-
           SELECTED_LANGS=()
           IFS=',' read -ra LANG_INPUTS <<< "$LANGUAGES"
-          for raw_lang in "${LANG_INPUTS[@]}"; do
-            normalized=$(normalize_lang "$raw_lang")
-            if [ "$normalized" = "all" ]; then
-              for every in golang python typescript java; do
-                SELECTED_LANGS+=("$every")
-              done
-            elif [ "$normalized" != "agnostic" ]; then
-              SELECTED_LANGS+=("$normalized")
+          for normalized in "${LANG_INPUTS[@]}"; do
+            normalized=$(echo "$normalized" | xargs | tr '[:upper:]' '[:lower:]')
+            if [ "$normalized" = "" ] || [ "$normalized" = "agnostic" ]; then
+              continue
             fi
+            SELECTED_LANGS+=("$normalized")
           done
 
           # De-duplicate while preserving order.
