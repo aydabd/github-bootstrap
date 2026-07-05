@@ -1,0 +1,37 @@
+---
+name: Validate Bootstrap Owner
+description: Validate the target repository owner against the optional allowlist.
+
+inputs:
+  owner:
+    description: Target repository owner.
+    required: true
+  allowed_repo_owners:
+    description: Optional comma-separated allowlist of permitted target owners.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Validate target owner against allowlist
+      shell: bash
+      env:
+        OWNER: ${{ inputs.owner }}
+        ALLOWLIST: ${{ inputs.allowed_repo_owners }}
+      run: |
+        CLEAN_ALLOWLIST=$(printf '%s' "$ALLOWLIST" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+
+        if [ -z "$CLEAN_ALLOWLIST" ]; then
+          echo "No owner allowlist configured; all owners allowed."
+          exit 0
+        fi
+        OWNER_LC=$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')
+
+        if echo ",$CLEAN_ALLOWLIST," | grep -q ",$OWNER_LC,"; then
+          echo "Owner '$OWNER' allowed by allowlist."
+          exit 0
+        fi
+
+        echo "::error::Target owner '$OWNER' is not in allowed_repo_owners."
+        exit 1

@@ -383,26 +383,11 @@ jobs:
           echo "go_version=$GO_VERSION" >> "$GITHUB_OUTPUT"
           echo "java_version=$JAVA_VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Validate target owner against allowlist
-        run: |
-          OWNER="${{ steps.set-owner.outputs.owner }}"
-          ALLOWLIST="${{ inputs.allowed_repo_owners }}"
-          # Normalize first so whitespace-only input is treated as empty (no allowlist)
-          CLEAN_ALLOWLIST=$(echo "$ALLOWLIST" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
-
-          if [ -z "$CLEAN_ALLOWLIST" ]; then
-            echo "No owner allowlist configured; all owners allowed."
-            exit 0
-          fi
-          OWNER_LC=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
-
-          if echo ",$CLEAN_ALLOWLIST," | grep -q ",$OWNER_LC,"; then
-            echo "Owner '$OWNER' allowed by allowlist."
-            exit 0
-          fi
-
-          echo "::error::Target owner '$OWNER' is not in allowed_repo_owners."
-          exit 1
+      - name: Validate target owner
+        uses: ./.github/actions/validate-bootstrap-owner
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          allowed_repo_owners: ${{ inputs.allowed_repo_owners }}
 
       - name: Resolve GitHub token
         id: resolve-token
@@ -415,27 +400,12 @@ jobs:
           app_owner: ${{ inputs.app_owner || steps.set-owner.outputs.owner }}
 
       - name: Audit bootstrap request
-        run: |
-          echo "### Bootstrap Request Audit" >> $GITHUB_STEP_SUMMARY
-          echo "- Event: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Auth mode: ${{ steps.resolve-token.outputs.auth_mode }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Actor: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Run ID: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Target owner: ${{ steps.set-owner.outputs.owner }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Target repository: ${{ inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
-
-      - name: Validate owner type vs auth mode
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          OWNER="${{ steps.set-owner.outputs.owner }}"
-          AUTH_MODE="${{ steps.resolve-token.outputs.auth_mode }}"
-          OWNER_TYPE=$(gh api /users/$OWNER --jq '.type')
-          echo "Owner type: $OWNER_TYPE, Auth mode: $AUTH_MODE"
-          if [ "$AUTH_MODE" = "app" ] && [ "$OWNER_TYPE" = "User" ]; then
-            echo "::error::GitHub App installation tokens cannot create repositories under a personal user account ('$OWNER' is a User, not an Organization). Use a PAT (GH_PAT secret or gh_token input) for personal account targets, or use an organization as the target repo_owner."
-            exit 1
-          fi
+        uses: ./.github/actions/audit-bootstrap-request
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          repo_name: ${{ inputs.repo_name }}
+          auth_mode: ${{ steps.resolve-token.outputs.auth_mode }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
 
       - name: Terraform Init
         working-directory: terraform

@@ -1,0 +1,54 @@
+---
+name: Audit Bootstrap Request
+description: Audit the bootstrap request and validate owner type against auth mode.
+
+inputs:
+  owner:
+    description: Target repository owner.
+    required: true
+  repo_name:
+    description: Target repository name.
+    required: true
+  auth_mode:
+    description: Resolved GitHub authentication mode.
+    required: true
+  gh_token:
+    description: Resolved GitHub token for API calls.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Audit bootstrap request
+      shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        AUTH_MODE: ${{ inputs.auth_mode }}
+        ACTOR: ${{ github.actor }}
+        RUN_ID: ${{ github.run_id }}
+        OWNER: ${{ inputs.owner }}
+        REPO_NAME: ${{ inputs.repo_name }}
+      run: |
+        echo "### Bootstrap Request Audit" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Event: $EVENT_NAME" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Auth mode: $AUTH_MODE" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Actor: $ACTOR" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Run ID: $RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Target owner: $OWNER" >> "$GITHUB_STEP_SUMMARY"
+        echo "- Target repository: $REPO_NAME" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Validate owner type vs auth mode
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+        OWNER: ${{ inputs.owner }}
+        AUTH_MODE: ${{ inputs.auth_mode }}
+      run: |
+        OWNER_TYPE=$(gh api "/users/$OWNER" --jq '.type')
+        echo "Owner type: $OWNER_TYPE, Auth mode: $AUTH_MODE"
+        if [ "$AUTH_MODE" = "app" ] && [ "$OWNER_TYPE" = "User" ]; then
+          ERROR_MESSAGE="GitHub App installation tokens cannot create repositories under a personal user account ('$OWNER' is a User, not an Organization)."
+          ERROR_MESSAGE+=" Use a PAT (GH_PAT secret or gh_token input) for personal account targets, or use an organization as the target repo_owner."
+          echo "::error::$ERROR_MESSAGE"
+          exit 1
+        fi
