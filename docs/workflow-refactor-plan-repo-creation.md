@@ -188,9 +188,9 @@ Exit criteria:
 3. [x] Move release/configuration steps into dedicated actions.
 4. [x] Move CodeQL configuration into `configure-codeql` action.
 5. [x] Move repo settings and Dependabot handling into `apply-repo-settings`
-  action; remove classic branch-protection automation from workflows.
+       action; remove classic branch-protection automation from workflows.
 6. [x] Add `apply-repository-ruleset` action to apply default ruleset payload
-  during repository bootstrap.
+       during repository bootstrap.
 
 Exit criteria:
 
@@ -198,7 +198,7 @@ Exit criteria:
 - [x] each extracted action has input/output contract
 - [x] repo settings handling extracted and wired into both workflows
 - [x] ruleset bootstrap extracted and wired into both workflows via
-  `apply-repository-ruleset`
+      `apply-repository-ruleset`
 
 ### Phase 3: Test workflow parity and reliability
 
