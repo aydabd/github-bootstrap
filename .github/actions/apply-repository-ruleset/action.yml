@@ -35,7 +35,11 @@ runs:
           exit 1
         fi
 
-        RULESET_NAME=$(jq -r '.name // "default"' "$RULESET_FILE")
+        if command -v jq >/dev/null 2>&1; then
+          RULESET_NAME=$(jq -r '.name // "default"' "$RULESET_FILE")
+        else
+          RULESET_NAME=$(python3 -c "import json; d=json.load(open('$RULESET_FILE')); print(d.get('name','default'))")
+        fi
 
         EXISTING_RULESET_ID=$(gh api --paginate /repos/"$OWNER"/"$REPO"/rulesets --jq '.[] | select(.name == "'"$RULESET_NAME"'") | .id' 2>/dev/null | head -n1)
 
@@ -55,9 +59,12 @@ runs:
           "$ENDPOINT" \
           --input "$RULESET_FILE" 2>&1) || {
           EXIT_CODE=$?
-          if echo "$RESPONSE" | grep -Eiq "Upgrade to GitHub Pro|public repositories with GitHub Free|rulesets are available|Invalid request\. Invalid property /rules/|data matches no possible input|code_scanning|copilot_code_review|Advanced Security must be enabled|Copilot"; then
-            echo "⚠️ Ruleset setup skipped: repository plan/features do not support this ruleset payload." >> "$GITHUB_STEP_SUMMARY"
-            echo "::warning::Ruleset setup skipped due to unsupported plan/features for one or more rules."
+          # Only skip silently for known plan-tier or feature-gate messages.
+          # Generic 422 schema errors are surfaced as failures so payload bugs are visible.
+          if echo "$RESPONSE" | grep -Eiq "Upgrade to GitHub Pro|public repositories with GitHub Free|rulesets are available|GitHub Advanced Security must be enabled|Copilot is not enabled|Copilot Business|Copilot Enterprise"; then
+            echo "⚠️ Ruleset setup skipped: repository plan or required features are not enabled." >> "$GITHUB_STEP_SUMMARY"
+            echo "Details: $RESPONSE" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Ruleset setup skipped due to plan/feature limitations. See step summary for details."
             exit 0
           fi
           echo "$RESPONSE"
