@@ -34,6 +34,7 @@ var codeQLLanguageMap = map[string]string{
 	"java":       "java-kotlin",
 	"kotlin":     "java-kotlin",
 	"go":         "go",
+	"golang":     "go",
 	"csharp":     "csharp",
 	"cpp":        "cpp",
 	"ruby":       "ruby",
@@ -49,7 +50,13 @@ func NormalizeLanguagesPermissive(input string) ([]string, error) {
 
 func normalizeLanguages(input string, strictUnknown bool) ([]string, error) {
 	trimmed := strings.TrimSpace(input)
-	if trimmed == "" || strings.EqualFold(trimmed, "language-agnostic-only") || strings.EqualFold(trimmed, "agnostic") {
+	if strings.EqualFold(trimmed, "language-agnostic-only") || strings.EqualFold(trimmed, "agnostic") {
+		return []string{"agnostic"}, nil
+	}
+	if trimmed == "" {
+		if strictUnknown {
+			return nil, fmt.Errorf("no valid language tokens in %q", input)
+		}
 		return []string{"agnostic"}, nil
 	}
 

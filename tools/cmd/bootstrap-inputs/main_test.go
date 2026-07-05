@@ -23,6 +23,13 @@ func TestParseFlagsInvalidMode(t *testing.T) {
 	}
 }
 
+func TestParseFlagsMissingLanguages(t *testing.T) {
+	_, err := parseFlags([]string{"--mode", "normalize"})
+	if err == nil {
+		t.Fatal("expected missing languages error, got nil")
+	}
+}
+
 func TestRunNormalize(t *testing.T) {
 	result, err := run(config{mode: "normalize", languages: "go,node,kotlin"})
 	if err != nil {
@@ -57,5 +64,25 @@ func TestRunValidateRuntimePins(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "python_version") {
 		t.Fatalf("unexpected runtime validation error: %v", err)
+	}
+}
+
+func TestRunValidateSuccess(t *testing.T) {
+	result, err := run(config{
+		mode:          "validate",
+		languages:     "golang,typescript",
+		pythonVersion: "3.13",
+		nodeVersion:   "24",
+		goVersion:     "1.26",
+		javaVersion:   "25",
+	})
+	if err != nil {
+		t.Fatalf("validate run failed: %v", err)
+	}
+	if !result.Valid {
+		t.Fatal("expected valid result")
+	}
+	if result.ReleaseType != "simple" {
+		t.Fatalf("unexpected release type in validate mode: %s", result.ReleaseType)
 	}
 }

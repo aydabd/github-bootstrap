@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github-bootstrap/tools/pkg/bootstrapinputs"
@@ -49,7 +50,8 @@ func main() {
 
 func parseFlags(args []string) (config, error) {
 	fs := flag.NewFlagSet("bootstrap-inputs", flag.ContinueOnError)
-	fs.SetOutput(os.Stderr)
+	fs.SetOutput(io.Discard)
+	fs.Usage = func() {}
 
 	cfg := config{}
 	fs.StringVar(&cfg.mode, "mode", "normalize", "mode: normalize or validate")
@@ -67,6 +69,9 @@ func parseFlags(args []string) (config, error) {
 	}
 	if cfg.languages == "" {
 		return config{}, errors.New("--languages is required")
+	}
+	if cfg.mode == "validate" && (cfg.pythonVersion == "" || cfg.nodeVersion == "" || cfg.goVersion == "" || cfg.javaVersion == "") {
+		return config{}, errors.New("--python-version, --node-version, --go-version, and --java-version are required in validate mode")
 	}
 	return cfg, nil
 }

@@ -13,7 +13,8 @@ func TestNormalizeLanguagesStrict(t *testing.T) {
 		want    []string
 		wantErr bool
 	}{
-		{name: "agnostic default", input: "", want: []string{"agnostic"}},
+		{name: "empty strict fails", input: "", wantErr: true},
+		{name: "blank strict fails", input: "   ", wantErr: true},
 		{name: "agnostic explicit", input: "language-agnostic-only", want: []string{"agnostic"}},
 		{name: "alias mapping", input: "go,node,nodejs,kotlin", want: []string{"golang", "typescript", "java"}},
 		{name: "all", input: "all", want: []string{"golang", "python", "typescript", "java"}},
@@ -100,6 +101,7 @@ func TestCodeQLLanguages(t *testing.T) {
 	}{
 		{name: "agnostic none", input: "language-agnostic-only", want: nil},
 		{name: "all", input: "all", want: []string{"javascript-typescript", "python", "java-kotlin", "csharp", "go", "ruby", "cpp"}},
+		{name: "golang alias", input: "golang", want: []string{"go"}},
 		{name: "dedupe alias", input: "javascript,typescript,go", want: []string{"javascript-typescript", "go"}},
 		{name: "unsupported removed", input: "python,rust", want: []string{"python"}},
 	}
