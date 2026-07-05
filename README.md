@@ -32,23 +32,23 @@ Fallback: use a PAT when App setup is not available.
 
 1. Create or use an existing GitHub App with the following minimum permissions:
 
-| Permission scope | Level          | Required for                                   |
-| ---------------- | -------------- | ---------------------------------------------- |
-| `Contents`       | Read and write | Clone template, push initial commits           |
-| `Administration` | Read and write | Create repos, configure settings, delete repos |
-| `Metadata`       | Read-only      | Read repository info (auto-granted)            |
+  | Permission scope | Level          | Required for                                   |
+  | ---------------- | -------------- | ---------------------------------------------- |
+  | `Contents`       | Read and write | Clone template, push initial commits           |
+  | `Administration` | Read and write | Create repos, configure settings, delete repos |
+  | `Metadata`       | Read-only      | Read repository info (auto-granted)            |
 
-For **organization** repositories also add:
+  For **organization** repositories also add:
 
-| Permission scope | Level     | Required for                          |
-| ---------------- | --------- | ------------------------------------- |
-| `Members`        | Read-only | Resolve org membership for team setup |
+  | Permission scope | Level     | Required for                          |
+  | ---------------- | --------- | ------------------------------------- |
+  | `Members`        | Read-only | Resolve org membership for team setup |
 
-1. Install the App in each target user/org (tenant isolation). The App must be installed
+2. Install the App in each target user/org (tenant isolation). The App must be installed
    on every `app_owner` value you intend to target.
-2. In the repository that runs bootstrap, set:
+3. In the repository that runs bootstrap, set:
    - `BOOTSTRAP_APP_PRIVATE_KEY` (Actions secret — the PEM private key of the App)
-3. When running the workflow, provide:
+4. When running the workflow, provide:
    - `app_id` (the numeric App ID, visible in the App's settings)
    - `app_owner` (target tenant owner)
 
