@@ -1,0 +1,49 @@
+---
+name: Render Pre-commit Configs
+description: >-
+  Render the root .pre-commit-config.yaml and per-language files from snippet
+  templates using the precommit-renderer tool.
+
+inputs:
+  root_language:
+    description: Normalized root language (single token, used to pick the toolchain hooks).
+    required: true
+  languages:
+    description: Normalized comma-separated language list (used for per-language files).
+    required: true
+  output_dir:
+    description: Working directory of the generated repository to write files into.
+    required: false
+    default: new-repo
+
+runs:
+  using: composite
+  steps:
+    - name: Render pre-commit configs from snippets
+      shell: bash
+      env:
+        ROOT_LANGUAGE: ${{ inputs.root_language }}
+        LANGUAGES: ${{ inputs.languages }}
+        REPO_DIR: ${{ inputs.output_dir }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+      run: |
+        PRECOMMIT_BASE_TEMPLATE="$GITHUB_WORKSPACE/templates/languages/agnostic/pre-commit-snippets/base.tmpl"
+        PRECOMMIT_SNIPPETS_ROOT="$GITHUB_WORKSPACE/templates/languages"
+
+        if [ ! -f "$PRECOMMIT_BASE_TEMPLATE" ]; then
+          echo "::error::Missing pre-commit base template: $PRECOMMIT_BASE_TEMPLATE"
+          exit 1
+        fi
+        if [ ! -d "$PRECOMMIT_SNIPPETS_ROOT" ]; then
+          echo "::error::Missing pre-commit snippets root: $PRECOMMIT_SNIPPETS_ROOT"
+          exit 1
+        fi
+
+        mkdir -p "$REPO_DIR/.pre-commit/languages"
+        go run "$GITHUB_WORKSPACE/tools/cmd/precommit-renderer" \
+          --base "$PRECOMMIT_BASE_TEMPLATE" \
+          --snippets-root "$PRECOMMIT_SNIPPETS_ROOT" \
+          --languages "$ROOT_LANGUAGE" \
+          --emit-languages "$LANGUAGES" \
+          --output "$REPO_DIR/.pre-commit-config.yaml" \
+          --emit-language-files-dir "$REPO_DIR/.pre-commit/languages"

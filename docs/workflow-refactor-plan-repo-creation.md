@@ -24,7 +24,9 @@ low-risk PR, then this refactor can proceed in phases.
   generated-file snapshots, and CI confirmation are all complete on `main`.
 - Phase 1: Completed. Shared normalization package, command wrapper, renderer,
   and both workflow migrations now consume the same normalization contract.
-- Phase 2: Not started. Depends on the normalization contract from Phase 1.
+- Phase 2: In progress. Composite actions for pre-commit rendering, provider
+  tooling files, release-tool configuration, and CodeQL configuration are
+  extracted and both creation workflows updated to consume them.
 - Phase 3: Not started. Can start after production workflow behavior is stable.
 - Phase 4: Not started. Final documentation pass after the implementation phases.
 
@@ -179,19 +181,20 @@ Exit criteria:
 
 ### Phase 2: Extract composite actions
 
-1. [ ] Move pre-commit rendering to `render-precommit-configs` action.
-2. [ ] Move provider file selection/substitution to
+1. [x] Move pre-commit rendering to `render-precommit-configs` action.
+2. [x] Move provider file selection/substitution to
        `configure-provider-tooling-files` action.
-3. [ ] Move release/configuration steps into dedicated actions.
-4. [ ] Move CodeQL configuration into `configure-codeql` only if the Python helper
-       remains a stable boundary.
+3. [x] Move release/configuration steps into dedicated actions.
+4. [x] Move CodeQL configuration into `configure-codeql` action.
 5. [ ] Move repo settings and branch protection only after the direct and Terraform
        paths have matching behavior documented.
 
 Exit criteria:
 
-- [ ] top-level workflows mostly linear and readable
-- [ ] each extracted action has input/output contract
+- [x] top-level workflows mostly linear and readable
+- [x] each extracted action has input/output contract
+- [ ] repo settings and branch protection actions pending — deferred to follow-up
+      PR after both paths have matching behavior documented
 
 ### Phase 3: Test workflow parity and reliability
 

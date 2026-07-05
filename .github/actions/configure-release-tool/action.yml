@@ -1,0 +1,34 @@
+---
+name: Configure Release Tool
+description: Configure Release Please for the selected release type when release_tool=release-please.
+
+inputs:
+  release_tool:
+    description: Release tool to configure (release-please, semantic-release, git-cliff).
+    required: true
+  release_type:
+    description: Normalized release type from bootstrap input validation.
+    required: true
+  working_directory:
+    description: Working directory containing the generated repository to configure.
+    required: false
+    default: new-repo
+
+runs:
+  using: composite
+  steps:
+    - name: Configure Release Please for selected languages
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        RELEASE_TOOL: ${{ inputs.release_tool }}
+        RELEASE_TYPE: ${{ inputs.release_type }}
+      run: |
+        case "$RELEASE_TOOL" in
+          "release-please") ;;
+          *) echo "⏭️ Release Please configuration skipped (release_tool=$RELEASE_TOOL)" >> "$GITHUB_STEP_SUMMARY"; exit 0 ;;
+        esac
+
+        jq --arg rt "$RELEASE_TYPE" '."release-type" = $rt' release-please-config.json > tmp.json \
+          && mv tmp.json release-please-config.json
+        echo "Release Please configured with release-type: $RELEASE_TYPE" >> "$GITHUB_STEP_SUMMARY"
