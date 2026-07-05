@@ -79,8 +79,11 @@ func TestReleaseTypeForFirstToken(t *testing.T) {
 		want  string
 	}{
 		{input: "typescript", want: "node"},
+		{input: "node", want: "node"},
+		{input: "nodejs", want: "node"},
 		{input: "python", want: "python"},
 		{input: "go", want: "go"},
+		{input: "golang", want: "go"},
 		{input: "kotlin", want: "java"},
 		{input: "terraform", want: "terraform-module"},
 		{input: "all", want: "simple"},
@@ -102,6 +105,7 @@ func TestCodeQLLanguages(t *testing.T) {
 		{name: "agnostic none", input: "language-agnostic-only", want: nil},
 		{name: "all", input: "all", want: []string{"javascript-typescript", "python", "java-kotlin", "csharp", "go", "ruby", "cpp"}},
 		{name: "golang alias", input: "golang", want: []string{"go"}},
+		{name: "node alias", input: "node,nodejs,typescript", want: []string{"javascript-typescript"}},
 		{name: "dedupe alias", input: "javascript,typescript,go", want: []string{"javascript-typescript", "go"}},
 		{name: "unsupported removed", input: "python,rust", want: []string{"python"}},
 	}

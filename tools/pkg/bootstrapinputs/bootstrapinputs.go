@@ -30,6 +30,8 @@ var codeQLAllLanguages = []string{
 var codeQLLanguageMap = map[string]string{
 	"javascript": "javascript-typescript",
 	"typescript": "javascript-typescript",
+	"node":       "javascript-typescript",
+	"nodejs":     "javascript-typescript",
 	"python":     "python",
 	"java":       "java-kotlin",
 	"kotlin":     "java-kotlin",
@@ -151,11 +153,11 @@ func RootLanguageDir(languagesInput string) string {
 func ReleaseTypeForFirstToken(languagesInput string) string {
 	first := strings.ToLower(strings.TrimSpace(strings.Split(languagesInput, ",")[0]))
 	switch first {
-	case "javascript", "typescript":
+	case "javascript", "typescript", "node", "nodejs":
 		return "node"
 	case "python":
 		return "python"
-	case "go":
+	case "go", "golang":
 		return "go"
 	case "rust":
 		return "rust"

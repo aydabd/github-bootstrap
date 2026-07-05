@@ -22,8 +22,8 @@ low-risk PR, then this refactor can proceed in phases.
 
 - Phase 0: Completed. Validation extraction, behavior contract, baseline tests,
   generated-file snapshots, and CI confirmation are all complete on `main`.
-- Phase 1: In progress. Shared normalization package, command wrapper, and
-  renderer migration are implemented with tests; workflow migrations are next.
+- Phase 1: Completed. Shared normalization package, command wrapper, renderer,
+  and both workflow migrations now consume the same normalization contract.
 - Phase 2: Not started. Depends on the normalization contract from Phase 1.
 - Phase 3: Not started. Can start after production workflow behavior is stable.
 - Phase 4: Not started. Final documentation pass after the implementation phases.
@@ -167,15 +167,15 @@ Exit criteria:
        and release type mapping.
 2. [x] Implement `tools/cmd/bootstrap-inputs` as a thin CLI over the package.
 3. [x] Migrate `tools/cmd/precommit-renderer` to use the shared package.
-4. [ ] Migrate `create-repository.yml` to consume normalized outputs.
-5. [ ] Migrate `terraform-create-repository.yml` to consume normalized outputs.
-6. [ ] Remove duplicated shell parsing blocks.
+4. [x] Migrate `create-repository.yml` to consume normalized outputs.
+5. [x] Migrate `terraform-create-repository.yml` to consume normalized outputs.
+6. [x] Remove duplicated shell parsing blocks.
 
 Exit criteria:
 
-- [ ] no language parsing logic duplicated in workflow shell blocks
-- [ ] all input validation sourced from one shared Go package
-- [ ] unsupported language tokens fail consistently across workflows and tools
+- [x] no language parsing logic duplicated in workflow shell blocks
+- [x] all input validation sourced from one shared Go package
+- [x] unsupported language tokens fail consistently across workflows and tools
 
 ### Phase 2: Extract composite actions
 
