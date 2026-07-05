@@ -247,11 +247,11 @@ tooling-verify: tooling-updater-build ## Verify updater layout assumptions and r
 	@$(RUN) env CGO_ENABLED=0 go test ./tools/...
 
 render-precommit: ## Regenerate template pre-commit configs from snippet packs
-	@go run ./tools/cmd/precommit-renderer --base templates/languages/agnostic/pre-commit-snippets/base.yaml --snippets-root templates/languages --languages language-agnostic-only --output templates/languages/agnostic/.pre-commit-config.yaml
-	@go run ./tools/cmd/precommit-renderer --base templates/languages/agnostic/pre-commit-snippets/base.yaml --snippets-root templates/languages --languages golang --output templates/languages/golang/.pre-commit-config.yaml
-	@go run ./tools/cmd/precommit-renderer --base templates/languages/agnostic/pre-commit-snippets/base.yaml --snippets-root templates/languages --languages python --output templates/languages/python/.pre-commit-config.yaml
-	@go run ./tools/cmd/precommit-renderer --base templates/languages/agnostic/pre-commit-snippets/base.yaml --snippets-root templates/languages --languages typescript --output templates/languages/typescript/.pre-commit-config.yaml
-	@go run ./tools/cmd/precommit-renderer --base templates/languages/agnostic/pre-commit-snippets/base.yaml --snippets-root templates/languages --languages java --output templates/languages/java/.pre-commit-config.yaml
+	@go run ./tools/cmd/precommit-renderer --base templates/languages/agnostic/pre-commit-snippets/base.tmpl --snippets-root templates/languages --languages language-agnostic-only --output templates/languages/agnostic/.pre-commit-config.yaml
+	@go run ./tools/cmd/precommit-renderer --base templates/languages/agnostic/pre-commit-snippets/base.tmpl --snippets-root templates/languages --languages golang --output templates/languages/golang/.pre-commit-config.yaml
+	@go run ./tools/cmd/precommit-renderer --base templates/languages/agnostic/pre-commit-snippets/base.tmpl --snippets-root templates/languages --languages python --output templates/languages/python/.pre-commit-config.yaml
+	@go run ./tools/cmd/precommit-renderer --base templates/languages/agnostic/pre-commit-snippets/base.tmpl --snippets-root templates/languages --languages typescript --output templates/languages/typescript/.pre-commit-config.yaml
+	@go run ./tools/cmd/precommit-renderer --base templates/languages/agnostic/pre-commit-snippets/base.tmpl --snippets-root templates/languages --languages java --output templates/languages/java/.pre-commit-config.yaml
 
 # =============================================================================
 # Clean

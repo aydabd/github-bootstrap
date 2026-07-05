@@ -45,7 +45,6 @@ repos:
             .*\.(png|jpg|jpeg|gif|ico|svg|pdf|lock)|
             \.git/.*
           )$
-
       # ── Java: formatting (Spotless via Gradle) ────────────────────────────
       - id: spotless
         name: spotless (Java formatting)

@@ -44,7 +44,6 @@ repos:
             .*\.(png|jpg|jpeg|gif|ico|svg|pdf|lock)|
             \.git/.*
           )$
-
       # ── Python: linting (ruff check) ──────────────────────────────────────
       - id: ruff-check
         name: ruff check (lint)

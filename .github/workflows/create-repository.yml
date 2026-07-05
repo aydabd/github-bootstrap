@@ -642,7 +642,7 @@ jobs:
           PROVIDER_DIR="$TEMPLATE_DIR/providers/$ENV_MANAGER"
           LINT_WORKFLOW_TEMPLATE="templates/.github/workflows/providers/lint-$ENV_MANAGER.yml"
           PROVIDER_SCRIPT_TEMPLATE="templates/providers/$ENV_MANAGER/provider-run.sh"
-          PRECOMMIT_BASE_TEMPLATE="templates/languages/agnostic/pre-commit-snippets/base.yaml"
+          PRECOMMIT_BASE_TEMPLATE="templates/languages/agnostic/pre-commit-snippets/base.tmpl"
           PRECOMMIT_SNIPPETS_ROOT="templates/languages"
           REPO_DIR="new-repo"
 

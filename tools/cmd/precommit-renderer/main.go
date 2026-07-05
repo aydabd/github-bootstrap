@@ -157,8 +157,8 @@ func renderConfig(basePath, snippetsRoot string, languages []string) (string, er
 		return "", err
 	}
 
-	rendered := strings.ReplaceAll(base, placeholderExclude, excludeBlock)
-	rendered = strings.ReplaceAll(rendered, placeholderHooks, hooksBlock)
+	rendered := strings.ReplaceAll(base, placeholderExclude, indentBlock(excludeBlock, "    "))
+	rendered = strings.ReplaceAll(rendered, placeholderHooks, indentBlock(hooksBlock, "      "))
 	return rendered, nil
 }
 
@@ -172,7 +172,7 @@ func collectSnippets(snippetsRoot string, languages []string) (string, string, e
 			continue
 		}
 		exPath := filepath.Join(snippetsRoot, lang, "pre-commit-snippets", "exclude-block.txt")
-		hkPath := filepath.Join(snippetsRoot, lang, "pre-commit-snippets", "language-hooks.yaml")
+		hkPath := filepath.Join(snippetsRoot, lang, "pre-commit-snippets", "language-hooks.txt")
 
 		exData, err := os.ReadFile(exPath)
 		if err != nil {
@@ -216,4 +216,20 @@ func writeFile(path, content string) error {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 	return nil
+}
+
+func indentBlock(input, prefix string) string {
+	if strings.TrimSpace(input) == "" {
+		return ""
+	}
+	trimmed := strings.TrimSuffix(input, "\n")
+	lines := strings.Split(trimmed, "\n")
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			lines[i] = ""
+			continue
+		}
+		lines[i] = prefix + line
+	}
+	return strings.Join(lines, "\n") + "\n"
 }

@@ -1,0 +1,24 @@
+# ── Go: lint + format (golangci-lint) ─────────────────────────────────
+- id: golangci-lint
+  name: golangci-lint
+  entry: bash
+  args:
+    - -c
+    - |
+      if [ "$LINT_MODE" = "check" ]; then
+        golangci-lint run ./...
+      else
+        golangci-lint run --fix ./...
+      fi
+  language: system
+  files: '\.go$'
+  pass_filenames: false
+
+# ── Go: unit tests (pre-push) ──────────────────────────────────────────
+- id: go-test
+  name: go test
+  entry: go
+  args: [test, ./...]
+  language: system
+  pass_filenames: false
+  stages: [pre-push]

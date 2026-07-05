@@ -46,7 +46,6 @@ repos:
             .*\.(png|jpg|jpeg|gif|ico|svg|pdf|lock)|
             \.git/.*
           )$
-
       # ── TypeScript / JavaScript: Biome (lint + format) ────────────────────
       - id: biome
         name: biome (lint + format)

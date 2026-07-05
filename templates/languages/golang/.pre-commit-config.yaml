@@ -45,7 +45,6 @@ repos:
             .*\.(png|jpg|jpeg|gif|ico|svg|pdf|lock)|
             \.git/.*
           )$
-
       # ── Go: lint + format (golangci-lint) ─────────────────────────────────
       - id: golangci-lint
         name: golangci-lint

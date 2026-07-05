@@ -43,16 +43,16 @@ func TestNormalizeLanguages(t *testing.T) {
 
 func TestRunRendersCombinedAndPerLanguageFiles(t *testing.T) {
 	root := t.TempDir()
-	basePath := filepath.Join(root, "templates", "languages", "agnostic", "pre-commit-snippets", "base.yaml")
+	basePath := filepath.Join(root, "templates", "languages", "agnostic", "pre-commit-snippets", "base.tmpl")
 	snippetsRoot := filepath.Join(root, "templates", "languages")
 	outPath := filepath.Join(root, "out", ".pre-commit-config.yaml")
 	emitDir := filepath.Join(root, "out", ".pre-commit", "languages")
 
-	mustWrite(t, basePath, "exclude:\n{{EXCLUDE_BLOCK}}hooks:\n{{LANGUAGE_HOOKS}}")
-	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "    vendor/\n")
-	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "language-hooks.yaml"), "\n      - id: golangci-lint\n")
-	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "exclude-block.txt"), "    node_modules/\n")
-	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "language-hooks.yaml"), "\n      - id: biome\n")
+	mustWrite(t, basePath, "exclude:\n  |-\n    build/\n{{EXCLUDE_BLOCK}}hooks:\n  - repo: local\n    hooks:\n{{LANGUAGE_HOOKS}}")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "vendor/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "language-hooks.txt"), "- id: golangci-lint\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "exclude-block.txt"), "node_modules/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "typescript", "pre-commit-snippets", "language-hooks.txt"), "- id: biome\n")
 
 	cfg := config{
 		basePath:       basePath,
