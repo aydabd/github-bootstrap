@@ -33,9 +33,9 @@ variable "visibility" {
 }
 
 variable "enable_branch_protection" {
-  description = "Enable branch protection rules for the main branch"
+  description = "Opt-in: create a Terraform-managed repository ruleset for the main branch. Disabled by default because bootstrap workflows apply the default ruleset via apply-repository-ruleset. Enable only when managing rulesets through Terraform directly and not using the bootstrap workflow."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "team_name" {
