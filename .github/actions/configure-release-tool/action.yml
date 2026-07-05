@@ -4,7 +4,9 @@ description: Configure Release Please for the selected release type when release
 
 inputs:
   release_tool:
-    description: Release tool to configure (release-please, semantic-release, git-cliff).
+    description: >-
+      Active release tool (release-please, semantic-release, git-cliff).
+      This action only configures Release Please; all other values are no-ops.
     required: true
   release_type:
     description: Normalized release type from bootstrap input validation.
@@ -28,6 +30,14 @@ runs:
           "release-please") ;;
           *) echo "⏭️ Release Please configuration skipped (release_tool=$RELEASE_TOOL)" >> "$GITHUB_STEP_SUMMARY"; exit 0 ;;
         esac
+
+        # Guard: release-please-config.json may have been removed by an earlier
+        # step (e.g. the workflows input excluded the release workflow). Treat a
+        # missing file as an intentional skip rather than a hard failure.
+        if [ ! -f release-please-config.json ]; then
+          echo "⏭️ release-please-config.json not found — skipping (release workflow was excluded)" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
 
         jq --arg rt "$RELEASE_TYPE" '."release-type" = $rt' release-please-config.json > tmp.json \
           && mv tmp.json release-please-config.json

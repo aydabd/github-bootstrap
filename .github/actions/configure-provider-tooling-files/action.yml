@@ -74,7 +74,12 @@ runs:
         rm -f "$REPO_DIR/environment.yml" "$REPO_DIR/mise.toml"
         [ -f "$PROVIDER_DIR/environment.yml" ] && cp "$PROVIDER_DIR/environment.yml" "$REPO_DIR/environment.yml"
         [ -f "$PROVIDER_DIR/mise.toml" ] && cp "$PROVIDER_DIR/mise.toml" "$REPO_DIR/mise.toml"
-        cp "$LINT_WORKFLOW_TEMPLATE" "$REPO_DIR/.github/workflows/lint.yml"
+        # Only overwrite lint.yml when it already exists in the repo — it may
+        # have been intentionally removed by the "Remove unselected workflows"
+        # step when the workflows input excluded lint.
+        if [ -f "$REPO_DIR/.github/workflows/lint.yml" ]; then
+          cp "$LINT_WORKFLOW_TEMPLATE" "$REPO_DIR/.github/workflows/lint.yml"
+        fi
         cp "$GITHUB_WORKSPACE/templates/.github/bootstrap-provider.yml" "$REPO_DIR/.github/bootstrap-provider.yml"
         mkdir -p "$REPO_DIR/scripts"
         cp "$PROVIDER_SCRIPT_TEMPLATE" "$REPO_DIR/scripts/provider-run.sh"
