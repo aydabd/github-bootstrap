@@ -468,7 +468,7 @@ The Terraform module (in `terraform/`) manages the same infrastructure declarati
 1. Creates the repository with all settings via `github_repository`
 2. Creates `dev` and `prod` environments via `github_repository_environment`
 3. Optionally creates a repository ruleset via `github_repository_ruleset`
-  when Terraform input `enable_branch_protection=true`
+   when Terraform input `enable_branch_protection=true`
 4. The wrapper workflow then copies template files and configures linting
 
 Branch protection/rulesets are not configured by the bootstrap workflows.
