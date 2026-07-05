@@ -338,7 +338,7 @@ jobs:
                 has_all=true
                 lang_count=$((lang_count + 1))
                 ;;
-              go|golang|python|typescript|javascript|node|nodejs|java|kotlin)
+              go|golang|python|typescript|javascript|node|nodejs|java|kotlin|rust|ruby|php|terraform)
                 lang_count=$((lang_count + 1))
                 ;;
               *)

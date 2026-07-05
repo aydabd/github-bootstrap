@@ -16,7 +16,7 @@
 exclude: |-
   (?x)^(
     build/
-    .gradle/
+    \.gradle/
   )
 repos:
   # ── Standard file hygiene ──────────────────────────────────────────────────
@@ -69,11 +69,15 @@ repos:
         args:
           - -c
           - |
-            if ./gradlew -q tasks --all | grep -q '^checkstyleMain'; then
-              ./gradlew checkstyleMain checkstyleTest
-            else
-              echo "Checkstyle plugin not configured; skipping."
-            fi
+            task_probe_output=$(./gradlew -q help --task checkstyleMain 2>&1) || {
+              if echo "$task_probe_output" | grep -q "Task 'checkstyleMain' not found"; then
+                echo "Checkstyle plugin not configured; skipping."
+                exit 0
+              fi
+              echo "$task_probe_output"
+              exit 1
+            }
+            ./gradlew checkstyleMain checkstyleTest
         language: system
         files: '\.java$'
         pass_filenames: false

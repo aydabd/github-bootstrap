@@ -54,6 +54,10 @@ func parseFlags() (config, error) {
 }
 
 func run(cfg config) error {
+	if strings.TrimSpace(cfg.emitLanguages) != "" && strings.TrimSpace(cfg.emitDir) == "" {
+		return errors.New("--emit-languages requires --emit-language-files-dir")
+	}
+
 	langs, err := normalizeLanguages(cfg.languagesInput)
 	if err != nil {
 		return err
@@ -110,6 +114,7 @@ func normalizeLanguages(input string) ([]string, error) {
 	seen := map[string]bool{}
 	langs := make([]string, 0, len(raw))
 	hasAll := false
+	hasAgnostic := false
 
 	for _, item := range raw {
 		normalized := normalizeAlias(item)
@@ -120,6 +125,9 @@ func normalizeLanguages(input string) ([]string, error) {
 			hasAll = true
 			continue
 		}
+		if normalized == "agnostic" {
+			hasAgnostic = true
+		}
 		if !seen[normalized] {
 			langs = append(langs, normalized)
 			seen[normalized] = true
@@ -127,6 +135,9 @@ func normalizeLanguages(input string) ([]string, error) {
 	}
 
 	if hasAll {
+		if hasAgnostic {
+			return nil, errors.New("language-agnostic-only cannot be combined with other languages")
+		}
 		return append([]string{}, supportedLanguages...), nil
 	}
 

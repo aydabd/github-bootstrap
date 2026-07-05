@@ -19,6 +19,7 @@ func TestNormalizeLanguages(t *testing.T) {
 		{name: "multiple dedupe", input: "go,typescript,javascript,python", want: []string{"golang", "typescript", "python"}},
 		{name: "all", input: "all", want: []string{"golang", "python", "typescript", "java"}},
 		{name: "mixed all token", input: "python,all", want: []string{"golang", "python", "typescript", "java"}},
+		{name: "invalid agnostic with all", input: "agnostic,all", wantErr: true},
 		{name: "invalid fallback", input: "unknown", want: []string{"agnostic"}},
 		{name: "invalid mixed agnostic", input: "language-agnostic-only,go", wantErr: true},
 	}
@@ -82,6 +83,56 @@ func TestRunRendersCombinedAndPerLanguageFiles(t *testing.T) {
 	tsLang := mustRead(t, filepath.Join(emitDir, "typescript.yaml"))
 	if !strings.Contains(tsLang, "biome") || strings.Contains(tsLang, "golangci-lint") {
 		t.Fatalf("typescript language config incorrect: %s", tsLang)
+	}
+}
+
+func TestRunMissingSnippetFileReturnsWrappedError(t *testing.T) {
+	root := t.TempDir()
+	basePath := filepath.Join(root, "templates", "languages", "agnostic", "pre-commit-snippets", "base.tmpl")
+	snippetsRoot := filepath.Join(root, "templates", "languages")
+	outPath := filepath.Join(root, "out", ".pre-commit-config.yaml")
+
+	mustWrite(t, basePath, "exclude:\n  |-\n    build/\n{{EXCLUDE_BLOCK}}hooks:\n  - repo: local\n    hooks:\n{{LANGUAGE_HOOKS}}")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "vendor/\n")
+
+	cfg := config{
+		basePath:       basePath,
+		snippetsRoot:   snippetsRoot,
+		languagesInput: "go",
+		outputPath:     outPath,
+	}
+	err := run(cfg)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "read hooks snippet for golang") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRunEmitLanguagesRequiresEmitDir(t *testing.T) {
+	root := t.TempDir()
+	basePath := filepath.Join(root, "templates", "languages", "agnostic", "pre-commit-snippets", "base.tmpl")
+	snippetsRoot := filepath.Join(root, "templates", "languages")
+	outPath := filepath.Join(root, "out", ".pre-commit-config.yaml")
+
+	mustWrite(t, basePath, "exclude:\n  |-\n    build/\n{{EXCLUDE_BLOCK}}hooks:\n  - repo: local\n    hooks:\n{{LANGUAGE_HOOKS}}")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "exclude-block.txt"), "vendor/\n")
+	mustWrite(t, filepath.Join(snippetsRoot, "golang", "pre-commit-snippets", "language-hooks.txt"), "- id: golangci-lint\n")
+
+	cfg := config{
+		basePath:       basePath,
+		snippetsRoot:   snippetsRoot,
+		languagesInput: "go",
+		emitLanguages:  "go",
+		outputPath:     outPath,
+	}
+	err := run(cfg)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "--emit-languages requires --emit-language-files-dir") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
