@@ -37,8 +37,11 @@ runs:
 
         if command -v jq >/dev/null 2>&1; then
           RULESET_NAME=$(jq -r '.name // "default"' "$RULESET_FILE")
+        elif command -v python3 >/dev/null 2>&1; then
+          RULESET_NAME=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('name','default'))" -- "$RULESET_FILE")
         else
-          RULESET_NAME=$(python3 -c "import json; d=json.load(open('$RULESET_FILE')); print(d.get('name','default'))")
+          echo "::error::Neither jq nor python3 is available; cannot read ruleset name."
+          exit 1
         fi
 
         EXISTING_RULESET_ID=$(gh api --paginate /repos/"$OWNER"/"$REPO"/rulesets --jq '.[] | select(.name == "'"$RULESET_NAME"'") | .id' 2>/dev/null | head -n1)
