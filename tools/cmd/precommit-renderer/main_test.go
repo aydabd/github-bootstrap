@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var expectedAllLanguages = []string{"golang", "python", "typescript", "java"}
+var expectedAllLanguages = append([]string{}, supportedLanguages...)
 
 func TestNormalizeLanguages(t *testing.T) {
 	tests := []struct {
