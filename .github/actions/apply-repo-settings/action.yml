@@ -12,7 +12,9 @@ inputs:
     description: Target repository name.
     required: true
   enable_repo_settings:
-    description: Whether to apply repository settings and Dependabot configuration.
+    description: >-
+      Master toggle for this action. When false, repository settings PATCH,
+      environment management, and Dependabot updates are all skipped.
     required: true
   apply_repository_settings:
     description: Whether to PATCH repository settings JSON.
