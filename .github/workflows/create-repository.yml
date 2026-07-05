@@ -662,7 +662,8 @@ jobs:
           go run ./tools/cmd/precommit-renderer \
             --base "$PRECOMMIT_BASE_TEMPLATE" \
             --snippets-root "$PRECOMMIT_SNIPPETS_ROOT" \
-            --languages "$LANGUAGES" \
+            --languages "$FIRST_LANG" \
+            --emit-languages "$LANGUAGES" \
             --output "$REPO_DIR/.pre-commit-config.yaml" \
             --emit-language-files-dir "$REPO_DIR/.pre-commit/languages"
 

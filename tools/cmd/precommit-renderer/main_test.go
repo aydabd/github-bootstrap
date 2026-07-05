@@ -57,7 +57,8 @@ func TestRunRendersCombinedAndPerLanguageFiles(t *testing.T) {
 	cfg := config{
 		basePath:       basePath,
 		snippetsRoot:   snippetsRoot,
-		languagesInput: "go,typescript",
+		languagesInput: "go",
+		emitLanguages:  "go,typescript",
 		outputPath:     outPath,
 		emitDir:        emitDir,
 	}
@@ -66,11 +67,11 @@ func TestRunRendersCombinedAndPerLanguageFiles(t *testing.T) {
 	}
 
 	combined := mustRead(t, outPath)
-	if !strings.Contains(combined, "vendor/") || !strings.Contains(combined, "node_modules/") {
-		t.Fatalf("combined output missing excludes: %s", combined)
+	if !strings.Contains(combined, "vendor/") || strings.Contains(combined, "node_modules/") {
+		t.Fatalf("combined output exclude set mismatch: %s", combined)
 	}
-	if !strings.Contains(combined, "golangci-lint") || !strings.Contains(combined, "biome") {
-		t.Fatalf("combined output missing hooks: %s", combined)
+	if !strings.Contains(combined, "golangci-lint") || strings.Contains(combined, "biome") {
+		t.Fatalf("combined output hook set mismatch: %s", combined)
 	}
 
 	goLang := mustRead(t, filepath.Join(emitDir, "golang.yaml"))

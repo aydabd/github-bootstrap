@@ -28,3 +28,9 @@ indent_size = unset
 
 [*.toml]
 indent_size = 2
+
+[languages/*/pre-commit-snippets/*.txt]
+indent_size = unset
+
+[languages/agnostic/pre-commit-snippets/*.tmpl]
+indent_size = unset

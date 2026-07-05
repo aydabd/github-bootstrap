@@ -20,6 +20,7 @@ type config struct {
 	basePath       string
 	snippetsRoot   string
 	languagesInput string
+	emitLanguages  string
 	outputPath     string
 	emitDir        string
 }
@@ -41,6 +42,7 @@ func parseFlags() (config, error) {
 	flag.StringVar(&cfg.basePath, "base", "", "Path to agnostic base pre-commit template")
 	flag.StringVar(&cfg.snippetsRoot, "snippets-root", "", "Path to templates/languages directory")
 	flag.StringVar(&cfg.languagesInput, "languages", "", "Comma-separated language list")
+	flag.StringVar(&cfg.emitLanguages, "emit-languages", "", "Optional comma-separated language list used for per-language outputs")
 	flag.StringVar(&cfg.outputPath, "output", "", "Output .pre-commit-config.yaml path")
 	flag.StringVar(&cfg.emitDir, "emit-language-files-dir", "", "Optional output dir for per-language configs")
 	flag.Parse()
@@ -56,6 +58,13 @@ func run(cfg config) error {
 	if err != nil {
 		return err
 	}
+	emitLangs := langs
+	if strings.TrimSpace(cfg.emitLanguages) != "" {
+		emitLangs, err = normalizeLanguages(cfg.emitLanguages)
+		if err != nil {
+			return err
+		}
+	}
 
 	content, err := renderConfig(cfg.basePath, cfg.snippetsRoot, langs)
 	if err != nil {
@@ -69,7 +78,7 @@ func run(cfg config) error {
 		if err := os.MkdirAll(cfg.emitDir, 0o755); err != nil {
 			return fmt.Errorf("create language config dir: %w", err)
 		}
-		for _, lang := range langs {
+		for _, lang := range emitLangs {
 			if lang == "agnostic" {
 				continue
 			}
