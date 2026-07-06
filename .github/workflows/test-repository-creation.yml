@@ -268,6 +268,10 @@ jobs:
             echo "::error::Invalid release_tool '$RELEASE_TOOL'."
             exit 1
           fi
+          WORKFLOWS="${WORKFLOWS//[[:space:]]/}"
+          if [ -z "$WORKFLOWS" ]; then
+            WORKFLOWS="all"
+          fi
           if ! [[ "$WORKFLOWS" =~ ^(all|none)$ ]] && ! [[ "$WORKFLOWS" =~ ^(lint|codeql|ai-code-review|release)(,(lint|codeql|ai-code-review|release))*$ ]]; then
             echo "::error::Invalid workflows '$WORKFLOWS'. Allowed: all, none, or comma-separated of lint,codeql,ai-code-review,release"
             exit 1
