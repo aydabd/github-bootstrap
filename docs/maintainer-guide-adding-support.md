@@ -24,7 +24,6 @@ When you add a workflow input or option in one create workflow, mirror it in the
 
 - `tools/pkg/bootstrapinputs`
 - `tools/cmd/bootstrap-inputs`
-- `docs/repository-creation-behavior-contract.md`
 
 All language/runtime normalization logic must live in `bootstrapinputs`. Do not reimplement parsing in workflow shell.
 
