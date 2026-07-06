@@ -579,6 +579,7 @@ jobs:
           echo "🔍 Validating API-level repository settings parity..."
 
           REPO_JSON=$(gh api "/repos/${OWNER}/${REPO_NAME}")
+          DEFAULT_BRANCH=$(echo "$REPO_JSON" | jq -r '.default_branch // "main"')
 
           for assertion in \
             '.has_wiki == true' \
@@ -613,8 +614,8 @@ jobs:
             exit 1
           fi
 
-          if ! echo "$DEFAULT_RULESET" | jq -e '.conditions.ref_name.include | index("refs/heads/main") != null' >/dev/null; then
-            echo "❌ Default ruleset does not target refs/heads/main"
+          if ! echo "$DEFAULT_RULESET" | jq -e --arg default_ref "refs/heads/${DEFAULT_BRANCH}" '(.conditions.ref_name.include | index("~DEFAULT_BRANCH") != null) or (.conditions.ref_name.include | index($default_ref) != null)' >/dev/null; then
+            echo "❌ Default ruleset does not target the repository default branch"
             exit 1
           fi
 
