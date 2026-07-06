@@ -602,10 +602,17 @@ jobs:
           echo "✅ Repository settings parity checks passed"
 
           RULESETS_JSON=$(gh api --paginate "/repos/${OWNER}/${REPO_NAME}/rulesets" 2>/dev/null || true)
-          DEFAULT_RULESET=$(echo "$RULESETS_JSON" | jq -c '.[]? | select(.name == "default" and .target == "branch")' | head -n1)
+          DEFAULT_RULESET_ID=$(echo "$RULESETS_JSON" | jq -r '.[]? | select(.name == "default" and .target == "branch") | .id' | head -n1)
+
+          if [ -z "$DEFAULT_RULESET_ID" ]; then
+            echo "❌ Missing default branch ruleset"
+            exit 1
+          fi
+
+          DEFAULT_RULESET=$(gh api "/repos/${OWNER}/${REPO_NAME}/rulesets/${DEFAULT_RULESET_ID}" 2>/dev/null || true)
 
           if [ -z "$DEFAULT_RULESET" ]; then
-            echo "❌ Missing default branch ruleset"
+            echo "❌ Failed to load default branch ruleset details"
             exit 1
           fi
 
