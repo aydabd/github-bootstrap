@@ -363,6 +363,10 @@ jobs:
             --field workflows="$WORKFLOWS" \
             --field cleanup_on_failure="true"
           DISPATCH_ACTOR=$(gh api /user --jq '.login')
+          if [ -z "$DISPATCH_ACTOR" ]; then
+            echo "::error::Failed to resolve dispatch actor from GH_TOKEN; cannot correlate workflow run"
+            exit 1
+          fi
           echo "workflow_triggered_at=$TRIGGERED_AT" >> "$GITHUB_OUTPUT"
           echo "dispatch_actor=$DISPATCH_ACTOR" >> "$GITHUB_OUTPUT"
 
