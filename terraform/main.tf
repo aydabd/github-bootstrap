@@ -67,9 +67,9 @@ resource "github_repository_ruleset" "main_protection" {
     required_linear_history = true
 
     pull_request {
-      required_approving_review_count   = 2
+      required_approving_review_count   = 1
       dismiss_stale_reviews_on_push     = true
-      require_code_owner_review         = true
+      require_code_owner_review         = false
       require_last_push_approval        = true
       required_review_thread_resolution = true
     }
@@ -79,6 +79,10 @@ resource "github_repository_ruleset" "main_protection" {
 
       required_check {
         context = "lint"
+      }
+
+      required_check {
+        context = "CodeRabbit"
       }
     }
   }

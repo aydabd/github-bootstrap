@@ -8,8 +8,9 @@ This Terraform module creates a fully configured GitHub repository with the same
 - **`github_repository`** - Repository with squash merge, branch deletion, issues, projects enabled,
   and vulnerability alerts enabled
 - **`github_repository_environment`** - `dev` and `prod` deployment environments
-- **`github_repository_ruleset`** - Branch protection for `main` (optional) requiring 2 approving reviews,
-  code-owner review, the Lint status check, and linear history (no merge commits)
+- **`github_repository_ruleset`** - Branch protection for `main` (optional) requiring one approving review,
+  latest-push approval, resolved review threads, `lint` and `CodeRabbit` status checks,
+  and linear history (no merge commits)
 
 ## Usage
 

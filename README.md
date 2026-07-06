@@ -443,15 +443,15 @@ automatically.
 
 Every bootstrapped repository gets a core security baseline out of the box:
 
-| Feature                      | Details                                                                                                         |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Vulnerability alerts         | Enabled automatically via the GitHub API                                                                        |
-| Dependabot security updates  | Enabled automatically — auto-PRs for vulnerable deps                                                            |
-| Dependabot version updates   | Configured in `.github/dependabot.yml` for all ecosystems                                                       |
-| CodeQL scanning              | Workflow generated and scoped to the selected language(s)                                                       |
-| Branch protection / rulesets | Default ruleset configured from `.github/config/ruleset-default.json` (skips with warning on unsupported plans) |
-| SECURITY.md                  | Security policy and vulnerability reporting instructions                                                        |
-| Secret scanning              | Enabled by GitHub for all public repos automatically                                                            |
+| Feature                      | Details                                                                                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Vulnerability alerts         | Enabled automatically via the GitHub API                                                                              |
+| Dependabot security updates  | Enabled automatically — auto-PRs for vulnerable deps                                                                  |
+| Dependabot version updates   | Configured in `.github/dependabot.yml` for all ecosystems                                                             |
+| CodeQL scanning              | Workflow generated and scoped to the selected language(s)                                                             |
+| Branch protection / rulesets | Default ruleset configured from `.github/config/ruleset-default.json` with review, lint, CodeRabbit, and CodeQL gates |
+| SECURITY.md                  | Security policy and vulnerability reporting instructions                                                              |
+| Secret scanning              | Enabled by GitHub for all public repos automatically                                                                  |
 
 ## Core Principles
 
@@ -503,6 +503,11 @@ The Terraform module (in `terraform/`) manages the same infrastructure declarati
 
 Bootstrap workflows apply the default ruleset payload from
 `.github/config/ruleset-default.json` after repository creation.
+The default ruleset requires one approving review, approval after the latest
+push, resolved review threads, linear history, the `lint` and `CodeRabbit`
+status checks, and CodeQL code scanning results. CODEOWNERS remains generated
+as ownership documentation, but the ruleset does not require code-owner-specific
+approval.
 If you run Terraform directly, you can also manage rulesets through Terraform
 inputs (for example, `enable_branch_protection=true`) or configure them
 manually in repository settings.

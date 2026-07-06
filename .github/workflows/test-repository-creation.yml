@@ -631,7 +631,7 @@ jobs:
             exit 1
           fi
 
-          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "pull_request") | (.parameters.required_approving_review_count == 2 and .parameters.require_code_owner_review == true and .parameters.required_review_thread_resolution == true)' >/dev/null; then
+          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "pull_request") | (.parameters.required_approving_review_count == 1 and .parameters.require_code_owner_review == false and .parameters.required_review_thread_resolution == true)' >/dev/null; then
             echo "❌ Pull request review requirements do not match expected defaults"
             exit 1
           fi
@@ -643,6 +643,11 @@ jobs:
 
           if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | (.parameters.required_status_checks[]?.context == "lint")' >/dev/null; then
             echo "❌ lint status check requirement missing"
+            exit 1
+          fi
+
+          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | (.parameters.required_status_checks[]?.context == "CodeRabbit")' >/dev/null; then
+            echo "❌ CodeRabbit status check requirement missing"
             exit 1
           fi
 

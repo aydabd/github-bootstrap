@@ -1,11 +1,1 @@
 * @aydabd
-
-# Weekly tooling update outputs are reviewed by automation, CI, and CodeRabbit.
-/.pre-commit-config.yaml
-/environment.yml
-/mise.toml
-/scripts/provider-assets.txt
-/templates/scripts/provider-assets.txt
-/templates/languages/*/.pre-commit-config.yaml
-/templates/languages/*/providers/micromamba/environment.yml
-/templates/languages/*/providers/mise/mise.toml
