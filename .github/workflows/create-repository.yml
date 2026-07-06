@@ -279,6 +279,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: tools/go.mod
+          cache-dependency-path: tools/go.mod
 
       - name: Set repository owner
         id: set-owner

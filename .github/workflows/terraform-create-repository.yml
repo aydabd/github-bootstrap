@@ -280,6 +280,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: tools/go.mod
+          cache-dependency-path: tools/go.mod
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
