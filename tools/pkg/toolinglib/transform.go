@@ -209,12 +209,17 @@ func UpdateProviderAssetManifestText(text string, providerData map[string]Provid
 			return "", err
 		}
 		pattern := fmt.Sprintf(`(?m)^%s\s+%s\s+%s\s+\S+\s+\S+\s*$`, regexp.QuoteMeta(provider), regexp.QuoteMeta(osName), regexp.QuoteMeta(arch))
-		replacement := fmt.Sprintf("%s %s %s %s %s", provider, osName, arch, values.URL, values.SHA256)
-		next, err := ReplaceOrFail(pattern, replacement, updated)
+		re, err := regexp.Compile(pattern)
 		if err != nil {
 			return "", err
 		}
-		updated = next
+		if !re.MatchString(updated) {
+			return "", fmt.Errorf("expected pattern not found: %s", pattern)
+		}
+		replacement := fmt.Sprintf("%s %s %s %s %s", provider, osName, arch, values.URL, values.SHA256)
+		updated = re.ReplaceAllStringFunc(updated, func(_ string) string {
+			return replacement
+		})
 	}
 	return updated, nil
 }
