@@ -1,4 +1,4 @@
-name: CodeRabbit Review for Dependabot
+name: CodeRabbit Review for Automation PRs
 
 on:
   pull_request_target:
@@ -13,8 +13,16 @@ permissions:
 
 jobs:
   request-coderabbit-review:
-    name: Request CodeRabbit review for Dependabot PRs
-    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    name: Request CodeRabbit review for automation PRs
+    if: >-
+      ${{
+        github.event.pull_request.user.login == 'dependabot[bot]' ||
+        (
+          github.event.pull_request.head.ref == 'chore/weekly-tooling-updates' &&
+          contains(github.event.pull_request.labels.*.name, 'automation') &&
+          contains(github.event.pull_request.labels.*.name, 'dependencies')
+        )
+      }}
     runs-on: ubuntu-latest
 
     steps:
