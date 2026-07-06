@@ -1,0 +1,118 @@
+---
+name: Apply Repository Settings
+description: >-
+  Apply repository settings, create environments, and enable Dependabot
+  security features. No-op when enable_repo_settings is not 'true'.
+
+inputs:
+  owner:
+    description: Repository owner (user or organization).
+    required: true
+  repo_name:
+    description: Target repository name.
+    required: true
+  enable_repo_settings:
+    description: >-
+      Master toggle for this action. When false, repository settings PATCH,
+      environment management, and Dependabot updates are all skipped.
+    required: true
+  apply_repository_settings:
+    description: Whether to PATCH repository settings JSON.
+    required: false
+    default: "true"
+  manage_environments:
+    description: Whether to create dev/prod environments when missing.
+    required: false
+    default: "true"
+  enable_dependabot:
+    description: Whether to enable Dependabot vulnerability and security updates.
+    required: false
+    default: "true"
+  gh_token:
+    description: GitHub token with repository administration permissions.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Apply repository settings, environments, and Dependabot
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+        OWNER: ${{ inputs.owner }}
+        REPO: ${{ inputs.repo_name }}
+        ENABLE: ${{ inputs.enable_repo_settings }}
+        APPLY_REPO_SETTINGS: ${{ inputs.apply_repository_settings }}
+        MANAGE_ENVIRONMENTS: ${{ inputs.manage_environments }}
+        ENABLE_DEPENDABOT: ${{ inputs.enable_dependabot }}
+      run: |
+        case "$ENABLE" in
+          "true") ;;
+          *)
+            echo "⏭️ Repository settings skipped (enable_repo_settings=false)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+            ;;
+        esac
+
+        case "$APPLY_REPO_SETTINGS" in
+          "true")
+            if [ ! -f ".github/config/repo-settings.json" ]; then
+              echo "::error::Missing repository settings payload: .github/config/repo-settings.json"
+              exit 1
+            fi
+            gh api \
+              --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              /repos/"$OWNER"/"$REPO" \
+              --input ".github/config/repo-settings.json"
+            ;;
+          *)
+            echo "⏭️ Repository settings PATCH skipped (apply_repository_settings=false)" >> "$GITHUB_STEP_SUMMARY"
+            ;;
+        esac
+
+        case "$MANAGE_ENVIRONMENTS" in
+          "true")
+            if gh api /repos/"$OWNER"/"$REPO"/environments/dev >/dev/null 2>&1; then
+              echo "✅ Development environment already exists" >> "$GITHUB_STEP_SUMMARY"
+            else
+              gh api \
+                --method PUT \
+                -H "Accept: application/vnd.github+json" \
+                /repos/"$OWNER"/"$REPO"/environments/dev
+              echo "✅ Development environment created" >> "$GITHUB_STEP_SUMMARY"
+            fi
+
+            if gh api /repos/"$OWNER"/"$REPO"/environments/prod >/dev/null 2>&1; then
+              echo "✅ Production environment already exists" >> "$GITHUB_STEP_SUMMARY"
+            else
+              gh api \
+                --method PUT \
+                -H "Accept: application/vnd.github+json" \
+                /repos/"$OWNER"/"$REPO"/environments/prod
+              echo "✅ Production environment created" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            ;;
+          *)
+            echo "⏭️ Environment management skipped (manage_environments=false)" >> "$GITHUB_STEP_SUMMARY"
+            ;;
+        esac
+
+        case "$ENABLE_DEPENDABOT" in
+          "true")
+            gh api \
+              --method PUT \
+              -H "Accept: application/vnd.github+json" \
+              /repos/"$OWNER"/"$REPO"/vulnerability-alerts
+            echo "✅ Vulnerability alerts enabled" >> "$GITHUB_STEP_SUMMARY"
+
+            gh api \
+              --method PUT \
+              -H "Accept: application/vnd.github+json" \
+              /repos/"$OWNER"/"$REPO"/automated-security-fixes
+            echo "✅ Dependabot security updates enabled" >> "$GITHUB_STEP_SUMMARY"
+            ;;
+          *)
+            echo "⏭️ Dependabot updates skipped (enable_dependabot=false)" >> "$GITHUB_STEP_SUMMARY"
+            ;;
+        esac

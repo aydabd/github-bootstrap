@@ -30,11 +30,6 @@ on:
         required: false
         default: true
         type: boolean
-      enable_branch_protection:
-        description: "Enable branch protection rules"
-        required: false
-        default: true
-        type: boolean
       team_name:
         description: "GitHub team for code owners (e.g., team-leads)"
         required: false
@@ -104,9 +99,9 @@ on:
           - semantic-release
       enable_repo_settings:
         description: >-
-          Apply repository settings, create dev/prod environments, and enable
-          Dependabot. Branch protection is controlled separately by
-          enable_branch_protection.
+          Apply repository settings PATCH, create dev/prod environments, and
+          enable Dependabot security updates. Repository ruleset application is
+          handled separately and is not controlled by this toggle.
         required: false
         default: true
         type: boolean
@@ -174,10 +169,6 @@ on:
         default: "public"
         type: string
       cleanup_on_failure:
-        required: false
-        default: true
-        type: boolean
-      enable_branch_protection:
         required: false
         default: true
         type: boolean
@@ -419,7 +410,7 @@ jobs:
           TF_VAR_repo_owner: ${{ steps.set-owner.outputs.owner }}
           TF_VAR_repo_description: ${{ inputs.repo_description }}
           TF_VAR_visibility: ${{ inputs.visibility }}
-          TF_VAR_enable_branch_protection: ${{ inputs.enable_branch_protection }}
+          TF_VAR_enable_branch_protection: false
           TF_VAR_enable_repo_settings: ${{ inputs.enable_repo_settings }}
           TF_VAR_github_host: ${{ inputs.github_host }}
           TF_VAR_team_name: ${{ inputs.team_name }}
@@ -437,7 +428,7 @@ jobs:
           TF_VAR_repo_owner: ${{ steps.set-owner.outputs.owner }}
           TF_VAR_repo_description: ${{ inputs.repo_description }}
           TF_VAR_visibility: ${{ inputs.visibility }}
-          TF_VAR_enable_branch_protection: ${{ inputs.enable_branch_protection }}
+          TF_VAR_enable_branch_protection: false
           TF_VAR_enable_repo_settings: ${{ inputs.enable_repo_settings }}
           TF_VAR_github_host: ${{ inputs.github_host }}
           TF_VAR_team_name: ${{ inputs.team_name }}
@@ -652,31 +643,23 @@ jobs:
           git push
           echo "✅ Template files pushed" >> $GITHUB_STEP_SUMMARY
 
-      - name: Enable Dependabot security features
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          case "${{ inputs.enable_repo_settings }}" in
-            "true") ;;
-            *) echo "⏭️ Dependabot skipped (enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY; exit 0 ;;
-          esac
+      - name: Apply repository settings
+        uses: ./.github/actions/apply-repo-settings
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          repo_name: ${{ inputs.repo_name }}
+          enable_repo_settings: ${{ inputs.enable_repo_settings }}
+          apply_repository_settings: "false"
+          manage_environments: "false"
+          enable_dependabot: ${{ inputs.enable_repo_settings }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
 
-          OWNER="${{ steps.set-owner.outputs.owner }}"
-          REPO="${{ inputs.repo_name }}"
-
-          # Enable Dependabot vulnerability alerts
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/vulnerability-alerts
-          echo "✅ Vulnerability alerts enabled" >> $GITHUB_STEP_SUMMARY
-
-          # Enable Dependabot automated security fixes
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/automated-security-fixes
-          echo "✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
+      - name: Apply repository ruleset
+        uses: ./.github/actions/apply-repository-ruleset
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          repo_name: ${{ inputs.repo_name }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
 
       - name: Summary
         run: |
@@ -684,7 +667,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Repository:** https://github.com/${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Visibility:** ${{ inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch Protection:** ${{ inputs.enable_branch_protection }}" >> $GITHUB_STEP_SUMMARY
           echo "**Languages:** ${{ steps.validate-inputs.outputs.languages }}" >> $GITHUB_STEP_SUMMARY
           echo "**Environment manager:** ${{ steps.validate-inputs.outputs.env_manager }}" >> $GITHUB_STEP_SUMMARY
           echo "**Runtime versions:** python=${{ steps.validate-inputs.outputs.python_version }}, node=${{ steps.validate-inputs.outputs.node_version }}, go=${{ steps.validate-inputs.outputs.go_version }}, java=${{ steps.validate-inputs.outputs.java_version }}" >> $GITHUB_STEP_SUMMARY
@@ -698,19 +680,15 @@ jobs:
             "true")
               echo "- ✅ Vulnerability alerts enabled" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Development environment (Terraform-managed; not modified here)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Production environment (Terraform-managed; not modified here)" >> $GITHUB_STEP_SUMMARY
               ;;
             *)
-              echo "- ⏭️ Environments and Dependabot skipped" >> $GITHUB_STEP_SUMMARY
-              ;;
-          esac
-          case "${{ inputs.enable_repo_settings }}/${{ inputs.enable_branch_protection }}" in
-            "true/true")
-              echo "- ✅ Branch protection ruleset (2 required approvals, linear history, code-owner review)" >> $GITHUB_STEP_SUMMARY
-              ;;
-            *)
-              echo "- ⏭️ Branch protection skipped" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Development environment (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Production environment (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
               ;;
           esac
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -726,7 +704,17 @@ jobs:
           echo "- ✅ SECURITY.md (security policy)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ CONTRIBUTING.md (contribution guide)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Lint workflow (${{ steps.validate-inputs.outputs.env_manager }} + pre-commit)" >> $GITHUB_STEP_SUMMARY
+          case "${{ inputs.workflows }}" in
+            "all"|"")
+              echo "- ✅ Lint workflow (${{ steps.validate-inputs.outputs.env_manager }} + pre-commit)" >> $GITHUB_STEP_SUMMARY
+              ;;
+            "none")
+              echo "- ⏭️ All workflows skipped" >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              echo "- ✅ Selected workflows: ${{ inputs.workflows }}" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
           if [ -f new-repo/environment.yml ]; then
             echo "- ✅ provider/micromamba config selected (environment.yml)" >> $GITHUB_STEP_SUMMARY
           elif [ -f new-repo/mise.toml ]; then
@@ -736,17 +724,22 @@ jobs:
           fi
           echo "- ✅ .pre-commit-config.yaml (all language: system hooks)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Conventional commits (pre-commit)" >> $GITHUB_STEP_SUMMARY
-          case "${{ inputs.release_tool }}" in
-            "release-please")
-              echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
-              ;;
-            "semantic-release")
-              echo "- ✅ semantic-release workflow (push-to-main, fully automated)" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ .releaserc.json (semantic-release configuration)" >> $GITHUB_STEP_SUMMARY
-              ;;
+          case "${{ inputs.workflows }}" in
+            "none") ;;
             *)
-              echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ cliff.toml (changelog configuration)" >> $GITHUB_STEP_SUMMARY
+              case "${{ inputs.release_tool }}" in
+                "release-please")
+                  echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
+                  ;;
+                "semantic-release")
+                  echo "- ✅ semantic-release workflow (push-to-main, fully automated)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ .releaserc.json (semantic-release configuration)" >> $GITHUB_STEP_SUMMARY
+                  ;;
+                *)
+                  echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ cliff.toml (changelog configuration)" >> $GITHUB_STEP_SUMMARY
+                  ;;
+              esac
               ;;
           esac
           echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY

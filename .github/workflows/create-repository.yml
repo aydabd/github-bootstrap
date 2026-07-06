@@ -30,11 +30,6 @@ on:
         required: false
         default: true
         type: boolean
-      enable_branch_protection:
-        description: "Enable branch protection rules"
-        required: false
-        default: true
-        type: boolean
       team_name:
         description: "GitHub team for code owners (e.g., org/team-leads)"
         required: false
@@ -104,9 +99,9 @@ on:
           - semantic-release
       enable_repo_settings:
         description: >-
-          Apply repository settings, create dev/prod environments, and enable
-          Dependabot. Branch protection is controlled separately by
-          enable_branch_protection.
+          Apply repository settings PATCH, create dev/prod environments, and
+          enable Dependabot security updates. Repository ruleset application is
+          handled separately and is not controlled by this toggle.
         required: false
         default: true
         type: boolean
@@ -174,10 +169,6 @@ on:
         default: "public"
         type: string
       cleanup_on_failure:
-        required: false
-        default: true
-        type: boolean
-      enable_branch_protection:
         required: false
         default: true
         type: boolean
@@ -672,81 +663,19 @@ jobs:
           echo "✅ Template files pushed" >> $GITHUB_STEP_SUMMARY
 
       - name: Apply repository settings
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          case "${{ inputs.enable_repo_settings }}" in
-            "true") ;;
-            *)
-              echo "⏭️ Repository settings skipped (enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
-              exit 0
-              ;;
-          esac
+        uses: ./.github/actions/apply-repo-settings
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          repo_name: ${{ inputs.repo_name }}
+          enable_repo_settings: ${{ inputs.enable_repo_settings }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
 
-          OWNER="${{ steps.set-owner.outputs.owner }}"
-          REPO="${{ inputs.repo_name }}"
-
-          # Apply repository settings
-          gh api \
-            --method PATCH \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO \
-            --input ".github/config/repo-settings.json"
-
-          # Create dev environment (no wait, no reviewers required)
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/environments/dev
-          echo "✅ Development environment created" >> $GITHUB_STEP_SUMMARY
-
-          # Create prod environment
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/environments/prod
-          echo "✅ Production environment created" >> $GITHUB_STEP_SUMMARY
-
-          # Enable Dependabot vulnerability alerts
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/vulnerability-alerts
-          echo "✅ Vulnerability alerts enabled" >> $GITHUB_STEP_SUMMARY
-
-          # Enable Dependabot automated security fixes
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            /repos/$OWNER/$REPO/automated-security-fixes
-          echo "✅ Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
-
-      - name: Apply branch protection rules
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          case "${{ inputs.enable_repo_settings }}/${{ inputs.enable_branch_protection }}" in
-            "true/true") ;;
-            *)
-              echo "⏭️ Branch protection skipped" >> $GITHUB_STEP_SUMMARY
-              exit 0
-              ;;
-          esac
-          sleep 3
-          RESPONSE=$(gh api \
-            --method POST \
-            -H "Accept: application/vnd.github+json" \
-            /repos/${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}/rulesets \
-            --input ".github/config/branch-protection.json" 2>&1) || {
-            EXIT_CODE=$?
-            if echo "$RESPONSE" | grep -q "Upgrade to GitHub Pro"; then
-              echo "⚠️ Branch protection rulesets require GitHub Pro or a public repository. Skipping." >> $GITHUB_STEP_SUMMARY
-              echo "::warning::Branch protection skipped: rulesets require GitHub Pro or a public repository."
-              exit 0
-            fi
-            echo "$RESPONSE"
-            exit $EXIT_CODE
-          }
+      - name: Apply repository ruleset
+        uses: ./.github/actions/apply-repository-ruleset
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          repo_name: ${{ inputs.repo_name }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
 
       - name: Summary
         run: |
@@ -754,7 +683,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Repository:** https://github.com/${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Visibility:** ${{ inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch Protection:** ${{ inputs.enable_branch_protection }}" >> $GITHUB_STEP_SUMMARY
           echo "**Languages:** ${{ steps.validate-inputs.outputs.languages }}" >> $GITHUB_STEP_SUMMARY
           echo "**Environment manager:** ${{ steps.validate-inputs.outputs.env_manager }}" >> $GITHUB_STEP_SUMMARY
           echo "**Runtime versions:** python=${{ steps.validate-inputs.outputs.python_version }}, node=${{ steps.validate-inputs.outputs.node_version }}, go=${{ steps.validate-inputs.outputs.go_version }}, java=${{ steps.validate-inputs.outputs.java_version }}" >> $GITHUB_STEP_SUMMARY
@@ -769,23 +697,20 @@ jobs:
 
           case "${{ inputs.enable_repo_settings }}" in
             "true")
-              echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Vulnerability alerts and Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
-              case "${{ inputs.enable_branch_protection }}" in
-                "true") echo "- ✅ Branch protection rules (2 required approvals, linear history, code-owner review)" >> $GITHUB_STEP_SUMMARY ;;
-                *)      echo "- ⏭️ Branch protection rules (skipped)" >> $GITHUB_STEP_SUMMARY ;;
-              esac
+              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
               echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
               ;;
             *)
-              echo "- ⏭️ Dependabot configuration (skipped)" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped)" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Branch protection rules (skipped)" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Development environment (skipped)" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Production environment (skipped)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Development environment (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Production environment (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
               ;;
           esac
+
+          echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
 
           echo "- ✅ .editorconfig (4 spaces code, 2 spaces config)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ .gitignore, .gitattributes" >> $GITHUB_STEP_SUMMARY

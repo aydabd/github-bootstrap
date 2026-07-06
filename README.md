@@ -32,11 +32,11 @@ Fallback: use a PAT when App setup is not available.
 
 1. Create or use an existing GitHub App with the following minimum permissions:
 
-   | Permission scope | Level          | Required for                                  |
-   | ---------------- | -------------- | --------------------------------------------- |
-   | `Contents`       | Read and write | Clone template, push initial commits          |
-   | `Administration` | Read and write | Create repos, apply branch protection, delete |
-   | `Metadata`       | Read-only      | Read repository info (auto-granted)           |
+   | Permission scope | Level          | Required for                                   |
+   | ---------------- | -------------- | ---------------------------------------------- |
+   | `Contents`       | Read and write | Clone template, push initial commits           |
+   | `Administration` | Read and write | Create repos, configure settings, delete repos |
+   | `Metadata`       | Read-only      | Read repository info (auto-granted)            |
 
    For **organization** repositories also add:
 
@@ -184,31 +184,30 @@ Your new repository is created with all templates and settings.
 
 ## Workflow Inputs
 
-| Input                      | Required | Default                                  | Description                                                                                                   |
-| -------------------------- | -------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `repo_name`                | Yes      | -                                        | New repository name                                                                                           |
-| `repo_owner`               | No       | Current user/org                         | Repository owner — a GitHub username or organization                                                          |
-| `repo_description`         | No       | `Repository following SOLID principles…` | Repository description                                                                                        |
-| `visibility`               | No       | `public`                                 | `public`, `private`, or `internal` (org only)                                                                 |
-| `cleanup_on_failure`       | No       | `true`                                   | Delete the created repository automatically if the workflow fails                                             |
-| `enable_repo_settings`     | No       | `true`                                   | Apply repo settings, create dev/prod environments, enable Dependabot, and apply branch protection             |
-| `enable_branch_protection` | No       | `true`                                   | Enable branch protection rules (only applied when `enable_repo_settings` is also `true`)                      |
-| `enable_codeowners`        | No       | `true`                                   | Add a CODEOWNERS file assigning the chosen team as default reviewer                                           |
-| `workflows`                | No       | `all`                                    | Workflows to include: `all`, `none`, or comma-separated names — `lint`, `codeql`, `ai-code-review`, `release` |
-| `team_name`                | No       | `team-leads`                             | GitHub team for code owners                                                                                   |
-| `license_holder`           | No       | Current user/org                         | License copyright holder                                                                                      |
-| `languages`                | No       | `language-agnostic-only`                 | Comma-separated list of languages (e.g. `javascript,python`) or `all`                                         |
-| `env_manager`              | Yes      | -                                        | Environment manager: `micromamba`, `mise`, or `system`                                                        |
-| `python_version`           | No       | `3.13`                                   | Python runtime version used by generated tooling files                                                        |
-| `node_version`             | No       | `24`                                     | Node.js major LTS version used by generated tooling files                                                     |
-| `go_version`               | No       | `1.26`                                   | Go stable version used by generated tooling files                                                             |
-| `java_version`             | No       | `25`                                     | Java LTS version used by generated tooling files                                                              |
-| `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release`                                 |
-| `app_id`                   | No       | -                                        | GitHub App ID for App-based authentication (recommended)                                                      |
-| `app_owner`                | No       | `repo_owner`                             | Owner/user/org whose App installation token is used                                                           |
-| `allowed_repo_owners`      | No       | -                                        | Optional comma-separated allowlist of owners that can be targeted                                             |
-| `require_cleanup_approval` | No       | `true`                                   | If `cleanup_on_failure=true`, requires environment approval before delete                                     |
-| `gh_token`                 | No       | -                                        | PAT fallback input (less safe than secrets or GitHub App)                                                     |
+| Input                      | Required | Default                                  | Description                                                                                                                                 |
+| -------------------------- | -------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repo_name`                | Yes      | -                                        | New repository name                                                                                                                         |
+| `repo_owner`               | No       | Current user/org                         | Repository owner — a GitHub username or organization                                                                                        |
+| `repo_description`         | No       | `Repository following SOLID principles…` | Repository description                                                                                                                      |
+| `visibility`               | No       | `public`                                 | `public`, `private`, or `internal` (org only)                                                                                               |
+| `cleanup_on_failure`       | No       | `true`                                   | Delete the created repository automatically if the workflow fails                                                                           |
+| `enable_repo_settings`     | No       | `true`                                   | Apply repo settings PATCH, create dev/prod environments, and enable Dependabot security updates (ruleset application is handled separately) |
+| `enable_codeowners`        | No       | `true`                                   | Add a CODEOWNERS file assigning the chosen team as default reviewer                                                                         |
+| `workflows`                | No       | `all`                                    | Workflows to include: `all`, `none`, or comma-separated names — `lint`, `codeql`, `ai-code-review`, `release`                               |
+| `team_name`                | No       | `team-leads`                             | GitHub team for code owners                                                                                                                 |
+| `license_holder`           | No       | Current user/org                         | License copyright holder                                                                                                                    |
+| `languages`                | No       | `language-agnostic-only`                 | Comma-separated list of languages (e.g. `javascript,python`) or `all`                                                                       |
+| `env_manager`              | Yes      | -                                        | Environment manager: `micromamba`, `mise`, or `system`                                                                                      |
+| `python_version`           | No       | `3.13`                                   | Python runtime version used by generated tooling files                                                                                      |
+| `node_version`             | No       | `24`                                     | Node.js major LTS version used by generated tooling files                                                                                   |
+| `go_version`               | No       | `1.26`                                   | Go stable version used by generated tooling files                                                                                           |
+| `java_version`             | No       | `25`                                     | Java LTS version used by generated tooling files                                                                                            |
+| `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release`                                                               |
+| `app_id`                   | No       | -                                        | GitHub App ID for App-based authentication (recommended)                                                                                    |
+| `app_owner`                | No       | `repo_owner`                             | Owner/user/org whose App installation token is used                                                                                         |
+| `allowed_repo_owners`      | No       | -                                        | Optional comma-separated allowlist of owners that can be targeted                                                                           |
+| `require_cleanup_approval` | No       | `true`                                   | If `cleanup_on_failure=true`, requires environment approval before delete                                                                   |
+| `gh_token`                 | No       | -                                        | PAT fallback input (less safe than secrets or GitHub App)                                                                                   |
 
 ## What Gets Created
 
@@ -218,8 +217,7 @@ Editor configurations, Git settings, and ignore patterns that work across all la
 
 ### GitHub Configuration
 
-Code ownership rules, automated dependency updates, and branch protection settings requiring
-2 approvals, linear history, and code owner reviews. Vulnerability alerts and Dependabot
+Code ownership rules and automated dependency updates. Vulnerability alerts and Dependabot
 automated security fixes are enabled on every created repository.
 
 ### Documentation Templates
@@ -275,7 +273,7 @@ Automation is provided by `.github/workflows/weekly-tooling-updates.yml`:
 - runs weekly and on manual dispatch
 - opens or updates one PR with all non-Dependabot tooling updates
 - enables PR auto-merge so GitHub merges only after required checks, required approvals,
-  and branch protection rules are satisfied
+  and repository merge requirements are satisfied
 
 ### Conventional Commits
 
@@ -421,18 +419,17 @@ automatically.
 
 ### Security
 
-Every bootstrapped repository gets a full security baseline out of the box:
+Every bootstrapped repository gets a core security baseline out of the box:
 
-| Feature                            | Details                                                   |
-| ---------------------------------- | --------------------------------------------------------- |
-| Vulnerability alerts               | Enabled automatically via the GitHub API                  |
-| Dependabot security updates        | Enabled automatically — auto-PRs for vulnerable deps      |
-| Dependabot version updates         | Configured in `.github/dependabot.yml` for all ecosystems |
-| CodeQL scanning                    | Workflow generated and scoped to the selected language(s) |
-| Branch protection — linear history | Only squash merges allowed                                |
-| Branch protection — 2 approvals    | Two code-owner approvals required before merging          |
-| SECURITY.md                        | Security policy and vulnerability reporting instructions  |
-| Secret scanning                    | Enabled by GitHub for all public repos automatically      |
+| Feature                      | Details                                                                                                         |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Vulnerability alerts         | Enabled automatically via the GitHub API                                                                        |
+| Dependabot security updates  | Enabled automatically — auto-PRs for vulnerable deps                                                            |
+| Dependabot version updates   | Configured in `.github/dependabot.yml` for all ecosystems                                                       |
+| CodeQL scanning              | Workflow generated and scoped to the selected language(s)                                                       |
+| Branch protection / rulesets | Default ruleset configured from `.github/config/ruleset-default.json` (skips with warning on unsupported plans) |
+| SECURITY.md                  | Security policy and vulnerability reporting instructions                                                        |
+| Secret scanning              | Enabled by GitHub for all public repos automatically                                                            |
 
 ## Core Principles
 
@@ -470,8 +467,19 @@ The Terraform module (in `terraform/`) manages the same infrastructure declarati
 
 1. Creates the repository with all settings via `github_repository`
 2. Creates `dev` and `prod` environments via `github_repository_environment`
-3. Applies branch protection via `github_repository_ruleset`
+3. Optionally creates a repository ruleset via `github_repository_ruleset`
+   when Terraform input `enable_branch_protection=true`
 4. The wrapper workflow then copies template files and configures linting
+
+Bootstrap workflows apply the default ruleset payload from
+`.github/config/ruleset-default.json` after repository creation.
+If you run Terraform directly, you can also manage rulesets through Terraform
+inputs (for example, `enable_branch_protection=true`) or configure them
+manually in repository settings.
+
+Avoid enabling both approaches for the same repository at the same time.
+Applying both the bootstrap default ruleset and Terraform ruleset management
+can create overlapping/conflicting rules on `main`.
 
 Terraform provides idempotent applies and state tracking, making it suitable for
 managing repositories as long-lived infrastructure.

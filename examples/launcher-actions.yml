@@ -15,7 +15,7 @@
 #   The App must be installed on every owner you want to create repos under.
 #   Required permissions:
 #     Contents:       Read and write   (clone, push initial commits)
-#     Administration: Read and write   (create repo, branch protection, delete)
+#     Administration: Read and write   (create repo, configure settings, delete)
 #     Metadata:       Read-only        (auto-granted)
 #   For organization repos additionally:
 #     Members:        Read-only        (team setup)
@@ -97,11 +97,6 @@ on:
           - git-cliff
           - release-please
           - semantic-release
-      enable_branch_protection:
-        description: "Apply branch protection rules"
-        required: false
-        default: true
-        type: boolean
       cleanup_on_failure:
         description: "Delete the repo if creation fails"
         required: false
@@ -123,7 +118,6 @@ jobs:
       go_version: ${{ inputs.go_version }}
       java_version: ${{ inputs.java_version }}
       release_tool: ${{ inputs.release_tool }}
-      enable_branch_protection: ${{ inputs.enable_branch_protection }}
       cleanup_on_failure: ${{ inputs.cleanup_on_failure }}
       # GitHub App auth — recommended over PAT
       app_id: ${{ vars.BOOTSTRAP_APP_ID }}

@@ -1,5 +1,5 @@
 {
-  "name": "main-protection",
+  "name": "default",
   "target": "branch",
   "source_type": "Repository",
   "enforcement": "active",
@@ -26,7 +26,8 @@
         "dismiss_stale_reviews_on_push": true,
         "require_code_owner_review": true,
         "require_last_push_approval": true,
-        "required_review_thread_resolution": true
+        "required_review_thread_resolution": true,
+        "allowed_merge_methods": ["squash"]
       }
     },
     {
@@ -39,6 +40,22 @@
           }
         ]
       }
+    },
+    {
+      "type": "code_scanning",
+      "parameters": {
+        "code_scanning_tools": [
+          {
+            "tool": "CodeQL",
+            "security_alerts_threshold": "high_or_higher",
+            "alerts_threshold": "errors"
+          }
+        ]
+      }
+    },
+    {
+      "type": "copilot_code_review",
+      "parameters": { "review_on_push": true }
     }
   ],
   "bypass_actors": [

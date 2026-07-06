@@ -24,9 +24,10 @@ low-risk PR, then this refactor can proceed in phases.
   generated-file snapshots, and CI confirmation are all complete on `main`.
 - Phase 1: Completed. Shared normalization package, command wrapper, renderer,
   and both workflow migrations now consume the same normalization contract.
-- Phase 2: In progress. Composite actions for pre-commit rendering, provider
-  tooling files, release-tool configuration, and CodeQL configuration are
-  extracted and both creation workflows updated to consume them.
+- Phase 2: Completed. All composite actions extracted: pre-commit rendering,
+  provider tooling files, release-tool configuration, CodeQL configuration,
+  and repository settings. Branch protection automation removed from workflows.
+  Both creation workflows updated.
 - Phase 3: Not started. Can start after production workflow behavior is stable.
 - Phase 4: Not started. Final documentation pass after the implementation phases.
 
@@ -110,7 +111,7 @@ Introduce composable units under `.github/actions/`:
 - `configure-release-tool`
 - `configure-codeql`
 - `apply-repo-settings`
-- `apply-branch-protection`
+- `apply-repository-ruleset`
 
 Each action:
 
@@ -186,15 +187,18 @@ Exit criteria:
        `configure-provider-tooling-files` action.
 3. [x] Move release/configuration steps into dedicated actions.
 4. [x] Move CodeQL configuration into `configure-codeql` action.
-5. [ ] Move repo settings and branch protection only after the direct and Terraform
-       paths have matching behavior documented.
+5. [x] Move repo settings and Dependabot handling into `apply-repo-settings`
+       action; remove classic branch-protection automation from workflows.
+6. [x] Add `apply-repository-ruleset` action to apply default ruleset payload
+       during repository bootstrap.
 
 Exit criteria:
 
 - [x] top-level workflows mostly linear and readable
 - [x] each extracted action has input/output contract
-- [ ] repo settings and branch protection actions pending — deferred to follow-up
-      PR after both paths have matching behavior documented
+- [x] repo settings handling extracted and wired into both workflows
+- [x] ruleset bootstrap extracted and wired into both workflows via
+      `apply-repository-ruleset`
 
 ### Phase 3: Test workflow parity and reliability
 
