@@ -190,6 +190,26 @@ func TestUpdateProviderAssetManifestText(t *testing.T) {
 	}
 }
 
+func TestUpdateProviderAssetManifestTextInvalidKey(t *testing.T) {
+	source := "# provider os arch url sha256\nmise linux x64 https://example.invalid/old old\n"
+	_, err := UpdateProviderAssetManifestText(source, map[string]ProviderAsset{
+		"mise:linux": {URL: "https://example.invalid/new", SHA256: "abc123"},
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid provider key")
+	}
+}
+
+func TestUpdateProviderAssetManifestTextMissingRow(t *testing.T) {
+	source := "# provider os arch url sha256\nmise linux x64 https://example.invalid/old old\n"
+	_, err := UpdateProviderAssetManifestText(source, map[string]ProviderAsset{
+		"mise:linux:arm64": {URL: "https://example.invalid/new", SHA256: "abc123"},
+	})
+	if err == nil {
+		t.Fatal("expected error when provider row is missing")
+	}
+}
+
 func TestUpdateFilePreservesPermissions(t *testing.T) {
 	tmp, err := os.CreateTemp(t.TempDir(), "bootstrap-*.sh")
 	if err != nil {
