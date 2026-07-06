@@ -264,6 +264,14 @@ jobs:
             echo "::error::Invalid enable_codeowners '$ENABLE_CODEOWNERS'. Allowed: true, false"
             exit 1
           fi
+          if ! [[ "$RELEASE_TOOL" =~ ^(git-cliff|release-please|semantic-release)$ ]]; then
+            echo "::error::Invalid release_tool '$RELEASE_TOOL'."
+            exit 1
+          fi
+          if ! [[ "$WORKFLOWS" =~ ^(all|none)$ ]] && ! [[ "$WORKFLOWS" =~ ^(lint|codeql|ai-code-review|release)(,(lint|codeql|ai-code-review|release))*$ ]]; then
+            echo "::error::Invalid workflows '$WORKFLOWS'. Allowed: all, none, or comma-separated of lint,codeql,ai-code-review,release"
+            exit 1
+          fi
           if ! [[ "$TARGET_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "$TARGET_REF" == *".."* ]] || [[ "$TARGET_REF" == /* ]] || [[ "$TARGET_REF" == */ ]]; then
             echo "::error::Invalid target_ref '$TARGET_REF'."
             exit 1
@@ -784,6 +792,8 @@ jobs:
       - name: Write job summary
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          PRESET: ${{ steps.validate-inputs.outputs.preset }}
+          TARGET_WORKFLOW: ${{ steps.validate-inputs.outputs.target_workflow }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
           OWNER="${{ github.repository_owner }}"
@@ -795,8 +805,8 @@ jobs:
           | Item | Status |
           |------|--------|
           | Repository | [${OWNER}/${REPO_NAME}](${REPO_URL}) |
-          | Preset | `${{ steps.validate-inputs.outputs.preset }}` |
-          | Target workflow | `${{ steps.validate-inputs.outputs.target_workflow }}` |
+          | Preset | \`${PRESET}\` |
+          | Target workflow | \`${TARGET_WORKFLOW}\` |
           | Structure validation | ✅ Passed |
           | Agent kit (agents + skills) | ✅ Passed |
           | API parity (settings + rulesets) | ✅ Passed |
