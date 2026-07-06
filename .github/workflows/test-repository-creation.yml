@@ -81,6 +81,11 @@ on:
           - git-cliff
           - release-please
           - semantic-release
+      enable_repo_settings:
+        description: "Enable repo settings/dependabot/environments in target workflow"
+        required: false
+        default: true
+        type: boolean
       gh_token:
         description: >-
           Personal Access Token with repo and admin:org scopes.
@@ -140,6 +145,7 @@ jobs:
           NODE_VERSION_INPUT: ${{ github.event.inputs.node_version }}
           GO_VERSION_INPUT: ${{ github.event.inputs.go_version }}
           JAVA_VERSION_INPUT: ${{ github.event.inputs.java_version }}
+          ENABLE_REPO_SETTINGS_INPUT: ${{ github.event.inputs.enable_repo_settings }}
         run: |
           ENV_MANAGER="$ENV_MANAGER_INPUT"
           LANGUAGES="$LANGUAGES_INPUT"
@@ -149,6 +155,7 @@ jobs:
           NODE_VERSION="$NODE_VERSION_INPUT"
           GO_VERSION="$GO_VERSION_INPUT"
           JAVA_VERSION="$JAVA_VERSION_INPUT"
+          ENABLE_REPO_SETTINGS="$ENABLE_REPO_SETTINGS_INPUT"
           if ! [[ "$ENV_MANAGER" =~ ^(micromamba|mise|system)$ ]]; then
             echo "::error::Invalid env_manager '$ENV_MANAGER'. Allowed: micromamba, mise, system"
             exit 1
@@ -204,6 +211,7 @@ jobs:
           echo "root_language=$ROOT_LANGUAGE" >> "$GITHUB_OUTPUT"
           echo "target_workflow=$TARGET_WORKFLOW" >> "$GITHUB_OUTPUT"
           echo "target_ref=$TARGET_REF" >> "$GITHUB_OUTPUT"
+          echo "enable_repo_settings=$ENABLE_REPO_SETTINGS" >> "$GITHUB_OUTPUT"
 
       - name: Trigger repository creation workflow
         id: trigger-workflow
@@ -220,6 +228,7 @@ jobs:
           GO_VERSION: ${{ github.event.inputs.go_version }}
           JAVA_VERSION: ${{ github.event.inputs.java_version }}
           RELEASE_TOOL: ${{ github.event.inputs.release_tool }}
+          ENABLE_REPO_SETTINGS: ${{ steps.validate-inputs.outputs.enable_repo_settings }}
         run: |
           TRIGGERED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
@@ -237,6 +246,7 @@ jobs:
             --field go_version="$GO_VERSION" \
             --field java_version="$JAVA_VERSION" \
             --field release_tool="$RELEASE_TOOL" \
+            --field enable_repo_settings="$ENABLE_REPO_SETTINGS" \
             --field cleanup_on_failure="true"
           echo "workflow_triggered_at=$TRIGGERED_AT" >> $GITHUB_OUTPUT
 
@@ -432,6 +442,94 @@ jobs:
 
           echo "🎉 All required files are present!"
 
+      - name: Validate API parity for settings and rulesets
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+        run: |
+          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
+          OWNER="${{ github.repository_owner }}"
+          ENABLE_REPO_SETTINGS="${{ steps.validate-inputs.outputs.enable_repo_settings }}"
+
+          echo "🔍 Validating API-level repository settings parity..."
+
+          REPO_JSON=$(gh api "/repos/${OWNER}/${REPO_NAME}")
+
+          for assertion in \
+            '.has_wiki == true' \
+            '.has_projects == true' \
+            '.has_issues == true' \
+            '.allow_auto_merge == true' \
+            '.allow_update_branch == true' \
+            '.allow_squash_merge == true' \
+            '.allow_merge_commit == false' \
+            '.allow_rebase_merge == false' \
+            '.squash_merge_commit_title == "PR_TITLE"' \
+            '.squash_merge_commit_message == "COMMIT_MESSAGES"' \
+            '.delete_branch_on_merge == true'; do
+            if ! echo "$REPO_JSON" | jq -e "$assertion" >/dev/null; then
+              echo "❌ Repository setting assertion failed: $assertion"
+              exit 1
+            fi
+          done
+
+          echo "✅ Repository settings parity checks passed"
+
+          RULESETS_JSON=$(gh api --paginate "/repos/${OWNER}/${REPO_NAME}/rulesets" 2>/dev/null || true)
+          DEFAULT_RULESET=$(echo "$RULESETS_JSON" | jq -c '.[]? | select(.name == "default" and .target == "branch")' | head -n1)
+
+          if [ -z "$DEFAULT_RULESET" ]; then
+            echo "❌ Missing default branch ruleset"
+            exit 1
+          fi
+
+          if ! echo "$DEFAULT_RULESET" | jq -e '.enforcement == "active"' >/dev/null; then
+            echo "❌ Default ruleset is not active"
+            exit 1
+          fi
+
+          if ! echo "$DEFAULT_RULESET" | jq -e '.conditions.ref_name.include | index("refs/heads/main") != null' >/dev/null; then
+            echo "❌ Default ruleset does not target refs/heads/main"
+            exit 1
+          fi
+
+          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "pull_request") | (.parameters.required_approving_review_count == 2 and .parameters.require_code_owner_review == true and .parameters.required_review_thread_resolution == true)' >/dev/null; then
+            echo "❌ Pull request review requirements do not match expected defaults"
+            exit 1
+          fi
+
+          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_linear_history")' >/dev/null; then
+            echo "❌ required_linear_history rule missing"
+            exit 1
+          fi
+
+          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | (.parameters.required_status_checks[]?.context == "lint")' >/dev/null; then
+            echo "❌ lint status check requirement missing"
+            exit 1
+          fi
+
+          echo "✅ Ruleset parity checks passed"
+
+          case "$ENABLE_REPO_SETTINGS" in
+            "true")
+              if ! gh api "/repos/${OWNER}/${REPO_NAME}/environments/dev" >/dev/null 2>&1; then
+                echo "❌ Missing dev environment when enable_repo_settings=true"
+                exit 1
+              fi
+              if ! gh api "/repos/${OWNER}/${REPO_NAME}/environments/prod" >/dev/null 2>&1; then
+                echo "❌ Missing prod environment when enable_repo_settings=true"
+                exit 1
+              fi
+              if ! gh api "/repos/${OWNER}/${REPO_NAME}/automated-security-fixes" >/dev/null 2>&1; then
+                echo "❌ Dependabot automated security fixes not enabled when enable_repo_settings=true"
+                exit 1
+              fi
+              echo "✅ Environment and Dependabot checks passed for enable_repo_settings=true"
+              ;;
+            *)
+              echo "ℹ️ enable_repo_settings=false: skipping strict environment/dependabot assertions"
+              ;;
+          esac
+
       - name: Validate agent kit structure
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
@@ -589,6 +687,7 @@ jobs:
           | Repository | [${OWNER}/${REPO_NAME}](${REPO_URL}) |
           | Structure validation | ✅ Passed |
           | Agent kit (agents + skills) | ✅ Passed |
+          | API parity (settings + rulesets) | ✅ Passed |
           | No stale Super-Linter artifacts | ✅ Passed |
           | Pre-commit config | ✅ Passed |
           | Lint workflow | Dispatched — [check result](${REPO_URL}/actions) |
