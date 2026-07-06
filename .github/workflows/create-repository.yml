@@ -99,8 +99,9 @@ on:
           - semantic-release
       enable_repo_settings:
         description: >-
-          Apply repository settings, create dev/prod environments, and enable
-          Dependabot.
+          Apply repository settings PATCH, create dev/prod environments, and
+          enable Dependabot security updates. Repository ruleset application is
+          handled separately and is not controlled by this toggle.
         required: false
         default: true
         type: boolean

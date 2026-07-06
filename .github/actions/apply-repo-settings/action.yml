@@ -56,6 +56,10 @@ runs:
 
         case "$APPLY_REPO_SETTINGS" in
           "true")
+            if [ ! -f ".github/config/repo-settings.json" ]; then
+              echo "::error::Missing repository settings payload: .github/config/repo-settings.json"
+              exit 1
+            fi
             gh api \
               --method PATCH \
               -H "Accept: application/vnd.github+json" \

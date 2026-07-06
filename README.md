@@ -191,7 +191,7 @@ Your new repository is created with all templates and settings.
 | `repo_description`         | No       | `Repository following SOLID principles…` | Repository description                                                                                        |
 | `visibility`               | No       | `public`                                 | `public`, `private`, or `internal` (org only)                                                                 |
 | `cleanup_on_failure`       | No       | `true`                                   | Delete the created repository automatically if the workflow fails                                             |
-| `enable_repo_settings`     | No       | `true`                                   | Apply repo settings, create dev/prod environments, and enable Dependabot                                      |
+| `enable_repo_settings`     | No       | `true`                                   | Apply repo settings PATCH, create dev/prod environments, and enable Dependabot security updates (ruleset application is handled separately) |
 | `enable_codeowners`        | No       | `true`                                   | Add a CODEOWNERS file assigning the chosen team as default reviewer                                           |
 | `workflows`                | No       | `all`                                    | Workflows to include: `all`, `none`, or comma-separated names — `lint`, `codeql`, `ai-code-review`, `release` |
 | `team_name`                | No       | `team-leads`                             | GitHub team for code owners                                                                                   |
