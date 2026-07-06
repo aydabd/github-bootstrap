@@ -132,3 +132,31 @@ terraform {
 | Release Please          | ✅ Workflow + config files                          | ✅ Handled by the wrapper workflow   |
 | State tracking          | ❌ Stateless                                        | ✅ Terraform state (drift detection) |
 | Idempotency             | ⚠️ Creates new repo each run                        | ✅ Apply is idempotent               |
+
+## Architecture Notes
+
+Repository bootstrap uses shared building blocks across both orchestration paths:
+
+- Actions orchestration: `.github/workflows/create-repository.yml`
+- Terraform orchestration: `.github/workflows/terraform-create-repository.yml`
+- Shared normalization contract: `tools/pkg/bootstrapinputs` and
+  `tools/cmd/bootstrap-inputs`
+- Shared composite actions: `render-precommit-configs`,
+  `configure-provider-tooling-files`, `configure-release-tool`, `configure-codeql`,
+  `apply-repo-settings`, and `apply-repository-ruleset`
+
+For extension work (new language/provider/runtime), use the maintainer guide:
+
+- [`docs/maintainer-guide-adding-support.md`](../docs/maintainer-guide-adding-support.md)
+
+## Troubleshooting
+
+Common failure signatures and quick triage:
+
+| Failure signature                                      | Where it appears                                 | Likely cause                                                    | What to do                                                                                                                              |
+| ------------------------------------------------------ | ------------------------------------------------ | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `Error: creating repository`                           | Terraform apply output                           | token lacks required permissions/scopes                         | Verify App installation scope or PAT scopes (`repo`, plus `admin:org` for org repos).                                                   |
+| `Error: creating repository ruleset`                   | Terraform apply output                           | plan/features do not support rulesets or settings conflict      | Keep `enable_branch_protection=false` unless Terraform should own rulesets, and avoid dual ownership with workflow ruleset application. |
+| `Error: creating environment`                          | Terraform apply output                           | missing admin rights or existing environment policy constraints | Confirm token has administration rights and inspect existing environment configuration.                                                 |
+| Workflow succeeds but expected files are missing       | Post-apply template copy step                    | wrapper workflow failed after Terraform apply                   | Inspect `terraform-create-repository.yml` run logs after the apply step.                                                                |
+| Test harness timeout (`Workflow monitoring timed out`) | `.github/workflows/test-repository-creation.yml` | dispatch/run correlation mismatch                               | Verify monitor filter uses `dispatch_actor` from token identity and matching target ref.                                                |
