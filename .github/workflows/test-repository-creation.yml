@@ -354,7 +354,9 @@ jobs:
             --field enable_codeowners="$ENABLE_CODEOWNERS" \
             --field workflows="$WORKFLOWS" \
             --field cleanup_on_failure="true"
+          DISPATCH_ACTOR=$(gh api /user --jq '.login')
           echo "workflow_triggered_at=$TRIGGERED_AT" >> $GITHUB_OUTPUT
+          echo "dispatch_actor=$DISPATCH_ACTOR" >> $GITHUB_OUTPUT
 
       - name: Monitor workflow execution
         env:
@@ -363,10 +365,10 @@ jobs:
           TARGET_REF: ${{ steps.validate-inputs.outputs.target_ref }}
           REPOSITORY: ${{ github.repository }}
           TRIGGERED_AT: ${{ steps.trigger-workflow.outputs.workflow_triggered_at }}
-          ACTOR: ${{ github.actor }}
+          DISPATCH_ACTOR: ${{ steps.trigger-workflow.outputs.dispatch_actor }}
         timeout-minutes: 10
         run: |
-          echo "⏳ Monitoring ${WORKFLOW_FILE} on ref ${TARGET_REF}..."
+          echo "⏳ Monitoring ${WORKFLOW_FILE} on ref ${TARGET_REF} (dispatch actor: ${DISPATCH_ACTOR})..."
 
           # Wait a moment for the workflow to be registered
           sleep 5
@@ -377,7 +379,7 @@ jobs:
             # This avoids relying on branch-only filtering so tag refs are supported.
             RUN_STATUS=$(gh api \
               "/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=20&event=workflow_dispatch" \
-              | jq -c --arg ref "$TARGET_REF" --arg since "$TRIGGERED_AT" --arg actor "$ACTOR" '
+              | jq -c --arg ref "$TARGET_REF" --arg since "$TRIGGERED_AT" --arg actor "$DISPATCH_ACTOR" '
                   [.workflow_runs[]
                   | select(.head_branch == $ref)
                   | select(.created_at >= $since)
