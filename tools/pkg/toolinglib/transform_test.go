@@ -177,19 +177,16 @@ func TestUpdateMiseTextUpdatesRuntimePinsWhenPresent(t *testing.T) {
 	}
 }
 
-func TestUpdateBootstrapScriptText(t *testing.T) {
-	source := "case \"$provider:$os:$arch\" in\n    mise:linux:x64)\n        url=\"https://example.invalid/old\"\n        sha256=\"old\"\n        ;;\nesac\n"
-	updated, err := UpdateBootstrapScriptText(source, map[string]ProviderAsset{
+func TestUpdateProviderAssetManifestText(t *testing.T) {
+	source := "# provider os arch url sha256\nmise linux x64 https://example.invalid/old old\n"
+	updated, err := UpdateProviderAssetManifestText(source, map[string]ProviderAsset{
 		"mise:linux:x64": {URL: "https://example.invalid/new", SHA256: "abc123"},
 	})
 	if err != nil {
-		t.Fatalf("UpdateBootstrapScriptText returned error: %v", err)
+		t.Fatalf("UpdateProviderAssetManifestText returned error: %v", err)
 	}
-	if !strings.Contains(updated, `url="https://example.invalid/new"`) {
-		t.Fatalf("expected updated url, got: %s", updated)
-	}
-	if !strings.Contains(updated, `sha256="abc123"`) {
-		t.Fatalf("expected updated sha256, got: %s", updated)
+	if !strings.Contains(updated, "mise linux x64 https://example.invalid/new abc123") {
+		t.Fatalf("expected updated provider asset row, got: %s", updated)
 	}
 }
 

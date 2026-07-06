@@ -193,12 +193,23 @@ func HasTOMLAssignment(text string, key string) (bool, error) {
 	return re.MatchString(text), nil
 }
 
-func UpdateBootstrapScriptText(text string, providerData map[string]ProviderAsset) (string, error) {
+func parseProviderKey(key string) (string, string, string, error) {
+	parts := strings.Split(key, ":")
+	if len(parts) != 3 {
+		return "", "", "", fmt.Errorf("invalid provider asset key: %s", key)
+	}
+	return parts[0], parts[1], parts[2], nil
+}
+
+func UpdateProviderAssetManifestText(text string, providerData map[string]ProviderAsset) (string, error) {
 	updated := text
 	for key, values := range providerData {
-		caseLabel := regexp.QuoteMeta(key)
-		pattern := fmt.Sprintf(`(%s\)\n\s*url=")[^"]+("\n\s*sha256=")[^"]+(")`, caseLabel)
-		replacement := fmt.Sprintf(`${1}%s${2}%s${3}`, values.URL, values.SHA256)
+		provider, osName, arch, err := parseProviderKey(key)
+		if err != nil {
+			return "", err
+		}
+		pattern := fmt.Sprintf(`(?m)^%s\s+%s\s+%s\s+\S+\s+\S+\s*$`, regexp.QuoteMeta(provider), regexp.QuoteMeta(osName), regexp.QuoteMeta(arch))
+		replacement := fmt.Sprintf("%s %s %s %s %s", provider, osName, arch, values.URL, values.SHA256)
 		next, err := ReplaceOrFail(pattern, replacement, updated)
 		if err != nil {
 			return "", err
