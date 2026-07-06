@@ -18,7 +18,7 @@ jobs:
       contents: write
       pull-requests: write
     env:
-      GH_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
 
     steps:
       - name: Checkout code
@@ -72,8 +72,11 @@ jobs:
             exit 0
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          automation_login="$(gh api /user --jq '.login')"
+          automation_id="$(gh api /user --jq '.id')"
+
+          git config user.name "$automation_login"
+          git config user.email "${automation_id}+${automation_login}@users.noreply.github.com"
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
           git checkout -B "$branch"
