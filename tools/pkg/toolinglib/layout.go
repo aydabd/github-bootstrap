@@ -33,8 +33,10 @@ func VerifyWorkspaceLayout(root string) error {
 		filepath.Join(root, "environment.yml"),
 		filepath.Join(root, "mise.toml"),
 		filepath.Join(root, "scripts", "bootstrap-provider-binary.sh"),
+		filepath.Join(root, "scripts", "provider-assets.txt"),
 		filepath.Join(root, ".pre-commit-config.yaml"),
 		filepath.Join(root, "templates", "scripts", "bootstrap-provider-binary.sh"),
+		filepath.Join(root, "templates", "scripts", "provider-assets.txt"),
 	}
 	missing := make([]string, 0)
 	for _, p := range requiredFiles {

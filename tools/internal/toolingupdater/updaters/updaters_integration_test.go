@@ -50,6 +50,8 @@ func buildTestWorkspace(t *testing.T) (root string, versions toolinglib.Versions
 	tplMise := filepath.Join(root, "templates", "languages", "go", "providers", "mise", "mise.toml")
 	repoBootstrap := filepath.Join(root, "scripts", "bootstrap-provider-binary.sh")
 	tplBootstrap := filepath.Join(root, "templates", "scripts", "bootstrap-provider-binary.sh")
+	repoProviderAssets := filepath.Join(root, "scripts", "provider-assets.txt")
+	tplProviderAssets := filepath.Join(root, "templates", "scripts", "provider-assets.txt")
 	repoPre := filepath.Join(root, ".pre-commit-config.yaml")
 	tplPre := filepath.Join(root, "templates", "languages", "go", ".pre-commit-config.yaml")
 
@@ -60,9 +62,12 @@ func buildTestWorkspace(t *testing.T) (root string, versions toolinglib.Versions
 	mustWriteFile(t, repoMise, miseSource)
 	mustWriteFile(t, tplMise, miseSource)
 
-	bootstrap := "case \"$provider:$os:$arch\" in\n  mise:linux:x64)\n    url=\"https://old.example/mise\"\n    sha256=\"old\"\n    ;;\n  micromamba:linux:x64)\n    url=\"https://old.example/mamba\"\n    sha256=\"old\"\n    ;;\nesac\n"
+	bootstrap := "#!/usr/bin/env bash\nset -euo pipefail\n"
+	providerAssets := "# provider os arch url sha256\nmise linux x64 https://old.example/mise old\nmicromamba linux x64 https://old.example/mamba old\n"
 	mustWriteFile(t, repoBootstrap, bootstrap)
 	mustWriteFile(t, tplBootstrap, bootstrap)
+	mustWriteFile(t, repoProviderAssets, providerAssets)
+	mustWriteFile(t, tplProviderAssets, providerAssets)
 
 	mustWriteFile(t, repoPre, "repos:\n  - repo: https://example.invalid\n")
 	mustWriteFile(t, tplPre, "repos:\n  - repo: https://example.invalid\n")
@@ -113,8 +118,8 @@ func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
 	tplEnv := filepath.Join(root, "templates", "languages", "go", "providers", "micromamba", "environment.yml")
 	repoMise := filepath.Join(root, "mise.toml")
 	tplMise := filepath.Join(root, "templates", "languages", "go", "providers", "mise", "mise.toml")
-	repoBootstrap := filepath.Join(root, "scripts", "bootstrap-provider-binary.sh")
-	tplBootstrap := filepath.Join(root, "templates", "scripts", "bootstrap-provider-binary.sh")
+	repoProviderAssets := filepath.Join(root, "scripts", "provider-assets.txt")
+	tplProviderAssets := filepath.Join(root, "templates", "scripts", "provider-assets.txt")
 	repoPre := filepath.Join(root, ".pre-commit-config.yaml")
 	tplPre := filepath.Join(root, "templates", "languages", "go", ".pre-commit-config.yaml")
 
@@ -122,7 +127,7 @@ func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RunMicromamba failed: %v", err)
 	}
-	if !containsAll(mambaChanged, repoEnv, tplEnv, repoBootstrap, tplBootstrap) {
+	if !containsAll(mambaChanged, repoEnv, tplEnv, repoProviderAssets, tplProviderAssets) {
 		t.Fatalf("RunMicromamba changed mismatch: %v", mambaChanged)
 	}
 
@@ -130,7 +135,7 @@ func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RunMise failed: %v", err)
 	}
-	if !containsAll(miseChanged, repoMise, tplMise, repoBootstrap, tplBootstrap) {
+	if !containsAll(miseChanged, repoMise, tplMise, repoProviderAssets, tplProviderAssets) {
 		t.Fatalf("RunMise changed mismatch: %v", miseChanged)
 	}
 
@@ -162,11 +167,11 @@ func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
 	if !strings.Contains(mustReadFile(t, tplMise), "github.com/daixiang0/gci@v0.13.7") {
 		t.Fatalf("template mise.toml go module pins were not updated")
 	}
-	if !strings.Contains(mustReadFile(t, repoBootstrap), "url=\"https://new.example/mamba\"") {
-		t.Fatalf("repo bootstrap script was not updated")
+	if !strings.Contains(mustReadFile(t, repoProviderAssets), "micromamba linux x64 https://new.example/mamba mamba-sha") {
+		t.Fatalf("repo provider assets were not updated")
 	}
-	if !strings.Contains(mustReadFile(t, tplBootstrap), "sha256=\"mise-sha\"") {
-		t.Fatalf("template bootstrap script was not updated")
+	if !strings.Contains(mustReadFile(t, tplProviderAssets), "mise linux x64 https://new.example/mise mise-sha") {
+		t.Fatalf("template provider assets were not updated")
 	}
 	if !strings.Contains(mustReadFile(t, repoPre), "# updated-by-fake-pre-commit") {
 		t.Fatalf("repo pre-commit config was not updated by fake pre-commit")
@@ -183,10 +188,10 @@ func TestRunMicromamba_ScopeRepo(t *testing.T) {
 
 	repoEnv := filepath.Join(root, "environment.yml")
 	tplEnv := filepath.Join(root, "templates", "languages", "go", "providers", "micromamba", "environment.yml")
-	tplBootstrap := filepath.Join(root, "templates", "scripts", "bootstrap-provider-binary.sh")
+	tplProviderAssets := filepath.Join(root, "templates", "scripts", "provider-assets.txt")
 
 	originalTplEnv := mustReadFile(t, tplEnv)
-	originalTplBootstrap := mustReadFile(t, tplBootstrap)
+	originalTplProviderAssets := mustReadFile(t, tplProviderAssets)
 
 	changed, err := RunMicromamba(root, "repo", versions, true)
 	if err != nil {
@@ -201,8 +206,8 @@ func TestRunMicromamba_ScopeRepo(t *testing.T) {
 	if mustReadFile(t, tplEnv) != originalTplEnv {
 		t.Fatalf("template environment.yml was modified but should not have been")
 	}
-	if mustReadFile(t, tplBootstrap) != originalTplBootstrap {
-		t.Fatalf("template bootstrap was modified but should not have been")
+	if mustReadFile(t, tplProviderAssets) != originalTplProviderAssets {
+		t.Fatalf("template provider assets were modified but should not have been")
 	}
 }
 
@@ -213,10 +218,10 @@ func TestRunMicromamba_ScopeTemplates(t *testing.T) {
 
 	repoEnv := filepath.Join(root, "environment.yml")
 	tplEnv := filepath.Join(root, "templates", "languages", "go", "providers", "micromamba", "environment.yml")
-	repoBootstrap := filepath.Join(root, "scripts", "bootstrap-provider-binary.sh")
+	repoProviderAssets := filepath.Join(root, "scripts", "provider-assets.txt")
 
 	originalRepoEnv := mustReadFile(t, repoEnv)
-	originalRepoBootstrap := mustReadFile(t, repoBootstrap)
+	originalRepoProviderAssets := mustReadFile(t, repoProviderAssets)
 
 	changed, err := RunMicromamba(root, "templates", versions, true)
 	if err != nil {
@@ -231,8 +236,8 @@ func TestRunMicromamba_ScopeTemplates(t *testing.T) {
 	if mustReadFile(t, repoEnv) != originalRepoEnv {
 		t.Fatalf("repo environment.yml was modified but should not have been")
 	}
-	if mustReadFile(t, repoBootstrap) != originalRepoBootstrap {
-		t.Fatalf("repo bootstrap was modified but should not have been")
+	if mustReadFile(t, repoProviderAssets) != originalRepoProviderAssets {
+		t.Fatalf("repo provider assets were modified but should not have been")
 	}
 }
 
@@ -294,9 +299,9 @@ func TestRunPreCommitAutoupdate_ReturnsPartialChangesOnLaterError(t *testing.T) 
 func TestRunMicromamba_ReturnsPartialChangesOnLaterError(t *testing.T) {
 	root, versions := buildTestWorkspace(t)
 
-	templateBootstrap := filepath.Join(root, "templates", "scripts", "bootstrap-provider-binary.sh")
-	if err := os.Chmod(templateBootstrap, 0o444); err != nil {
-		t.Fatalf("failed to chmod template bootstrap: %v", err)
+	templateProviderAssets := filepath.Join(root, "templates", "scripts", "provider-assets.txt")
+	if err := os.Chmod(templateProviderAssets, 0o444); err != nil {
+		t.Fatalf("failed to chmod template provider assets: %v", err)
 	}
 
 	changed, err := RunMicromamba(root, "all", versions, true)
@@ -305,8 +310,8 @@ func TestRunMicromamba_ReturnsPartialChangesOnLaterError(t *testing.T) {
 	}
 
 	repoEnv := filepath.Join(root, "environment.yml")
-	repoBootstrap := filepath.Join(root, "scripts", "bootstrap-provider-binary.sh")
-	if !containsAll(changed, repoEnv, repoBootstrap) {
+	repoProviderAssets := filepath.Join(root, "scripts", "provider-assets.txt")
+	if !containsAll(changed, repoEnv, repoProviderAssets) {
 		t.Fatalf("expected partial changed set to keep earlier repo updates, got %v", changed)
 	}
 }
