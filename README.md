@@ -209,6 +209,28 @@ Your new repository is created with all templates and settings.
 | `require_cleanup_approval` | No       | `true`                                   | If `cleanup_on_failure=true`, requires environment approval before delete                                                                   |
 | `gh_token`                 | No       | -                                        | PAT fallback input (less safe than secrets or GitHub App)                                                                                   |
 
+## Architecture Overview
+
+Repository bootstrap now follows a clear separation of responsibilities:
+
+- Orchestrator workflows: `.github/workflows/create-repository.yml` and
+  `.github/workflows/terraform-create-repository.yml`
+- Shared normalization contract: `tools/pkg/bootstrapinputs` and
+  `tools/cmd/bootstrap-inputs`
+- Reusable composite actions under `.github/actions/`: `render-precommit-configs`,
+  `configure-provider-tooling-files`, `configure-release-tool`, `configure-codeql`,
+  `apply-repo-settings`, and `apply-repository-ruleset`
+- Manual E2E parity harness: `.github/workflows/test-repository-creation.yml`
+
+Use the test harness presets to compare Actions and Terraform creation paths:
+
+- `api-default`
+- `terraform-default`
+- `api-no-repo-settings`
+- `terraform-no-repo-settings`
+- `api-all-languages`
+- `terraform-all-languages`
+
 ## What Gets Created
 
 ### Configuration Files
@@ -461,6 +483,14 @@ Every created repository ships with a reusable PR review agent kit:
 All templates are in `templates/`. Modify them to match your team's needs.
 See repository settings, environment configuration, and pre-commit options.
 
+### Maintainer Guide
+
+For adding support to a new language, provider, or runtime version, use:
+
+- [`docs/maintainer-guide-adding-support.md`](docs/maintainer-guide-adding-support.md)
+
+This is the canonical checklist for extension work and validation steps.
+
 ### Terraform IaC
 
 The Terraform module (in `terraform/`) manages the same infrastructure declaratively:
@@ -483,6 +513,21 @@ can create overlapping/conflicting rules on `main`.
 
 Terraform provides idempotent applies and state tracking, making it suitable for
 managing repositories as long-lived infrastructure.
+
+## Troubleshooting
+
+Common failure signatures and what to check first:
+
+| Failure signature                                                        | Where it appears                   | Likely cause                                               | What to do                                                                                 |
+| ------------------------------------------------------------------------ | ---------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `Workflow monitoring timed out` in `test-repository-creation.yml`        | Test workflow monitor step         | Dispatch/run correlation mismatch                          | Confirm `dispatch_actor` is captured from `gh api /user` and actor filtering is enabled.   |
+| `Invalid target_ref` / `Invalid workflows` / `Invalid release_tool`      | Test workflow validation step      | Dispatch input outside allow-list                          | Use supported values from workflow inputs or a `preset`.                                   |
+| `Missing repository settings payload: .github/config/repo-settings.json` | `apply-repo-settings` action       | Action executed without expected repo checkout/layout      | Ensure bootstrap repository is checked out before running actions and file path is intact. |
+| Ruleset step exits with plan/feature warning                             | `apply-repository-ruleset` summary | Target plan does not support rulesets or required features | Upgrade plan/features or accept skip on unsupported targets.                               |
+| `Unexpected input` while calling reusable workflow                       | Launcher workflow run              | Caller passes removed/unknown inputs                       | Align caller `with:` block to current inputs in create/terraform workflow definitions.     |
+
+When in doubt, re-run with `test-repository-creation.yml` using the matching
+preset for the path you are validating (`api-*` or `terraform-*`).
 
 ## Requirements
 

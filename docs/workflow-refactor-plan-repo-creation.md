@@ -30,7 +30,8 @@ low-risk PR, then this refactor can proceed in phases.
   Both creation workflows updated.
 - Phase 3: Completed. Test workflow input parity, deterministic run correlation,
   and preset-driven manual scenarios are in place.
-- Phase 4: Not started. Final documentation pass after the implementation phases.
+- Phase 4: Completed. Architecture documentation, maintainer extension guide,
+  and troubleshooting signatures have been consolidated.
 
 Use the exit criteria under each phase as the source of truth for deciding when a
 phase is done. A phase is not complete just because one PR lands; every exit
@@ -223,14 +224,14 @@ Exit criteria:
 
 ### Phase 4: Documentation consolidation
 
-1. [ ] Update root README and terraform README with new architecture.
-2. [ ] Add maintainer guide for adding a language/provider/runtime.
-3. [ ] Add troubleshooting section with common failure signatures.
+1. [x] Update root README and terraform README with new architecture.
+2. [x] Add maintainer guide for adding a language/provider/runtime.
+3. [x] Add troubleshooting section with common failure signatures.
 
 Exit criteria:
 
-- [ ] one obvious place to update when adding support
-- [ ] no stale docs referencing removed shell parsing blocks
+- [x] one obvious place to update when adding support
+- [x] no stale docs referencing removed shell parsing blocks
 
 ## Deliverables
 
