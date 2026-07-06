@@ -8,11 +8,33 @@ on:
         required: false
         default: "bootstrap-test"
         type: string
+      preset:
+        description: "One-click test scenario preset"
+        required: false
+        default: "none"
+        type: choice
+        options:
+          - none
+          - api-default
+          - terraform-default
+          - api-no-repo-settings
+          - terraform-no-repo-settings
+          - api-all-languages
+          - terraform-all-languages
       languages:
         description: "Languages to test (comma-separated or 'all' or 'language-agnostic-only')"
         required: false
         default: "language-agnostic-only"
         type: string
+      visibility:
+        description: "Repository visibility to pass to target workflow"
+        required: false
+        default: "public"
+        type: choice
+        options:
+          - public
+          - private
+          - internal
       target_workflow:
         description: "Creation workflow to test"
         required: false
@@ -86,6 +108,16 @@ on:
         required: false
         default: true
         type: boolean
+      enable_codeowners:
+        description: "Enable CODEOWNERS generation in target workflow"
+        required: false
+        default: true
+        type: boolean
+      workflows:
+        description: "Workflows to include: all, none, or comma-separated names"
+        required: false
+        default: "all"
+        type: string
       gh_token:
         description: >-
           Personal Access Token with repo and admin:org scopes.
@@ -141,21 +173,73 @@ jobs:
           LANGUAGES_INPUT: ${{ github.event.inputs.languages }}
           TARGET_WORKFLOW_INPUT: ${{ github.event.inputs.target_workflow }}
           TARGET_REF_INPUT: ${{ github.event.inputs.target_ref }}
+          PRESET_INPUT: ${{ github.event.inputs.preset }}
+          VISIBILITY_INPUT: ${{ github.event.inputs.visibility }}
           PYTHON_VERSION_INPUT: ${{ github.event.inputs.python_version }}
           NODE_VERSION_INPUT: ${{ github.event.inputs.node_version }}
           GO_VERSION_INPUT: ${{ github.event.inputs.go_version }}
           JAVA_VERSION_INPUT: ${{ github.event.inputs.java_version }}
+          RELEASE_TOOL_INPUT: ${{ github.event.inputs.release_tool }}
           ENABLE_REPO_SETTINGS_INPUT: ${{ github.event.inputs.enable_repo_settings }}
+          ENABLE_CODEOWNERS_INPUT: ${{ github.event.inputs.enable_codeowners }}
+          WORKFLOWS_INPUT: ${{ github.event.inputs.workflows }}
         run: |
           ENV_MANAGER="$ENV_MANAGER_INPUT"
           LANGUAGES="$LANGUAGES_INPUT"
           TARGET_WORKFLOW="$TARGET_WORKFLOW_INPUT"
           TARGET_REF="$TARGET_REF_INPUT"
+          PRESET="$PRESET_INPUT"
+          VISIBILITY="$VISIBILITY_INPUT"
           PYTHON_VERSION="$PYTHON_VERSION_INPUT"
           NODE_VERSION="$NODE_VERSION_INPUT"
           GO_VERSION="$GO_VERSION_INPUT"
           JAVA_VERSION="$JAVA_VERSION_INPUT"
+          RELEASE_TOOL="$RELEASE_TOOL_INPUT"
           ENABLE_REPO_SETTINGS="$ENABLE_REPO_SETTINGS_INPUT"
+          ENABLE_CODEOWNERS="$ENABLE_CODEOWNERS_INPUT"
+          WORKFLOWS="$WORKFLOWS_INPUT"
+
+          case "$PRESET" in
+            "none") ;;
+            "api-default")
+              TARGET_WORKFLOW="create-repository.yml"
+              LANGUAGES="language-agnostic-only"
+              ENV_MANAGER="micromamba"
+              VISIBILITY="public"
+              ENABLE_REPO_SETTINGS="true"
+              ENABLE_CODEOWNERS="true"
+              WORKFLOWS="all"
+              ;;
+            "terraform-default")
+              TARGET_WORKFLOW="terraform-create-repository.yml"
+              LANGUAGES="language-agnostic-only"
+              ENV_MANAGER="micromamba"
+              VISIBILITY="public"
+              ENABLE_REPO_SETTINGS="true"
+              ENABLE_CODEOWNERS="true"
+              WORKFLOWS="all"
+              ;;
+            "api-no-repo-settings")
+              TARGET_WORKFLOW="create-repository.yml"
+              ENABLE_REPO_SETTINGS="false"
+              ;;
+            "terraform-no-repo-settings")
+              TARGET_WORKFLOW="terraform-create-repository.yml"
+              ENABLE_REPO_SETTINGS="false"
+              ;;
+            "api-all-languages")
+              TARGET_WORKFLOW="create-repository.yml"
+              LANGUAGES="all"
+              ;;
+            "terraform-all-languages")
+              TARGET_WORKFLOW="terraform-create-repository.yml"
+              LANGUAGES="all"
+              ;;
+            *)
+              echo "::error::Invalid preset '$PRESET'"
+              exit 1
+              ;;
+          esac
           if ! [[ "$ENV_MANAGER" =~ ^(micromamba|mise|system)$ ]]; then
             echo "::error::Invalid env_manager '$ENV_MANAGER'. Allowed: micromamba, mise, system"
             exit 1
@@ -166,6 +250,18 @@ jobs:
           fi
           if [ -z "$TARGET_REF" ]; then
             echo "::error::target_ref must not be empty"
+            exit 1
+          fi
+          if ! [[ "$VISIBILITY" =~ ^(public|private|internal)$ ]]; then
+            echo "::error::Invalid visibility '$VISIBILITY'. Allowed: public, private, internal"
+            exit 1
+          fi
+          if ! [[ "$ENABLE_REPO_SETTINGS" =~ ^(true|false)$ ]]; then
+            echo "::error::Invalid enable_repo_settings '$ENABLE_REPO_SETTINGS'. Allowed: true, false"
+            exit 1
+          fi
+          if ! [[ "$ENABLE_CODEOWNERS" =~ ^(true|false)$ ]]; then
+            echo "::error::Invalid enable_codeowners '$ENABLE_CODEOWNERS'. Allowed: true, false"
             exit 1
           fi
           if ! [[ "$TARGET_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "$TARGET_REF" == *".."* ]] || [[ "$TARGET_REF" == /* ]] || [[ "$TARGET_REF" == */ ]]; then
@@ -211,7 +307,12 @@ jobs:
           echo "root_language=$ROOT_LANGUAGE" >> "$GITHUB_OUTPUT"
           echo "target_workflow=$TARGET_WORKFLOW" >> "$GITHUB_OUTPUT"
           echo "target_ref=$TARGET_REF" >> "$GITHUB_OUTPUT"
+          echo "preset=$PRESET" >> "$GITHUB_OUTPUT"
+          echo "visibility=$VISIBILITY" >> "$GITHUB_OUTPUT"
+          echo "release_tool=$RELEASE_TOOL" >> "$GITHUB_OUTPUT"
           echo "enable_repo_settings=$ENABLE_REPO_SETTINGS" >> "$GITHUB_OUTPUT"
+          echo "enable_codeowners=$ENABLE_CODEOWNERS" >> "$GITHUB_OUTPUT"
+          echo "workflows=$WORKFLOWS" >> "$GITHUB_OUTPUT"
 
       - name: Trigger repository creation workflow
         id: trigger-workflow
@@ -223,12 +324,15 @@ jobs:
           REPO_OWNER: ${{ github.repository_owner }}
           LANGUAGES: ${{ steps.validate-inputs.outputs.languages }}
           ENV_MANAGER: ${{ steps.validate-inputs.outputs.env_manager }}
+          VISIBILITY: ${{ steps.validate-inputs.outputs.visibility }}
           PYTHON_VERSION: ${{ github.event.inputs.python_version }}
           NODE_VERSION: ${{ github.event.inputs.node_version }}
           GO_VERSION: ${{ github.event.inputs.go_version }}
           JAVA_VERSION: ${{ github.event.inputs.java_version }}
-          RELEASE_TOOL: ${{ github.event.inputs.release_tool }}
+          RELEASE_TOOL: ${{ steps.validate-inputs.outputs.release_tool }}
           ENABLE_REPO_SETTINGS: ${{ steps.validate-inputs.outputs.enable_repo_settings }}
+          ENABLE_CODEOWNERS: ${{ steps.validate-inputs.outputs.enable_codeowners }}
+          WORKFLOWS: ${{ steps.validate-inputs.outputs.workflows }}
         run: |
           TRIGGERED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
@@ -236,7 +340,7 @@ jobs:
             --ref "$TARGET_REF" \
             --field repo_name="$REPO_NAME" \
             --field repo_description="Test repository for bootstrap validation - created $(date)" \
-            --field visibility="public" \
+            --field visibility="$VISIBILITY" \
             --field team_name="* @$REPO_OWNER" \
             --field license_holder="$REPO_OWNER" \
             --field languages="$LANGUAGES" \
@@ -247,6 +351,8 @@ jobs:
             --field java_version="$JAVA_VERSION" \
             --field release_tool="$RELEASE_TOOL" \
             --field enable_repo_settings="$ENABLE_REPO_SETTINGS" \
+            --field enable_codeowners="$ENABLE_CODEOWNERS" \
+            --field workflows="$WORKFLOWS" \
             --field cleanup_on_failure="true"
           echo "workflow_triggered_at=$TRIGGERED_AT" >> $GITHUB_OUTPUT
 
@@ -257,6 +363,7 @@ jobs:
           TARGET_REF: ${{ steps.validate-inputs.outputs.target_ref }}
           REPOSITORY: ${{ github.repository }}
           TRIGGERED_AT: ${{ steps.trigger-workflow.outputs.workflow_triggered_at }}
+          ACTOR: ${{ github.actor }}
         timeout-minutes: 10
         run: |
           echo "⏳ Monitoring ${WORKFLOW_FILE} on ref ${TARGET_REF}..."
@@ -270,10 +377,11 @@ jobs:
             # This avoids relying on branch-only filtering so tag refs are supported.
             RUN_STATUS=$(gh api \
               "/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=20&event=workflow_dispatch" \
-              | jq -c --arg ref "$TARGET_REF" --arg since "$TRIGGERED_AT" '
+              | jq -c --arg ref "$TARGET_REF" --arg since "$TRIGGERED_AT" --arg actor "$ACTOR" '
                   [.workflow_runs[]
                   | select(.head_branch == $ref)
                   | select(.created_at >= $since)
+                  | select(.actor.login == $actor)
                   | {status: .status, conclusion: .conclusion, html_url: .html_url}]
                   | first // {}')
 
@@ -685,6 +793,8 @@ jobs:
           | Item | Status |
           |------|--------|
           | Repository | [${OWNER}/${REPO_NAME}](${REPO_URL}) |
+          | Preset | `${{ steps.validate-inputs.outputs.preset }}` |
+          | Target workflow | `${{ steps.validate-inputs.outputs.target_workflow }}` |
           | Structure validation | ✅ Passed |
           | Agent kit (agents + skills) | ✅ Passed |
           | API parity (settings + rulesets) | ✅ Passed |

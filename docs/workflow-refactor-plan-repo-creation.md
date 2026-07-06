@@ -28,7 +28,8 @@ low-risk PR, then this refactor can proceed in phases.
   provider tooling files, release-tool configuration, CodeQL configuration,
   and repository settings. Branch protection automation removed from workflows.
   Both creation workflows updated.
-- Phase 3: Not started. Can start after production workflow behavior is stable.
+- Phase 3: Completed. Test workflow input parity, deterministic run correlation,
+  and preset-driven manual scenarios are in place.
 - Phase 4: Not started. Final documentation pass after the implementation phases.
 
 Use the exit criteria under each phase as the source of truth for deciding when a
@@ -202,14 +203,23 @@ Exit criteria:
 
 ### Phase 3: Test workflow parity and reliability
 
-1. [ ] Align test workflow inputs with create workflow schema.
-2. [ ] Add deterministic dispatch-run correlation metadata.
-3. [ ] Add matrix-style manual test presets (docs + dispatch examples).
+1. [x] Align test workflow inputs with create workflow schema.
+2. [x] Add deterministic dispatch-run correlation metadata.
+3. [x] Add matrix-style manual test presets (docs + dispatch examples).
+
+Preset examples now supported in `test-repository-creation.yml`:
+
+- `api-default`
+- `terraform-default`
+- `api-no-repo-settings`
+- `terraform-no-repo-settings`
+- `api-all-languages`
+- `terraform-all-languages`
 
 Exit criteria:
 
-- [ ] repeatable manual validation against branch/tag refs
-- [ ] no ambiguous run polling behavior
+- [x] repeatable manual validation against branch/tag refs
+- [x] no ambiguous run polling behavior
 
 ### Phase 4: Documentation consolidation
 
