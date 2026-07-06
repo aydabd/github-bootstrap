@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.1](https://github.com/aydabd/github-bootstrap/compare/v1.12.0...v1.12.1) (2026-07-06)
+
+
+### Bug Fixes
+
+* **ci:** require coderabbit status instead of code owner review ([6d34be8](https://github.com/aydabd/github-bootstrap/commit/6d34be8cbaf69ca6f985afe776f384d43d930624))
+
 ## [1.12.0](https://github.com/aydabd/github-bootstrap/compare/v1.11.0...v1.12.0) (2026-07-06)
 
 
