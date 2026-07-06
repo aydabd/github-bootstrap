@@ -265,7 +265,7 @@ jobs:
             exit 1
           fi
           if ! [[ "$RELEASE_TOOL" =~ ^(git-cliff|release-please|semantic-release)$ ]]; then
-            echo "::error::Invalid release_tool '$RELEASE_TOOL'."
+            echo "::error::Invalid release_tool '$RELEASE_TOOL'. Allowed: git-cliff, release-please, semantic-release"
             exit 1
           fi
           WORKFLOWS="${WORKFLOWS//[[:space:]]/}"
