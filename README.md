@@ -184,30 +184,30 @@ Your new repository is created with all templates and settings.
 
 ## Workflow Inputs
 
-| Input                      | Required | Default                                  | Description                                                                                                   |
-| -------------------------- | -------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `repo_name`                | Yes      | -                                        | New repository name                                                                                           |
-| `repo_owner`               | No       | Current user/org                         | Repository owner — a GitHub username or organization                                                          |
-| `repo_description`         | No       | `Repository following SOLID principles…` | Repository description                                                                                        |
-| `visibility`               | No       | `public`                                 | `public`, `private`, or `internal` (org only)                                                                 |
-| `cleanup_on_failure`       | No       | `true`                                   | Delete the created repository automatically if the workflow fails                                             |
+| Input                      | Required | Default                                  | Description                                                                                                                                 |
+| -------------------------- | -------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repo_name`                | Yes      | -                                        | New repository name                                                                                                                         |
+| `repo_owner`               | No       | Current user/org                         | Repository owner — a GitHub username or organization                                                                                        |
+| `repo_description`         | No       | `Repository following SOLID principles…` | Repository description                                                                                                                      |
+| `visibility`               | No       | `public`                                 | `public`, `private`, or `internal` (org only)                                                                                               |
+| `cleanup_on_failure`       | No       | `true`                                   | Delete the created repository automatically if the workflow fails                                                                           |
 | `enable_repo_settings`     | No       | `true`                                   | Apply repo settings PATCH, create dev/prod environments, and enable Dependabot security updates (ruleset application is handled separately) |
-| `enable_codeowners`        | No       | `true`                                   | Add a CODEOWNERS file assigning the chosen team as default reviewer                                           |
-| `workflows`                | No       | `all`                                    | Workflows to include: `all`, `none`, or comma-separated names — `lint`, `codeql`, `ai-code-review`, `release` |
-| `team_name`                | No       | `team-leads`                             | GitHub team for code owners                                                                                   |
-| `license_holder`           | No       | Current user/org                         | License copyright holder                                                                                      |
-| `languages`                | No       | `language-agnostic-only`                 | Comma-separated list of languages (e.g. `javascript,python`) or `all`                                         |
-| `env_manager`              | Yes      | -                                        | Environment manager: `micromamba`, `mise`, or `system`                                                        |
-| `python_version`           | No       | `3.13`                                   | Python runtime version used by generated tooling files                                                        |
-| `node_version`             | No       | `24`                                     | Node.js major LTS version used by generated tooling files                                                     |
-| `go_version`               | No       | `1.26`                                   | Go stable version used by generated tooling files                                                             |
-| `java_version`             | No       | `25`                                     | Java LTS version used by generated tooling files                                                              |
-| `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release`                                 |
-| `app_id`                   | No       | -                                        | GitHub App ID for App-based authentication (recommended)                                                      |
-| `app_owner`                | No       | `repo_owner`                             | Owner/user/org whose App installation token is used                                                           |
-| `allowed_repo_owners`      | No       | -                                        | Optional comma-separated allowlist of owners that can be targeted                                             |
-| `require_cleanup_approval` | No       | `true`                                   | If `cleanup_on_failure=true`, requires environment approval before delete                                     |
-| `gh_token`                 | No       | -                                        | PAT fallback input (less safe than secrets or GitHub App)                                                     |
+| `enable_codeowners`        | No       | `true`                                   | Add a CODEOWNERS file assigning the chosen team as default reviewer                                                                         |
+| `workflows`                | No       | `all`                                    | Workflows to include: `all`, `none`, or comma-separated names — `lint`, `codeql`, `ai-code-review`, `release`                               |
+| `team_name`                | No       | `team-leads`                             | GitHub team for code owners                                                                                                                 |
+| `license_holder`           | No       | Current user/org                         | License copyright holder                                                                                                                    |
+| `languages`                | No       | `language-agnostic-only`                 | Comma-separated list of languages (e.g. `javascript,python`) or `all`                                                                       |
+| `env_manager`              | Yes      | -                                        | Environment manager: `micromamba`, `mise`, or `system`                                                                                      |
+| `python_version`           | No       | `3.13`                                   | Python runtime version used by generated tooling files                                                                                      |
+| `node_version`             | No       | `24`                                     | Node.js major LTS version used by generated tooling files                                                                                   |
+| `go_version`               | No       | `1.26`                                   | Go stable version used by generated tooling files                                                                                           |
+| `java_version`             | No       | `25`                                     | Java LTS version used by generated tooling files                                                                                            |
+| `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release`                                                               |
+| `app_id`                   | No       | -                                        | GitHub App ID for App-based authentication (recommended)                                                                                    |
+| `app_owner`                | No       | `repo_owner`                             | Owner/user/org whose App installation token is used                                                                                         |
+| `allowed_repo_owners`      | No       | -                                        | Optional comma-separated allowlist of owners that can be targeted                                                                           |
+| `require_cleanup_approval` | No       | `true`                                   | If `cleanup_on_failure=true`, requires environment approval before delete                                                                   |
+| `gh_token`                 | No       | -                                        | PAT fallback input (less safe than secrets or GitHub App)                                                                                   |
 
 ## What Gets Created
 
