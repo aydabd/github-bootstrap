@@ -36,7 +36,11 @@ on:
           - private
           - internal
       target_workflow:
-        description: "Creation workflow to test"
+        description: >-
+          Creation workflow to test. Only used when preset=none — all other
+          presets encode the target workflow in their name (api-* uses
+          create-repository.yml, terraform-* uses
+          terraform-create-repository.yml) and ignore this input.
         required: false
         default: "create-repository.yml"
         type: choice
