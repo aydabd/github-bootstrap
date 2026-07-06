@@ -84,6 +84,7 @@ runs:
         mkdir -p "$REPO_DIR/scripts"
         cp "$PROVIDER_SCRIPT_TEMPLATE" "$REPO_DIR/scripts/provider-run.sh"
         cp "$GITHUB_WORKSPACE/templates/scripts/bootstrap-provider-binary.sh" "$REPO_DIR/scripts/bootstrap-provider-binary.sh"
+        cp "$GITHUB_WORKSPACE/templates/scripts/provider-assets.txt" "$REPO_DIR/scripts/provider-assets.txt"
         chmod +x "$REPO_DIR/scripts/provider-run.sh"
         chmod +x "$REPO_DIR/scripts/bootstrap-provider-binary.sh"
 

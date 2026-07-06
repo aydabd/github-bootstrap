@@ -27,15 +27,15 @@ func runScopedProviderUpdater(root string, scope string, write bool, cfg scopedP
 			changed = append(changed, repoPath)
 		}
 
-		repoBootstrap := filepath.Join(root, "scripts", "bootstrap-provider-binary.sh")
-		ok, err = toolinglib.UpdateFile(repoBootstrap, func(content string) (string, error) {
-			return toolinglib.UpdateBootstrapScriptText(content, cfg.providerAssets)
+		repoProviderAssets := filepath.Join(root, "scripts", "provider-assets.txt")
+		ok, err = toolinglib.UpdateFile(repoProviderAssets, func(content string) (string, error) {
+			return toolinglib.UpdateProviderAssetManifestText(content, cfg.providerAssets)
 		}, write)
 		if err != nil {
 			return changed, err
 		}
 		if ok {
-			changed = append(changed, repoBootstrap)
+			changed = append(changed, repoProviderAssets)
 		}
 	}
 
@@ -50,15 +50,15 @@ func runScopedProviderUpdater(root string, scope string, write bool, cfg scopedP
 			}
 		}
 
-		templateBootstrap := filepath.Join(root, "templates", "scripts", "bootstrap-provider-binary.sh")
-		ok, err := toolinglib.UpdateFile(templateBootstrap, func(content string) (string, error) {
-			return toolinglib.UpdateBootstrapScriptText(content, cfg.providerAssets)
+		templateProviderAssets := filepath.Join(root, "templates", "scripts", "provider-assets.txt")
+		ok, err := toolinglib.UpdateFile(templateProviderAssets, func(content string) (string, error) {
+			return toolinglib.UpdateProviderAssetManifestText(content, cfg.providerAssets)
 		}, write)
 		if err != nil {
 			return changed, err
 		}
 		if ok {
-			changed = append(changed, templateBootstrap)
+			changed = append(changed, templateProviderAssets)
 		}
 	}
 
