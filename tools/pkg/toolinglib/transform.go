@@ -209,7 +209,7 @@ func UpdateProviderAssetManifestText(text string, providerData map[string]Provid
 			return "", err
 		}
 		pattern := fmt.Sprintf(`(?m)^%s\s+%s\s+%s\s+\S+\s+\S+\s*$`, regexp.QuoteMeta(provider), regexp.QuoteMeta(osName), regexp.QuoteMeta(arch))
-		replacement := fmt.Sprintf("%s %s %s %s %s", provider, osName, arch, values.URL, values.SHA256)
+		replacement := regexp.QuoteReplacement(fmt.Sprintf("%s %s %s %s %s", provider, osName, arch, values.URL, values.SHA256))
 		next, err := ReplaceOrFail(pattern, replacement, updated)
 		if err != nil {
 			return "", err
