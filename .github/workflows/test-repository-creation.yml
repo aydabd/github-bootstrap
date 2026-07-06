@@ -641,13 +641,16 @@ jobs:
             exit 1
           fi
 
-          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | (.parameters.required_status_checks[]?.context == "lint")' >/dev/null; then
-            echo "❌ lint status check requirement missing"
+          REQUIRED_CHECK_CONTEXTS=$(echo "$DEFAULT_RULESET" | jq -r '[.rules[]? | select(.type == "required_status_checks") | .parameters.required_status_checks[]?.context] | sort | join(", ")')
+          echo "Required status checks: ${REQUIRED_CHECK_CONTEXTS:-none}"
+
+          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | index("lint") != null)' >/dev/null; then
+            echo "❌ lint status check requirement missing (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
             exit 1
           fi
 
           if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | (.parameters.required_status_checks[]?.context == "CodeRabbit")' >/dev/null; then
-            echo "❌ CodeRabbit status check requirement missing"
+            echo "❌ CodeRabbit status check requirement missing (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
             exit 1
           fi
 
