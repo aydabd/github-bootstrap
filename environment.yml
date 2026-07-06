@@ -5,13 +5,13 @@ channels:
   - nodefaults
 dependencies:
   # ── Python runtime (required by pre-commit) ─────────────────────────────────
-  - python=3.13
+  - python=3.14.6
 
   # ── Node.js runtime (required by npm tooling tasks) ───────────────────────
-  - nodejs=24
+  - nodejs=26.4.0
 
   # ── Go runtime (required by tooling updater CLI) ─────────────────────────────
-  - go=1.26
+  - go=1.26.4
 
   # ── Pre-commit framework ────────────────────────────────────────────────────
   - pre-commit=4.6.0
