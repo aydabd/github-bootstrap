@@ -46,7 +46,12 @@ runs:
 
         # List failures (for example feature/plan restrictions) should not abort
         # the flow before create/update handling; treat them as no existing ruleset.
-        EXISTING_RULESET_ID=$(gh api --paginate /repos/"$OWNER"/"$REPO"/rulesets --jq '.[] | select(.name == "'"$RULESET_NAME"'") | .id' 2>/dev/null || true)
+        EXISTING_RULESET_ID=$(gh api --paginate /repos/"$OWNER"/"$REPO"/rulesets --jq '.[] | [.id, .name] | @tsv' 2>/dev/null | while IFS=$'\t' read -r id name; do
+          if [ "$name" = "$RULESET_NAME" ]; then
+            printf '%s\n' "$id"
+            break
+          fi
+        done || true)
         EXISTING_RULESET_ID=${EXISTING_RULESET_ID%%$'\n'*}
 
         if [ -n "$EXISTING_RULESET_ID" ]; then
