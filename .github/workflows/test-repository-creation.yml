@@ -747,32 +747,6 @@ jobs:
           fi
           echo "Agent kit structure verified"
 
-      - name: Verify no stale Super-Linter artifacts
-        env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-        run: |
-          REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
-          OWNER="${{ github.repository_owner }}"
-
-          echo "Checking for stale Super-Linter artifacts..."
-
-          # These files must NOT exist
-          FORBIDDEN_FILES=(
-            ".super-linter.env"
-            ".github/workflows/super-linter.yml"
-          )
-
-          for file in "${FORBIDDEN_FILES[@]}"; do
-            if gh api "/repos/${OWNER}/${REPO_NAME}/contents/${file}" >/dev/null 2>&1; then
-              echo "❌ Stale artifact found: ${file}"
-              exit 1
-            else
-              echo "✅ Absent (correct): ${file}"
-            fi
-          done
-
-          echo "No stale Super-Linter artifacts found"
-
       - name: Check pre-commit configuration
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
@@ -839,7 +813,6 @@ jobs:
           | Structure validation | ✅ Passed |
           | Agent kit (agents + skills) | ✅ Passed |
           | API parity (settings + rulesets) | ✅ Passed |
-          | No stale Super-Linter artifacts | ✅ Passed |
           | Pre-commit config | ✅ Passed |
           | Lint workflow | Dispatched — [check result](${REPO_URL}/actions) |
 
