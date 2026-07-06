@@ -44,7 +44,10 @@ runs:
           exit 1
         fi
 
-        EXISTING_RULESET_ID=$(gh api --paginate /repos/"$OWNER"/"$REPO"/rulesets --jq '.[] | select(.name == "'"$RULESET_NAME"'") | .id' 2>/dev/null | head -n1)
+        # List failures (for example feature/plan restrictions) should not abort
+        # the flow before create/update handling; treat them as no existing ruleset.
+        EXISTING_RULESET_ID=$(gh api --paginate /repos/"$OWNER"/"$REPO"/rulesets --jq '.[] | select(.name == "'"$RULESET_NAME"'") | .id' 2>/dev/null || true)
+        EXISTING_RULESET_ID=${EXISTING_RULESET_ID%%$'\n'*}
 
         if [ -n "$EXISTING_RULESET_ID" ]; then
           METHOD="PATCH"
