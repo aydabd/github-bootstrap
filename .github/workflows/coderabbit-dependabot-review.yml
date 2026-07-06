@@ -21,6 +21,10 @@ jobs:
           github.event.pull_request.head.ref == 'chore/weekly-tooling-updates' &&
           contains(github.event.pull_request.labels.*.name, 'automation') &&
           contains(github.event.pull_request.labels.*.name, 'dependencies')
+        ) ||
+        (
+          startsWith(github.event.pull_request.head.ref, 'release-please--branches--') &&
+          contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
         )
       }}
     runs-on: ubuntu-latest
