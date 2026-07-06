@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.12.0](https://github.com/aydabd/github-bootstrap/compare/v1.11.0...v1.12.0) (2026-07-06)
+
+
+### Features
+
+* **test:** add API parity assertions for settings and rulesets ([c230e91](https://github.com/aydabd/github-bootstrap/commit/c230e9112833880eb9adc665c33ac8153de40782))
+* **test:** complete Phase 3 workflow parity and preset scenarios ([#56](https://github.com/aydabd/github-bootstrap/issues/56)) ([622136e](https://github.com/aydabd/github-bootstrap/commit/622136e16276bbef043dd16a7570b69cfad172b1))
+* **tools:** add bootstrap input normalizer package and CLI ([#51](https://github.com/aydabd/github-bootstrap/issues/51)) ([6c3b387](https://github.com/aydabd/github-bootstrap/commit/6c3b3871224f93745e523c37711f69bd8de07325))
+* **tools:** migrate precommit renderer to bootstrapinputs ([#52](https://github.com/aydabd/github-bootstrap/issues/52)) ([9e15803](https://github.com/aydabd/github-bootstrap/commit/9e15803d5bf45aee095e264665ffc4de0aa65342))
+* **workflows:** consume bootstrap input normalizer outputs ([#53](https://github.com/aydabd/github-bootstrap/issues/53)) ([6ec6b24](https://github.com/aydabd/github-bootstrap/commit/6ec6b248f3f3c3f2d501a2d8b40e584648be95e5))
+* **workflows:** extract codeql configuration action ([99e01e0](https://github.com/aydabd/github-bootstrap/commit/99e01e04939b2a292c9cad349a58e52087e3f9a2))
+* **workflows:** extract composite actions (Phase 2) ([#54](https://github.com/aydabd/github-bootstrap/issues/54)) ([a644ee9](https://github.com/aydabd/github-bootstrap/commit/a644ee97c57758c4408b42663cd389db71ce3a24))
+* **workflows:** modular pre-commit renderer for multi-language repos ([#47](https://github.com/aydabd/github-bootstrap/issues/47)) ([22fbf58](https://github.com/aydabd/github-bootstrap/commit/22fbf58bf15296a4a14c8b012dd0c3c76b2efec6))
+
+
+### Bug Fixes
+
+* **cache:** add cache dependency path at the tools module ([413c185](https://github.com/aydabd/github-bootstrap/commit/413c1858aa9ff563644afb4d4b1433b24d7c5263))
+* **main:** clean up renderer dedup and workflow input handling ([2a0a1e4](https://github.com/aydabd/github-bootstrap/commit/2a0a1e4d35d5561c5df39ee392e9f48367b092fe))
+* **test-e2e:** accept default-branch selector in ruleset parity check ([86a0c32](https://github.com/aydabd/github-bootstrap/commit/86a0c322f6e6de8fbaaf1c257bf51418b0da8a7a))
+* **test-e2e:** accept refs/heads selectors in ruleset target check ([07c9587](https://github.com/aydabd/github-bootstrap/commit/07c9587c0a08d404a6464c749ad3fa44e83da8c1))
+* **test-e2e:** read full ruleset details by ID for parity checks ([644a309](https://github.com/aydabd/github-bootstrap/commit/644a309fa223ff511092d9c848eca89531a3544e))
+* **test-workflow:** set setup-go cache dependency path ([6d0a7b7](https://github.com/aydabd/github-bootstrap/commit/6d0a7b76cefdb81e938be960ac9193d91dead39a))
+* **test:** add repository creation baseline contract coverage ([#48](https://github.com/aydabd/github-bootstrap/issues/48)) ([9d437e8](https://github.com/aydabd/github-bootstrap/commit/9d437e88dc189100980b6fb59d9033211d1697ca))
+* **test:** characterize workflow input validation ([#49](https://github.com/aydabd/github-bootstrap/issues/49)) ([d9760da](https://github.com/aydabd/github-bootstrap/commit/d9760daf0f4525f3db3a16f075e0cbc0315672f1))
+* **test:** snapshot generated repository key files ([#50](https://github.com/aydabd/github-bootstrap/issues/50)) ([2f7cd69](https://github.com/aydabd/github-bootstrap/commit/2f7cd6955219110e20047355fc52db78d00a1213))
+* **workflows:** make test workflow polling ref-safe ([86f45d4](https://github.com/aydabd/github-bootstrap/commit/86f45d433fa510de05a4184dd984d44f0ecc80cb))
+* **workflows:** remove template-only dirs from generated repositories ([#45](https://github.com/aydabd/github-bootstrap/issues/45)) ([31f86a0](https://github.com/aydabd/github-bootstrap/commit/31f86a07255d185e4320bc5e25bfcdefc71fa3fe))
+
 ## [1.11.0](https://github.com/aydabd/github-bootstrap/compare/v1.10.0...v1.11.0) (2026-07-04)
 
 
