@@ -47,6 +47,10 @@ jobs:
           ENV_MANAGER=micromamba make tooling-update-repo
           ENV_MANAGER=micromamba make tooling-update-templates
 
+      - name: Normalize generated files
+        shell: bash
+        run: ENV_MANAGER=micromamba make lint
+
       - name: Create or update tooling update PR (gh CLI)
         shell: bash
         run: |
