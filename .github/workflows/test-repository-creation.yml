@@ -614,7 +614,7 @@ jobs:
             exit 1
           fi
 
-          if ! echo "$DEFAULT_RULESET" | jq -e --arg default_ref "refs/heads/${DEFAULT_BRANCH}" '(.conditions.ref_name.include | index("~DEFAULT_BRANCH") != null) or (.conditions.ref_name.include | index($default_ref) != null)' >/dev/null; then
+          if ! echo "$DEFAULT_RULESET" | jq -e --arg default_ref "refs/heads/${DEFAULT_BRANCH}" '(.conditions.ref_name.include | index("~DEFAULT_BRANCH") != null) or (.conditions.ref_name.include | index($default_ref) != null) or (any(.conditions.ref_name.include[]?; startswith("refs/heads/")))' >/dev/null; then
             echo "❌ Default ruleset does not target the repository default branch"
             exit 1
           fi
