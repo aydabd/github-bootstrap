@@ -326,6 +326,10 @@ no noise from style nitpicks (linters handle those).
 
 Setup: install the [CodeRabbit GitHub App](https://github.com/apps/coderabbitai) on your
 repository or organization. Reviews start automatically on the next PR.
+The default ruleset also requires the `CodeRabbit` status check, so CodeRabbit
+must be installed and have review quota available. If CodeRabbit is rate-limited,
+release, Dependabot, and other automation PRs can remain blocked until quota
+resets or usage-based reviews are enabled.
 
 #### Claude AI Review (GitHub Actions)
 
@@ -508,6 +512,9 @@ push, resolved review threads, linear history, the `lint` and `CodeRabbit`
 status checks, and CodeQL code scanning results. CODEOWNERS remains generated
 as ownership documentation, but the ruleset does not require code-owner-specific
 approval.
+Because `CodeRabbit` is a required third-party status, repositories using the
+default ruleset should install CodeRabbit and monitor review quota. Rate limits
+can leave release and dependency automation PRs waiting for the required status.
 If you run Terraform directly, you can also manage rulesets through Terraform
 inputs (for example, `enable_branch_protection=true`) or configure them
 manually in repository settings.

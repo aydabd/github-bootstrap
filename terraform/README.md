@@ -12,6 +12,9 @@ This Terraform module creates a fully configured GitHub repository with the same
   latest-push approval, resolved review threads, `lint` and `CodeRabbit` status checks,
   and linear history (no merge commits)
 
+  CodeRabbit must be installed and have review quota available when this ruleset is enabled;
+  otherwise automation PRs can remain blocked waiting for the required `CodeRabbit` status.
+
 ## Usage
 
 ### Prerequisites
