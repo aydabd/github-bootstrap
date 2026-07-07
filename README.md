@@ -182,32 +182,69 @@ See [`terraform/README.md`](terraform/README.md) for full documentation.
 
 Your new repository is created with all templates and settings.
 
-## Workflow Inputs
+## Setup Existing Repositories
 
-| Input                      | Required | Default                                  | Description                                                                                                                                 |
-| -------------------------- | -------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `repo_name`                | Yes      | -                                        | New repository name                                                                                                                         |
-| `repo_owner`               | No       | Current user/org                         | Repository owner — a GitHub username or organization                                                                                        |
-| `repo_description`         | No       | `Repository following SOLID principles…` | Repository description                                                                                                                      |
-| `visibility`               | No       | `public`                                 | `public`, `private`, or `internal` (org only)                                                                                               |
-| `cleanup_on_failure`       | No       | `true`                                   | Delete the created repository automatically if the workflow fails                                                                           |
-| `enable_repo_settings`     | No       | `true`                                   | Apply repo settings PATCH, create dev/prod environments, and enable Dependabot security updates (ruleset application is handled separately) |
-| `enable_codeowners`        | No       | `true`                                   | Add a CODEOWNERS file assigning the chosen team as default reviewer                                                                         |
-| `workflows`                | No       | `all`                                    | Workflows to include: `all`, `none`, or comma-separated names — `lint`, `codeql`, `ai-code-review`, `release`                               |
-| `team_name`                | No       | `team-leads`                             | GitHub team for code owners                                                                                                                 |
-| `license_holder`           | No       | Current user/org                         | License copyright holder                                                                                                                    |
-| `languages`                | No       | `language-agnostic-only`                 | Comma-separated list of languages (e.g. `javascript,python`) or `all`                                                                       |
-| `env_manager`              | Yes      | -                                        | Environment manager: `micromamba`, `mise`, or `system`                                                                                      |
-| `python_version`           | No       | `3.13`                                   | Python runtime version used by generated tooling files                                                                                      |
-| `node_version`             | No       | `24`                                     | Node.js major LTS version used by generated tooling files                                                                                   |
-| `go_version`               | No       | `1.26`                                   | Go stable version used by generated tooling files                                                                                           |
-| `java_version`             | No       | `25`                                     | Java LTS version used by generated tooling files                                                                                            |
-| `release_tool`             | No       | `git-cliff`                              | Release automation tool: `git-cliff`, `release-please`, or `semantic-release`                                                               |
-| `app_id`                   | No       | -                                        | GitHub App ID for App-based authentication (recommended)                                                                                    |
-| `app_owner`                | No       | `repo_owner`                             | Owner/user/org whose App installation token is used                                                                                         |
-| `allowed_repo_owners`      | No       | -                                        | Optional comma-separated allowlist of owners that can be targeted                                                                           |
-| `require_cleanup_approval` | No       | `true`                                   | If `cleanup_on_failure=true`, requires environment approval before delete                                                                   |
-| `gh_token`                 | No       | -                                        | PAT fallback input (less safe than secrets or GitHub App)                                                                                   |
+You can also use this repository to configure a repository that already exists.
+Existing-repo setup is explicit and opt-in: each action has one responsibility,
+and file changes default to a pull request or plan mode instead of silently
+overwriting repository content.
+
+### Reusable Setup Entry Points
+
+Copy a launcher example into your launcher repository and replace
+`BOOTSTRAP_OWNER`. The launcher files are the copy-paste source of truth for
+caller-side inputs, secrets, and `uses:` syntax.
+
+| Use case            | Launcher example                                                                 | Reusable workflow                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| General setup       | [`examples/launcher-existing-repo.yml`](examples/launcher-existing-repo.yml)     | [`.github/workflows/setup-existing-repository.yml`](.github/workflows/setup-existing-repository.yml) |
+| CodeRabbit only     | [`examples/launcher-coderabbit.yml`](examples/launcher-coderabbit.yml)           | [`.github/workflows/setup-coderabbit.yml`](.github/workflows/setup-coderabbit.yml)                   |
+| Labels and security | [`examples/launcher-security-labels.yml`](examples/launcher-security-labels.yml) | [`.github/workflows/setup-labels-and-security.yml`](.github/workflows/setup-labels-and-security.yml) |
+| Agent instructions  | [`examples/launcher-agent-templates.yml`](examples/launcher-agent-templates.yml) | [`.github/workflows/setup-agent-instructions.yml`](.github/workflows/setup-agent-instructions.yml)   |
+
+For exact workflow inputs, secrets, and outputs, read the `workflow_call` block in
+the reusable workflow file. For capability behavior, read the relevant composite
+action metadata under [`.github/actions/`](.github/actions/).
+
+Launcher workflows pass non-secret values as explicit inputs and private values
+as secrets from the launcher repository. Target repository access comes from the
+resolved GitHub App token or PAT.
+
+### Permissions and Authentication
+
+For organization usage, prefer a GitHub App installation token. For personal
+repositories or local use, a PAT can be used as a fallback.
+
+Typical permissions needed by the resolved token:
+
+| Capability area        | Required access                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| Repo settings/rulesets | Repository administration read/write                                            |
+| Security settings      | Repository administration read/write; some features require GitHub plan support |
+| Labels                 | Issue/label write access or repository administration access                    |
+| File pull requests     | Contents read/write and pull requests write                                     |
+
+CodeRabbit setup has one extra prerequisite: install the
+[CodeRabbit GitHub App](https://github.com/apps/coderabbitai) on the target
+repository. This toolkit can add the config file, labels, and optional ruleset,
+but it cannot universally install CodeRabbit for every tenant.
+
+### Local Usage
+
+Local GitHub setup scripts live in [scripts/github-setup/](scripts/github-setup/).
+Use that folder's README as the entry point for local setup and live verification
+guidance. Each script's `--help` output is the source of truth for command usage.
+
+## Creation Workflows
+
+Creation workflow inputs live in the workflow metadata. Use the workflow files
+and launcher examples as the source of truth instead of duplicating input tables
+in this README:
+
+- [`.github/workflows/create-repository.yml`](.github/workflows/create-repository.yml)
+- [`.github/workflows/terraform-create-repository.yml`](.github/workflows/terraform-create-repository.yml)
+- [`examples/launcher-actions.yml`](examples/launcher-actions.yml)
+- [`examples/launcher-terraform.yml`](examples/launcher-terraform.yml)
 
 ## Architecture Overview
 
@@ -220,16 +257,10 @@ Repository bootstrap now follows a clear separation of responsibilities:
 - Reusable composite actions under `.github/actions/`: `render-precommit-configs`,
   `configure-provider-tooling-files`, `configure-release-tool`, `configure-codeql`,
   `apply-repo-settings`, and `apply-repository-ruleset`
-- Manual E2E parity harness: `.github/workflows/test-repository-creation.yml`
+- Manual E2E parity harness: [`.github/workflows/test-repository-creation.yml`](.github/workflows/test-repository-creation.yml)
 
-Use the test harness presets to compare Actions and Terraform creation paths:
-
-- `api-default`
-- `terraform-default`
-- `api-no-repo-settings`
-- `terraform-no-repo-settings`
-- `api-all-languages`
-- `terraform-all-languages`
+Use the test workflow's `preset` input to compare Actions and Terraform creation
+paths. The preset list lives in the workflow file.
 
 ## What Gets Created
 

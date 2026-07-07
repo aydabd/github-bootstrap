@@ -1,0 +1,34 @@
+---
+name: Test Local Setup Scripts
+description: >-
+  Test-only action that runs local setup scripts against a temporary repository
+  and asserts the resulting GitHub API state.
+
+inputs:
+  owner:
+    description: Target test repository owner.
+    required: true
+  repo_name:
+    description: Target test repository name.
+    required: true
+  ruleset_profile:
+    description: "Ruleset profile to test: default, minimal, or coderabbit."
+    required: false
+    default: minimal
+  gh_token:
+    description: GitHub token with repository administration permissions.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Run local setup script E2E assertions
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+      run: |
+        set -euo pipefail
+        scripts/github-setup/test-local-setup-scripts.sh \
+          --owner "${{ inputs.owner }}" \
+          --repo "${{ inputs.repo_name }}" \
+          --ruleset-profile "${{ inputs.ruleset_profile }}"

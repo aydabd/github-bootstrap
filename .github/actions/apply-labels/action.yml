@@ -1,0 +1,125 @@
+---
+name: Apply Labels
+description: Create or update repository labels from a declarative JSON file.
+
+inputs:
+  owner:
+    description: Repository owner (user or organization).
+    required: true
+  repo_name:
+    description: Target repository name.
+    required: true
+  label_file:
+    description: Path to the labels JSON file.
+    required: false
+    default: .github/config/labels-default.json
+  label_policy:
+    description: "Label apply policy: create-missing or create-and-update."
+    required: false
+    default: create-and-update
+  gh_token:
+    description: GitHub token with label management permissions.
+    required: true
+
+outputs:
+  created_count:
+    description: Number of labels created.
+    value: ${{ steps.apply_labels.outputs.created_count }}
+  updated_count:
+    description: Number of labels updated.
+    value: ${{ steps.apply_labels.outputs.updated_count }}
+  unchanged_count:
+    description: Number of labels that were already correct or skipped.
+    value: ${{ steps.apply_labels.outputs.unchanged_count }}
+  changed:
+    description: Whether any label was created or updated.
+    value: ${{ steps.apply_labels.outputs.changed }}
+
+runs:
+  using: composite
+  steps:
+    - name: Apply labels
+      id: apply_labels
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+        OWNER: ${{ inputs.owner }}
+        REPO: ${{ inputs.repo_name }}
+        LABEL_FILE: ${{ inputs.label_file }}
+        LABEL_POLICY: ${{ inputs.label_policy }}
+      run: |
+        set -euo pipefail
+
+        if [ "$LABEL_POLICY" != "create-missing" ] && [ "$LABEL_POLICY" != "create-and-update" ]; then
+          echo "::error::Invalid label_policy '$LABEL_POLICY'. Allowed: create-missing, create-and-update."
+          exit 1
+        fi
+        if [ ! -f "$LABEL_FILE" ]; then
+          echo "::error::Labels file not found: $LABEL_FILE"
+          exit 1
+        fi
+
+        jq -e '.labels | type == "array"' "$LABEL_FILE" >/dev/null
+        existing_labels_file="$(mktemp)"
+        gh api --paginate "/repos/$OWNER/$REPO/labels?per_page=100" > "$existing_labels_file"
+
+        created_count=0
+        updated_count=0
+        unchanged_count=0
+
+        while IFS=$'\t' read -r name color description; do
+          existing_label="$(jq -c --arg name "$name" '.[] | select(.name == $name)' "$existing_labels_file" | head -n 1)"
+          payload="$(mktemp)"
+          jq -n \
+            --arg name "$name" \
+            --arg color "$color" \
+            --arg description "$description" \
+            '{name:$name,color:$color,description:$description}' > "$payload"
+
+          if [ -z "$existing_label" ]; then
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/$OWNER/$REPO/labels" \
+              --input "$payload" >/dev/null
+            created_count=$((created_count + 1))
+            echo "✅ Created label: $name" >> "$GITHUB_STEP_SUMMARY"
+            rm -f "$payload"
+            continue
+          fi
+
+          existing_color="$(jq -r '.color' <<< "$existing_label")"
+          existing_description="$(jq -r '.description // ""' <<< "$existing_label")"
+          if [ "$existing_color" = "$color" ] && [ "$existing_description" = "$description" ]; then
+            unchanged_count=$((unchanged_count + 1))
+            rm -f "$payload"
+            continue
+          fi
+
+          if [ "$LABEL_POLICY" = "create-and-update" ]; then
+            encoded_name="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$name")"
+            gh api \
+              --method PATCH \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/$OWNER/$REPO/labels/$encoded_name" \
+              --input "$payload" >/dev/null
+            updated_count=$((updated_count + 1))
+            echo "✅ Updated label: $name" >> "$GITHUB_STEP_SUMMARY"
+          else
+            unchanged_count=$((unchanged_count + 1))
+            echo "⏭️ Label exists and update disabled: $name" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          rm -f "$payload"
+        done < <(jq -r '.labels[] | [.name, .color, (.description // "")] | @tsv' "$LABEL_FILE")
+
+        rm -f "$existing_labels_file"
+        changed=false
+        if [ "$created_count" -gt 0 ] || [ "$updated_count" -gt 0 ]; then
+          changed=true
+        fi
+        echo "created_count=$created_count" >> "$GITHUB_OUTPUT"
+        echo "updated_count=$updated_count" >> "$GITHUB_OUTPUT"
+        echo "unchanged_count=$unchanged_count" >> "$GITHUB_OUTPUT"
+        echo "changed=$changed" >> "$GITHUB_OUTPUT"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "Labels summary: created=$created_count, updated=$updated_count, unchanged=$unchanged_count" >> "$GITHUB_STEP_SUMMARY"

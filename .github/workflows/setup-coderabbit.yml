@@ -1,0 +1,94 @@
+name: Setup CodeRabbit
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_owner:
+        description: "Target owner - GitHub user or organization"
+        required: true
+        type: string
+      repo_name:
+        description: "Existing repository name"
+        required: true
+        type: string
+      mode:
+        description: "CodeRabbit file apply mode"
+        required: false
+        default: pull-request
+        type: choice
+        options:
+          - plan
+          - pull-request
+          - direct
+      include_labels:
+        description: "Apply default labels as part of CodeRabbit setup"
+        required: false
+        default: true
+        type: boolean
+      include_ruleset:
+        description: "Apply CodeRabbit ruleset profile"
+        required: false
+        default: false
+        type: boolean
+      app_id:
+        description: "GitHub App ID for App-based auth"
+        required: false
+        type: string
+      app_owner:
+        description: "Owner whose GitHub App installation token should be used"
+        required: false
+        type: string
+      allowed_repo_owners:
+        description: "Optional comma-separated allowlist of target owners"
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      repo_owner:
+        required: true
+        type: string
+      repo_name:
+        required: true
+        type: string
+      mode:
+        required: false
+        default: pull-request
+        type: string
+      include_labels:
+        required: false
+        default: true
+        type: boolean
+      include_ruleset:
+        required: false
+        default: false
+        type: boolean
+      app_id:
+        required: false
+        type: string
+      app_owner:
+        required: false
+        type: string
+      allowed_repo_owners:
+        required: false
+        type: string
+    secrets:
+      GH_PAT:
+        required: false
+      app_private_key:
+        required: false
+      BOOTSTRAP_APP_PRIVATE_KEY:
+        required: false
+
+jobs:
+  setup-coderabbit:
+    uses: ./.github/workflows/setup-existing-repository.yml
+    with:
+      repo_owner: ${{ inputs.repo_owner }}
+      repo_name: ${{ inputs.repo_name }}
+      apply_labels: ${{ inputs.include_labels }}
+      ruleset_profile: ${{ inputs.include_ruleset && 'coderabbit' || 'none' }}
+      coderabbit_mode: ${{ inputs.mode }}
+      app_id: ${{ inputs.app_id }}
+      app_owner: ${{ inputs.app_owner || inputs.repo_owner }}
+      allowed_repo_owners: ${{ inputs.allowed_repo_owners }}
+    secrets: inherit

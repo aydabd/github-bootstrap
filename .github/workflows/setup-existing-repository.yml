@@ -1,0 +1,341 @@
+name: Setup Existing Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_owner:
+        description: "Target owner - GitHub user or organization"
+        required: true
+        type: string
+      repo_name:
+        description: "Existing repository name"
+        required: true
+        type: string
+      apply_repo_settings:
+        description: "Apply repository settings from repo-settings.json"
+        required: false
+        default: false
+        type: boolean
+      apply_labels:
+        description: "Apply labels from labels-default.json"
+        required: false
+        default: false
+        type: boolean
+      apply_security_settings:
+        description: "Apply security settings from security-default.json"
+        required: false
+        default: false
+        type: boolean
+      ruleset_profile:
+        description: "Ruleset profile to apply"
+        required: false
+        default: none
+        type: choice
+        options:
+          - none
+          - minimal
+          - default
+          - coderabbit
+      coderabbit_mode:
+        description: "CodeRabbit file apply mode"
+        required: false
+        default: none
+        type: choice
+        options:
+          - none
+          - plan
+          - pull-request
+          - direct
+      agent_provider:
+        description: "AI agent instructions to apply"
+        required: false
+        default: none
+        type: choice
+        options:
+          - none
+          - copilot
+          - claude
+          - cursor
+          - windsurf
+          - codex
+          - all
+      agent_mode:
+        description: "Agent instruction file apply mode"
+        required: false
+        default: pull-request
+        type: choice
+        options:
+          - plan
+          - pull-request
+          - direct
+      label_policy:
+        description: "Label apply policy"
+        required: false
+        default: create-and-update
+        type: choice
+        options:
+          - create-missing
+          - create-and-update
+      target_branch:
+        description: "Target branch for file changes"
+        required: false
+        default: main
+        type: string
+      github_host:
+        description: "GitHub hostname"
+        required: false
+        default: github.com
+        type: string
+      gh_token:
+        description: >-
+          PAT fallback. Prefer GH_PAT secret or GitHub App auth for shared usage.
+        required: false
+        type: string
+      app_id:
+        description: "GitHub App ID for App-based auth"
+        required: false
+        type: string
+      app_owner:
+        description: "Owner whose GitHub App installation token should be used"
+        required: false
+        type: string
+      allowed_repo_owners:
+        description: "Optional comma-separated allowlist of target owners"
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      repo_owner:
+        required: true
+        type: string
+      repo_name:
+        required: true
+        type: string
+      apply_repo_settings:
+        required: false
+        default: false
+        type: boolean
+      apply_labels:
+        required: false
+        default: false
+        type: boolean
+      apply_security_settings:
+        required: false
+        default: false
+        type: boolean
+      ruleset_profile:
+        required: false
+        default: none
+        type: string
+      coderabbit_mode:
+        required: false
+        default: none
+        type: string
+      agent_provider:
+        required: false
+        default: none
+        type: string
+      agent_mode:
+        required: false
+        default: pull-request
+        type: string
+      label_policy:
+        required: false
+        default: create-and-update
+        type: string
+      target_branch:
+        required: false
+        default: main
+        type: string
+      github_host:
+        required: false
+        default: github.com
+        type: string
+      gh_token:
+        required: false
+        type: string
+      app_id:
+        required: false
+        type: string
+      app_owner:
+        required: false
+        type: string
+      allowed_repo_owners:
+        required: false
+        type: string
+    secrets:
+      GH_PAT:
+        required: false
+      app_private_key:
+        required: false
+      BOOTSTRAP_APP_PRIVATE_KEY:
+        required: false
+    outputs:
+      labels_changed:
+        description: Whether labels were created or updated.
+        value: ${{ jobs.setup-existing-repository.outputs.labels_changed }}
+      labels_created_count:
+        description: Number of labels created.
+        value: ${{ jobs.setup-existing-repository.outputs.labels_created_count }}
+      labels_updated_count:
+        description: Number of labels updated.
+        value: ${{ jobs.setup-existing-repository.outputs.labels_updated_count }}
+      ruleset_action:
+        description: "Ruleset action taken: created, updated, skipped, or empty."
+        value: ${{ jobs.setup-existing-repository.outputs.ruleset_action }}
+      ruleset_id:
+        description: Ruleset ID when available.
+        value: ${{ jobs.setup-existing-repository.outputs.ruleset_id }}
+      coderabbit_pull_request_url:
+        description: CodeRabbit setup pull request URL when created or updated.
+        value: ${{ jobs.setup-existing-repository.outputs.coderabbit_pull_request_url }}
+      agent_pull_request_url:
+        description: Agent instruction setup pull request URL when created or updated.
+        value: ${{ jobs.setup-existing-repository.outputs.agent_pull_request_url }}
+
+jobs:
+  setup-existing-repository:
+    name: Setup Existing Repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      labels_changed: ${{ steps.apply_labels.outputs.changed }}
+      labels_created_count: ${{ steps.apply_labels.outputs.created_count }}
+      labels_updated_count: ${{ steps.apply_labels.outputs.updated_count }}
+      ruleset_action: ${{ steps.apply_ruleset.outputs.ruleset_action }}
+      ruleset_id: ${{ steps.apply_ruleset.outputs.ruleset_id }}
+      coderabbit_pull_request_url: ${{ steps.apply_coderabbit.outputs.pull_request_url }}
+      agent_pull_request_url: ${{ steps.apply_agent_instructions.outputs.pull_request_url }}
+    env:
+      GH_HOST: ${{ inputs.github_host || 'github.com' }}
+
+    steps:
+      - name: Resolve bootstrap repository
+        id: bootstrap-repo
+        shell: bash
+        run: |
+          REPO=$(printf '%s' '${{ github.workflow_ref }}' | cut -d'/' -f1,2)
+          echo "repository=$REPO" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ steps.bootstrap-repo.outputs.repository }}
+          ref: ${{ github.workflow_sha }}
+
+      - name: Validate explicit options
+        shell: bash
+        env:
+          RULESET_PROFILE: ${{ inputs.ruleset_profile }}
+          CODERABBIT_MODE: ${{ inputs.coderabbit_mode }}
+          AGENT_PROVIDER: ${{ inputs.agent_provider }}
+          AGENT_MODE: ${{ inputs.agent_mode }}
+          LABEL_POLICY: ${{ inputs.label_policy }}
+        run: |
+          set -euo pipefail
+          validate_choice() {
+            value="$1"
+            allowed="$2"
+            name="$3"
+            if ! printf '%s' "$allowed" | tr ' ' '\n' | grep -Fxq "$value"; then
+              echo "::error::Invalid $name '$value'. Allowed: $allowed"
+              exit 1
+            fi
+          }
+          validate_choice "$RULESET_PROFILE" "none minimal default coderabbit" "ruleset_profile"
+          validate_choice "$CODERABBIT_MODE" "none plan pull-request direct" "coderabbit_mode"
+          validate_choice "$AGENT_PROVIDER" "none copilot claude cursor windsurf codex all" "agent_provider"
+          validate_choice "$AGENT_MODE" "plan pull-request direct" "agent_mode"
+          validate_choice "$LABEL_POLICY" "create-missing create-and-update" "label_policy"
+
+      - name: Validate target owner
+        uses: ./.github/actions/validate-bootstrap-owner
+        with:
+          owner: ${{ inputs.repo_owner }}
+          allowed_repo_owners: ${{ inputs.allowed_repo_owners }}
+
+      - name: Resolve GitHub token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          gh_token: ${{ inputs.gh_token }}
+          gh_pat_secret: ${{ secrets.GH_PAT }}
+          app_id: ${{ inputs.app_id }}
+          app_private_key: ${{ secrets.app_private_key || secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_owner: ${{ inputs.app_owner || inputs.repo_owner }}
+
+      - name: Apply repository settings
+        id: apply_repo_settings
+        if: inputs.apply_repo_settings == true
+        uses: ./.github/actions/apply-repo-settings
+        with:
+          owner: ${{ inputs.repo_owner }}
+          repo_name: ${{ inputs.repo_name }}
+          enable_repo_settings: "true"
+          apply_repository_settings: "true"
+          repo_settings_file: .github/config/repo-settings.json
+          manage_environments: "false"
+          enable_dependabot: "false"
+          gh_token: ${{ steps.resolve-token.outputs.token }}
+
+      - name: Apply labels
+        id: apply_labels
+        if: inputs.apply_labels == true
+        uses: ./.github/actions/apply-labels
+        with:
+          owner: ${{ inputs.repo_owner }}
+          repo_name: ${{ inputs.repo_name }}
+          label_file: .github/config/labels-default.json
+          label_policy: ${{ inputs.label_policy }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
+
+      - name: Apply security settings
+        id: apply_security_settings
+        if: inputs.apply_security_settings == true
+        uses: ./.github/actions/apply-security-settings
+        with:
+          owner: ${{ inputs.repo_owner }}
+          repo_name: ${{ inputs.repo_name }}
+          security_file: .github/config/security-default.json
+          gh_token: ${{ steps.resolve-token.outputs.token }}
+
+      - name: Apply repository ruleset
+        id: apply_ruleset
+        if: inputs.ruleset_profile != 'none'
+        uses: ./.github/actions/apply-repository-ruleset
+        with:
+          owner: ${{ inputs.repo_owner }}
+          repo_name: ${{ inputs.repo_name }}
+          ruleset_profile: ${{ inputs.ruleset_profile }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
+
+      - name: Apply CodeRabbit
+        id: apply_coderabbit
+        if: inputs.coderabbit_mode != 'none'
+        uses: ./.github/actions/apply-coderabbit
+        with:
+          owner: ${{ inputs.repo_owner }}
+          repo_name: ${{ inputs.repo_name }}
+          mode: ${{ inputs.coderabbit_mode }}
+          target_branch: ${{ inputs.target_branch }}
+          github_host: ${{ inputs.github_host }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
+
+      - name: Apply agent instructions
+        id: apply_agent_instructions
+        if: inputs.agent_provider != 'none'
+        uses: ./.github/actions/apply-agent-instructions
+        with:
+          owner: ${{ inputs.repo_owner }}
+          repo_name: ${{ inputs.repo_name }}
+          agent_provider: ${{ inputs.agent_provider }}
+          mode: ${{ inputs.agent_mode }}
+          target_branch: ${{ inputs.target_branch }}
+          github_host: ${{ inputs.github_host }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
+
+      - name: Summary
+        shell: bash
+        run: |
+          echo "Existing repository setup finished for ${{ inputs.repo_owner }}/${{ inputs.repo_name }}" >> "$GITHUB_STEP_SUMMARY"

@@ -7,6 +7,10 @@ TEST_PRESET ?= none
 TEST_LANGUAGES ?= language-agnostic-only
 TEST_TARGET_WORKFLOW ?= create-repository.yml
 TEST_TARGET_REF ?= main
+TEST_LOCAL_SETUP_REPO_NAME ?= scripts
+TEST_LOCAL_SETUP_VISIBILITY ?= public
+TEST_LOCAL_SETUP_RULESET_PROFILE ?= minimal
+TEST_LOCAL_SETUP_REF ?= main
 
 test: ## Trigger repository creation tests via GitHub Actions
 	@echo "Running repository creation tests..."
@@ -37,3 +41,14 @@ test-api-all-languages: ## Trigger test workflow with preset=api-all-languages
 
 test-terraform-all-languages: ## Trigger test workflow with preset=terraform-all-languages
 	@$(MAKE) --no-print-directory test TEST_PRESET=terraform-all-languages
+
+test-local-setup-scripts: ## Trigger live E2E workflow for local GitHub setup scripts
+	@echo "Running local setup script E2E workflow..."
+	@$(CMD_ECHO) "+ gh workflow run test-local-setup-scripts.yml --ref $(TEST_LOCAL_SETUP_REF) --field test_repo_name=$(TEST_LOCAL_SETUP_REPO_NAME) --field visibility=$(TEST_LOCAL_SETUP_VISIBILITY) --field ruleset_profile=$(TEST_LOCAL_SETUP_RULESET_PROFILE) --field cleanup_after_test=true"
+	@gh workflow run test-local-setup-scripts.yml \
+		--ref "$(TEST_LOCAL_SETUP_REF)" \
+		--field test_repo_name="$(TEST_LOCAL_SETUP_REPO_NAME)" \
+		--field visibility="$(TEST_LOCAL_SETUP_VISIBILITY)" \
+		--field ruleset_profile="$(TEST_LOCAL_SETUP_RULESET_PROFILE)" \
+		--field cleanup_after_test="true"
+	@echo "Test triggered. Check: gh run list --workflow=test-local-setup-scripts.yml"

@@ -1,0 +1,135 @@
+---
+name: Apply CodeRabbit
+description: Add the CodeRabbit configuration file to an existing repository.
+
+inputs:
+  owner:
+    description: Repository owner (user or organization).
+    required: true
+  repo_name:
+    description: Target repository name.
+    required: true
+  mode:
+    description: "Apply mode: plan, pull-request, or direct."
+    required: false
+    default: pull-request
+  target_branch:
+    description: Target branch for direct commits or pull request base.
+    required: false
+    default: main
+  work_branch:
+    description: Branch to push when mode is pull-request.
+    required: false
+    default: bootstrap/coderabbit-setup
+  github_host:
+    description: GitHub hostname, such as github.com or a GHES hostname.
+    required: false
+    default: github.com
+  gh_token:
+    description: GitHub token with contents and pull request permissions.
+    required: true
+
+outputs:
+  changed:
+    description: Whether the CodeRabbit configuration changed.
+    value: ${{ steps.apply_coderabbit.outputs.changed }}
+  mode:
+    description: Apply mode used by the action.
+    value: ${{ steps.apply_coderabbit.outputs.mode }}
+  branch:
+    description: Branch updated when mode is pull-request or direct.
+    value: ${{ steps.apply_coderabbit.outputs.branch }}
+  pull_request_url:
+    description: Pull request URL when mode is pull-request.
+    value: ${{ steps.apply_coderabbit.outputs.pull_request_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Apply CodeRabbit config
+      id: apply_coderabbit
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+        OWNER: ${{ inputs.owner }}
+        REPO: ${{ inputs.repo_name }}
+        MODE: ${{ inputs.mode }}
+        TARGET_BRANCH: ${{ inputs.target_branch }}
+        WORK_BRANCH: ${{ inputs.work_branch }}
+        GH_HOST: ${{ inputs.github_host }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+
+        if [ "$MODE" != "plan" ] && [ "$MODE" != "pull-request" ] && [ "$MODE" != "direct" ]; then
+          echo "::error::Invalid mode '$MODE'. Allowed: plan, pull-request, direct."
+          exit 1
+        fi
+
+        bootstrap_root="$(cd "$ACTION_PATH/../../.." && pwd)"
+        source_file="$bootstrap_root/templates/.coderabbit.yaml"
+        if [ ! -f "$source_file" ]; then
+          echo "::error::Missing CodeRabbit template: $source_file"
+          exit 1
+        fi
+
+        workdir="$(mktemp -d)"
+        git clone --depth 1 --branch "$TARGET_BRANCH" "https://x-access-token:$GH_TOKEN@$GH_HOST/$OWNER/$REPO.git" "$workdir/repo"
+        cd "$workdir/repo"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        cp "$source_file" .coderabbit.yaml
+
+        if git diff --quiet -- .coderabbit.yaml; then
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "branch=$TARGET_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "pull_request_url=" >> "$GITHUB_OUTPUT"
+          echo "✅ CodeRabbit config already up to date" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        if [ "$MODE" = "plan" ]; then
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "branch=$TARGET_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "pull_request_url=" >> "$GITHUB_OUTPUT"
+          echo "### Planned CodeRabbit changes" >> "$GITHUB_STEP_SUMMARY"
+          git diff -- .coderabbit.yaml >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        git add .coderabbit.yaml
+        git commit -m "chore: add CodeRabbit configuration"
+
+        if [ "$MODE" = "direct" ]; then
+          git push origin "HEAD:$TARGET_BRANCH"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "branch=$TARGET_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "pull_request_url=" >> "$GITHUB_OUTPUT"
+          echo "✅ CodeRabbit config pushed directly to $TARGET_BRANCH" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        git push --force-with-lease origin "HEAD:$WORK_BRANCH"
+        if gh pr view "$WORK_BRANCH" --repo "$OWNER/$REPO" >/dev/null 2>&1; then
+          gh pr edit "$WORK_BRANCH" \
+            --repo "$OWNER/$REPO" \
+            --title "Configure CodeRabbit" \
+            --body "Adds the CodeRabbit configuration from github-bootstrap."
+        else
+          gh pr create \
+            --repo "$OWNER/$REPO" \
+            --base "$TARGET_BRANCH" \
+            --head "$WORK_BRANCH" \
+            --title "Configure CodeRabbit" \
+            --body "Adds the CodeRabbit configuration from github-bootstrap."
+        fi
+        pull_request_url="$(gh pr view "$WORK_BRANCH" --repo "$OWNER/$REPO" --json url --jq '.url')"
+        echo "changed=true" >> "$GITHUB_OUTPUT"
+        echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+        echo "branch=$WORK_BRANCH" >> "$GITHUB_OUTPUT"
+        echo "pull_request_url=$pull_request_url" >> "$GITHUB_OUTPUT"
+        echo "✅ CodeRabbit pull request opened or updated" >> "$GITHUB_STEP_SUMMARY"

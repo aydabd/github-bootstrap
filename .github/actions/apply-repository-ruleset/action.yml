@@ -14,22 +14,55 @@ inputs:
   gh_token:
     description: GitHub token with repository administration permissions.
     required: true
+  ruleset_profile:
+    description: "Ruleset profile: default, minimal, or coderabbit. Ignored when ruleset_file is set."
+    required: false
+    default: default
   ruleset_file:
     description: Path to the ruleset JSON payload.
     required: false
-    default: .github/config/ruleset-default.json
+    default: ""
+
+outputs:
+  ruleset_name:
+    description: Name of the ruleset from the selected payload.
+    value: ${{ steps.apply_ruleset.outputs.ruleset_name }}
+  ruleset_id:
+    description: Ruleset ID when created or updated.
+    value: ${{ steps.apply_ruleset.outputs.ruleset_id }}
+  ruleset_action:
+    description: "Action taken: created, updated, or skipped."
+    value: ${{ steps.apply_ruleset.outputs.ruleset_action }}
+  ruleset_file:
+    description: Ruleset file used by the action.
+    value: ${{ steps.apply_ruleset.outputs.ruleset_file }}
 
 runs:
   using: composite
   steps:
     - name: Apply default repository ruleset
+      id: apply_ruleset
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
         OWNER: ${{ inputs.owner }}
         REPO: ${{ inputs.repo_name }}
+        RULESET_PROFILE: ${{ inputs.ruleset_profile }}
         RULESET_FILE: ${{ inputs.ruleset_file }}
       run: |
+        if [ -z "$RULESET_FILE" ]; then
+          if [ "$RULESET_PROFILE" = "default" ]; then
+            RULESET_FILE=".github/config/ruleset-default.json"
+          elif [ "$RULESET_PROFILE" = "minimal" ]; then
+            RULESET_FILE=".github/config/ruleset-minimal.json"
+          elif [ "$RULESET_PROFILE" = "coderabbit" ]; then
+            RULESET_FILE=".github/config/ruleset-coderabbit.json"
+          else
+            echo "::error::Invalid ruleset_profile '$RULESET_PROFILE'. Allowed: default, minimal, coderabbit."
+            exit 1
+          fi
+        fi
+
         if [ ! -f "$RULESET_FILE" ]; then
           echo "::error::Ruleset file not found: $RULESET_FILE"
           exit 1
@@ -43,6 +76,8 @@ runs:
           echo "::error::Neither jq nor python3 is available; cannot read ruleset name."
           exit 1
         fi
+        echo "ruleset_name=$RULESET_NAME" >> "$GITHUB_OUTPUT"
+        echo "ruleset_file=$RULESET_FILE" >> "$GITHUB_OUTPUT"
 
         # List failures (for example feature/plan restrictions) should not abort
         # the flow before create/update handling; treat them as no existing ruleset.
@@ -58,10 +93,12 @@ runs:
           METHOD="PATCH"
           ENDPOINT="/repos/$OWNER/$REPO/rulesets/$EXISTING_RULESET_ID"
           ACTION_TEXT="updated"
+          ACTION_OUTPUT="updated"
         else
           METHOD="POST"
           ENDPOINT="/repos/$OWNER/$REPO/rulesets"
           ACTION_TEXT="applied"
+          ACTION_OUTPUT="created"
         fi
 
         RESPONSE=$(gh api \
@@ -73,6 +110,8 @@ runs:
           # Only skip silently for known plan-tier or feature-gate messages.
           # Generic 422 schema errors are surfaced as failures so payload bugs are visible.
           if echo "$RESPONSE" | grep -Eiq "Upgrade to GitHub Pro|public repositories with GitHub Free|rulesets are available|GitHub Advanced Security must be enabled|Copilot is not enabled|Copilot Business|Copilot Enterprise"; then
+            echo "ruleset_id=" >> "$GITHUB_OUTPUT"
+            echo "ruleset_action=skipped" >> "$GITHUB_OUTPUT"
             echo "⚠️ Ruleset setup skipped: repository plan or required features are not enabled." >> "$GITHUB_STEP_SUMMARY"
             echo "Details: $RESPONSE" >> "$GITHUB_STEP_SUMMARY"
             echo "::warning::Ruleset setup skipped due to plan/feature limitations. See step summary for details."
@@ -81,5 +120,13 @@ runs:
           echo "$RESPONSE"
           exit "$EXIT_CODE"
         }
+
+        if [ -n "$EXISTING_RULESET_ID" ]; then
+          RULESET_ID="$EXISTING_RULESET_ID"
+        else
+          RULESET_ID="$(printf '%s' "$RESPONSE" | jq -r '.id // ""')"
+        fi
+        echo "ruleset_id=$RULESET_ID" >> "$GITHUB_OUTPUT"
+        echo "ruleset_action=$ACTION_OUTPUT" >> "$GITHUB_OUTPUT"
 
         echo "✅ Repository ruleset $ACTION_TEXT" >> "$GITHUB_STEP_SUMMARY"

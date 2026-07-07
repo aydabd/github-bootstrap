@@ -20,6 +20,10 @@ inputs:
     description: Whether to PATCH repository settings JSON.
     required: false
     default: "true"
+  repo_settings_file:
+    description: Path to the repository settings JSON payload.
+    required: false
+    default: .github/config/repo-settings.json
   manage_environments:
     description: Whether to create dev/prod environments when missing.
     required: false
@@ -32,10 +36,22 @@ inputs:
     description: GitHub token with repository administration permissions.
     required: true
 
+outputs:
+  repository_settings_applied:
+    description: Whether repository settings were patched.
+    value: ${{ steps.apply_repo_settings.outputs.repository_settings_applied }}
+  environments_managed:
+    description: Whether dev/prod environment management ran.
+    value: ${{ steps.apply_repo_settings.outputs.environments_managed }}
+  dependabot_enabled:
+    description: Whether vulnerability alerts and security fixes were enabled.
+    value: ${{ steps.apply_repo_settings.outputs.dependabot_enabled }}
+
 runs:
   using: composite
   steps:
     - name: Apply repository settings, environments, and Dependabot
+      id: apply_repo_settings
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
@@ -43,12 +59,16 @@ runs:
         REPO: ${{ inputs.repo_name }}
         ENABLE: ${{ inputs.enable_repo_settings }}
         APPLY_REPO_SETTINGS: ${{ inputs.apply_repository_settings }}
+        REPO_SETTINGS_FILE: ${{ inputs.repo_settings_file }}
         MANAGE_ENVIRONMENTS: ${{ inputs.manage_environments }}
         ENABLE_DEPENDABOT: ${{ inputs.enable_dependabot }}
       run: |
         case "$ENABLE" in
           "true") ;;
           *)
+            echo "repository_settings_applied=false" >> "$GITHUB_OUTPUT"
+            echo "environments_managed=false" >> "$GITHUB_OUTPUT"
+            echo "dependabot_enabled=false" >> "$GITHUB_OUTPUT"
             echo "⏭️ Repository settings skipped (enable_repo_settings=false)" >> "$GITHUB_STEP_SUMMARY"
             exit 0
             ;;
@@ -56,17 +76,20 @@ runs:
 
         case "$APPLY_REPO_SETTINGS" in
           "true")
-            if [ ! -f ".github/config/repo-settings.json" ]; then
-              echo "::error::Missing repository settings payload: .github/config/repo-settings.json"
+            if [ ! -f "$REPO_SETTINGS_FILE" ]; then
+              echo "::error::Missing repository settings payload: $REPO_SETTINGS_FILE"
               exit 1
             fi
             gh api \
               --method PATCH \
               -H "Accept: application/vnd.github+json" \
               /repos/"$OWNER"/"$REPO" \
-              --input ".github/config/repo-settings.json"
+              --input "$REPO_SETTINGS_FILE"
+            echo "repository_settings_applied=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Repository settings patched from $REPO_SETTINGS_FILE" >> "$GITHUB_STEP_SUMMARY"
             ;;
           *)
+            echo "repository_settings_applied=false" >> "$GITHUB_OUTPUT"
             echo "⏭️ Repository settings PATCH skipped (apply_repository_settings=false)" >> "$GITHUB_STEP_SUMMARY"
             ;;
         esac
@@ -92,8 +115,10 @@ runs:
                 /repos/"$OWNER"/"$REPO"/environments/prod
               echo "✅ Production environment created" >> "$GITHUB_STEP_SUMMARY"
             fi
+            echo "environments_managed=true" >> "$GITHUB_OUTPUT"
             ;;
           *)
+            echo "environments_managed=false" >> "$GITHUB_OUTPUT"
             echo "⏭️ Environment management skipped (manage_environments=false)" >> "$GITHUB_STEP_SUMMARY"
             ;;
         esac
@@ -110,9 +135,11 @@ runs:
               --method PUT \
               -H "Accept: application/vnd.github+json" \
               /repos/"$OWNER"/"$REPO"/automated-security-fixes
+            echo "dependabot_enabled=true" >> "$GITHUB_OUTPUT"
             echo "✅ Dependabot security updates enabled" >> "$GITHUB_STEP_SUMMARY"
             ;;
           *)
+            echo "dependabot_enabled=false" >> "$GITHUB_OUTPUT"
             echo "⏭️ Dependabot updates skipped (enable_dependabot=false)" >> "$GITHUB_STEP_SUMMARY"
             ;;
         esac

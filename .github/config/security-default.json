@@ -1,0 +1,8 @@
+{
+  "vulnerability_alerts": "enabled",
+  "automated_security_fixes": "enabled",
+  "dependency_graph": "enabled",
+  "secret_scanning": "best-effort",
+  "secret_scanning_push_protection": "best-effort",
+  "private_vulnerability_reporting": "best-effort"
+}

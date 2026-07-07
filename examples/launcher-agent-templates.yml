@@ -1,0 +1,69 @@
+---
+# Agent Instructions Setup Launcher
+#
+# Create these in THIS launcher repository, not in the target repo:
+# - Secret: BOOTSTRAP_APP_PRIVATE_KEY
+# - Workflow input: app_id
+# - Optional workflow input: allowed_repo_owners
+# The GitHub App or PAT must have access to the target repository selected by
+# repo_owner/repo_name.
+
+name: Setup Agent Instructions
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_owner:
+        description: "Target owner - GitHub user or organization"
+        required: true
+        type: string
+      repo_name:
+        description: "Existing repository name"
+        required: true
+        type: string
+      app_id:
+        description: "GitHub App ID used to configure the target repository"
+        required: true
+        type: string
+      allowed_repo_owners:
+        description: "Optional comma-separated allowlist of target owners"
+        required: false
+        type: string
+      agent_provider:
+        description: "AI agent provider"
+        required: true
+        default: copilot
+        type: choice
+        options:
+          - copilot
+          - claude
+          - cursor
+          - windsurf
+          - codex
+          - all
+      mode:
+        description: "Agent instruction apply mode"
+        required: false
+        default: pull-request
+        type: choice
+        options:
+          - plan
+          - pull-request
+          - direct
+
+permissions:
+  contents: read
+
+jobs:
+  setup-agent-instructions:
+    uses: BOOTSTRAP_OWNER/github-bootstrap/.github/workflows/setup-agent-instructions.yml@main
+    with:
+      repo_owner: ${{ inputs.repo_owner }}
+      repo_name: ${{ inputs.repo_name }}
+      agent_provider: ${{ inputs.agent_provider }}
+      mode: ${{ inputs.mode }}
+      app_id: ${{ inputs.app_id }}
+      app_owner: ${{ inputs.repo_owner }}
+      allowed_repo_owners: ${{ inputs.allowed_repo_owners }}
+    secrets:
+      app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}

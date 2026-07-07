@@ -1,0 +1,75 @@
+name: Setup Labels and Security
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_owner:
+        description: "Target owner - GitHub user or organization"
+        required: true
+        type: string
+      repo_name:
+        description: "Existing repository name"
+        required: true
+        type: string
+      label_policy:
+        description: "Label apply policy"
+        required: false
+        default: create-and-update
+        type: choice
+        options:
+          - create-missing
+          - create-and-update
+      app_id:
+        description: "GitHub App ID for App-based auth"
+        required: false
+        type: string
+      app_owner:
+        description: "Owner whose GitHub App installation token should be used"
+        required: false
+        type: string
+      allowed_repo_owners:
+        description: "Optional comma-separated allowlist of target owners"
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      repo_owner:
+        required: true
+        type: string
+      repo_name:
+        required: true
+        type: string
+      label_policy:
+        required: false
+        default: create-and-update
+        type: string
+      app_id:
+        required: false
+        type: string
+      app_owner:
+        required: false
+        type: string
+      allowed_repo_owners:
+        required: false
+        type: string
+    secrets:
+      GH_PAT:
+        required: false
+      app_private_key:
+        required: false
+      BOOTSTRAP_APP_PRIVATE_KEY:
+        required: false
+
+jobs:
+  setup-labels-and-security:
+    uses: ./.github/workflows/setup-existing-repository.yml
+    with:
+      repo_owner: ${{ inputs.repo_owner }}
+      repo_name: ${{ inputs.repo_name }}
+      apply_labels: true
+      apply_security_settings: true
+      label_policy: ${{ inputs.label_policy }}
+      app_id: ${{ inputs.app_id }}
+      app_owner: ${{ inputs.app_owner || inputs.repo_owner }}
+      allowed_repo_owners: ${{ inputs.allowed_repo_owners }}
+    secrets: inherit

@@ -40,6 +40,10 @@ help: ## Show available make targets
 			print "  TEST_LANGUAGES language-agnostic-only | all | csv list (default: language-agnostic-only)"; \
 			print "  TEST_TARGET_WORKFLOW create-repository.yml | terraform-create-repository.yml (default: create-repository.yml)"; \
 			print "  TEST_TARGET_REF Branch/tag ref for target workflow (default: main)"; \
+			print "  TEST_LOCAL_SETUP_REPO_NAME Local setup test repo base name (default: scripts)"; \
+			print "  TEST_LOCAL_SETUP_VISIBILITY public | private | internal (default: public)"; \
+			print "  TEST_LOCAL_SETUP_RULESET_PROFILE minimal | default | coderabbit (default: minimal)"; \
+			print "  TEST_LOCAL_SETUP_REF Branch/tag ref for local setup test workflow (default: main)"; \
 			print "  cleanup_after_test Always true for make test commands"; \
 		} \
 		function category(name) { \

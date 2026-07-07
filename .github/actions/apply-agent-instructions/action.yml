@@ -1,0 +1,186 @@
+---
+name: Apply Agent Instructions
+description: Add provider-specific AI agent instruction files to an existing repository.
+
+inputs:
+  owner:
+    description: Repository owner (user or organization).
+    required: true
+  repo_name:
+    description: Target repository name.
+    required: true
+  agent_provider:
+    description: "AI agent provider: copilot, claude, cursor, windsurf, codex, or all."
+    required: true
+  mode:
+    description: "Apply mode: plan, pull-request, or direct."
+    required: false
+    default: pull-request
+  target_branch:
+    description: Target branch for direct commits or pull request base.
+    required: false
+    default: main
+  work_branch:
+    description: Branch to push when mode is pull-request.
+    required: false
+    default: bootstrap/agent-instructions
+  github_host:
+    description: GitHub hostname, such as github.com or a GHES hostname.
+    required: false
+    default: github.com
+  gh_token:
+    description: GitHub token with contents and pull request permissions.
+    required: true
+
+outputs:
+  changed:
+    description: Whether any agent instruction file changed.
+    value: ${{ steps.apply_agent_instructions.outputs.changed }}
+  agent_provider:
+    description: AI agent provider applied by the action.
+    value: ${{ steps.apply_agent_instructions.outputs.agent_provider }}
+  mode:
+    description: Apply mode used by the action.
+    value: ${{ steps.apply_agent_instructions.outputs.mode }}
+  branch:
+    description: Branch updated when mode is pull-request or direct.
+    value: ${{ steps.apply_agent_instructions.outputs.branch }}
+  pull_request_url:
+    description: Pull request URL when mode is pull-request.
+    value: ${{ steps.apply_agent_instructions.outputs.pull_request_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Apply agent instructions
+      id: apply_agent_instructions
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+        OWNER: ${{ inputs.owner }}
+        REPO: ${{ inputs.repo_name }}
+        AGENT_PROVIDER: ${{ inputs.agent_provider }}
+        MODE: ${{ inputs.mode }}
+        TARGET_BRANCH: ${{ inputs.target_branch }}
+        WORK_BRANCH: ${{ inputs.work_branch }}
+        GH_HOST: ${{ inputs.github_host }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+
+        if [ "$MODE" != "plan" ] && [ "$MODE" != "pull-request" ] && [ "$MODE" != "direct" ]; then
+          echo "::error::Invalid mode '$MODE'. Allowed: plan, pull-request, direct."
+          exit 1
+        fi
+        if [ "$AGENT_PROVIDER" != "copilot" ] && [ "$AGENT_PROVIDER" != "claude" ] && [ "$AGENT_PROVIDER" != "cursor" ] && [ "$AGENT_PROVIDER" != "windsurf" ] && [ "$AGENT_PROVIDER" != "codex" ] && [ "$AGENT_PROVIDER" != "all" ]; then
+          echo "::error::Invalid agent_provider '$AGENT_PROVIDER'. Allowed: copilot, claude, cursor, windsurf, codex, all."
+          exit 1
+        fi
+
+        bootstrap_root="$(cd "$ACTION_PATH/../../.." && pwd)"
+        workdir="$(mktemp -d)"
+        git clone --depth 1 --branch "$TARGET_BRANCH" "https://x-access-token:$GH_TOKEN@$GH_HOST/$OWNER/$REPO.git" "$workdir/repo"
+        cd "$workdir/repo"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        copy_copilot() {
+          mkdir -p .github
+          cp "$bootstrap_root/templates/.github/copilot-instructions.md" .github/copilot-instructions.md
+          rm -rf .github/instructions .github/skills .github/agents
+          cp -R "$bootstrap_root/templates/.github/instructions" .github/instructions
+          cp -R "$bootstrap_root/templates/.github/skills" .github/skills
+          cp -R "$bootstrap_root/templates/.github/agents" .github/agents
+        }
+
+        copy_claude() {
+          cp "$bootstrap_root/templates/CLAUDE.md" CLAUDE.md
+          rm -rf .claude
+          cp -R "$bootstrap_root/templates/.claude" .claude
+        }
+
+        copy_cursor() {
+          rm -rf .cursor
+          cp -R "$bootstrap_root/templates/.cursor" .cursor
+        }
+
+        copy_windsurf() {
+          cp "$bootstrap_root/templates/.windsurfrules" .windsurfrules
+        }
+
+        copy_codex() {
+          cp "$bootstrap_root/templates/AGENT.md" AGENT.md
+        }
+
+        if [ "$AGENT_PROVIDER" = "copilot" ] || [ "$AGENT_PROVIDER" = "all" ]; then
+          copy_copilot
+        fi
+        if [ "$AGENT_PROVIDER" = "claude" ] || [ "$AGENT_PROVIDER" = "all" ]; then
+          copy_claude
+        fi
+        if [ "$AGENT_PROVIDER" = "cursor" ] || [ "$AGENT_PROVIDER" = "all" ]; then
+          copy_cursor
+        fi
+        if [ "$AGENT_PROVIDER" = "windsurf" ] || [ "$AGENT_PROVIDER" = "all" ]; then
+          copy_windsurf
+        fi
+        if [ "$AGENT_PROVIDER" = "codex" ] || [ "$AGENT_PROVIDER" = "all" ]; then
+          copy_codex
+        fi
+
+        if git diff --quiet; then
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+          echo "agent_provider=$AGENT_PROVIDER" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "branch=$TARGET_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "pull_request_url=" >> "$GITHUB_OUTPUT"
+          echo "✅ Agent instructions already up to date for $AGENT_PROVIDER" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        if [ "$MODE" = "plan" ]; then
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "agent_provider=$AGENT_PROVIDER" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "branch=$TARGET_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "pull_request_url=" >> "$GITHUB_OUTPUT"
+          echo "### Planned agent instruction changes for $AGENT_PROVIDER" >> "$GITHUB_STEP_SUMMARY"
+          git diff --stat >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        git add .
+        git commit -m "chore: add $AGENT_PROVIDER agent instructions"
+
+        if [ "$MODE" = "direct" ]; then
+          git push origin "HEAD:$TARGET_BRANCH"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "agent_provider=$AGENT_PROVIDER" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "branch=$TARGET_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "pull_request_url=" >> "$GITHUB_OUTPUT"
+          echo "✅ Agent instructions pushed directly to $TARGET_BRANCH" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        git push --force-with-lease origin "HEAD:$WORK_BRANCH"
+        if gh pr view "$WORK_BRANCH" --repo "$OWNER/$REPO" >/dev/null 2>&1; then
+          gh pr edit "$WORK_BRANCH" \
+            --repo "$OWNER/$REPO" \
+            --title "Add $AGENT_PROVIDER agent instructions" \
+            --body "Adds $AGENT_PROVIDER agent instruction files from github-bootstrap."
+        else
+          gh pr create \
+            --repo "$OWNER/$REPO" \
+            --base "$TARGET_BRANCH" \
+            --head "$WORK_BRANCH" \
+            --title "Add $AGENT_PROVIDER agent instructions" \
+            --body "Adds $AGENT_PROVIDER agent instruction files from github-bootstrap."
+        fi
+          pull_request_url="$(gh pr view "$WORK_BRANCH" --repo "$OWNER/$REPO" --json url --jq '.url')"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "agent_provider=$AGENT_PROVIDER" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "branch=$WORK_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "pull_request_url=$pull_request_url" >> "$GITHUB_OUTPUT"
+        echo "✅ Agent instruction pull request opened or updated" >> "$GITHUB_STEP_SUMMARY"

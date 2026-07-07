@@ -1,0 +1,190 @@
+name: Test Local Setup Scripts
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_repo_name:
+        description: "Name for test repository (will be prefixed with test-local-setup-)"
+        required: false
+        default: "scripts"
+        type: string
+      visibility:
+        description: "Temporary test repository visibility"
+        required: false
+        default: "public"
+        type: choice
+        options:
+          - public
+          - private
+          - internal
+      ruleset_profile:
+        description: "Ruleset profile to test"
+        required: false
+        default: "minimal"
+        type: choice
+        options:
+          - minimal
+          - default
+          - coderabbit
+      cleanup_after_test:
+        description: "Automatically delete test repository after validation"
+        required: false
+        default: true
+        type: boolean
+      gh_token:
+        description: >-
+          Personal Access Token with repository creation, administration, and
+          label/Issues write access. Prefer using the repository secret GH_PAT
+          whenever possible.
+        required: false
+        type: string
+
+jobs:
+  test-local-setup-scripts:
+    name: Test Local Setup Scripts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      test_repo_name: ${{ steps.generate-name.outputs.repo_name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Resolve GitHub token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          gh_token: ${{ inputs.gh_token }}
+          gh_pat_secret: ${{ secrets.GH_PAT }}
+
+      - name: Generate unique test repository name
+        id: generate-name
+        shell: bash
+        env:
+          TEST_REPO_NAME: ${{ inputs.test_repo_name }}
+        run: |
+          set -euo pipefail
+          timestamp=$(date +"%Y%m%d-%H%M%S")
+          sanitized_name=$(printf '%s' "$TEST_REPO_NAME" | tr -cs 'A-Za-z0-9._-' '-' | sed 's/^-//; s/-$//')
+          if [ -z "$sanitized_name" ]; then
+            sanitized_name="scripts"
+          fi
+          repo_name="test-local-setup-${sanitized_name}-${timestamp}"
+          echo "repo_name=$repo_name" >> "$GITHUB_OUTPUT"
+          echo "Generated test repository: $repo_name"
+
+      - name: Create temporary test repository
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ steps.generate-name.outputs.repo_name }}
+          VISIBILITY: ${{ inputs.visibility }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner_type=$(gh api "/users/$OWNER" --jq '.type')
+          if [ "$owner_type" = "Organization" ]; then
+            endpoint="/orgs/$OWNER/repos"
+          else
+            endpoint="/user/repos"
+          fi
+
+          case "$VISIBILITY" in
+            public | private | internal) ;;
+            *)
+              echo "::error::Invalid visibility '$VISIBILITY'"
+              exit 1
+              ;;
+          esac
+
+          if [ "$endpoint" = "/user/repos" ]; then
+            private=false
+            if [ "$VISIBILITY" != "public" ]; then
+              private=true
+            fi
+            jq -n \
+              --arg name "$REPO_NAME" \
+              --arg description "Temporary repository for github-bootstrap local setup script E2E" \
+              --argjson private "$private" \
+              '{name: $name, description: $description, private: $private, has_issues: true, has_projects: true, has_wiki: false, auto_init: true}' | \
+              gh api --method POST -H "Accept: application/vnd.github+json" "$endpoint" --input -
+          else
+            jq -n \
+              --arg name "$REPO_NAME" \
+              --arg description "Temporary repository for github-bootstrap local setup script E2E" \
+              --arg visibility "$VISIBILITY" \
+              '{name: $name, description: $description, visibility: $visibility, has_issues: true, has_projects: true, has_wiki: false, auto_init: true}' | \
+              gh api --method POST -H "Accept: application/vnd.github+json" "$endpoint" --input -
+          fi
+
+          echo "Created temporary repository: $OWNER/$REPO_NAME"
+
+      - name: Test local setup scripts
+        uses: ./.github/actions/test-local-setup-scripts
+        with:
+          owner: ${{ github.repository_owner }}
+          repo_name: ${{ steps.generate-name.outputs.repo_name }}
+          ruleset_profile: ${{ inputs.ruleset_profile }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
+
+      - name: Write summary
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ steps.generate-name.outputs.repo_name }}
+          RULESET_PROFILE: ${{ inputs.ruleset_profile }}
+        shell: bash
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## Local Setup Scripts E2E
+
+          | Item | Status |
+          | ---- | ------ |
+          | Repository | [$OWNER/$REPO_NAME](https://github.com/$OWNER/$REPO_NAME) |
+          | Labels script | Passed |
+          | Repo settings script | Passed |
+          | Security settings script | Passed |
+          | Ruleset script | Passed ($RULESET_PROFILE) |
+          | Idempotency | Labels and ruleset scripts ran twice |
+          EOF
+
+  cleanup-test-repo:
+    name: Cleanup Test Repository
+    needs: test-local-setup-scripts
+    runs-on: ubuntu-latest
+    if: >-
+      ${{ always() &&
+      needs.test-local-setup-scripts.outputs.test_repo_name != '' &&
+      (inputs.cleanup_after_test == true ||
+      needs.test-local-setup-scripts.result == 'failure') }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Resolve GitHub token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          gh_token: ${{ inputs.gh_token }}
+          gh_pat_secret: ${{ secrets.GH_PAT }}
+
+      - name: Cleanup temporary test repository
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ needs.test-local-setup-scripts.outputs.test_repo_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Cleaning up temporary repository: $OWNER/$REPO_NAME"
+          if gh repo view "$OWNER/$REPO_NAME" >/dev/null 2>&1; then
+            gh api \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/$OWNER/$REPO_NAME"
+            echo "Deleted temporary repository: $OWNER/$REPO_NAME"
+          else
+            echo "Temporary repository already absent: $OWNER/$REPO_NAME"
+          fi
