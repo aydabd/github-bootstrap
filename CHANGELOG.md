@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.14.0](https://github.com/aydabd/github-bootstrap/compare/v1.13.0...v1.14.0) (2026-07-07)
+
+
+### Features
+
+* **existing-repo:** add modular setup workflows ([d88259f](https://github.com/aydabd/github-bootstrap/commit/d88259f287191cffa4109d8019f1a27474b65bc0))
+
 ## [1.13.0](https://github.com/aydabd/github-bootstrap/compare/v1.12.1...v1.13.0) (2026-07-06)
 
 
