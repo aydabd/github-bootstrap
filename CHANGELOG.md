@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.14.1](https://github.com/aydabd/github-bootstrap/compare/v1.14.0...v1.14.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* **release:** update release-please configuration ([d19a6da](https://github.com/aydabd/github-bootstrap/commit/d19a6da636238b61572851c3999a18edc1973189))
+* use --no-verify on automation commit in weekly tooling update workflow ([#66](https://github.com/aydabd/github-bootstrap/issues/66)) ([fa95a58](https://github.com/aydabd/github-bootstrap/commit/fa95a58dd2c653af9d8a0f56ae148d2cd4de8558))
+
 ## [1.14.0](https://github.com/aydabd/github-bootstrap/compare/v1.13.0...v1.14.0) (2026-07-07)
 
 
