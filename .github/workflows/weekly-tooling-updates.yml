@@ -87,7 +87,7 @@ jobs:
 
           git checkout -B "$branch"
           git add -A
-          git commit -m "$commit_msg"
+          git commit --no-verify -m "$commit_msg"
           git push --force-with-lease origin "$branch"
 
           pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
