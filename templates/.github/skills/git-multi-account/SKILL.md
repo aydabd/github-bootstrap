@@ -235,8 +235,7 @@ gh api user --jq .login
 
 ## 📊 Summary Matrix
 
-| Context | Directory Path | SSH Key Used | Git Email | `gh` Active User |
-| --- | --- | --- | --- | --- |
-| **Work** | `~/git/work-internal/` | `id_ed25519_github_work` | `<YOUR_WORK_EMAIL>` | `<YOUR_WORK_GITHUB_HANDLE>` |
-| **Personal** | `~/git/personal/` | `id_ed25519_github_personal` | `<YOUR_PERSONAL_EMAIL>` | `<YOUR_PERSONAL_GITHUB_HANDLE>` |
-
+| Context      | Directory Path         | SSH Key Used                 | Git Email               | `gh` Active User                |
+| ------------ | ---------------------- | ---------------------------- | ----------------------- | ------------------------------- |
+| **Work**     | `~/git/work-internal/` | `id_ed25519_github_work`     | `<YOUR_WORK_EMAIL>`     | `<YOUR_WORK_GITHUB_HANDLE>`     |
+| **Personal** | `~/git/personal/`      | `id_ed25519_github_personal` | `<YOUR_PERSONAL_EMAIL>` | `<YOUR_PERSONAL_GITHUB_HANDLE>` |
