@@ -23,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@0717577d45739eb3c851188b29f50ed6c0b2194e # v2.8.0
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -32,7 +32,7 @@ jobs:
         uses: ./.github/actions/setup-lint-mise
 
       - name: Cache pre-commit hook environments
-        uses: actions/cache@a7833574556fa59680c1b7cb190c1735db73ebf0 # v5.0.0
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
