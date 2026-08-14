@@ -480,15 +480,15 @@ automatically.
 
 Every bootstrapped repository gets a core security baseline out of the box:
 
-| Feature                      | Details                                                                                                               |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Vulnerability alerts         | Enabled automatically via the GitHub API                                                                              |
-| Dependabot security updates  | Enabled automatically — auto-PRs for vulnerable deps                                                                  |
-| Dependabot version updates   | Configured in `.github/dependabot.yml` for all ecosystems                                                             |
-| CodeQL scanning              | Workflow generated and scoped to the selected language(s)                                                             |
+| Feature                      | Details                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------- |
+| Vulnerability alerts         | Enabled automatically via the GitHub API                                                          |
+| Dependabot security updates  | Enabled automatically — auto-PRs for vulnerable deps                                              |
+| Dependabot version updates   | Configured in `.github/dependabot.yml` for all ecosystems                                         |
+| CodeQL scanning              | Workflow generated and scoped to the selected language(s)                                         |
 | Branch protection / rulesets | Strict main-branch ruleset with review, signed commits, and optional validated status-check gates |
-| SECURITY.md                  | Security policy and vulnerability reporting instructions                                                              |
-| Secret scanning              | Enabled by GitHub for all public repos automatically                                                                  |
+| SECURITY.md                  | Security policy and vulnerability reporting instructions                                          |
+| Secret scanning              | Enabled by GitHub for all public repos automatically                                              |
 
 ## Core Principles
 

@@ -106,15 +106,15 @@ validate_ruleset_payload() {
         and (.conditions.ref_name.exclude == [])
         and (.bypass_actors == [])
         and (all(.rules[]; .type as $type |
-          ($type == "deletion" or $type == "non_fast_forward" or
-           $type == "required_linear_history" or $type == "required_signatures" or
-           $type == "pull_request" or $type == "required_status_checks")))
+            ($type == "deletion" or $type == "non_fast_forward" or
+            $type == "required_linear_history" or $type == "required_signatures" or
+            $type == "pull_request" or $type == "required_status_checks")))
         and (any(.rules[]; .type == "pull_request" and
-          .parameters.required_approving_review_count == 1 and
-          .parameters.dismiss_stale_reviews_on_push == true and
-          .parameters.require_last_push_approval == true and
-          .parameters.required_review_thread_resolution == true and
-          .parameters.allowed_merge_methods == ["squash"]))
+            .parameters.required_approving_review_count == 1 and
+            .parameters.dismiss_stale_reviews_on_push == true and
+            .parameters.require_last_push_approval == true and
+            .parameters.required_review_thread_resolution == true and
+            .parameters.allowed_merge_methods == ["squash"]))
         and (any(.rules[]; .type == "required_signatures"))
     ' "$ruleset_file" > /dev/null; then
         echo "invalid ruleset payload: expected strict main-branch Repository Rulesets API schema" >&2
@@ -129,17 +129,17 @@ build_ruleset_payload() {
         return 0
     fi
     jq -e --arg checks "$required_status_checks" '
-      ($checks | split(",") | map(gsub("^[[:space:]]+|[[:space:]]+$"; "")) |
-       if any(.[]; (length == 0 or test("[\\r\\n]"))) then error("invalid status check") else . end) as $contexts
-      | if any(.rules[]; .type == "required_status_checks") then
-          .rules |= map(if .type == "required_status_checks" then
-            .parameters.required_status_checks = ($contexts | map({context: .}))
-          else . end)
+        ($checks | split(",") | map(gsub("^[[:space:]]+|[[:space:]]+$"; "")) |
+        if any(.[]; (length == 0 or test("[\\r\\n]"))) then error("invalid status check") else . end) as $contexts
+        | if any(.rules[]; .type == "required_status_checks") then
+            .rules |= map(if .type == "required_status_checks" then
+                .parameters.required_status_checks = ($contexts | map({context: .}))
+            else . end)
         else
-          .rules += [{type: "required_status_checks", parameters: {
-            strict_required_status_checks_policy: true,
-            required_status_checks: ($contexts | map({context: .}))
-          }}]
+            .rules += [{type: "required_status_checks", parameters: {
+                strict_required_status_checks_policy: true,
+                required_status_checks: ($contexts | map({context: .}))
+            }}]
         end
     ' "$ruleset_file" > "$output"
 }

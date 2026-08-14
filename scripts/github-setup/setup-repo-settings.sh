@@ -60,13 +60,13 @@ validate_inputs() {
     require_github_owner_repo_names
     require_file "$settings_file" "settings file"
     jq -e '
-      type == "object" and .default_branch == "main" and
-      .allow_squash_merge == true and .allow_merge_commit == false and
-      .allow_rebase_merge == false and .allow_auto_merge == false and
-      .allow_update_branch == true and .delete_branch_on_merge == true and
-      .squash_merge_commit_title == "PR_TITLE" and
-      .squash_merge_commit_message == "COMMIT_MESSAGES" and
-      .has_wiki == false and .has_issues == true and .has_projects == true
+        type == "object" and .default_branch == "main" and
+        .allow_squash_merge == true and .allow_merge_commit == false and
+        .allow_rebase_merge == false and .allow_auto_merge == false and
+        .allow_update_branch == true and .delete_branch_on_merge == true and
+        .squash_merge_commit_title == "PR_TITLE" and
+        .squash_merge_commit_message == "COMMIT_MESSAGES" and
+        .has_wiki == false and .has_issues == true and .has_projects == true
     ' "$settings_file" > /dev/null || {
         echo "invalid repository settings payload" >&2
         exit 1
