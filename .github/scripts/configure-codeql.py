@@ -48,14 +48,15 @@ def dedupe_preserve_order(items):
 
 
 languages = os.environ.get("CODEQL_INPUT_LANGUAGES", "").strip().lower()
-codeql_langs = []
+codeql_langs = ["actions"]
 
 if languages == "all":
-    codeql_langs = ALL_CODEQL_LANGUAGES[:]
+    codeql_langs += ALL_CODEQL_LANGUAGES
 elif languages != "language-agnostic-only":
     selected = [part.strip().lower() for part in languages.split(",") if part.strip()]
     mapped = [LANGUAGE_MAP.get(lang, "") for lang in selected]
-    codeql_langs = dedupe_preserve_order(mapped)
+    codeql_langs += mapped
+codeql_langs = dedupe_preserve_order(codeql_langs)
 
 workflow_path = Path(".github/workflows/codeql.yml")
 summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -77,10 +78,7 @@ if codeql_langs:
         workflow_path.write_text(content, encoding="utf-8")
     summary_message = f"CodeQL configured for: {', '.join(codeql_langs)}\n"
 else:
-    # No supported CodeQL language — remove the workflow to avoid an empty matrix
-    if workflow_path.exists():
-        workflow_path.unlink()
-    summary_message = "CodeQL skipped — no supported language selected\n"
+    summary_message = "CodeQL configured for GitHub Actions workflows\n"
 
 if summary_path:
     with open(summary_path, "a", encoding="utf-8") as summary_file:
