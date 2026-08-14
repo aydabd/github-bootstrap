@@ -6,7 +6,7 @@ resource "github_repository" "new_repo" {
 
   has_issues   = true
   has_projects = true
-  has_wiki     = true
+  has_wiki     = false
   auto_init    = true
 
   vulnerability_alerts = true
@@ -15,7 +15,7 @@ resource "github_repository" "new_repo" {
   allow_squash_merge          = true
   allow_merge_commit          = false
   allow_rebase_merge          = false
-  allow_auto_merge            = true
+  allow_auto_merge            = false
   allow_update_branch         = true
   squash_merge_commit_title   = "PR_TITLE"
   squash_merge_commit_message = "COMMIT_MESSAGES"
@@ -65,6 +65,7 @@ resource "github_repository_ruleset" "main_protection" {
     deletion                = true
     non_fast_forward        = true
     required_linear_history = true
+    required_signatures     = true
 
     pull_request {
       required_approving_review_count   = 1
@@ -77,20 +78,7 @@ resource "github_repository_ruleset" "main_protection" {
     required_status_checks {
       strict_required_status_checks_policy = true
 
-      required_check {
-        context = "lint"
-      }
-
-      required_check {
-        context = "CodeRabbit"
-      }
     }
-  }
-
-  bypass_actors {
-    actor_id    = 5
-    actor_type  = "RepositoryRole"
-    bypass_mode = "always"
   }
 
   depends_on = [github_repository.new_repo]

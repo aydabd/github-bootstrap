@@ -357,8 +357,10 @@ no noise from style nitpicks (linters handle those).
 
 Setup: install the [CodeRabbit GitHub App](https://github.com/apps/coderabbitai) on your
 repository or organization. Reviews start automatically on the next PR.
-The default ruleset also requires the `CodeRabbit` status check, so CodeRabbit
-must be installed and have review quota available. If CodeRabbit is rate-limited,
+The default ruleset does not guess third-party status-check names. Supply exact
+successful check-run names with `--required-status-checks` when applying a
+ruleset, or discover them from the target repository first. If CodeRabbit is
+rate-limited,
 release, Dependabot, and other automation PRs can remain blocked until quota
 resets or usage-based reviews are enabled.
 
@@ -484,7 +486,7 @@ Every bootstrapped repository gets a core security baseline out of the box:
 | Dependabot security updates  | Enabled automatically — auto-PRs for vulnerable deps                                                                  |
 | Dependabot version updates   | Configured in `.github/dependabot.yml` for all ecosystems                                                             |
 | CodeQL scanning              | Workflow generated and scoped to the selected language(s)                                                             |
-| Branch protection / rulesets | Default ruleset configured from `.github/config/ruleset-default.json` with review, lint, CodeRabbit, and CodeQL gates |
+| Branch protection / rulesets | Strict main-branch ruleset with review, signed commits, and optional validated status-check gates |
 | SECURITY.md                  | Security policy and vulnerability reporting instructions                                                              |
 | Secret scanning              | Enabled by GitHub for all public repos automatically                                                                  |
 
@@ -539,13 +541,13 @@ The Terraform module (in `terraform/`) manages the same infrastructure declarati
 Bootstrap workflows apply the default ruleset payload from
 `.github/config/ruleset-default.json` after repository creation.
 The default ruleset requires one approving review, approval after the latest
-push, resolved review threads, linear history, the `lint` and `CodeRabbit`
-status checks, and CodeQL code scanning results. CODEOWNERS remains generated
+push, resolved review threads, linear history, signed commits, and squash-only
+pull requests. Status checks are empty until exact check-run names are supplied.
+CODEOWNERS remains generated
 as ownership documentation, but the ruleset does not require code-owner-specific
 approval.
-Because `CodeRabbit` is a required third-party status, repositories using the
-default ruleset should install CodeRabbit and monitor review quota. Rate limits
-can leave release and dependency automation PRs waiting for the required status.
+Repositories can add CodeRabbit or other checks only after verifying their
+exact check-run names in the target repository.
 If you run Terraform directly, you can also manage rulesets through Terraform
 inputs (for example, `enable_branch_protection=true`) or configure them
 manually in repository settings.

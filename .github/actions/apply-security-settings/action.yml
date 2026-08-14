@@ -46,7 +46,7 @@ runs:
           echo "::error::Security settings file not found: $SECURITY_FILE"
           exit 1
         fi
-        jq -e 'type == "object"' "$SECURITY_FILE" >/dev/null
+        jq -e 'type == "object" and all(to_entries[]; .value == "enabled" or .value == "disabled" or (.key == "private_vulnerability_reporting" and .value == "best-effort"))' "$SECURITY_FILE" >/dev/null
 
         enabled_count=0
         skipped_count=0
@@ -69,7 +69,7 @@ runs:
           fi
           if [ "$value" = "best-effort" ]; then
             unsupported_count=$((unsupported_count + 1))
-            echo "⚠️ $key unsupported or unavailable for this repository" >> "$GITHUB_STEP_SUMMARY"
+            echo "⚠️ $key unavailable; skipped because private vulnerability reporting may be plan-gated" >> "$GITHUB_STEP_SUMMARY"
             return 0
           fi
           echo "::error::Failed to enable $key"

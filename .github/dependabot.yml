@@ -10,6 +10,8 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 14
     groups:
       github-actions:
         patterns:
@@ -28,6 +30,12 @@ updates:
     directory: "/tools"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 14
+    groups:
+      go:
+        patterns:
+          - "*"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
@@ -42,6 +50,12 @@ updates:
     directory: "/terraform"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 14
+    groups:
+      terraform:
+        patterns:
+          - "*"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"

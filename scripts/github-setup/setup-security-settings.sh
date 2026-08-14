@@ -64,8 +64,8 @@ validate_inputs() {
     require_owner_repo
     require_github_owner_repo_names
     require_file "$security_file" "security file"
-    if ! jq -e 'all(.[]; . == "enabled" or . == "best-effort" or . == "disabled")' "$security_file" > /dev/null; then
-        echo "security file values must be enabled, best-effort, or disabled" >&2
+    if ! jq -e 'all(to_entries[]; .value == "enabled" or .value == "disabled" or (.key == "private_vulnerability_reporting" and .value == "best-effort"))' "$security_file" > /dev/null; then
+        echo "security controls must be enabled or disabled; only private_vulnerability_reporting may be best-effort" >&2
         exit 1
     fi
 }
@@ -89,6 +89,9 @@ apply_put_feature() {
     fi
     if [ "$value" = "best-effort" ]; then
         echo "warning: $key unsupported or unavailable for this repository" >&2
+        if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            echo "⚠️ $key unavailable; skipped because the repository plan may not support private vulnerability reporting." >> "$GITHUB_STEP_SUMMARY"
+        fi
         return 0
     fi
     echo "failed to enable $key" >&2
