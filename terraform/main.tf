@@ -75,10 +75,6 @@ resource "github_repository_ruleset" "main_protection" {
       required_review_thread_resolution = true
     }
 
-    required_status_checks {
-      strict_required_status_checks_policy = true
-
-    }
   }
 
   depends_on = [github_repository.new_repo]

@@ -18,6 +18,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -28,14 +29,19 @@ jobs:
           import re
           import urllib.request
 
-          url = f"https://api.github.com/repos/{os.environ['REPOSITORY']}/pulls/{os.environ['PR_NUMBER']}/commits?per_page=100"
+          api_url = os.environ["GITHUB_API_URL"].rstrip("/")
+          url = f"{api_url}/repos/{os.environ['REPOSITORY']}/pulls/{os.environ['PR_NUMBER']}/commits?per_page=100"
           commits = []
           while url:
               request = urllib.request.Request(
                   url,
-                  headers={"Accept": "application/vnd.github+json", "Authorization": f"Bearer {os.environ['GH_TOKEN']}"},
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                      "User-Agent": "signed-off-by-trailers",
+                  },
               )
-              with urllib.request.urlopen(request) as response:
+              with urllib.request.urlopen(request, timeout=30) as response:
                   commits.extend(json.load(response))
                   links = response.headers.get("Link", "")
               url = next((part.split(";")[0].strip("<>") for part in links.split(",") if 'rel="next"' in part), "")

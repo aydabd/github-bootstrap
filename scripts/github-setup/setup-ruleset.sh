@@ -116,6 +116,9 @@ validate_ruleset_payload() {
             .parameters.required_review_thread_resolution == true and
             .parameters.allowed_merge_methods == ["squash"]))
         and (any(.rules[]; .type == "required_signatures"))
+        and (all(.rules[] | select(.type == "required_status_checks");
+            .parameters.strict_required_status_checks_policy == true and
+            (.parameters.required_status_checks | type == "array")))
     ' "$ruleset_file" > /dev/null; then
         echo "invalid ruleset payload: expected strict main-branch Repository Rulesets API schema" >&2
         exit 1
@@ -133,6 +136,7 @@ build_ruleset_payload() {
         if any(.[]; (length == 0 or test("[\\r\\n]"))) then error("invalid status check") else . end) as $contexts
         | if any(.rules[]; .type == "required_status_checks") then
             .rules |= map(if .type == "required_status_checks" then
+                .parameters.strict_required_status_checks_policy = true |
                 .parameters.required_status_checks = ($contexts | map({context: .}))
             else . end)
         else

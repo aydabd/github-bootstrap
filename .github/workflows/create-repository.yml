@@ -532,18 +532,20 @@ jobs:
           # Build a space-separated list of workflow filenames to keep
           KEEP_FILES=" signed-off-by.yml"
           RELEASE_KEPT=false
+          VALID_WORKFLOW_FOUND=false
 
           case "$WORKFLOWS_INPUT" in
-            "none") ;;
+            "none") VALID_WORKFLOW_FOUND=true ;;
             *)
               IFS=',' read -ra WORKFLOW_NAMES <<< "$WORKFLOWS_INPUT"
               for name in "${WORKFLOW_NAMES[@]}"; do
                 name=$(echo "$name" | xargs)
                 case "$name" in
-                  "lint")           KEEP_FILES="$KEEP_FILES lint.yml" ;;
-                  "codeql")         KEEP_FILES="$KEEP_FILES codeql.yml" ;;
-                  "ai-code-review") KEEP_FILES="$KEEP_FILES ai-code-review.yml" ;;
+                  "lint")           KEEP_FILES="$KEEP_FILES lint.yml"; VALID_WORKFLOW_FOUND=true ;;
+                  "codeql")         KEEP_FILES="$KEEP_FILES codeql.yml"; VALID_WORKFLOW_FOUND=true ;;
+                  "ai-code-review") KEEP_FILES="$KEEP_FILES ai-code-review.yml"; VALID_WORKFLOW_FOUND=true ;;
                   "release")
+                    VALID_WORKFLOW_FOUND=true
                     RELEASE_KEPT=true
                     case "${{ inputs.release_tool }}" in
                       "release-please")   KEEP_FILES="$KEEP_FILES release-please.yml" ;;
@@ -557,7 +559,7 @@ jobs:
                 esac
               done
               # Fail fast if every supplied name was unrecognised
-              if [ -z "$KEEP_FILES" ]; then
+              if [ "$VALID_WORKFLOW_FOUND" = false ]; then
                 echo "❌ No valid workflow names found in '$WORKFLOWS_INPUT'. Valid: lint,codeql,ai-code-review,release" >&2
                 exit 1
               fi

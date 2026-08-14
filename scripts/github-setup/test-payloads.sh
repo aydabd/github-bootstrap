@@ -35,10 +35,21 @@ jq -e '
     any(.rules[]; .type == "non_fast_forward") and
     any(.rules[]; .type == "required_linear_history") and
     any(.rules[]; .type == "required_signatures") and
+    any(.rules[]; .type == "required_status_checks" and
+        .parameters.strict_required_status_checks_policy == true and
+        .parameters.required_status_checks == []) and
     any(.rules[]; .type == "pull_request" and .parameters.required_approving_review_count == 1 and
         .parameters.dismiss_stale_reviews_on_push == true and .parameters.require_last_push_approval == true and
         .parameters.required_review_thread_resolution == true and .parameters.allowed_merge_methods == ["squash"])
 ' "$ruleset" > /dev/null
 
-jq -e 'all(to_entries[]; .value == "enabled" or .value == "disabled" or (.key == "private_vulnerability_reporting" and .value == "best-effort"))' "$security" > /dev/null
+jq -e '
+    type == "object" and
+    ((keys_unsorted | sort) == [
+        "automated_security_fixes", "dependency_graph", "private_vulnerability_reporting",
+        "secret_scanning", "secret_scanning_push_protection", "vulnerability_alerts"
+    ]) and
+    all(to_entries[]; .value == "enabled" or .value == "disabled" or
+        (.key == "private_vulnerability_reporting" and .value == "best-effort"))
+' "$security" > /dev/null
 echo "repository settings, strict ruleset, and security payloads validated"

@@ -39,7 +39,8 @@ permissions:
 jobs:
   claude-review:
     name: Claude AI Review
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
 
     # Run when:
     #   1. A PR is opened/updated (non-draft, no skip-ai-review label)
@@ -80,9 +81,11 @@ jobs:
         uses: anthropics/claude-code-action@0d1933529914177075d5bc3558ae3d047f188146 # v1.0.26
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-
-          # Direct Claude to focus on high-impact issues only
           prompt: |
+            REPOSITORY: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+
+            # Direct Claude to focus on high-impact issues only
             Review this pull request focusing ONLY on high-impact issues:
 
             1. **Security vulnerabilities** — injection, auth bypass, secrets exposure, unsafe deserialization, path traversal, XSS, CSRF
@@ -97,5 +100,3 @@ jobs:
 
             For each issue found, explain WHY it is a problem and suggest a concrete fix.
             If the PR looks good with no high-impact issues, say so briefly.
-
-          # Timeout for the review (in milliseconds)

@@ -16,7 +16,7 @@ permissions: {}
 
 jobs:
   analyze:
-    name: Analyze (actions)
+    name: Analyze (actions, python)
     runs-on: ubuntu-24.04
     permissions:
       actions: read
@@ -30,9 +30,9 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
         with:
-          languages: actions
+          languages: actions, python
           queries: security-extended
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
         with:
-          category: "/language:actions"
+          category: "/language:actions-python"

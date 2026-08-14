@@ -48,7 +48,8 @@ def dedupe_preserve_order(items):
 
 
 languages = os.environ.get("CODEQL_INPUT_LANGUAGES", "").strip().lower()
-codeql_langs = ["actions"]
+codeql_langs = []
+codeql_langs.append("actions")
 
 if languages == "all":
     codeql_langs += ALL_CODEQL_LANGUAGES
@@ -63,22 +64,17 @@ summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
 
 PLACEHOLDER = "{{CODEQL_LANGUAGES}}"
 
-if codeql_langs:
-    if workflow_path.exists():
-        content = workflow_path.read_text(encoding="utf-8")
-        if PLACEHOLDER not in content:
-            error_message = (
-                f"CodeQL workflow template is missing the {PLACEHOLDER} placeholder\n"
-            )
-            if summary_path:
-                with open(summary_path, "a", encoding="utf-8") as f:
-                    f.write(error_message)
-            raise SystemExit(error_message.strip())
-        content = content.replace(PLACEHOLDER, ", ".join(codeql_langs))
-        workflow_path.write_text(content, encoding="utf-8")
-    summary_message = f"CodeQL configured for: {', '.join(codeql_langs)}\n"
-else:
-    summary_message = "CodeQL configured for GitHub Actions workflows\n"
+if workflow_path.exists():
+    content = workflow_path.read_text(encoding="utf-8")
+    if PLACEHOLDER not in content:
+        error_message = f"CodeQL workflow template is missing the {PLACEHOLDER} placeholder\n"
+        if summary_path:
+            with open(summary_path, "a", encoding="utf-8") as f:
+                f.write(error_message)
+        raise SystemExit(error_message.strip())
+    content = content.replace(PLACEHOLDER, ", ".join(codeql_langs))
+    workflow_path.write_text(content, encoding="utf-8")
+summary_message = f"CodeQL configured for: {', '.join(codeql_langs)}\n"
 
 if summary_path:
     with open(summary_path, "a", encoding="utf-8") as summary_file:

@@ -8,8 +8,10 @@
 
 ## Reporting a Vulnerability
 
-The main-branch policy requires cryptographically signed commits and
-`Signed-off-by` trailers. GitHub may be unable to create a verified squash
+The main-branch policy requires cryptographically signed commits. The generated
+`Signed-off-by trailers` workflow validates every pull request; it becomes a
+merge requirement when its exact check name is supplied to the ruleset setup.
+GitHub may be unable to create a verified squash
 commit when a contributor other than the pull-request author performs the
 merge; in that case, the contributor may need to create a locally signed
 squash commit.
