@@ -27,10 +27,9 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Setup provider (micromamba)
-        uses: mamba-org/setup-micromamba@5d5dbebd87f7b9358c403c7a66651fa92b310105 # v1.4.1
+        uses: mamba-org/setup-micromamba@ce51e99f4bb8a82ab7158c4dc59ef4634c59c4f9 # v3.1.0
         with:
           environment-file: environment.yml
           environment-name: github-bootstrap
@@ -59,7 +58,6 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Setup provider (mise)
         uses: ./.github/actions/setup-lint-mise
@@ -86,7 +84,6 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Setup provider (system)
         uses: ./.github/actions/setup-lint-system
