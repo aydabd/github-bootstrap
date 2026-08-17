@@ -10,8 +10,12 @@ inputs:
     description: Target repository name.
     required: true
   agent_provider:
-    description: "AI agent provider: copilot, claude, cursor, windsurf, codex, or all."
+    description: "AI agent provider: none, copilot, claude, cursor, windsurf, codex, or all."
     required: true
+  include_github_planning:
+    description: "Install optional issue, tracker, roadmap, and Project workflow assets."
+    required: false
+    default: "false"
   mode:
     description: "Apply mode: plan, pull-request, or direct."
     required: false
@@ -60,6 +64,7 @@ runs:
         OWNER: ${{ inputs.owner }}
         REPO: ${{ inputs.repo_name }}
         AGENT_PROVIDER: ${{ inputs.agent_provider }}
+        INCLUDE_GITHUB_PLANNING: ${{ inputs.include_github_planning }}
         MODE: ${{ inputs.mode }}
         TARGET_BRANCH: ${{ inputs.target_branch }}
         WORK_BRANCH: ${{ inputs.work_branch }}
@@ -72,8 +77,12 @@ runs:
           echo "::error::Invalid mode '$MODE'. Allowed: plan, pull-request, direct."
           exit 1
         fi
-        if [ "$AGENT_PROVIDER" != "copilot" ] && [ "$AGENT_PROVIDER" != "claude" ] && [ "$AGENT_PROVIDER" != "cursor" ] && [ "$AGENT_PROVIDER" != "windsurf" ] && [ "$AGENT_PROVIDER" != "codex" ] && [ "$AGENT_PROVIDER" != "all" ]; then
-          echo "::error::Invalid agent_provider '$AGENT_PROVIDER'. Allowed: copilot, claude, cursor, windsurf, codex, all."
+        if [ "$AGENT_PROVIDER" != "none" ] && [ "$AGENT_PROVIDER" != "copilot" ] && [ "$AGENT_PROVIDER" != "claude" ] && [ "$AGENT_PROVIDER" != "cursor" ] && [ "$AGENT_PROVIDER" != "windsurf" ] && [ "$AGENT_PROVIDER" != "codex" ] && [ "$AGENT_PROVIDER" != "all" ]; then
+          echo "::error::Invalid agent_provider '$AGENT_PROVIDER'. Allowed: none, copilot, claude, cursor, windsurf, codex, all."
+          exit 1
+        fi
+        if [ "$INCLUDE_GITHUB_PLANNING" != "true" ] && [ "$INCLUDE_GITHUB_PLANNING" != "false" ]; then
+          echo "::error::Invalid include_github_planning '$INCLUDE_GITHUB_PLANNING'. Allowed: true, false."
           exit 1
         fi
 
@@ -90,7 +99,7 @@ runs:
         rm -f AGENT.md
 
         copy_copilot() {
-          mkdir -p .github
+          mkdir -p .github .github/workflows
           cp "$bootstrap_root/templates/.github/copilot-instructions.md" .github/copilot-instructions.md
           rm -rf .github/instructions .github/skills .github/agents
           cp -R "$bootstrap_root/templates/.github/instructions" .github/instructions
@@ -131,6 +140,36 @@ runs:
         fi
         if [ "$AGENT_PROVIDER" = "codex" ] || [ "$AGENT_PROVIDER" = "all" ]; then
           copy_codex
+        fi
+
+        if [ "$INCLUDE_GITHUB_PLANNING" = "true" ]; then
+          mkdir -p .github .github/workflows
+          rm -rf .github/ISSUE_TEMPLATE
+          cp -R "$bootstrap_root/templates/.github/ISSUE_TEMPLATE" .github/ISSUE_TEMPLATE
+          mkdir -p .github/skills .github/agents
+          for optional_skill in backlog-breakdown github-issue-triage roadmap-prioritization tracker-setup tracker-views; do
+            rm -rf ".github/skills/$optional_skill"
+            cp -R "$bootstrap_root/templates/.github/skills/$optional_skill" ".github/skills/$optional_skill"
+          done
+          cp "$bootstrap_root/templates/.github/agents/roadmap-prioritizer.agent.md" .github/agents/roadmap-prioritizer.agent.md
+          cp "$bootstrap_root/templates/.github/workflows/project-status-sync.yml" .github/workflows/project-status-sync.yml
+        fi
+
+        if [ "$INCLUDE_GITHUB_PLANNING" = "false" ]; then
+          rm -rf \
+            .github/agents/roadmap-prioritizer.agent.md \
+            .github/skills/backlog-breakdown \
+            .github/skills/github-issue-triage \
+            .github/skills/roadmap-prioritization \
+            .github/skills/tracker-setup \
+            .github/skills/tracker-views \
+            .claude/skills/backlog-breakdown \
+            .claude/skills/git-worktree \
+            .claude/skills/github-issue-triage \
+            .claude/skills/github-stack \
+            .claude/skills/roadmap-prioritization \
+            .claude/skills/tracker-setup \
+            .claude/skills/tracker-views
         fi
 
         if git diff --quiet; then

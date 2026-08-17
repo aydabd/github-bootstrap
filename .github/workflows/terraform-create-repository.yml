@@ -118,6 +118,14 @@ on:
         required: false
         default: "all"
         type: string
+      optional_features:
+        description: >-
+          Optional feature bundles. Use 'github-planning' to include issue
+          templates, tracker/roadmap skills, the roadmap agent, and Project
+          status automation. Default: none.
+        required: false
+        default: "none"
+        type: string
       github_host:
         description: >-
           GitHub hostname. Use 'github.com' for GitHub.com or your GHES
@@ -217,6 +225,10 @@ on:
       workflows:
         required: false
         default: "all"
+        type: string
+      optional_features:
+        required: false
+        default: "none"
         type: string
       github_host:
         required: false
@@ -574,6 +586,28 @@ jobs:
       - name: Remove unselected workflows
         run: |
           cd new-repo
+          OPTIONAL_FEATURES="${{ inputs.optional_features }}"
+          case "$OPTIONAL_FEATURES" in
+            ""|"none")
+              rm -rf .github/ISSUE_TEMPLATE \
+                .github/agents/roadmap-prioritizer.agent.md \
+                .github/skills/backlog-breakdown \
+                .github/skills/github-issue-triage \
+                .github/skills/roadmap-prioritization \
+                .github/skills/tracker-setup \
+                .github/skills/tracker-views \
+                .github/workflows/project-status-sync.yml
+              echo "✅ Optional GitHub planning assets disabled (default)." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            "github-planning")
+              echo "✅ Optional GitHub planning assets enabled." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "::error::Unknown optional feature bundle '$OPTIONAL_FEATURES'. Valid: none,github-planning"
+              exit 1
+              ;;
+          esac
+
           WORKFLOWS_INPUT="${{ inputs.workflows }}"
 
           case "$WORKFLOWS_INPUT" in

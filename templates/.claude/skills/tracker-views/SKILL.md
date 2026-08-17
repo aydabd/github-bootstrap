@@ -1,0 +1,1 @@
+../../../.github/skills/tracker-views/SKILL.md

@@ -1,0 +1,1 @@
+../../../.github/skills/github-issue-triage/SKILL.md

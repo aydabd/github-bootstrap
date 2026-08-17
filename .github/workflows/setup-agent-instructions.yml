@@ -76,6 +76,9 @@ on:
       BOOTSTRAP_APP_PRIVATE_KEY:
         required: false
 
+permissions:
+  contents: read
+
 jobs:
   setup-agent-instructions:
     uses: ./.github/workflows/setup-existing-repository.yml

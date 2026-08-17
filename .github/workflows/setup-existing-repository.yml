@@ -59,6 +59,11 @@ on:
           - windsurf
           - codex
           - all
+      include_github_planning:
+        description: "Install optional issue, tracker, roadmap, and Project workflow assets"
+        required: false
+        default: false
+        type: boolean
       agent_mode:
         description: "Agent instruction file apply mode"
         required: false
@@ -135,6 +140,10 @@ on:
         required: false
         default: none
         type: string
+      include_github_planning:
+        required: false
+        default: false
+        type: boolean
       agent_mode:
         required: false
         default: pull-request
@@ -192,6 +201,8 @@ on:
       agent_pull_request_url:
         description: Agent instruction setup pull request URL when created or updated.
         value: ${{ jobs.setup-existing-repository.outputs.agent_pull_request_url }}
+
+permissions: {}
 
 jobs:
   setup-existing-repository:
@@ -325,12 +336,13 @@ jobs:
 
       - name: Apply agent instructions
         id: apply_agent_instructions
-        if: inputs.agent_provider != 'none'
+        if: inputs.agent_provider != 'none' || inputs.include_github_planning == true
         uses: ./.github/actions/apply-agent-instructions
         with:
           owner: ${{ inputs.repo_owner }}
           repo_name: ${{ inputs.repo_name }}
           agent_provider: ${{ inputs.agent_provider }}
+          include_github_planning: ${{ inputs.include_github_planning }}
           mode: ${{ inputs.agent_mode }}
           target_branch: ${{ inputs.target_branch }}
           github_host: ${{ inputs.github_host }}
