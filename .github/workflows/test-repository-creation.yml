@@ -589,10 +589,10 @@ jobs:
           DEFAULT_BRANCH=$(echo "$REPO_JSON" | jq -r '.default_branch // "main"')
 
           for assertion in \
-            '.has_wiki == true' \
+            '.has_wiki == false' \
             '.has_projects == true' \
             '.has_issues == true' \
-            '.allow_auto_merge == true' \
+            '.allow_auto_merge == false' \
             '.allow_update_branch == true' \
             '.allow_squash_merge == true' \
             '.allow_merge_commit == false' \
@@ -609,7 +609,7 @@ jobs:
           echo "✅ Repository settings parity checks passed"
 
           RULESETS_JSON=$(gh api --paginate "/repos/${OWNER}/${REPO_NAME}/rulesets" 2>/dev/null || true)
-          DEFAULT_RULESET_ID=$(echo "$RULESETS_JSON" | jq -r '.[]? | select(.name == "default" and .target == "branch") | .id' | head -n1)
+          DEFAULT_RULESET_ID=$(echo "$RULESETS_JSON" | jq -r '.[]? | select(.name == "strict-main" and .target == "branch") | .id' | head -n1)
 
           if [ -z "$DEFAULT_RULESET_ID" ]; then
             echo "❌ Missing default branch ruleset"
