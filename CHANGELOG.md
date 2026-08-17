@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.15.0](https://github.com/aydabd/github-bootstrap/compare/v1.14.1...v1.15.0) (2026-08-17)
+
+
+### Features
+
+* add generic GitHub workflow skills and templates ([#83](https://github.com/aydabd/github-bootstrap/issues/83)) ([557cb15](https://github.com/aydabd/github-bootstrap/commit/557cb1554a4412eed2ddd0bd32ae9635fe56d669))
+
+
+### Bug Fixes
+
+* **docs:** fix lint issues in git-multi-account skill ([4b76807](https://github.com/aydabd/github-bootstrap/commit/4b76807cdb4d527982d620f9bda471737d4108a4))
+* restore lint and address security review findings ([#75](https://github.com/aydabd/github-bootstrap/issues/75)) ([a7721ce](https://github.com/aydabd/github-bootstrap/commit/a7721ceddc6117ac58e5508a6d36239e07420b19))
+
 ## [1.14.1](https://github.com/aydabd/github-bootstrap/compare/v1.14.0...v1.14.1) (2026-07-21)
 
 
