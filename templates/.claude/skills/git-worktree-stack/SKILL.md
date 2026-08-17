@@ -1,0 +1,1 @@
+../../../.github/skills/git-worktree-stack/SKILL.md

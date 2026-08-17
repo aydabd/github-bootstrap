@@ -6,7 +6,7 @@
 
 - the canonical file below via the @ directive.
 
-@.github/instructions/project.instructions.md
+@AGENTS.md
 
 ## Shared Agent Kit
 
