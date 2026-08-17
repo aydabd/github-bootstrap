@@ -8,6 +8,15 @@ applyTo: "**"
 > OpenAI Codex, Cursor, and others).
 > Edit **only this file** to update instructions across every agent.
 
+## Canonical workflow documents
+
+- `AGENTS.md` is the canonical agent entrypoint.
+- `WORKTREES.md` is the canonical worktree and stacked-PR workflow.
+- `.github/skills/` contains focused procedures; skills should link to these
+  documents instead of copying their rules.
+
+Read `WORKTREES.md` before parallel work, branch changes, or stack operations.
+
 ## Golden Rules
 
 1. **Simplicity** — simplest working solution wins.

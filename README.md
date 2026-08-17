@@ -500,11 +500,15 @@ and language-agnostic code formatting (4 spaces code, 2 spaces config).
 Templates use a **single source of truth** pattern for AI agent instructions:
 
 - **Canonical file**: `.github/instructions/project.instructions.md`
-- **Thin pointers**: `AGENT.md`, `CLAUDE.md`, `.github/copilot-instructions.md`
+- **Canonical entrypoint**: `AGENTS.md`
+- **Canonical isolated workflow**: `WORKTREES.md`
+- **Thin pointers**: `CLAUDE.md`, `.github/copilot-instructions.md`
 - **Cursor rules**: `.cursor/rules/project.mdc`
 - **Windsurf rules**: `.windsurfrules`
 
 Edit only the canonical file — all agents pick up changes automatically.
+For worktree and stacked-PR operations, edit `WORKTREES.md` and keep the
+`git-worktree-stack` skill as a thin pointer.
 
 ### PR Review Agent Kit
 

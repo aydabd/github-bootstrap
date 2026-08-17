@@ -84,6 +84,11 @@ runs:
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
 
+        # Provider-neutral workflow documents are always installed.
+        cp "$bootstrap_root/WORKTREES.md" WORKTREES.md
+        cp "$bootstrap_root/AGENTS.md" AGENTS.md
+        rm -f AGENT.md
+
         copy_copilot() {
           mkdir -p .github
           cp "$bootstrap_root/templates/.github/copilot-instructions.md" .github/copilot-instructions.md
@@ -109,7 +114,7 @@ runs:
         }
 
         copy_codex() {
-          cp "$bootstrap_root/templates/AGENT.md" AGENT.md
+          cp "$bootstrap_root/AGENTS.md" AGENTS.md
         }
 
         if [ "$AGENT_PROVIDER" = "copilot" ] || [ "$AGENT_PROVIDER" = "all" ]; then

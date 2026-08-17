@@ -29,7 +29,8 @@ func TestGeneratedRepositoryRequiredFilesSnapshot(t *testing.T) {
 		"README.md",
 		"LICENSE",
 		"Makefile",
-		"AGENT.md",
+		"AGENTS.md",
+		"WORKTREES.md",
 		"CLAUDE.md",
 		".github/copilot-instructions.md",
 		".github/instructions/project.instructions.md",
@@ -136,6 +137,11 @@ func checkRequiredFileSources(t *testing.T, repoRoot string, requiredFiles []str
 			editorConfigTemplate := filepath.Join(templatesRoot, ".github", "linters", ".editorconfig")
 			if _, err := os.Stat(editorConfigTemplate); err != nil {
 				t.Fatalf("missing editorconfig template source %s: %v", editorConfigTemplate, err)
+			}
+		case "AGENTS.md", "WORKTREES.md":
+			canonicalFile := filepath.Join(repoRoot, file)
+			if _, err := os.Stat(canonicalFile); err != nil {
+				t.Fatalf("missing canonical file %s (source for generated %s): %v", canonicalFile, file, err)
 			}
 		default:
 			templateFile := filepath.Join(templatesRoot, filepath.FromSlash(file))

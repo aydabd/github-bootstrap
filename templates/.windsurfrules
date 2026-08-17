@@ -15,6 +15,8 @@ Always read and follow the instructions in that file when working in this reposi
 It covers: code style, architecture patterns, testing standards, documentation rules,
 and common tasks.
 
+Read `WORKTREES.md` before parallel work, branch changes, or `gh stack` operations.
+
 # PR Review Agent Kit
 
 This repository includes reusable PR review agents under `.github/agents/` and
