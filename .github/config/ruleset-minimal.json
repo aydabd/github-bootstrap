@@ -1,5 +1,5 @@
 {
-  "name": "minimal",
+  "name": "strict-main-minimal",
   "target": "branch",
   "source_type": "Repository",
   "enforcement": "active",
@@ -29,13 +29,17 @@
         "required_review_thread_resolution": true,
         "allowed_merge_methods": ["squash"]
       }
+    },
+    {
+      "type": "required_signatures"
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "required_status_checks": [{ "context": "Signed-off-by trailers" }, { "context": "lint" }]
+      }
     }
   ],
-  "bypass_actors": [
-    {
-      "actor_id": 5,
-      "actor_type": "RepositoryRole",
-      "bypass_mode": "always"
-    }
-  ]
+  "bypass_actors": []
 }

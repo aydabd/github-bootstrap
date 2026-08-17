@@ -1,5 +1,5 @@
 {
-  "name": "default",
+  "name": "strict-main",
   "target": "branch",
   "source_type": "Repository",
   "enforcement": "active",
@@ -31,41 +31,15 @@
       }
     },
     {
+      "type": "required_signatures"
+    },
+    {
       "type": "required_status_checks",
       "parameters": {
         "strict_required_status_checks_policy": true,
-        "required_status_checks": [
-          {
-            "context": "lint"
-          },
-          {
-            "context": "CodeRabbit"
-          }
-        ]
+        "required_status_checks": [{ "context": "Signed-off-by trailers" }, { "context": "lint" }]
       }
-    },
-    {
-      "type": "code_scanning",
-      "parameters": {
-        "code_scanning_tools": [
-          {
-            "tool": "CodeQL",
-            "security_alerts_threshold": "high_or_higher",
-            "alerts_threshold": "errors"
-          }
-        ]
-      }
-    },
-    {
-      "type": "copilot_code_review",
-      "parameters": { "review_on_push": true }
     }
   ],
-  "bypass_actors": [
-    {
-      "actor_id": 5,
-      "actor_type": "RepositoryRole",
-      "bypass_mode": "always"
-    }
-  ]
+  "bypass_actors": []
 }

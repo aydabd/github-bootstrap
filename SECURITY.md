@@ -8,6 +8,12 @@
 
 ## Reporting a Vulnerability
 
+The main-branch policy requires cryptographically signed commits and
+`Signed-off-by` trailers. GitHub may be unable to create a verified squash
+commit when a contributor other than the pull-request author performs the
+merge; in that case, the contributor may need to create a locally signed
+squash commit.
+
 Please **do not** report security vulnerabilities through public GitHub issues.
 
 Instead, use one of these channels:
