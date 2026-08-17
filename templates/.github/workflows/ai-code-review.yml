@@ -75,12 +75,12 @@ jobs:
 
       - name: Run Claude Code Review
         if: steps.check-key.outputs.has_key == 'true'
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@0d1933529914177075d5bc3558ae3d047f188146 # v1.0.26
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
           # Direct Claude to focus on high-impact issues only
-          direct_prompt: |
+          prompt: |
             Review this pull request focusing ONLY on high-impact issues:
 
             1. **Security vulnerabilities** — injection, auth bypass, secrets exposure, unsafe deserialization, path traversal, XSS, CSRF
@@ -97,4 +97,3 @@ jobs:
             If the PR looks good with no high-impact issues, say so briefly.
 
           # Timeout for the review (in milliseconds)
-          timeout_ms: 120000

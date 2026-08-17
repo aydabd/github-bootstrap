@@ -107,7 +107,7 @@ runs:
     - name: Create GitHub App installation token
       id: app-token
       if: steps.validate-auth-mode.outputs.mode == 'app'
-      uses: actions/create-github-app-token@v3
+      uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
       with:
         client-id: ${{ inputs.app_id }}
         private-key: ${{ inputs.app_private_key }}

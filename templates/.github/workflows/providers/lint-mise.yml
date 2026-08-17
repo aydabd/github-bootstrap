@@ -23,15 +23,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Setup provider (mise)
         uses: ./.github/actions/setup-lint-mise
 
       - name: Cache pre-commit hook environments
-        uses: actions/cache@v6
+        uses: actions/cache@a7833574556fa59680c1b7cb190c1735db73ebf0 # v5.0.0
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
