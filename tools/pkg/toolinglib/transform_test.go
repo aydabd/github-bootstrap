@@ -8,32 +8,32 @@ import (
 
 func TestUpdateEnvText(t *testing.T) {
 	source := "dependencies:\n  - pre-commit=4.0.0\n  - prettier=1.0.0\n"
-	updated, err := UpdateEnvText(source, map[string]string{"pre-commit": "4.6.0", "prettier": "3.9.3"})
+	updated, err := UpdateEnvText(source, map[string]string{"pre-commit": "4.6.2", "prettier": "3.9.6"})
 	if err != nil {
 		t.Fatalf("UpdateEnvText returned error: %v", err)
 	}
-	if !strings.Contains(updated, "pre-commit=4.6.0") {
+	if !strings.Contains(updated, "pre-commit=4.6.2") {
 		t.Fatalf("expected updated pre-commit version, got: %s", updated)
 	}
-	if !strings.Contains(updated, "prettier=3.9.3") {
+	if !strings.Contains(updated, "prettier=3.9.6") {
 		t.Fatalf("expected updated prettier version, got: %s", updated)
 	}
 }
 
 func TestUpdateEnvTextIgnoresMissingPackage(t *testing.T) {
 	source := "dependencies:\n  - pre-commit=4.0.0\n"
-	updated, err := UpdateEnvText(source, map[string]string{"pre-commit": "4.6.0", "terraform": "1.2.3"})
+	updated, err := UpdateEnvText(source, map[string]string{"pre-commit": "4.6.2", "terraform": "1.2.3"})
 	if err != nil {
 		t.Fatalf("UpdateEnvText returned error: %v", err)
 	}
-	if !strings.Contains(updated, "pre-commit=4.6.0") {
+	if !strings.Contains(updated, "pre-commit=4.6.2") {
 		t.Fatalf("expected updated pre-commit version, got: %s", updated)
 	}
 }
 
 func TestUpdateEnvTextKeepsTemplatePlaceholders(t *testing.T) {
 	source := "dependencies:\n  - python={{PYTHON_VERSION}}\n  - nodejs={{NODE_VERSION}}\n  - pre-commit=4.0.0\n"
-	updated, err := UpdateEnvText(source, map[string]string{"python": "3.13.14", "nodejs": "24.10.0", "pre-commit": "4.6.0"})
+	updated, err := UpdateEnvText(source, map[string]string{"python": "3.13.14", "nodejs": "24.10.0", "pre-commit": "4.6.2"})
 	if err != nil {
 		t.Fatalf("UpdateEnvText returned error: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestUpdateEnvTextKeepsTemplatePlaceholders(t *testing.T) {
 	if !strings.Contains(updated, "nodejs={{NODE_VERSION}}") {
 		t.Fatalf("expected node placeholder to remain, got: %s", updated)
 	}
-	if !strings.Contains(updated, "pre-commit=4.6.0") {
+	if !strings.Contains(updated, "pre-commit=4.6.2") {
 		t.Fatalf("expected updated pre-commit version, got: %s", updated)
 	}
 }
@@ -53,8 +53,8 @@ func TestUpdateMiseTextKeepsTemplatePlaceholders(t *testing.T) {
 	updated, err := UpdateMiseText(
 		source,
 		map[string]string{"python": "3.13.14", "nodejs": "24.10.0", "go": "1.26.4", "shellcheck": "0.11.0", "go-shfmt": "3.13.1", "terraform": "1.15.6", "taplo": "0.10.0"},
-		map[string]string{"pre-commit": "4.6.0", "editorconfig-checker": "3.6.1", "yamllint": "1.38.0"},
-		map[string]string{"prettier": "3.9.3", "markdownlint-cli": "0.49.0"},
+		map[string]string{"pre-commit": "4.6.2", "editorconfig-checker": "3.11.1", "yamllint": "1.38.0"},
+		map[string]string{"prettier": "3.9.6", "markdownlint-cli": "0.49.1"},
 		nil,
 	)
 	if err != nil {
@@ -66,11 +66,11 @@ func TestUpdateMiseTextKeepsTemplatePlaceholders(t *testing.T) {
 		`shfmt = "3.13.1"`,
 		`terraform = "1.15.6"`,
 		`taplo = "0.10.0"`,
-		"pre-commit==4.6.0",
-		"editorconfig-checker==3.6.1",
+		"pre-commit==4.6.2",
+		"editorconfig-checker==3.11.1",
 		"yamllint==1.38.0",
-		"prettier@3.9.3",
-		"markdownlint-cli@0.49.0",
+		"prettier@3.9.6",
+		"markdownlint-cli@0.49.1",
 	}
 	for _, expected := range expects {
 		if !strings.Contains(updated, expected) {
@@ -84,14 +84,14 @@ func TestUpdateMiseTextIgnoresMissingGoModulePatterns(t *testing.T) {
 	updated, err := UpdateMiseText(
 		source,
 		map[string]string{"python": "3.13.14", "nodejs": "24.10.0", "go": "1.26.4", "shellcheck": "0.11.0", "go-shfmt": "3.13.1", "terraform": "1.15.6", "taplo": "0.10.0"},
-		map[string]string{"pre-commit": "4.6.0", "editorconfig-checker": "3.6.1", "yamllint": "1.38.0"},
-		map[string]string{"prettier": "3.9.3", "markdownlint-cli": "0.49.0"},
+		map[string]string{"pre-commit": "4.6.2", "editorconfig-checker": "3.11.1", "yamllint": "1.38.0"},
+		map[string]string{"prettier": "3.9.6", "markdownlint-cli": "0.49.1"},
 		map[string]string{"github.com/daixiang0/gci": "v0.1.0", "github.com/golangci/golangci-lint/cmd/golangci-lint": "v1.2.3"},
 	)
 	if err != nil {
 		t.Fatalf("UpdateMiseText returned error: %v", err)
 	}
-	if !strings.Contains(updated, "pre-commit==4.6.0") {
+	if !strings.Contains(updated, "pre-commit==4.6.2") {
 		t.Fatalf("expected updated pre-commit version, got: %s", updated)
 	}
 }
@@ -105,8 +105,8 @@ func TestUpdateMiseTextPlaceholderWithMissingCondaVersion(t *testing.T) {
 		source,
 		// python deliberately absent — key is placeholder-only in source
 		map[string]string{"shellcheck": "0.11.0", "go-shfmt": "3.13.1", "terraform": "1.15.6", "taplo": "0.10.0"},
-		map[string]string{"pre-commit": "4.6.0", "editorconfig-checker": "3.6.1", "yamllint": "1.38.0"},
-		map[string]string{"prettier": "3.9.3", "markdownlint-cli": "0.49.0"},
+		map[string]string{"pre-commit": "4.6.2", "editorconfig-checker": "3.11.1", "yamllint": "1.38.0"},
+		map[string]string{"prettier": "3.9.6", "markdownlint-cli": "0.49.1"},
 		nil,
 	)
 	if err != nil {
@@ -122,8 +122,8 @@ func TestUpdateMiseTextUpdatesJavaTemurinPrefix(t *testing.T) {
 	updated, err := UpdateMiseText(
 		source,
 		map[string]string{"python": "3.13.14", "nodejs": "24.10.0", "go": "1.26.4", "openjdk": "25.0.2", "shellcheck": "0.11.0", "go-shfmt": "3.13.1", "terraform": "1.15.6", "taplo": "0.10.0"},
-		map[string]string{"pre-commit": "4.6.0", "editorconfig-checker": "3.6.1", "yamllint": "1.38.0"},
-		map[string]string{"prettier": "3.9.3", "markdownlint-cli": "0.49.0"},
+		map[string]string{"pre-commit": "4.6.2", "editorconfig-checker": "3.11.1", "yamllint": "1.38.0"},
+		map[string]string{"prettier": "3.9.6", "markdownlint-cli": "0.49.1"},
 		nil,
 	)
 	if err != nil {
@@ -142,8 +142,8 @@ func TestUpdateMiseTextPreservesJavaTemplatePlaceholder(t *testing.T) {
 	updated, err := UpdateMiseText(
 		source,
 		map[string]string{"python": "3.13.14", "nodejs": "24.10.0", "go": "1.26.4", "openjdk": "25.0.2", "shellcheck": "0.11.0", "go-shfmt": "3.13.1", "terraform": "1.15.6", "taplo": "0.10.0"},
-		map[string]string{"pre-commit": "4.6.0", "editorconfig-checker": "3.6.1", "yamllint": "1.38.0"},
-		map[string]string{"prettier": "3.9.3", "markdownlint-cli": "0.49.0"},
+		map[string]string{"pre-commit": "4.6.2", "editorconfig-checker": "3.11.1", "yamllint": "1.38.0"},
+		map[string]string{"prettier": "3.9.6", "markdownlint-cli": "0.49.1"},
 		nil,
 	)
 	if err != nil {
@@ -162,8 +162,8 @@ func TestUpdateMiseTextUpdatesRuntimePinsWhenPresent(t *testing.T) {
 	updated, err := UpdateMiseText(
 		source,
 		map[string]string{"python": "3.13.14", "nodejs": "24.10.0", "go": "1.26.4", "shellcheck": "0.11.0", "go-shfmt": "3.13.1", "terraform": "1.15.6", "taplo": "0.10.0"},
-		map[string]string{"pre-commit": "4.6.0", "editorconfig-checker": "3.6.1", "yamllint": "1.38.0"},
-		map[string]string{"prettier": "3.9.3", "markdownlint-cli": "0.49.0"},
+		map[string]string{"pre-commit": "4.6.2", "editorconfig-checker": "3.11.1", "yamllint": "1.38.0"},
+		map[string]string{"prettier": "3.9.6", "markdownlint-cli": "0.49.1"},
 		nil,
 	)
 	if err != nil {
