@@ -46,7 +46,15 @@ runs:
           echo "::error::Security settings file not found: $SECURITY_FILE"
           exit 1
         fi
-        jq -e 'type == "object" and all(to_entries[]; .value == "enabled" or .value == "disabled" or (.key == "private_vulnerability_reporting" and .value == "best-effort"))' "$SECURITY_FILE" >/dev/null
+        jq -e '
+          type == "object" and
+          ((keys_unsorted | sort) == [
+            "automated_security_fixes", "dependency_graph", "private_vulnerability_reporting",
+            "secret_scanning", "secret_scanning_push_protection", "vulnerability_alerts"
+          ]) and
+          all(to_entries[]; .value == "enabled" or .value == "disabled" or
+            (.key == "private_vulnerability_reporting" and .value == "best-effort"))
+        ' "$SECURITY_FILE" >/dev/null
 
         enabled_count=0
         skipped_count=0
