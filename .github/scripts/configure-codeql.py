@@ -48,39 +48,34 @@ def dedupe_preserve_order(items):
 
 
 languages = os.environ.get("CODEQL_INPUT_LANGUAGES", "").strip().lower()
-codeql_langs = []
+codeql_langs = ["actions"]
 
 if languages == "all":
-    codeql_langs = ALL_CODEQL_LANGUAGES[:]
+    codeql_langs += ALL_CODEQL_LANGUAGES
 elif languages != "language-agnostic-only":
     selected = [part.strip().lower() for part in languages.split(",") if part.strip()]
     mapped = [LANGUAGE_MAP.get(lang, "") for lang in selected]
-    codeql_langs = dedupe_preserve_order(mapped)
+    codeql_langs += mapped
+codeql_langs = dedupe_preserve_order(codeql_langs)
 
 workflow_path = Path(".github/workflows/codeql.yml")
 summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
 
 PLACEHOLDER = "{{CODEQL_LANGUAGES}}"
 
-if codeql_langs:
-    if workflow_path.exists():
-        content = workflow_path.read_text(encoding="utf-8")
-        if PLACEHOLDER not in content:
-            error_message = (
-                f"CodeQL workflow template is missing the {PLACEHOLDER} placeholder\n"
-            )
-            if summary_path:
-                with open(summary_path, "a", encoding="utf-8") as f:
-                    f.write(error_message)
-            raise SystemExit(error_message.strip())
-        content = content.replace(PLACEHOLDER, ", ".join(codeql_langs))
-        workflow_path.write_text(content, encoding="utf-8")
-    summary_message = f"CodeQL configured for: {', '.join(codeql_langs)}\n"
-else:
-    # No supported CodeQL language — remove the workflow to avoid an empty matrix
-    if workflow_path.exists():
-        workflow_path.unlink()
-    summary_message = "CodeQL skipped — no supported language selected\n"
+if workflow_path.exists():
+    content = workflow_path.read_text(encoding="utf-8")
+    if PLACEHOLDER not in content:
+        error_message = (
+            f"CodeQL workflow template is missing the {PLACEHOLDER} placeholder\n"
+        )
+        if summary_path:
+            with open(summary_path, "a", encoding="utf-8") as f:
+                f.write(error_message)
+        raise SystemExit(error_message.strip())
+    content = content.replace(PLACEHOLDER, ", ".join(codeql_langs))
+    workflow_path.write_text(content, encoding="utf-8")
+summary_message = f"CodeQL configured for: {', '.join(codeql_langs)}\n"
 
 if summary_path:
     with open(summary_path, "a", encoding="utf-8") as summary_file:
