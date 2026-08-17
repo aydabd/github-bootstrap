@@ -55,7 +55,7 @@ jobs:
         run: |
           case "${{ matrix.language }}" in
             "actions")
-              PATTERN='\.github/workflows/.*\.ya?ml$'
+              PATTERN='\.github/(workflows/.*\.ya?ml|actions/.*/action\.ya?ml)$'
               ;;
             "python")
               PATTERN='\.py$'

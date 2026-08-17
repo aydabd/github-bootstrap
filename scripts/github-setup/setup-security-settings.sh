@@ -64,8 +64,16 @@ validate_inputs() {
     require_owner_repo
     require_github_owner_repo_names
     require_file "$security_file" "security file"
-    if ! jq -e 'all(to_entries[]; .value == "enabled" or .value == "disabled" or (.key == "private_vulnerability_reporting" and .value == "best-effort"))' "$security_file" > /dev/null; then
-        echo "security controls must be enabled or disabled; only private_vulnerability_reporting may be best-effort" >&2
+    if ! jq -e '
+        type == "object" and
+        ((keys_unsorted | sort) == [
+            "automated_security_fixes", "dependency_graph", "private_vulnerability_reporting",
+            "secret_scanning", "secret_scanning_push_protection", "vulnerability_alerts"
+        ]) and
+        all(to_entries[]; .value == "enabled" or .value == "disabled" or
+            (.key == "private_vulnerability_reporting" and .value == "best-effort"))
+    ' "$security_file" > /dev/null; then
+        echo "security payload must contain exactly the supported controls with valid values" >&2
         exit 1
     fi
 }
@@ -122,6 +130,9 @@ apply_security_and_analysis() {
     rm -f "$payload"
     if [ "$value" = "best-effort" ]; then
         echo "warning: $key unsupported or unavailable for this repository" >&2
+        if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            echo "⚠️ $key unavailable; skipped because the repository plan may not support private vulnerability reporting." >> "$GITHUB_STEP_SUMMARY"
+        fi
         return 0
     fi
     echo "failed to enable $key" >&2
