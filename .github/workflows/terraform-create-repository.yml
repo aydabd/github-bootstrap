@@ -661,6 +661,7 @@ jobs:
           owner: ${{ steps.set-owner.outputs.owner }}
           repo_name: ${{ inputs.repo_name }}
           gh_token: ${{ steps.resolve-token.outputs.token }}
+          required_status_checks: ${{ inputs.workflows == 'none' && 'Signed-off-by trailers' || 'Signed-off-by trailers,lint' }}
 
       - name: Summary
         run: |

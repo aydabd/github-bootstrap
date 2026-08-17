@@ -1,8 +1,9 @@
 {
-  "has_wiki": true,
+  "default_branch": "main",
+  "has_wiki": false,
   "has_projects": true,
   "has_issues": true,
-  "allow_auto_merge": true,
+  "allow_auto_merge": false,
   "allow_update_branch": true,
   "allow_squash_merge": true,
   "allow_merge_commit": false,

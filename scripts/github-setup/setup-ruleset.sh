@@ -10,6 +10,7 @@ owner=""
 repo=""
 ruleset_profile="default"
 ruleset_file=""
+required_status_checks=""
 
 usage() {
     cat << 'USAGE'
@@ -23,6 +24,10 @@ Options:
         --ruleset-profile PROFILE default, minimal, or coderabbit.
                             Default: default
         --ruleset-file PATH       Custom ruleset JSON file. Overrides --ruleset-profile.
+        --required-status-checks NAMES
+                            Comma-separated exact check-run names. These are validated
+                            and replace the payload's status checks; omitted means
+                            the payload's configured status checks are retained.
         --help                    Show this help.
 
 Examples:
@@ -42,6 +47,11 @@ parse_args() {
             --ruleset-file)
                 require_option_value "$1" "${2:-}"
                 ruleset_file="${2:-}"
+                shift 2
+                ;;
+            --required-status-checks)
+                require_option_value "$1" "${2:-}"
+                required_status_checks="${2:-}"
                 shift 2
                 ;;
             --help)
@@ -84,6 +94,59 @@ validate_inputs() {
     require_github_owner_repo_names
     resolve_ruleset_file
     require_file "$ruleset_file" "ruleset file"
+    validate_ruleset_payload
+}
+
+validate_ruleset_payload() {
+    if ! jq -e --arg required_status_checks "$required_status_checks" '
+        (.name | type == "string" and length > 0)
+        and .target == "branch"
+        and .source_type == "Repository"
+        and .enforcement == "active"
+        and (.conditions.ref_name.include == ["refs/heads/main"])
+        and (.conditions.ref_name.exclude == [])
+        and (.bypass_actors == [])
+        and (all(.rules[]; .type as $type |
+            ($type == "deletion" or $type == "non_fast_forward" or
+            $type == "required_linear_history" or $type == "required_signatures" or
+            $type == "pull_request" or $type == "required_status_checks")))
+        and (any(.rules[]; .type == "pull_request" and
+            .parameters.required_approving_review_count == 1 and
+            .parameters.dismiss_stale_reviews_on_push == true and
+            .parameters.require_last_push_approval == true and
+            .parameters.required_review_thread_resolution == true and
+            .parameters.allowed_merge_methods == ["squash"]))
+        and (any(.rules[]; .type == "required_signatures"))
+        and (all(.rules[] | select(.type == "required_status_checks");
+            .parameters.strict_required_status_checks_policy == true and
+            (.parameters.required_status_checks | type == "array" and
+                (length > 0 or ($required_status_checks | length > 0)))))
+    ' "$ruleset_file" > /dev/null; then
+        echo "invalid ruleset payload: expected strict main-branch Repository Rulesets API schema" >&2
+        exit 1
+    fi
+}
+
+build_ruleset_payload() {
+    local output="$1"
+    if [ -z "$required_status_checks" ]; then
+        cp "$ruleset_file" "$output"
+        return 0
+    fi
+    jq -e --arg checks "$required_status_checks" '
+        ($checks | split(",") | map(gsub("^[[:space:]]+|[[:space:]]+$"; "")) |
+        if any(.[]; (length == 0 or test("[\\r\\n]"))) then error("invalid status check") else . end) as $contexts
+        | if any(.rules[]; .type == "required_status_checks") then
+            .rules |= map(if .type == "required_status_checks" then
+                .parameters.required_status_checks = ($contexts | map({context: .}))
+            else . end)
+        else
+            .rules += [{type: "required_status_checks", parameters: {
+                strict_required_status_checks_policy: true,
+                required_status_checks: ($contexts | map({context: .}))
+            }}]
+        end
+    ' "$ruleset_file" > "$output"
 }
 
 read_ruleset_name() {
@@ -107,6 +170,7 @@ upsert_ruleset() {
     local action
     local response
     local exit_code
+    local payload
 
     existing_ruleset_id="$(find_existing_ruleset_id "$ruleset_name")"
     if [ -n "$existing_ruleset_id" ]; then
@@ -119,11 +183,14 @@ upsert_ruleset() {
         action="created"
     fi
 
+    payload="$(mktemp)"
+    build_ruleset_payload "$payload"
     response="$(gh_api_json \
         --method "$method" \
         "$endpoint" \
-        --input "$ruleset_file" 2>&1)" || {
+        --input "$payload" 2>&1)" || {
         exit_code=$?
+        rm -f "$payload"
         if printf '%s' "$response" | is_plan_or_feature_limitation; then
             echo "warning: ruleset setup skipped due to repository plan or feature limitations" >&2
             echo "$response" >&2
@@ -132,6 +199,7 @@ upsert_ruleset() {
         echo "$response" >&2
         exit "$exit_code"
     }
+    rm -f "$payload"
 
     echo "Ruleset '$ruleset_name' $action for $owner/$repo."
 }

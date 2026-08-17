@@ -22,6 +22,13 @@ inputs:
     description: Path to the ruleset JSON payload.
     required: false
     default: ""
+  required_status_checks:
+    description: >-
+      Explicit comma-separated check contexts. Defaults to the bootstrap's
+      stable Signed-off-by and lint checks; pass only Signed-off-by trailers
+      when the lint workflow was explicitly excluded.
+    required: false
+    default: "Signed-off-by trailers,lint"
 
 outputs:
   ruleset_name:
@@ -49,6 +56,7 @@ runs:
         REPO: ${{ inputs.repo_name }}
         RULESET_PROFILE: ${{ inputs.ruleset_profile }}
         RULESET_FILE: ${{ inputs.ruleset_file }}
+        REQUIRED_STATUS_CHECKS: ${{ inputs.required_status_checks }}
       run: |
         if [ -z "$RULESET_FILE" ]; then
           if [ "$RULESET_PROFILE" = "default" ]; then
@@ -78,6 +86,40 @@ runs:
         fi
         echo "ruleset_name=$RULESET_NAME" >> "$GITHUB_OUTPUT"
         echo "ruleset_file=$RULESET_FILE" >> "$GITHUB_OUTPUT"
+
+        APPLIED_RULESET_FILE="$RULESET_FILE"
+        if [ -n "$REQUIRED_STATUS_CHECKS" ]; then
+          APPLIED_RULESET_FILE=$(mktemp)
+          trap 'rm -f "$APPLIED_RULESET_FILE"' EXIT
+          jq -e --arg checks "$REQUIRED_STATUS_CHECKS" '
+            ($checks | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))) as $contexts |
+            if ($contexts | length) == 0 then
+              error("required_status_checks must contain at least one context")
+            else
+              .rules |= map(
+                if .type == "required_status_checks" then
+                  .parameters.strict_required_status_checks_policy = true |
+                  .parameters.required_status_checks = ($contexts | map({context: .}))
+                else . end
+              ) |
+              if any(.rules[]?; .type == "required_status_checks") then . else
+                .rules += [{
+                  "type": "required_status_checks",
+                  "parameters": {
+                    "strict_required_status_checks_policy": true,
+                    "required_status_checks": ($contexts | map({context: .}))
+                  }
+                }]
+              end
+            end
+          ' "$RULESET_FILE" > "$APPLIED_RULESET_FILE"
+          RULESET_FILE="$APPLIED_RULESET_FILE"
+        fi
+
+        jq -e '
+          any(.rules[]?; .type == "required_status_checks" and
+            (.parameters.required_status_checks | type == "array" and length > 0))
+        ' "$RULESET_FILE" >/dev/null
 
         # List failures (for example feature/plan restrictions) should not abort
         # the flow before create/update handling; treat them as no existing ruleset.
