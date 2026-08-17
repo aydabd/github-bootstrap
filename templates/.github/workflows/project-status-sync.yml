@@ -1,0 +1,105 @@
+name: Project status sync
+
+on:
+  issues:
+    types: [opened, reopened, closed]
+  pull_request:
+    types: [opened, reopened, ready_for_review, closed]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions: {}
+
+jobs:
+  sync:
+    name: Synchronize Project status
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: read
+      pull-requests: read
+      repository-projects: write
+    steps:
+      - name: Update configured Project item
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          CONTENT_ID: ${{ github.event.issue.node_id || github.event.pull_request.node_id }}
+          MERGED: ${{ github.event.pull_request.merged || false }}
+          DRAFT: ${{ github.event.pull_request.draft || false }}
+          PROJECT_OWNER: ${{ vars.PROJECT_OWNER }}
+          PROJECT_NUMBER: ${{ vars.PROJECT_NUMBER }}
+        run: |
+          # shellcheck disable=SC2016
+          set -euo pipefail
+
+          summary_warning() {
+            echo "⚠️ $1" >> "$GITHUB_STEP_SUMMARY"
+            echo "Warning: $1"
+          }
+
+          if [ -z "$PROJECT_OWNER" ] || [ -z "$PROJECT_NUMBER" ]; then
+            summary_warning "Project status sync skipped: configure PROJECT_OWNER and PROJECT_NUMBER repository variables."
+            exit 0
+          fi
+
+          desired_status=""
+          case "$EVENT_NAME:$ACTION" in
+            issues:opened|issues:reopened)
+              desired_status="Needs plan"
+              ;;
+            issues:closed|pull_request:closed)
+              desired_status="Done"
+              ;;
+            pull_request:opened|pull_request:reopened)
+              if [ "$DRAFT" = "true" ]; then desired_status="Needs plan"; else desired_status="In progress"; fi
+              ;;
+            pull_request:ready_for_review)
+              desired_status="In progress"
+              ;;
+            pull_request_review:submitted)
+              desired_status="In review"
+              ;;
+            pull_request_review:dismissed)
+              desired_status="In progress"
+              ;;
+          esac
+
+          if [ "$MERGED" = "true" ]; then desired_status="Done"; fi
+          if [ -z "$desired_status" ] || [ -z "$CONTENT_ID" ]; then
+            summary_warning "Project status sync skipped: event has no supported status transition."
+            exit 0
+          fi
+
+          # shellcheck disable=SC2016
+          query='query($login:String!,$number:Int!){user(login:$login){projectV2(number:$number){id fields(first:100){nodes{... on ProjectV2SingleSelectField{id name options{id name}}}} items(first:100){nodes{id content{... on Issue{id} ... on PullRequest{id}}}}}} organization(login:$login){projectV2(number:$number){id fields(first:100){nodes{... on ProjectV2SingleSelectField{id name options{id name}}}} items(first:100){nodes{id content{... on Issue{id} ... on PullRequest{id}}}}}}}'
+          if ! project_data="$(gh api graphql -f query="$query" -f login="$PROJECT_OWNER" -F number="$PROJECT_NUMBER" 2>&1)"; then
+            summary_warning "Project status sync unavailable: GitHub API could not read the configured Project."
+            exit 0
+          fi
+
+          project="$(jq -c '.data.user.projectV2 // .data.organization.projectV2' <<<"$project_data")"
+          project_id="$(jq -r '.id // empty' <<<"$project")"
+          status_field_id="$(jq -r '.fields.nodes[]? | select(.name == "Status") | .id' <<<"$project" | head -n 1)"
+          # shellcheck disable=SC2016
+          option_id="$(jq -r --arg status "$desired_status" '.fields.nodes[]? | select(.name == "Status") | .options[]? | select(.name == $status) | .id' <<<"$project" | head -n 1)"
+          # shellcheck disable=SC2016
+          item_id="$(jq -r --arg content "$CONTENT_ID" '.items.nodes[]? | select(.content.id == $content) | .id' <<<"$project" | head -n 1)"
+
+          if [ -z "$project_id" ] || [ -z "$status_field_id" ] || [ -z "$option_id" ]; then
+            summary_warning "Project status sync skipped: Project, Status field, or '$desired_status' option was not found."
+            exit 0
+          fi
+          if [ -z "$item_id" ]; then
+            summary_warning "Project status sync skipped: issue or pull request is not an item in the configured Project."
+            exit 0
+          fi
+
+          # shellcheck disable=SC2016
+          mutation='mutation($project:ID!,$item:ID!,$field:ID!,$option:String!){updateProjectV2ItemFieldValue(input:{projectId:$project,itemId:$item,fieldId:$field,value:{singleSelectOptionId:$option}}){projectV2Item{id}}}'
+          if ! gh api graphql -f query="$mutation" -f project="$project_id" -f item="$item_id" -f field="$status_field_id" -f option="$option_id" >/dev/null; then
+            summary_warning "Project status sync failed: token or Project plan does not allow updating this Project."
+            exit 0
+          fi
+          echo "✅ Project item status updated to **$desired_status**." >> "$GITHUB_STEP_SUMMARY"

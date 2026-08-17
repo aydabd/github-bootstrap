@@ -39,6 +39,8 @@ on:
         required: false
         type: string
 
+permissions: {}
+
 jobs:
   test-local-setup-scripts:
     name: Test Local Setup Scripts
@@ -155,6 +157,8 @@ jobs:
     name: Cleanup Test Repository
     needs: test-local-setup-scripts
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: >-
       ${{ always() &&
       needs.test-local-setup-scripts.outputs.test_repo_name != '' &&

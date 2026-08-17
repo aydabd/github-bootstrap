@@ -143,6 +143,13 @@ repos:
         pass_filenames: false
         files: '\.github/skills/|\.claude/skills/'
 
+      - id: github-workflow-assets
+        name: github workflow assets
+        entry: ./scripts/check-github-workflow-assets.sh
+        language: system
+        pass_filenames: false
+        files: '(^|/)(\.github/(skills|agents|ISSUE_TEMPLATE)|\.github/pull_request_template\.md|templates/)'
+
       # ── Terraform: formatting (terraform fmt) ─────────────────────────────
       - id: terraform-fmt
         name: terraform fmt
