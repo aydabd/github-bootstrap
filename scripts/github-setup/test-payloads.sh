@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-command -v jq >/dev/null 2>&1 || {
+command -v jq > /dev/null 2>&1 || {
     echo "jq is required to validate bootstrap JSON payloads" >&2
     exit 1
 }
