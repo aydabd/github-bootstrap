@@ -84,20 +84,20 @@ func buildTestWorkspace(t *testing.T) (root string, versions toolinglib.Versions
 
 	versions = toolinglib.Versions{
 		Conda: map[string]string{
-			"pre-commit": "4.6.0",
+			"pre-commit": "4.6.2",
 			"go-shfmt":   "3.13.1",
 			"terraform":  "1.15.6",
 			"shellcheck": "0.11.0",
 			"taplo":      "0.9.3",
 		},
 		Python: map[string]string{
-			"pre-commit":           "4.6.0",
-			"editorconfig-checker": "3.6.1",
+			"pre-commit":           "4.6.2",
+			"editorconfig-checker": "3.11.1",
 			"yamllint":             "1.38.0",
 		},
 		NPM: map[string]string{
-			"prettier":         "3.9.3",
-			"markdownlint-cli": "0.49.0",
+			"prettier":         "3.9.6",
+			"markdownlint-cli": "0.49.1",
 		},
 		GoModules: map[string]string{
 			"github.com/daixiang0/gci":                            "v0.13.7",
@@ -155,7 +155,7 @@ func TestRunUpdatersEndToEndWithTempWorkspace(t *testing.T) {
 		t.Fatalf("RunPreCommit dry-run expected no changes, got %v", dryChanged)
 	}
 
-	if !strings.Contains(mustReadFile(t, repoEnv), "pre-commit=4.6.0") {
+	if !strings.Contains(mustReadFile(t, repoEnv), "pre-commit=4.6.2") {
 		t.Fatalf("repo environment.yml was not updated")
 	}
 	if !strings.Contains(mustReadFile(t, tplEnv), "go-shfmt=3.13.1") {
@@ -200,7 +200,7 @@ func TestRunMicromamba_ScopeRepo(t *testing.T) {
 	if len(changed) == 0 {
 		t.Fatal("expected at least one changed file for scope=repo")
 	}
-	if !strings.Contains(mustReadFile(t, repoEnv), "pre-commit=4.6.0") {
+	if !strings.Contains(mustReadFile(t, repoEnv), "pre-commit=4.6.2") {
 		t.Fatalf("repo environment.yml was not updated")
 	}
 	if mustReadFile(t, tplEnv) != originalTplEnv {
@@ -230,7 +230,7 @@ func TestRunMicromamba_ScopeTemplates(t *testing.T) {
 	if len(changed) == 0 {
 		t.Fatal("expected at least one changed file for scope=templates")
 	}
-	if !strings.Contains(mustReadFile(t, tplEnv), "pre-commit=4.6.0") {
+	if !strings.Contains(mustReadFile(t, tplEnv), "pre-commit=4.6.2") {
 		t.Fatalf("template environment.yml was not updated")
 	}
 	if mustReadFile(t, repoEnv) != originalRepoEnv {
