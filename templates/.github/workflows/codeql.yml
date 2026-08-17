@@ -7,8 +7,8 @@
 # on the languages selected at repository creation time. To add or remove a
 # language, edit the matrix below.
 #
-# Supported CodeQL languages:
-#   javascript-typescript, python, java-kotlin, csharp, go, ruby, cpp
+# GitHub Actions workflow analysis is always enabled; application languages are
+# added by the bootstrap renderer.
 name: CodeQL Security Scan
 
 on:
@@ -27,15 +27,16 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  actions: read
-  contents: read
-  security-events: write
+permissions: {}
 
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
 
     strategy:
       fail-fast: false
@@ -44,13 +45,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Detect source files for language
         id: detect-source
         shell: bash
         run: |
           case "${{ matrix.language }}" in
+            "actions")
+              PATTERN='\.github/workflows/.*\.ya?ml$'
+              ;;
             "python")
               PATTERN='\.py$'
               ;;
@@ -92,17 +98,17 @@ jobs:
 
       - name: Initialize CodeQL
         if: steps.detect-source.outputs.has_source == 'true'
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
         with:
           languages: ${{ matrix.language }}
-          queries: security-extended,security-and-quality
+          queries: security-extended
 
       - name: Autobuild
-        if: steps.detect-source.outputs.has_source == 'true'
-        uses: github/codeql-action/autobuild@v4
+        if: steps.detect-source.outputs.has_source == 'true' && matrix.language != 'actions'
+        uses: github/codeql-action/autobuild@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
 
       - name: Perform CodeQL Analysis
         if: steps.detect-source.outputs.has_source == 'true'
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
         with:
           category: "/language:${{ matrix.language }}"
