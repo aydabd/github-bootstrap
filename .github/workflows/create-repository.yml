@@ -270,13 +270,14 @@ jobs:
           echo "repository=$REPO" >> "$GITHUB_OUTPUT"
 
       - name: Checkout bootstrap repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          persist-credentials: false
           repository: ${{ steps.bootstrap-repo.outputs.repository }}
           ref: ${{ github.workflow_sha }}
 
       - name: Setup Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: tools/go.mod
           cache-dependency-path: tools/go.mod
@@ -529,20 +530,22 @@ jobs:
           esac
 
           # Build a space-separated list of workflow filenames to keep
-          KEEP_FILES=""
+          KEEP_FILES=" signed-off-by.yml"
           RELEASE_KEPT=false
+          VALID_WORKFLOW_FOUND=false
 
           case "$WORKFLOWS_INPUT" in
-            "none") ;;
+            "none") VALID_WORKFLOW_FOUND=true ;;
             *)
               IFS=',' read -ra WORKFLOW_NAMES <<< "$WORKFLOWS_INPUT"
               for name in "${WORKFLOW_NAMES[@]}"; do
                 name=$(echo "$name" | xargs)
                 case "$name" in
-                  "lint")           KEEP_FILES="$KEEP_FILES lint.yml" ;;
-                  "codeql")         KEEP_FILES="$KEEP_FILES codeql.yml" ;;
-                  "ai-code-review") KEEP_FILES="$KEEP_FILES ai-code-review.yml" ;;
+                  "lint")           KEEP_FILES="$KEEP_FILES lint.yml"; VALID_WORKFLOW_FOUND=true ;;
+                  "codeql")         KEEP_FILES="$KEEP_FILES codeql.yml"; VALID_WORKFLOW_FOUND=true ;;
+                  "ai-code-review") KEEP_FILES="$KEEP_FILES ai-code-review.yml"; VALID_WORKFLOW_FOUND=true ;;
                   "release")
+                    VALID_WORKFLOW_FOUND=true
                     RELEASE_KEPT=true
                     case "${{ inputs.release_tool }}" in
                       "release-please")   KEEP_FILES="$KEEP_FILES release-please.yml" ;;
@@ -551,12 +554,12 @@ jobs:
                     esac
                     ;;
                   *)
-                    echo "⚠️ Unknown workflow name: '$name' (valid: lint, codeql, ai-code-review, release)" >> $GITHUB_STEP_SUMMARY
+                    echo "⚠️ Unknown workflow name: '$name' (valid: lint, codeql, ai-code-review, release; signed-off-by is always included)" >> $GITHUB_STEP_SUMMARY
                     ;;
                 esac
               done
               # Fail fast if every supplied name was unrecognised
-              if [ -z "$KEEP_FILES" ]; then
+              if [ "$VALID_WORKFLOW_FOUND" = false ]; then
                 echo "❌ No valid workflow names found in '$WORKFLOWS_INPUT'. Valid: lint,codeql,ai-code-review,release" >&2
                 exit 1
               fi
@@ -802,8 +805,9 @@ jobs:
           echo "repository=$REPO" >> "$GITHUB_OUTPUT"
 
       - name: Checkout bootstrap repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          persist-credentials: false
           repository: ${{ steps.bootstrap-repo.outputs.repository }}
           ref: ${{ github.workflow_sha }}
 
@@ -863,8 +867,9 @@ jobs:
           echo "repository=$REPO" >> "$GITHUB_OUTPUT"
 
       - name: Checkout bootstrap repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
+          persist-credentials: false
           repository: ${{ steps.bootstrap-repo.outputs.repository }}
           ref: ${{ github.workflow_sha }}
 
