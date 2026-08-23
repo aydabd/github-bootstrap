@@ -443,30 +443,12 @@ Automated PR-based releases powered by [Google's Release Please](https://github.
 | `all` / `language-agnostic-only`        | `simple`           | `CHANGELOG.md` only                       |
 | `typescript,python` (multi, first wins) | `node`             | Same as first language (`package.json`)   |
 
-#### Option C — semantic-release (push-to-main, fully automated)
-
-[semantic-release](https://github.com/semantic-release/semantic-release) (~23k ⭐) — the most popular
-release automation tool. Zero manual steps: every merge to `main` is analysed and released
-automatically.
-
-- **Fully automated** — No tags, no PRs needed; semantic-release decides the version from commits
-- **Language-agnostic** — GitHub-releases-only mode works for any language
-- **CHANGELOG.md** — Generated and committed back to `main` automatically
-- **GitHub Releases** — Created with generated release notes on every merge
-- **Config file** — `.releaserc.json` (plugin-based, highly extensible)
-
-```sh
-# Nothing to do manually! Just merge to main with conventional commits.
-# semantic-release runs on every push to main and auto-tags + releases.
-```
-
 ### Release Tool Comparison
 
-| Tool             | Stars | Trigger           | Language support | Monorepo    | Manual step |
-| ---------------- | ----- | ----------------- | ---------------- | ----------- | ----------- |
-| git-cliff        | ~9k   | git tag           | any              | ✅          | `git tag`   |
-| release-please   | ~7k   | push to main (PR) | language-aware   | partial     | merge PR    |
-| semantic-release | ~23k  | push to main      | any              | via plugins | automatic   |
+| Tool           | Stars | Trigger           | Language support | Monorepo | Manual step |
+| -------------- | ----- | ----------------- | ---------------- | -------- | ----------- |
+| git-cliff      | ~9k   | git tag           | any              | ✅       | `git tag`   |
+| release-please | ~7k   | push to main (PR) | language-aware   | partial  | merge PR    |
 
 ### Repository Settings
 

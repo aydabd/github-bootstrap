@@ -5,7 +5,7 @@ description: Configure Release Please for the selected release type when release
 inputs:
   release_tool:
     description: >-
-      Active release tool (release-please, semantic-release, git-cliff).
+      Active release tool (release-please, git-cliff).
       This action only configures Release Please; all other values are no-ops.
     required: true
   release_type:

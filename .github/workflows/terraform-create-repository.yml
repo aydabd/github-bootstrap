@@ -88,15 +88,13 @@ on:
         description: >-
           Release automation tool:
           'git-cliff' (tag-triggered, fast changelog, any language),
-          'release-please' (PR-based, auto-bumps version files),
-          'semantic-release' (push-to-main, fully automated, any language)
+          'release-please' (PR-based, auto-bumps version files)
         required: false
         default: "git-cliff"
         type: choice
         options:
           - git-cliff
           - release-please
-          - semantic-release
       enable_repo_settings:
         description: >-
           Apply repository settings PATCH, create dev/prod environments, and
@@ -497,9 +495,6 @@ jobs:
           cp templates/.prettierignore new-repo/
           cp templates/.windsurfrules new-repo/
 
-          # Copy release-tool specific dotfiles / directories
-          cp templates/.releaserc.json new-repo/
-
           cp templates/.github/linters/.editorconfig new-repo/
 
       - name: Configure release tool
@@ -510,20 +505,15 @@ jobs:
           # Files (use rm -f) separated by release tool
           RP_FILES="release-please-config.json .release-please-manifest.json .github/workflows/release-please.yml"
           GC_FILES="cliff.toml .github/workflows/git-cliff-release.yml"
-          SR_FILES=".releaserc.json .github/workflows/semantic-release.yml"
 
           case "$RELEASE_TOOL" in
             "release-please")
-              rm -f $GC_FILES $SR_FILES
+              rm -f $GC_FILES
               echo "Release tool: **release-please** — PR-based semantic versioning (language-aware, ~7k ⭐)" >> $GITHUB_STEP_SUMMARY
-              ;;
-            "semantic-release")
-              rm -f $RP_FILES $GC_FILES
-              echo "Release tool: **semantic-release** — push-to-main, fully automated versioning (any language, ~23k ⭐)" >> $GITHUB_STEP_SUMMARY
               ;;
             *)
               # Default: git-cliff
-              rm -f $RP_FILES $SR_FILES
+              rm -f $RP_FILES
               echo "Release tool: **git-cliff** — tag-triggered changelog + GitHub Release (any language, ~9k ⭐)" >> $GITHUB_STEP_SUMMARY
               ;;
           esac
@@ -620,7 +610,6 @@ jobs:
                 .github/workflows/ai-code-review.yml
               case "${{ inputs.release_tool }}" in
                 "release-please") rm -f .github/workflows/release-please.yml release-please-config.json .release-please-manifest.json ;;
-                "semantic-release") rm -f .github/workflows/semantic-release.yml .releaserc.json ;;
                 *) rm -f .github/workflows/git-cliff-release.yml cliff.toml ;;
               esac
               echo "⏭️ All workflows removed (workflows=none)" >> $GITHUB_STEP_SUMMARY
@@ -651,7 +640,6 @@ jobs:
               if ! echo "$KEEP_LIST" | grep -qw "release"; then
                 case "${{ inputs.release_tool }}" in
                   "release-please") rm -f .github/workflows/release-please.yml release-please-config.json .release-please-manifest.json ;;
-                  "semantic-release") rm -f .github/workflows/semantic-release.yml .releaserc.json ;;
                   *) rm -f .github/workflows/git-cliff-release.yml cliff.toml ;;
                 esac
               fi
@@ -767,10 +755,6 @@ jobs:
               case "${{ inputs.release_tool }}" in
                 "release-please")
                   echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
-                  ;;
-                "semantic-release")
-                  echo "- ✅ semantic-release workflow (push-to-main, fully automated)" >> $GITHUB_STEP_SUMMARY
-                  echo "- ✅ .releaserc.json (semantic-release configuration)" >> $GITHUB_STEP_SUMMARY
                   ;;
                 *)
                   echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
