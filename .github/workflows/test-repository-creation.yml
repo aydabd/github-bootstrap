@@ -106,7 +106,6 @@ on:
         options:
           - git-cliff
           - release-please
-          - semantic-release
       enable_repo_settings:
         description: "Enable repo settings/dependabot/environments in target workflow"
         required: false
@@ -271,8 +270,8 @@ jobs:
             echo "::error::Invalid enable_codeowners '$ENABLE_CODEOWNERS'. Allowed: true, false"
             exit 1
           fi
-          if ! [[ "$RELEASE_TOOL" =~ ^(git-cliff|release-please|semantic-release)$ ]]; then
-            echo "::error::Invalid release_tool '$RELEASE_TOOL'. Allowed: git-cliff, release-please, semantic-release"
+          if ! [[ "$RELEASE_TOOL" =~ ^(git-cliff|release-please)$ ]]; then
+            echo "::error::Invalid release_tool '$RELEASE_TOOL'. Allowed: git-cliff, release-please"
             exit 1
           fi
           WORKFLOWS="${WORKFLOWS//[[:space:]]/}"

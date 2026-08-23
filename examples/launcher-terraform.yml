@@ -93,7 +93,6 @@ on:
         options:
           - git-cliff
           - release-please
-          - semantic-release
       cleanup_on_failure:
         description: "Delete the repo if creation fails"
         required: false
