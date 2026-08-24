@@ -1,0 +1,48 @@
+name: Quality capability
+
+on:
+  workflow_call:
+    inputs:
+      capability:
+        description: One capability identifier from bootstrap-profile.json.
+        required: true
+        type: string
+      environment-manager:
+        description: Local tooling provider used by the repository.
+        required: false
+        default: "{{ENV_MANAGER}}"
+        type: string
+
+permissions:
+  contents: read # Read repository files for the selected quality capability.
+
+jobs:
+  capability:
+    name: ${{ inputs.capability }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read # Read repository files for the selected quality capability.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Setup mise tooling
+        if: inputs['environment-manager'] == 'mise'
+        uses: ./.github/actions/setup-lint-mise
+      - name: Setup system tooling
+        if: inputs['environment-manager'] == 'system'
+        uses: ./.github/actions/setup-lint-system
+      - name: Bootstrap quality toolchain
+        shell: bash
+        env:
+          ENVIRONMENT_MANAGER: ${{ inputs['environment-manager'] }}
+        run: |
+          set -euo pipefail
+          [ -f Makefile ] || { echo "Generated repository is missing its provider Makefile" >&2; exit 1; }
+          ENV_MANAGER="$ENVIRONMENT_MANAGER" make install
+      - name: Run capability
+        uses: ./.github/actions/quality/run-capability
+        with:
+          capability: ${{ inputs.capability }}
+          environment-manager: ${{ inputs['environment-manager'] }}

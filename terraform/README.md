@@ -9,7 +9,7 @@ This Terraform module creates a fully configured GitHub repository with the same
   and vulnerability alerts enabled
 - **`github_repository_environment`** - `dev` and `prod` deployment environments
 - **`github_repository_ruleset`** - Branch protection for `main` (optional) requiring one approving review,
-  latest-push approval, resolved review threads, `lint` and `CodeRabbit` status checks,
+  latest-push approval, resolved review threads, `quality` and `CodeRabbit` status checks,
   and linear history (no merge commits)
 
   CodeRabbit must be installed and have review quota available when this ruleset is enabled;

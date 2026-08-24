@@ -1,0 +1,95 @@
+name: Centralized Quality
+
+on:
+  workflow_call:
+    inputs:
+      capabilities:
+        description: Comma-separated capability identifiers.
+        required: false
+        default: lint-markdown,lint-json,lint-yaml,lint-actions,lint-shell,lint-python,lint-terraform,lint-format,lint-tests
+        type: string
+      environment-manager:
+        description: Tooling provider configured by the calling repository.
+        required: false
+        default: system
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout consumer repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Setup mise tooling
+        if: inputs['environment-manager'] == 'mise'
+        uses: ./.github/actions/setup-lint-mise
+      - name: Setup system tooling
+        if: inputs['environment-manager'] == 'system'
+        uses: ./.github/actions/setup-lint-system
+      - name: Bootstrap consumer toolchain
+        shell: bash
+        env:
+          ENVIRONMENT_MANAGER: ${{ inputs['environment-manager'] }}
+        run: |
+          set -euo pipefail
+          [ -f Makefile ] || { echo "Consumer repository is missing its provider Makefile" >&2; exit 1; }
+          ENV_MANAGER="$ENVIRONMENT_MANAGER" make install
+      - name: Run consumer quality capabilities
+        shell: bash
+        env:
+          CAPABILITIES: ${{ inputs.capabilities }}
+          ENVIRONMENT_MANAGER: ${{ inputs['environment-manager'] }}
+          WORKING_DIRECTORY: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          [ -n "$CAPABILITIES" ] || { echo "At least one quality capability is required" >&2; exit 1; }
+
+          provider_run() {
+            if [ "$ENVIRONMENT_MANAGER" = system ]; then
+              "$@"
+            else
+              bash "$WORKING_DIRECTORY/scripts/provider-run.sh" "$@"
+            fi
+          }
+
+          IFS=',' read -r -a selected <<< "$CAPABILITIES"
+          for capability in "${selected[@]}"; do
+            capability="$(printf '%s' "$capability" | sed 's/^ *//;s/ *$//')"
+            case "$capability" in
+              lint-markdown) provider_run markdownlint --config .github/linters/.markdownlint.json --ignore CHANGELOG.md --ignore node_modules --ignore .git . ;;
+              lint-json) provider_run bash -c 'find . -path "./.git" -prune -o -path "./node_modules" -prune -o -type f -name "*.json" -exec jq empty {} +' ;;
+              lint-yaml) provider_run yamllint --config-file .github/linters/.yaml-lint.yml . ;;
+              lint-actions) provider_run actionlint; provider_run zizmor --pedantic .github/workflows ;;
+              lint-shell)
+                mapfile -d '' shell_files < <(
+                  find . -path './.git' -prune -o -path './node_modules' -prune -o \
+                    -type f \( -name '*.sh' -o -name '*.bash' \) -print0
+                )
+                [ "${#shell_files[@]}" -eq 0 ] || provider_run shellcheck "${shell_files[@]}"
+                ;;
+              lint-python) provider_run python3 -m compileall -q . ;;
+              lint-terraform)
+                terraform_file="$(find . -type f -name '*.tf' -print -quit)"
+                if [ -z "$terraform_file" ]; then
+                  echo "No Terraform files found; skipping lint-terraform"
+                else
+                  terraform_dir="$(dirname "$terraform_file")"
+                  provider_run terraform fmt -check -recursive
+                  provider_run terraform -chdir="$terraform_dir" init -backend=false -input=false
+                  provider_run terraform -chdir="$terraform_dir" validate
+                fi
+                ;;
+              lint-format) LINT_MODE=check provider_run pre-commit run --all-files --color=always ;;
+              lint-tests) if [ -f go.mod ]; then provider_run go test ./...; fi; if [ -f package.json ]; then provider_run npm test --if-present; fi; if [ -f pyproject.toml ] || [ -f pytest.ini ]; then provider_run python3 -m pytest; fi ;;
+              *) echo "Unknown quality capability: $capability" >&2; exit 1 ;;
+            esac
+          done

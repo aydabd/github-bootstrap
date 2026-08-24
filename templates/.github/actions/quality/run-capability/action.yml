@@ -1,0 +1,93 @@
+name: Run quality capability
+description: Run one stable bootstrap quality capability.
+
+inputs:
+  capability:
+    description: Capability identifier from bootstrap-profile.json.
+    required: true
+  working-directory:
+    description: Repository path to inspect.
+    required: false
+    default: .
+  environment-manager:
+    description: Selected local tooling provider.
+    required: false
+    default: system
+
+runs:
+  using: composite
+  steps:
+    - name: Run ${{ inputs.capability }}
+      shell: bash
+      env:
+        CAPABILITY: ${{ inputs.capability }}
+        WORKING_DIRECTORY: ${{ inputs['working-directory'] }}
+        ENVIRONMENT_MANAGER: ${{ inputs['environment-manager'] }}
+      run: |
+        set -euo pipefail
+
+        case "$WORKING_DIRECTORY" in
+          /*) ;;
+          *) WORKING_DIRECTORY="$PWD/$WORKING_DIRECTORY" ;;
+        esac
+        WORKING_DIRECTORY="$(cd "$WORKING_DIRECTORY" && pwd)"
+        cd "$WORKING_DIRECTORY"
+
+        provider_run() {
+          if [ "$ENVIRONMENT_MANAGER" = system ]; then
+            "$@"
+          else
+            bash "$WORKING_DIRECTORY/scripts/provider-run.sh" "$@"
+          fi
+        }
+
+        case "$CAPABILITY" in
+          lint-markdown)
+            provider_run markdownlint --config .github/linters/.markdownlint.json --ignore CHANGELOG.md --ignore node_modules --ignore .git .
+            ;;
+          lint-json)
+            provider_run bash -c "cd \"$WORKING_DIRECTORY\" && find . -path './.git' -prune -o -path './node_modules' -prune -o -type f -name '*.json' -exec jq empty {} +"
+            ;;
+          lint-yaml)
+            provider_run yamllint --config-file .github/linters/.yaml-lint.yml .
+            ;;
+          lint-actions)
+            provider_run actionlint
+            provider_run zizmor --pedantic .github/workflows
+            ;;
+          lint-shell)
+            mapfile -d '' shell_files < <(
+              find . -path './.git' -prune -o -path './node_modules' -prune -o \
+                -type f \( -name '*.sh' -o -name '*.bash' \) -print0
+            )
+            if [ "${#shell_files[@]}" -gt 0 ]; then
+              provider_run shellcheck "${shell_files[@]}"
+            fi
+            ;;
+          lint-python)
+            provider_run python3 -m compileall -q .
+            ;;
+          lint-terraform)
+            terraform_file="$(find . -type f -name '*.tf' -print -quit)"
+            if [ -z "$terraform_file" ]; then
+              echo "No Terraform files found; skipping lint-terraform"
+            else
+              terraform_dir="$(dirname "$terraform_file")"
+              provider_run terraform fmt -check -recursive
+              provider_run terraform -chdir="$terraform_dir" init -backend=false -input=false
+              provider_run terraform -chdir="$terraform_dir" validate
+            fi
+            ;;
+          lint-format)
+            LINT_MODE=check provider_run pre-commit run --all-files --color=always
+            ;;
+          lint-tests)
+            if [ -f go.mod ]; then provider_run go test ./...; fi
+            if [ -f package.json ]; then provider_run npm test --if-present; fi
+            if [ -f pyproject.toml ] || [ -f pytest.ini ]; then provider_run python3 -m pytest; fi
+            ;;
+          *)
+            echo "Unknown quality capability: $CAPABILITY" >&2
+            exit 1
+            ;;
+        esac

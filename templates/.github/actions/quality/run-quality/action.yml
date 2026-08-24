@@ -1,0 +1,97 @@
+name: Run selected quality capabilities
+description: Run the selected bootstrap quality capabilities behind one stable quality contract.
+
+inputs:
+  capabilities:
+    description: Comma-separated capability identifiers.
+    required: true
+  working-directory:
+    description: Repository path to inspect.
+    required: false
+    default: .
+  environment-manager:
+    description: Selected local tooling provider.
+    required: false
+    default: system
+
+runs:
+  using: composite
+  steps:
+    - name: Run selected capabilities
+      shell: bash
+      env:
+        CAPABILITIES: ${{ inputs.capabilities }}
+        WORKING_DIRECTORY: ${{ inputs['working-directory'] }}
+        ENVIRONMENT_MANAGER: ${{ inputs['environment-manager'] }}
+      run: |
+        set -euo pipefail
+        [ -n "$CAPABILITIES" ] || {
+          echo "At least one quality capability is required" >&2
+          exit 1
+        }
+        IFS=',' read -r -a selected <<< "$CAPABILITIES"
+        for capability in "${selected[@]}"; do
+          capability=$(printf '%s' "$capability" | sed 's/^ *//;s/ *$//')
+          [ -n "$capability" ] || continue
+          CAPABILITY="$capability" WORKING_DIRECTORY="$WORKING_DIRECTORY" ENVIRONMENT_MANAGER="$ENVIRONMENT_MANAGER" bash -c '
+            set -euo pipefail
+            provider_run() {
+              if [ "$ENVIRONMENT_MANAGER" = system ]; then
+                "$@"
+              else
+                bash "$WORKING_DIRECTORY/scripts/provider-run.sh" "$@"
+              fi
+            }
+            case "$CAPABILITY" in
+              lint-markdown)
+                provider_run markdownlint \
+                  --config "$WORKING_DIRECTORY/.github/linters/.markdownlint.json" \
+                  --ignore CHANGELOG.md --ignore node_modules --ignore .git \
+                  "$WORKING_DIRECTORY"
+                ;;
+              lint-json)
+                provider_run bash -c "cd \"$WORKING_DIRECTORY\" && find . -path './.git' -prune -o -path './node_modules' -prune -o -type f -name '*.json' -exec jq empty {} +"
+                ;;
+              lint-yaml) provider_run yamllint --config-file "$WORKING_DIRECTORY/.github/linters/.yaml-lint.yml" "$WORKING_DIRECTORY" ;;
+              lint-actions)
+                (cd "$WORKING_DIRECTORY" && provider_run actionlint)
+                provider_run zizmor --pedantic "$WORKING_DIRECTORY/.github/workflows"
+                ;;
+              lint-shell)
+                mapfile -d "" files < <(
+                  find "$WORKING_DIRECTORY" -path "$WORKING_DIRECTORY/.git" -prune -o \
+                    -path "$WORKING_DIRECTORY/node_modules" -prune -o \
+                    -type f \( -name "*.sh" -o -name "*.bash" \) -print0
+                )
+                [ "${#files[@]}" -eq 0 ] || provider_run shellcheck "${files[@]}"
+                ;;
+              lint-python) provider_run python3 -m compileall -q "$WORKING_DIRECTORY" ;;
+              lint-terraform)
+                terraform_file="$(find "$WORKING_DIRECTORY" -type f -name '*.tf' -print -quit)"
+                if [ -z "$terraform_file" ]; then
+                  echo "No Terraform files found; skipping lint-terraform"
+                else
+                  terraform_dir="$(dirname "$terraform_file")"
+                  provider_run terraform -chdir="$WORKING_DIRECTORY" fmt -check -recursive
+                  provider_run terraform -chdir="$terraform_dir" init -backend=false -input=false
+                  provider_run terraform -chdir="$terraform_dir" validate
+                fi
+                ;;
+              lint-format)
+                (cd "$WORKING_DIRECTORY" && LINT_MODE=check provider_run pre-commit run --all-files --color=always)
+                ;;
+              lint-tests)
+                if [ -f "$WORKING_DIRECTORY/go.mod" ]; then
+                  (cd "$WORKING_DIRECTORY" && provider_run go test ./...)
+                fi
+                if [ -f "$WORKING_DIRECTORY/package.json" ]; then
+                  (cd "$WORKING_DIRECTORY" && provider_run npm test --if-present)
+                fi
+                if [ -f "$WORKING_DIRECTORY/pyproject.toml" ] || [ -f "$WORKING_DIRECTORY/pytest.ini" ]; then
+                  (cd "$WORKING_DIRECTORY" && provider_run python3 -m pytest)
+                fi
+                ;;
+              *) echo "Unknown quality capability: $CAPABILITY" >&2; exit 1 ;;
+            esac
+          '
+        done

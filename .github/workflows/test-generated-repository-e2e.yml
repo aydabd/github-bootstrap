@@ -1,0 +1,298 @@
+name: Test Generated Repository E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: Branch or tag containing the creation workflow to test.
+        required: false
+        default: main
+        type: string
+      central_repository:
+        description: Existing user-owned central workflow repository for centralized scenarios.
+        required: false
+        type: string
+      central_ref:
+        description: Immutable ref in the central workflow repository.
+        required: false
+        type: string
+      creation_workflow:
+        description: Repository-creation workflow(s) to exercise.
+        required: false
+        default: both
+        type: choice
+        options:
+          - both
+          - create-repository.yml
+          - terraform-create-repository.yml
+      delivery:
+        description: Delivery mode(s) to exercise.
+        required: false
+        default: both
+        type: choice
+        options:
+          - both
+          - embedded
+          - centralized
+      cleanup:
+        description: Delete generated repositories after each scenario.
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  generated-repository:
+    name: ${{ matrix.creation_workflow }} / ${{ matrix.delivery }} / ${{ matrix.provider }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - provider: micromamba
+            delivery: embedded
+            creation_workflow: create-repository.yml
+          - provider: mise
+            delivery: embedded
+            creation_workflow: create-repository.yml
+          - provider: system
+            delivery: embedded
+            creation_workflow: create-repository.yml
+          - provider: micromamba
+            delivery: centralized
+            creation_workflow: create-repository.yml
+          - provider: mise
+            delivery: centralized
+            creation_workflow: create-repository.yml
+          - provider: system
+            delivery: centralized
+            creation_workflow: create-repository.yml
+          - provider: micromamba
+            delivery: embedded
+            creation_workflow: terraform-create-repository.yml
+          - provider: mise
+            delivery: embedded
+            creation_workflow: terraform-create-repository.yml
+          - provider: system
+            delivery: embedded
+            creation_workflow: terraform-create-repository.yml
+          - provider: micromamba
+            delivery: centralized
+            creation_workflow: terraform-create-repository.yml
+          - provider: mise
+            delivery: centralized
+            creation_workflow: terraform-create-repository.yml
+          - provider: system
+            delivery: centralized
+            creation_workflow: terraform-create-repository.yml
+    steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Resolve GitHub token
+        id: token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          gh_token: ${{ secrets.GH_PAT }}
+          gh_pat_secret: ${{ secrets.GH_PAT }}
+
+      - name: Select requested creation workflow
+        id: scenario
+        shell: bash
+        env:
+          REQUESTED_WORKFLOW: ${{ inputs.creation_workflow }}
+          MATRIX_WORKFLOW: ${{ matrix.creation_workflow }}
+          REQUESTED_DELIVERY: ${{ inputs.delivery }}
+          MATRIX_DELIVERY: ${{ matrix.delivery }}
+        run: |
+          set -euo pipefail
+          workflow_selected=false
+          delivery_selected=false
+          if [ "$REQUESTED_WORKFLOW" = both ] || [ "$REQUESTED_WORKFLOW" = "$MATRIX_WORKFLOW" ]; then
+            workflow_selected=true
+          fi
+          if [ "$REQUESTED_DELIVERY" = both ] || [ "$REQUESTED_DELIVERY" = "$MATRIX_DELIVERY" ]; then
+            delivery_selected=true
+          fi
+          if [ "$workflow_selected" = true ] && [ "$delivery_selected" = true ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping $MATRIX_WORKFLOW / $MATRIX_DELIVERY because creation_workflow=$REQUESTED_WORKFLOW and delivery=$REQUESTED_DELIVERY"
+          fi
+
+      - name: Run generated repository scenario
+        if: steps.scenario.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          TARGET_REF: ${{ inputs.target_ref || 'main' }}
+          PROVIDER: ${{ matrix.provider }}
+          DELIVERY: ${{ matrix.delivery }}
+          CENTRAL_REPOSITORY: ${{ inputs.central_repository }}
+          CENTRAL_REF: ${{ inputs.central_ref }}
+          CREATION_WORKFLOW: ${{ matrix.creation_workflow }}
+          CLEANUP: ${{ inputs.cleanup }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CENTRAL_SOURCE=""
+          if [ "$DELIVERY" = centralized ]; then
+            [[ "$CENTRAL_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
+              echo "central_repository is required and must match OWNER/REPOSITORY" >&2
+              exit 1
+            }
+            [[ "$CENTRAL_REF" =~ ^([0-9a-fA-F]{40}|v?[0-9][A-Za-z0-9._-]*)$ ]] || {
+              echo "central_ref is required and must be an immutable-looking version tag or 40-character commit SHA" >&2
+              exit 1
+            }
+            CENTRAL_SOURCE="$CENTRAL_REPOSITORY@$CENTRAL_REF"
+          fi
+
+          REPO_NAME="e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${PROVIDER}-${DELIVERY}-${CREATION_WORKFLOW%.yml}"
+
+          cleanup() {
+            if [ "$CLEANUP" = true ] && gh repo view "$OWNER/$REPO_NAME" >/dev/null 2>&1; then
+              gh repo delete "$OWNER/$REPO_NAME" --yes >/dev/null
+              echo "Deleted $OWNER/$REPO_NAME"
+            fi
+          }
+          trap cleanup EXIT
+
+          gh workflow run "$CREATION_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref "$TARGET_REF" \
+            --field repo_name="$REPO_NAME" \
+            --field repo_description="Generated repository E2E scenario" \
+            --field visibility=private --field team_name="* @$OWNER" --field license_holder="$OWNER" \
+            --field languages=language-agnostic-only --field env_manager="$PROVIDER" \
+            --field release_tool=release-please --field enable_repo_settings=false --field enable_codeowners=true \
+            --field workflows=quality --field delivery_mode="$DELIVERY" \
+            --field central_repository="$CENTRAL_SOURCE" \
+            --field cleanup_on_failure=true
+
+          CREATION_RUN=""
+          for _ in $(seq 1 60); do
+            CREATION_RUN=$(gh api "/repos/$GITHUB_REPOSITORY/actions/workflows/$CREATION_WORKFLOW/runs?event=workflow_dispatch&per_page=50" |
+              jq -r --arg repo "$REPO_NAME" '
+                [.workflow_runs[] |
+                select((.display_title // "") | contains($repo)) |
+                  .id] | first // empty')
+            [ -n "$CREATION_RUN" ] && break
+            sleep 10
+          done
+          [ -n "$CREATION_RUN" ] || { echo "creation run not found" >&2; exit 1; }
+
+          for _ in $(seq 1 90); do
+            STATUS=$(gh run view "$CREATION_RUN" --repo "$GITHUB_REPOSITORY" --json status,conclusion --jq '[.status,.conclusion] | @tsv')
+            RUN_STATUS="${STATUS%%$'\t'*}"
+            CONCLUSION="${STATUS#*$'\t'}"
+            [ "$RUN_STATUS" = completed ] && break
+            sleep 10
+          done
+          [ "$RUN_STATUS" = completed ] && [ "$CONCLUSION" = success ] || {
+            echo "creation failed: $CONCLUSION" >&2
+            exit 1
+          }
+
+          has_file() { gh api "/repos/$OWNER/$REPO_NAME/contents/$1" >/dev/null 2>&1; }
+          file_text() { gh api "/repos/$OWNER/$REPO_NAME/contents/$1" --jq .content | base64 -d; }
+          for file in .github/workflows/quality.yml .github/workflows/signed-off-by.yml .github/config/bootstrap-profile.json; do
+            has_file "$file" || { echo "missing generated file: $file" >&2; exit 1; }
+          done
+          for file in Makefile scripts/provider-run.sh .github/actions/setup-lint-mise/action.yml .github/actions/setup-lint-system/action.yml; do
+            has_file "$file" || { echo "missing generated provider asset: $file" >&2; exit 1; }
+          done
+          if has_file .github/workflows/lint.yml || has_file .github/workflows/providers/lint-system.yml; then
+            echo "legacy lint workflow asset found" >&2
+            exit 1
+          fi
+
+          QUALITY_WORKFLOW=$(file_text .github/workflows/quality.yml)
+          PROFILE_JSON=$(file_text .github/config/bootstrap-profile.json)
+          if [ "$DELIVERY" = embedded ]; then
+            jq -e '.delivery_modes.embedded.requires_repository == false and .delivery_modes.embedded.requires_ref == false' <<<"$PROFILE_JSON" >/dev/null || {
+              echo "embedded profile delivery metadata mismatch" >&2
+              exit 1
+            }
+            has_file .github/actions/quality/run-quality/action.yml || { echo "embedded quality action missing" >&2; exit 1; }
+            has_file .github/actions/quality/run-capability/action.yml || { echo "embedded capability action missing" >&2; exit 1; }
+            has_file .github/workflows/centralized-quality.yml && { echo "centralized caller present in embedded repo" >&2; exit 1; } || true
+          else
+            jq -e --arg repository "$CENTRAL_REPOSITORY" --arg ref "$CENTRAL_REF" \
+              '.delivery_modes.centralized.repository == $repository and .delivery_modes.centralized.ref == $ref' \
+              <<<"$PROFILE_JSON" >/dev/null || {
+              echo "centralized profile delivery metadata mismatch" >&2
+              exit 1
+            }
+            has_file .github/actions/quality/run-quality/action.yml && { echo "local quality action present in centralized repo" >&2; exit 1; } || true
+            printf '%s\n' "$QUALITY_WORKFLOW" | grep -Fq "$CENTRAL_REPOSITORY/.github/workflows/quality.yml@$CENTRAL_REF" || {
+              echo "central workflow reference mismatch" >&2
+              exit 1
+            }
+          fi
+
+          RULESET_ID=$(gh api "/repos/$OWNER/$REPO_NAME/rulesets" | jq -r '.[] | select(.name == "strict-main") | .id' | head -n1)
+          [ -n "$RULESET_ID" ] || { echo "strict-main ruleset missing" >&2; exit 1; }
+          RULESET_JSON=$(gh api "/repos/$OWNER/$REPO_NAME/rulesets/$RULESET_ID")
+          jq -e '
+            .enforcement == "active" and
+            .target == "branch" and
+            .conditions.ref_name.include == ["refs/heads/main"] and
+            any(.rules[]?; .type == "required_signatures") and
+            any(.rules[]?; .type == "pull_request" and
+              .parameters.required_approving_review_count == 1 and
+              .parameters.required_review_thread_resolution == true) and
+            any(.rules[]?; .type == "required_status_checks" and
+              .parameters.strict_required_status_checks_policy == true)
+          ' <<<"$RULESET_JSON" >/dev/null || {
+            echo "strict-main ruleset protection contract mismatch" >&2
+            exit 1
+          }
+          CONTEXTS=$(jq -r '[.rules[]? | select(.type == "required_status_checks") | .parameters.required_status_checks[]?.context] | sort | join(",")' <<<"$RULESET_JSON")
+          [ "$CONTEXTS" = "Signed-off-by trailers,quality" ] || {
+            echo "unexpected required checks: $CONTEXTS" >&2
+            exit 1
+          }
+
+          QUALITY_DISPATCHED=false
+          for _ in $(seq 1 6); do
+            if gh api --method POST "/repos/$OWNER/$REPO_NAME/actions/workflows/quality.yml/dispatches" -f ref=main >/dev/null 2>&1; then
+              QUALITY_DISPATCHED=true
+              break
+            fi
+            sleep 10
+          done
+          [ "$QUALITY_DISPATCHED" = true ] || { echo "generated quality workflow dispatch failed" >&2; exit 1; }
+          QUALITY_RUN=""
+          for _ in $(seq 1 60); do
+            QUALITY_RUN=$(gh api "/repos/$OWNER/$REPO_NAME/actions/workflows/quality.yml/runs?event=workflow_dispatch&per_page=20" |
+              jq -r '[.workflow_runs[] | .id] | first // empty')
+            [ -n "$QUALITY_RUN" ] && break
+            sleep 10
+          done
+          [ -n "$QUALITY_RUN" ] || { echo "generated quality run not found" >&2; exit 1; }
+
+          RUN_STATUS=""
+          CONCLUSION=""
+          QUALITY_URL=""
+          for _ in $(seq 1 90); do
+            if ! STATUS=$(gh run view "$QUALITY_RUN" --repo "$OWNER/$REPO_NAME" --json status,conclusion,url --jq '[.status,.conclusion,.url] | @tsv' 2>/dev/null); then
+              sleep 10
+              continue
+            fi
+            RUN_STATUS="${STATUS%%$'\t'*}"
+            REMAINDER="${STATUS#*$'\t'}"
+            CONCLUSION="${REMAINDER%%$'\t'*}"
+            QUALITY_URL="${REMAINDER#*$'\t'}"
+            [ "$RUN_STATUS" = completed ] && break
+            sleep 10
+          done
+          [ "$RUN_STATUS" = completed ] && [ "$CONCLUSION" = success ] || {
+            echo "generated quality failed: $QUALITY_URL ($CONCLUSION)" >&2
+            exit 1
+          }
+          echo "E2E passed: $OWNER/$REPO_NAME ($PROVIDER, $DELIVERY): $QUALITY_URL"

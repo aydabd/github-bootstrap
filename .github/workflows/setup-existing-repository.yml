@@ -96,8 +96,8 @@ on:
           PAT fallback. Prefer GH_PAT secret or GitHub App auth for shared usage.
         required: false
         type: string
-      app_id:
-        description: "GitHub App ID for App-based auth"
+      client_id:
+        description: "GitHub App client ID for App-based auth"
         required: false
         type: string
       app_owner:
@@ -163,7 +163,7 @@ on:
       gh_token:
         required: false
         type: string
-      app_id:
+      client_id:
         required: false
         type: string
       app_owner:
@@ -273,7 +273,7 @@ jobs:
         with:
           gh_token: ${{ inputs.gh_token }}
           gh_pat_secret: ${{ secrets.GH_PAT }}
-          app_id: ${{ inputs.app_id }}
+          client_id: ${{ inputs.client_id }}
           app_private_key: ${{ secrets.app_private_key || secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
           app_owner: ${{ inputs.app_owner || inputs.repo_owner }}
 

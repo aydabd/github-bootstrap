@@ -1,0 +1,38 @@
+name: Quality
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Setup micromamba environment
+        uses: mamba-org/setup-micromamba@f457c30a868e4760d3a6fcea5f25dc655b8edf39 # v3.2.1
+        with:
+          environment-file: environment.yml
+          environment-name: github-bootstrap
+          cache-environment: true
+          cache-downloads: true
+      - name: Run quality checks
+        shell: bash
+        run: LINT_MODE=check ENV_MANAGER=micromamba MICROMAMBA="$(command -v micromamba)" make lint

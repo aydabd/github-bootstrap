@@ -16,6 +16,10 @@ commit when a contributor other than the pull-request author performs the
 merge; in that case, the contributor may need to create a locally signed
 squash commit.
 
+The generated repository's stable required quality check is `quality`. The
+previous `lint` workflow and check are intentionally removed; existing
+repositories are not modified automatically.
+
 Please **do not** report security vulnerabilities through public GitHub issues.
 
 Instead, use one of these channels:

@@ -1,0 +1,27 @@
+name: Validate centralized quality capabilities
+description: Validate capability identifiers before configuring a centralized quality workflow.
+
+inputs:
+  capabilities:
+    description: Comma-separated capability identifiers.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Validate selected capabilities
+      shell: bash
+      env:
+        CAPABILITIES: ${{ inputs.capabilities }}
+      run: |
+        set -euo pipefail
+        [ -n "$CAPABILITIES" ] || { echo "At least one quality capability is required" >&2; exit 1; }
+        IFS=',' read -r -a selected <<< "$CAPABILITIES"
+        for capability in "${selected[@]}"; do
+          capability="$(printf '%s' "$capability" | sed 's/^ *//;s/ *$//')"
+          case "$capability" in
+            lint-markdown|lint-json|lint-yaml|lint-actions|lint-shell|lint-python|lint-terraform|lint-format|lint-tests) ;;
+            *) echo "Unsupported quality capability: $capability" >&2; exit 1 ;;
+          esac
+        done
+        echo "Central quality capabilities selected: $CAPABILITIES"

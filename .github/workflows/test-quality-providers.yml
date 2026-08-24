@@ -1,0 +1,70 @@
+name: Test Quality Providers
+
+on:
+  pull_request:
+    paths:
+      - ".github/actions/setup-lint-*/**"
+      - ".github/workflows/quality.yml"
+      - "make/**"
+      - "environment.yml"
+      - "mise.toml"
+      - "templates/.github/actions/quality/**"
+      - "templates/.github/workflows/quality*.yml"
+      - "templates/languages/*/providers/**"
+      - "scripts/provider-assets.txt"
+      - "scripts/bootstrap-provider-binary.sh"
+      - "scripts/provider-run.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: quality (${{ matrix['environment-manager'] }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        environment-manager: [micromamba, mise, system]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: tools/go.mod
+          cache-dependency-path: tools/go.mod
+
+      - name: Setup micromamba
+        if: matrix['environment-manager'] == 'micromamba'
+        uses: mamba-org/setup-micromamba@f457c30a868e4760d3a6fcea5f25dc655b8edf39 # v3.2.1
+        with:
+          environment-file: environment.yml
+          environment-name: github-bootstrap
+          cache-environment: true
+          cache-downloads: true
+
+      - name: Setup mise
+        if: matrix['environment-manager'] == 'mise'
+        uses: ./.github/actions/setup-lint-mise
+
+      - name: Setup system tools
+        if: matrix['environment-manager'] == 'system'
+        uses: ./.github/actions/setup-lint-system
+
+      - name: Run quality checks
+        env:
+          ENV_MANAGER: ${{ matrix['environment-manager'] }}
+          LINT_MODE: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$ENV_MANAGER" = micromamba ]; then
+            MICROMAMBA="$(command -v micromamba)"
+            export MICROMAMBA
+          fi
+          make lint

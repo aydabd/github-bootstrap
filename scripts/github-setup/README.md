@@ -21,6 +21,7 @@ have access to administer the target repository.
 | `setup-security-settings.sh`  | Security settings             |
 | `setup-repo-settings.sh`      | Repository settings           |
 | `setup-ruleset.sh`            | Repository rulesets           |
+| `validate-profile.sh`         | Bootstrap profile validation  |
 | `test-local-setup-scripts.sh` | Test-only live E2E assertions |
 
 Each script's `--help` output is the source of truth for options, defaults, and
@@ -31,6 +32,26 @@ Shared helpers live in `gh-common.sh`. Keep only cross-script concerns there,
 such as required input checks, file checks, GitHub API endpoint construction,
 JSON key reads, URL encoding, and known GitHub plan or feature limitation
 detection.
+
+## Bootstrap profiles
+
+The canonical profile manifest is
+`templates/.github/config/bootstrap-profile.json`. It classifies generated
+assets as `baseline`, `optional:<bundle>`, or `provider-specific`, and defines
+the stable quality capability names used by generated workflows and rulesets.
+
+Validate a profile before applying it:
+
+```bash
+scripts/github-setup/validate-profile.sh \
+  --profile-file templates/.github/config/bootstrap-profile.json \
+  --profile baseline \
+  --delivery-mode embedded
+```
+
+The default profile does not include the optional planning bundle. Centralized
+delivery requires a user-owned repository and immutable ref; existing
+repositories are not modified automatically.
 
 ## Live Verification
 

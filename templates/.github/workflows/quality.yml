@@ -1,0 +1,61 @@
+name: Quality
+
+on:
+  workflow_call:
+    inputs:
+      capabilities:
+        description: Comma-separated capabilities selected by the repository profile.
+        required: false
+        default: "{{QUALITY_CAPABILITIES}}"
+        type: string
+      environment-manager:
+        description: Local tooling provider used by the repository.
+        required: false
+        default: "{{ENV_MANAGER}}"
+        type: string
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read # Read repository files for quality checks.
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read # Read repository files for quality checks.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Setup mise tooling
+        if: (github.event_name == 'workflow_call' && inputs['environment-manager'] || '{{ENV_MANAGER}}') == 'mise'
+        uses: ./.github/actions/setup-lint-mise
+      - name: Setup system tooling
+        if: (github.event_name == 'workflow_call' && inputs['environment-manager'] || '{{ENV_MANAGER}}') == 'system'
+        uses: ./.github/actions/setup-lint-system
+      - name: Bootstrap quality toolchain
+        shell: bash
+        env:
+          ENVIRONMENT_MANAGER: ${{ github.event_name == 'workflow_call' && inputs['environment-manager'] || '{{ENV_MANAGER}}' }}
+        run: |
+          set -euo pipefail
+          [ -f Makefile ] || { echo "Generated repository is missing its provider Makefile" >&2; exit 1; }
+          ENV_MANAGER="$ENVIRONMENT_MANAGER" make install
+      - name: Run quality capabilities
+        uses: ./.github/actions/quality/run-quality
+        with:
+          capabilities: >-
+            ${{ github.event_name == 'workflow_call' && inputs.capabilities || '{{QUALITY_CAPABILITIES}}' }}
+          environment-manager: >-
+            ${{ github.event_name == 'workflow_call' && inputs['environment-manager'] || '{{ENV_MANAGER}}' }}

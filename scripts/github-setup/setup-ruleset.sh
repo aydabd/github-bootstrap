@@ -11,6 +11,9 @@ repo=""
 ruleset_profile="default"
 ruleset_file=""
 required_status_checks=""
+profile_file=".github/config/bootstrap-profile.json"
+profile_name="baseline"
+installed_root="."
 
 usage() {
     cat << 'USAGE'
@@ -27,7 +30,14 @@ Options:
         --required-status-checks NAMES
                             Comma-separated exact check-run names. These are validated
                             and replace the payload's status checks; omitted means
-                            the payload's configured status checks are retained.
+                            derive checks from validated workflow files under
+                            --installed-root.
+        --profile-file PATH  Bootstrap profile manifest. Defaults to
+                            .github/config/bootstrap-profile.json.
+        --profile NAME       Profile name. Default: baseline.
+        --installed-root PATH
+                            Generated repository root used to validate installed
+                            workflow files. Default: current directory.
         --help                    Show this help.
 
 Examples:
@@ -52,6 +62,21 @@ parse_args() {
             --required-status-checks)
                 require_option_value "$1" "${2:-}"
                 required_status_checks="${2:-}"
+                shift 2
+                ;;
+            --profile-file)
+                require_option_value "$1" "${2:-}"
+                profile_file="${2:-}"
+                shift 2
+                ;;
+            --profile)
+                require_option_value "$1" "${2:-}"
+                profile_name="${2:-}"
+                shift 2
+                ;;
+            --installed-root)
+                require_option_value "$1" "${2:-}"
+                installed_root="${2:-}"
                 shift 2
                 ;;
             --help)
@@ -88,11 +113,76 @@ resolve_ruleset_file() {
     fi
 }
 
+resolve_profile_file() {
+    if [ -f "$profile_file" ]; then
+        return 0
+    fi
+    if [ -f "templates/.github/config/bootstrap-profile.json" ]; then
+        profile_file="templates/.github/config/bootstrap-profile.json"
+        return 0
+    fi
+    echo "profile manifest not found: $profile_file" >&2
+    exit 1
+}
+
+validate_selected_profile() {
+    local validator="$script_dir/validate-profile.sh"
+    [ -x "$validator" ] || {
+        echo "profile validator is missing or not executable: $validator" >&2
+        exit 1
+    }
+    "$validator" --profile-file "$profile_file" --profile "$profile_name" --delivery-mode embedded > /dev/null
+}
+
+derive_required_status_checks() {
+    local checks=()
+    if workflow_has_check "$installed_root/.github/workflows/signed-off-by.yml" "Signed-off-by trailers"; then
+        checks+=("Signed-off-by trailers")
+    fi
+    if workflow_has_check "$installed_root/.github/workflows/quality.yml" "quality"; then
+        checks+=("quality")
+    fi
+    if [ "${#checks[@]}" -eq 0 ]; then
+        echo "no validated profile workflows are installed under $installed_root" >&2
+        exit 1
+    fi
+    required_status_checks="$(
+        IFS=,
+        echo "${checks[*]}"
+    )"
+}
+
+workflow_has_check() {
+    local workflow_file="$1"
+    local check_name="$2"
+    [ -f "$workflow_file" ] || return 1
+    awk -v expected="$check_name" '
+        /^    name:/ {
+            value = $0
+            sub(/^    name:[[:space:]]*/, "", value)
+            sub(/[[:space:]]*$/, "", value)
+            if (value == expected) {
+                found = 1
+            }
+        }
+        END { exit(found ? 0 : 1) }
+    ' "$workflow_file"
+}
+
 validate_inputs() {
     require_github_setup_tools
     require_owner_repo
     require_github_owner_repo_names
     resolve_ruleset_file
+    if [ -z "$required_status_checks" ]; then
+        resolve_profile_file
+        validate_selected_profile
+        derive_required_status_checks
+    fi
+    if printf '%s' "$required_status_checks" | grep -Eq '(^|,)[[:space:]]*lint[[:space:]]*(,|$)'; then
+        echo "the removed lint status check is not supported; use quality" >&2
+        exit 1
+    fi
     require_file "$ruleset_file" "ruleset file"
     validate_ruleset_payload
 }

@@ -16,6 +16,8 @@ dependencies:
   - taplo=0.10.0 # TOML formatter + validator
   - go-shfmt=3.13.1 # shell formatter (provides shfmt binary)
   - shellcheck=0.11.0 # shell linter
+  - actionlint=1.7.12 # GitHub Actions workflow linter
+  - terraform=1.15.6 # Terraform (includes terraform fmt)
   - libxml2=2.15.3 # provides xmllint binary for XML validation
   - jq=1.8.2 # JSON processor
   - coreutils=9.11 # GNU coreutils for consistent cross-platform behaviour
@@ -27,3 +29,4 @@ dependencies:
   - pip
   - pip:
       - editorconfig-checker
+      - zizmor @ git+https://github.com/zizmorcore/zizmor.git@3c116961091b50bd1a08ffefe916469d4d90093c

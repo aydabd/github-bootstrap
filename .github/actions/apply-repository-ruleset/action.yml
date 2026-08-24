@@ -24,11 +24,18 @@ inputs:
     default: ""
   required_status_checks:
     description: >-
-      Explicit comma-separated check contexts. Defaults to the bootstrap's
-      stable Signed-off-by and lint checks; pass only Signed-off-by trailers
-      when the lint workflow was explicitly excluded.
+      Explicit comma-separated check contexts. When omitted, checks are derived
+      from the installed bootstrap profile and workflow files.
     required: false
-    default: "Signed-off-by trailers,lint"
+    default: ""
+  profile_file:
+    description: Bootstrap profile manifest used to validate installed checks.
+    required: false
+    default: .github/config/bootstrap-profile.json
+  profile:
+    description: Selected bootstrap profile name.
+    required: false
+    default: baseline
 
 outputs:
   ruleset_name:
@@ -57,6 +64,8 @@ runs:
         RULESET_PROFILE: ${{ inputs.ruleset_profile }}
         RULESET_FILE: ${{ inputs.ruleset_file }}
         REQUIRED_STATUS_CHECKS: ${{ inputs.required_status_checks }}
+        PROFILE_FILE: ${{ inputs.profile_file }}
+        PROFILE_NAME: ${{ inputs.profile }}
       run: |
         if [ -z "$RULESET_FILE" ]; then
           if [ "$RULESET_PROFILE" = "default" ]; then
@@ -86,6 +95,57 @@ runs:
         fi
         echo "ruleset_name=$RULESET_NAME" >> "$GITHUB_OUTPUT"
         echo "ruleset_file=$RULESET_FILE" >> "$GITHUB_OUTPUT"
+
+        if [ -z "$REQUIRED_STATUS_CHECKS" ]; then
+          if [ "$PROFILE_FILE" = ".github/config/bootstrap-profile.json" ] &&
+            [ ! -f "$PROFILE_FILE" ] &&
+            [ -f "templates/.github/config/bootstrap-profile.json" ]; then
+            PROFILE_FILE="templates/.github/config/bootstrap-profile.json"
+          fi
+          if [ ! -f "$PROFILE_FILE" ]; then
+            echo "::error::Cannot derive ruleset checks: profile manifest is missing."
+            exit 1
+          fi
+          jq -e --arg profile "$PROFILE_NAME" '.profiles[$profile].capabilities | type == "array" and length > 0' "$PROFILE_FILE" >/dev/null || {
+            echo "::error::Selected profile '$PROFILE_NAME' has no validated capabilities."
+            exit 1
+          }
+          REQUIRED_STATUS_CHECKS="Signed-off-by trailers"
+          workflow_has_check() {
+            local workflow_path="$1"
+            local check_name="$2"
+            local content
+            content=$(gh api "/repos/$OWNER/$REPO/contents/$workflow_path" --jq .content 2>/dev/null | base64 --decode 2>/dev/null) || return 1
+            printf '%s\n' "$content" | awk -v expected="$check_name" '
+              /^    name:/ {
+                value = $0
+                sub(/^    name:[[:space:]]*/, "", value)
+                sub(/[[:space:]]*$/, "", value)
+                if (value == expected) {
+                  found = 1
+                }
+              }
+              END { exit(found ? 0 : 1) }
+            '
+          }
+          if workflow_has_check .github/workflows/signed-off-by.yml "Signed-off-by trailers"; then
+            REQUIRED_STATUS_CHECKS="Signed-off-by trailers"
+          else
+            REQUIRED_STATUS_CHECKS=""
+          fi
+          if workflow_has_check .github/workflows/quality.yml quality; then
+            REQUIRED_STATUS_CHECKS="$REQUIRED_STATUS_CHECKS,quality"
+          fi
+          REQUIRED_STATUS_CHECKS="${REQUIRED_STATUS_CHECKS#,}"
+          [ -n "$REQUIRED_STATUS_CHECKS" ] || {
+            echo "::error::Target repository has no validated bootstrap status workflows."
+            exit 1
+          }
+        fi
+        if printf '%s' "$REQUIRED_STATUS_CHECKS" | grep -Eq '(^|,)[[:space:]]*lint[[:space:]]*(,|$)'; then
+          echo "::error::The removed lint status check is not supported; use quality."
+          exit 1
+        fi
 
         APPLIED_RULESET_FILE="$RULESET_FILE"
         if [ -n "$REQUIRED_STATUS_CHECKS" ]; then
