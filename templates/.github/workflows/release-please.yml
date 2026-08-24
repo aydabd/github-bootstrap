@@ -9,8 +9,8 @@ on:
       - main
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: write # Create release commits and tags.
+  pull-requests: write # Create and update the release pull request.
 
 jobs:
   release-please:

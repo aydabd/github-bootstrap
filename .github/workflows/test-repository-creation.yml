@@ -278,8 +278,8 @@ jobs:
           if [ -z "$WORKFLOWS" ]; then
             WORKFLOWS="all"
           fi
-          if ! [[ "$WORKFLOWS" =~ ^(all|none)$ ]] && ! [[ "$WORKFLOWS" =~ ^(lint|codeql|ai-code-review|release)(,(lint|codeql|ai-code-review|release))*$ ]]; then
-            echo "::error::Invalid workflows '$WORKFLOWS'. Allowed: all, none, or comma-separated of lint,codeql,ai-code-review,release"
+          if ! [[ "$WORKFLOWS" =~ ^(all|none)$ ]] && ! [[ "$WORKFLOWS" =~ ^(quality|codeql|ai-code-review|release)(,(quality|codeql|ai-code-review|release))*$ ]]; then
+            echo "::error::Invalid workflows '$WORKFLOWS'. Allowed: all, none, or comma-separated of quality,codeql,ai-code-review,release"
             exit 1
           fi
           if ! [[ "$TARGET_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "$TARGET_REF" == *".."* ]] || [[ "$TARGET_REF" == /* ]] || [[ "$TARGET_REF" == */ ]]; then
@@ -473,7 +473,7 @@ jobs:
 
           # Check essential files exist
           REQUIRED_FILES=(
-            ".github/workflows/lint.yml"
+            ".github/workflows/quality.yml"
             ".github/CODEOWNERS"
             ".github/dependabot.yml"
             ".pre-commit-config.yaml"
@@ -646,13 +646,13 @@ jobs:
           REQUIRED_CHECK_CONTEXTS=$(echo "$DEFAULT_RULESET" | jq -r '[.rules[]? | select(.type == "required_status_checks") | .parameters.required_status_checks[]?.context] | sort | join(", ")')
           echo "Required status checks: ${REQUIRED_CHECK_CONTEXTS:-none}"
 
-          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | index("lint") != null)' >/dev/null; then
-            echo "❌ lint status check requirement missing (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
+          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | index("quality") != null)' >/dev/null; then
+            echo "❌ quality status check requirement missing (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
             exit 1
           fi
 
-          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | sort) == ["Signed-off-by trailers", "lint"]' >/dev/null; then
-            echo "❌ Bootstrap status checks must be exactly Signed-off-by trailers and lint (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
+          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | sort) == ["Signed-off-by trailers", "quality"]' >/dev/null; then
+            echo "❌ Bootstrap status checks must be exactly Signed-off-by trailers and quality (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
             exit 1
           fi
 
@@ -778,7 +778,7 @@ jobs:
             exit 1
           fi
 
-      - name: Trigger lint workflow
+      - name: Trigger quality workflow
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
@@ -788,10 +788,10 @@ jobs:
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
-            "/repos/${OWNER}/${REPO_NAME}/actions/workflows/lint.yml/dispatches" \
+            "/repos/${OWNER}/${REPO_NAME}/actions/workflows/quality.yml/dispatches" \
             -f ref="main"
 
-          echo "✅ Lint workflow dispatched"
+          echo "✅ Quality workflow dispatched"
           echo "Check result: https://github.com/${OWNER}/${REPO_NAME}/actions"
 
       - name: Write job summary
@@ -816,12 +816,12 @@ jobs:
           | Agent kit (agents + skills) | ✅ Passed |
           | API parity (settings + rulesets) | ✅ Passed |
           | Pre-commit config | ✅ Passed |
-          | Lint workflow | Dispatched — [check result](${REPO_URL}/actions) |
+          | Quality workflow | Dispatched — [check result](${REPO_URL}/actions) |
 
           ### Next steps
 
-          1. Verify the lint workflow passes in the test repo
-          2. Open a PR to test the PR-triggered lint path
+          1. Verify the quality workflow passes in the test repo
+          2. Open a PR to test the PR-triggered quality path
           3. Delete when done: \`gh repo delete ${OWNER}/${REPO_NAME} --yes\`
           EOF
 

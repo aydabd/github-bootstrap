@@ -81,7 +81,7 @@ resource "github_repository_ruleset" "main_protection" {
         context = "Signed-off-by trailers"
       }
       required_check {
-        context = "lint"
+        context = "quality"
       }
     }
   }

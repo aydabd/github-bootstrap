@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 required_assets=(
+    ".github/workflows/quality.yml"
     ".github/skills/github-stack/SKILL.md"
     ".github/skills/git-worktree/SKILL.md"
     ".github/skills/github-issue-triage/SKILL.md"
@@ -31,9 +32,28 @@ for relative_path in "${required_assets[@]}"; do
     done
 done
 
+template_quality_assets=(
+    ".github/workflows/quality-capability.yml"
+    ".github/actions/quality/run-capability/action.yml"
+    ".github/actions/quality/run-quality/action.yml"
+)
+for relative_path in "${template_quality_assets[@]}"; do
+    path="$ROOT_DIR/templates/$relative_path"
+    if [ ! -s "$path" ]; then
+        echo "MISSING_OR_EMPTY: $path" >&2
+        errors=$((errors + 1))
+    fi
+done
+
 template_workflow="$ROOT_DIR/templates/.github/workflows/project-status-sync.yml"
 if [ ! -s "$template_workflow" ]; then
     echo "MISSING_OR_EMPTY: $template_workflow" >&2
+    errors=$((errors + 1))
+fi
+
+template_profile="$ROOT_DIR/templates/.github/config/bootstrap-profile.json"
+if [ ! -s "$template_profile" ]; then
+    echo "MISSING_OR_EMPTY: $template_profile" >&2
     errors=$((errors + 1))
 fi
 

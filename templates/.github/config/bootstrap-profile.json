@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "baseline": {
+      "capabilities": [
+        "lint-markdown",
+        "lint-json",
+        "lint-yaml",
+        "lint-actions",
+        "lint-shell",
+        "lint-python",
+        "lint-terraform",
+        "lint-format",
+        "lint-tests"
+      ],
+      "bundles": []
+    }
+  },
+  "bundles": {
+    "planning": {
+      "enabled_by_default": false,
+      "assets": [
+        ".github/ISSUE_TEMPLATE",
+        ".github/skills/backlog-breakdown",
+        ".github/skills/github-issue-triage",
+        ".github/skills/roadmap-prioritization",
+        ".github/skills/tracker-setup",
+        ".github/skills/tracker-views",
+        ".github/agents/roadmap-prioritizer.agent.md",
+        ".github/workflows/project-status-sync.yml"
+      ]
+    }
+  },
+  "delivery_modes": {
+    "embedded": { "requires_repository": false, "requires_ref": false },
+    "centralized": {
+      "requires_repository": true,
+      "requires_ref": true,
+      "repository": "",
+      "ref": ""
+    }
+  },
+  "assets": [
+    { "path": ".github/workflows/signed-off-by.yml", "classification": "baseline", "owned": true },
+    { "path": ".github/workflows/quality.yml", "classification": "baseline", "owned": true },
+    { "path": ".github/actions/quality", "classification": "baseline", "owned": true },
+    { "path": ".github/skills/git-worktree-stack", "classification": "baseline", "owned": true },
+    { "path": ".github/skills/git-worktree", "classification": "baseline", "owned": true }
+  ],
+  "capabilities": [
+    {
+      "id": "lint-markdown",
+      "classification": "baseline",
+      "owned_paths": [
+        ".github/actions/quality",
+        ".github/workflows/quality.yml",
+        ".github/workflows/quality-capability.yml"
+      ],
+      "workflow": ".github/workflows/quality-capability.yml",
+      "check": "lint-markdown",
+      "enabled_by_default": true,
+      "providers": ["all"]
+    },
+    {
+      "id": "lint-json",
+      "classification": "baseline",
+      "owned_paths": [
+        ".github/actions/quality",
+        ".github/workflows/quality.yml",
+        ".github/workflows/quality-capability.yml"
+      ],
+      "workflow": ".github/workflows/quality-capability.yml",
+      "check": "lint-json",
+      "enabled_by_default": true,
+      "providers": ["all"]
+    },
+    {
+      "id": "lint-yaml",
+      "classification": "baseline",
+      "owned_paths": [
+        ".github/actions/quality",
+        ".github/workflows/quality.yml",
+        ".github/workflows/quality-capability.yml"
+      ],
+      "workflow": ".github/workflows/quality-capability.yml",
+      "check": "lint-yaml",
+      "enabled_by_default": true,
+      "providers": ["all"]
+    },
+    {
+      "id": "lint-actions",
+      "classification": "baseline",
+      "owned_paths": [
+        ".github/actions/quality",
+        ".github/workflows/quality.yml",
+        ".github/workflows/quality-capability.yml"
+      ],
+      "workflow": ".github/workflows/quality-capability.yml",
+      "check": "lint-actions",
+      "enabled_by_default": true,
+      "providers": ["all"]
+    },
+    {
+      "id": "lint-shell",
+      "classification": "baseline",
+      "owned_paths": [
+        ".github/actions/quality",
+        ".github/workflows/quality.yml",
+        ".github/workflows/quality-capability.yml"
+      ],
+      "workflow": ".github/workflows/quality-capability.yml",
+      "check": "lint-shell",
+      "enabled_by_default": true,
+      "providers": ["all"]
+    },
+    {
+      "id": "lint-python",
+      "classification": "provider-specific",
+      "owned_paths": [
+        ".github/actions/quality",
+        ".github/workflows/quality.yml",
+        ".github/workflows/quality-capability.yml"
+      ],
+      "workflow": ".github/workflows/quality-capability.yml",
+      "check": "lint-python",
+      "enabled_by_default": true,
+      "providers": ["python"]
+    },
+    {
+      "id": "lint-terraform",
+      "classification": "provider-specific",
+      "owned_paths": [
+        ".github/actions/quality",
+        ".github/workflows/quality.yml",
+        ".github/workflows/quality-capability.yml"
+      ],
+      "workflow": ".github/workflows/quality-capability.yml",
+      "check": "lint-terraform",
+      "enabled_by_default": true,
+      "providers": ["terraform"]
+    },
+    {
+      "id": "lint-format",
+      "classification": "baseline",
+      "owned_paths": [
+        ".github/actions/quality",
+        ".github/workflows/quality.yml",
+        ".github/workflows/quality-capability.yml"
+      ],
+      "workflow": ".github/workflows/quality-capability.yml",
+      "check": "lint-format",
+      "enabled_by_default": true,
+      "providers": ["all"]
+    },
+    {
+      "id": "lint-tests",
+      "classification": "baseline",
+      "owned_paths": [
+        ".github/actions/quality",
+        ".github/workflows/quality.yml",
+        ".github/workflows/quality-capability.yml"
+      ],
+      "workflow": ".github/workflows/quality-capability.yml",
+      "check": "lint-tests",
+      "enabled_by_default": true,
+      "providers": ["all"]
+    }
+  ]
+}

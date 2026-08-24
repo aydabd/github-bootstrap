@@ -1,4 +1,5 @@
-# Release Please workflow for automated releases with semantic versioning
+# Release Please workflow for automated releases with semantic versioning.
+# Breaking changes use a `feat!` commit and `BREAKING CHANGE:` footer.
 # Uses Google's release-please to create release PRs based on conventional commits
 # See: https://github.com/googleapis/release-please
 name: Release Please

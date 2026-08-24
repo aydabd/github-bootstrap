@@ -1,0 +1,20 @@
+name: Quality
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  quality:
+    name: quality
+    uses: "{{CENTRAL_REPOSITORY}}/.github/workflows/quality.yml@{{CENTRAL_REF}}"
+    with:
+      capabilities: "{{QUALITY_CAPABILITIES}}"
+      environment-manager: "{{ENV_MANAGER}}"
+    permissions:
+      contents: read # Read repository files for quality checks.

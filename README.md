@@ -1,6 +1,6 @@
 # github-bootstrap
 
-[![Lint](https://github.com/aydabd/github-bootstrap/actions/workflows/lint.yml/badge.svg)](https://github.com/aydabd/github-bootstrap/actions/workflows/lint.yml)
+[![Quality](https://github.com/aydabd/github-bootstrap/actions/workflows/quality.yml/badge.svg)](https://github.com/aydabd/github-bootstrap/actions/workflows/quality.yml)
 
 Bootstrap new GitHub repositories with best practices, SOLID principles, and language-agnostic templates.
 
@@ -16,9 +16,9 @@ Creates fully configured repositories with:
 - Editor and Git configurations
 - Conventional commits enforcement via pre-commit hooks
 - Release Please workflow for automated semantic versioning
-- Pre-commit linting workflow for PR and push (provider-aware: micromamba, mise, or system)
+- Profiled quality workflow for PR and push (embedded or user-owned centralized delivery)
 - AI code review with CodeRabbit and Claude (see [AI Code Review](#ai-code-review))
-- Makefile for local linting (`make lint` via selected environment provider)
+- Makefile for local quality checks (`make lint` via selected environment provider)
 - SECURITY.md and CONTRIBUTING.md
 - CodeQL security scanning workflow (language-aware)
 - Vulnerability alerts and Dependabot security updates enabled automatically
@@ -49,7 +49,7 @@ Fallback: use a PAT when App setup is not available.
 3. In the repository that runs bootstrap, set:
    - `BOOTSTRAP_APP_PRIVATE_KEY` (Actions secret — the PEM private key of the App)
 4. When running the workflow, provide:
-   - `app_id` (the numeric App ID, visible in the App's settings)
+   - `client_id` (the GitHub App client ID, visible in the App's settings)
    - `app_owner` (target tenant owner)
 
 The workflow mints a short-lived installation token for that owner and uses it for all API calls.
@@ -129,7 +129,7 @@ jobs:
       node_version: "24"
       java_version: "25"
       visibility: private
-      app_id: ${{ vars.BOOTSTRAP_APP_ID }}
+      client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
       app_owner: ${{ inputs.repo_owner }}
       allowed_repo_owners: ${{ vars.ALLOWED_REPO_OWNERS }}
       require_cleanup_approval: true
@@ -277,7 +277,7 @@ automated security fixes are enabled on every created repository.
 
 Project readme and AI assistant instructions (Agent, Claude, Copilot) following SOLID, TDD, and DDD principles.
 
-### Linting (provider-aware + pre-commit)
+### Quality profiles and delivery
 
 - **Pre-commit hooks** — All quality checks run via `.pre-commit-config.yaml` as the single source of truth
 - **Selectable provider** — choose `micromamba`, `mise`, or `system` when creating repositories
@@ -290,6 +290,11 @@ Project readme and AI assistant instructions (Agent, Claude, Copilot) following 
   markdownlint, editorconfig-checker, yamllint, taplo (TOML), terraform fmt
 - **Local and CI** — `make lint` auto-fixes locally; `LINT_MODE=check make lint` fails on violations in CI
 - **Language-specific linters** — Add language linters to `.pre-commit-config.yaml` as needed
+- **Profile manifest** — `templates/.github/config/bootstrap-profile.json` classifies baseline,
+  optional planning, and provider-specific assets
+- **Embedded delivery** — generated repositories receive local composite actions and reusable workflows
+- **Centralized delivery** — generated repositories can reference a user-owned actions/workflows
+  repository at a pinned tag or SHA; existing repositories are never migrated automatically
 
 To regenerate language template pre-commit files after snippet changes:
 
@@ -339,12 +344,12 @@ via pre-commit hooks:
 
 ### AI Code Review
 
-Every repository gets two independent AI reviewers that focus on **high and critical issues only** —
-no noise from style nitpicks (linters handle those).
+Repositories can use two independent AI reviewers that focus on **high and critical issues only** —
+no noise from style nitpicks (quality checks handle those).
 
 #### CodeRabbit (GitHub App)
 
-[CodeRabbit](https://coderabbit.ai) reviews every PR automatically via its GitHub App:
+[CodeRabbit](https://coderabbit.ai) can review PRs through its GitHub App:
 
 - **Free tier** — Works out of the box on public/open-source repositories
 - **Paid tiers** (Pro / Teams) — Sign up at [coderabbit.ai](https://coderabbit.ai)
@@ -356,7 +361,9 @@ no noise from style nitpicks (linters handle those).
 - **Configuration** — `.coderabbit.yaml` at the repository root (included in all templates)
 
 Setup: install the [CodeRabbit GitHub App](https://github.com/apps/coderabbitai) on your
-repository or organization. Reviews start automatically on the next PR.
+repository or organization. Depending on the repository and plan, reviews may start
+automatically; for explicit opt-in, run the `Request CodeRabbit Review` workflow and
+provide the PR number. The workflow is optional and is not a required status check.
 The default ruleset does not guess third-party status-check names. Supply exact
 successful check-run names with `--required-status-checks` when applying a
 ruleset, or discover them from the target repository first. If CodeRabbit is
@@ -364,17 +371,27 @@ rate-limited,
 release, Dependabot, and other automation PRs can remain blocked until quota
 resets or usage-based reviews are enabled.
 
-#### Claude AI Review (GitHub Actions)
+#### Claude AI Review (GitHub App + GitHub Actions)
 
-[Claude](https://anthropic.com) provides a second AI review layer via the
+[Claude](https://anthropic.com) provides a second, comment-triggered AI review
+layer through the Claude GitHub App and the
 `anthropics/claude-code-action` GitHub Action:
 
-- **API key** — Add an `ANTHROPIC_API_KEY` repository secret from
-  [console.anthropic.com](https://console.anthropic.com)
-- **Graceful skip** — The workflow is skipped with a notice when no API key is configured,
-  so it never breaks CI
+- **No static credentials** — Use Anthropic Workload Identity Federation (WIF)
+  with GitHub OIDC; do not store API keys or OAuth tokens in repository secrets
+- **Repository variables** — Configure `ANTHROPIC_FEDERATION_RULE_ID`,
+  `ANTHROPIC_ORGANIZATION_ID`, and `ANTHROPIC_SERVICE_ACCOUNT_ID`
 - **Interactive** — Comment `@claude` on any PR to ask follow-up questions
 - **Configuration** — `.github/workflows/ai-code-review.yml`
+
+Install the [Claude GitHub App](https://github.com/apps/claude), configure WIF,
+and add the workflow to enable Claude reviews. Without the federation variables,
+the workflow does not invoke Claude.
+
+The optional [`coderabbit-dependabot-review.yml`](.github/workflows/coderabbit-dependabot-review.yml)
+workflow remains because automation-authored PRs can be excluded by CodeRabbit’s
+normal App review policy. It uses only the short-lived GitHub Actions token to
+post an explicit `@coderabbitai review` request; it does not contain an API key.
 
 #### Review Focus
 
@@ -387,7 +404,7 @@ Both reviewers are configured to flag only high-impact issues:
 | Critical design flaws | Broken API contracts, missing input validation, SOLID issues |
 
 Style, formatting, and naming concerns are **not** flagged — those are handled by
-pre-commit hooks and the lint workflow.
+pre-commit hooks and the quality workflow.
 
 #### Opting Out
 
@@ -522,13 +539,13 @@ The Terraform module (in `terraform/`) manages the same infrastructure declarati
 2. Creates `dev` and `prod` environments via `github_repository_environment`
 3. Optionally creates a repository ruleset via `github_repository_ruleset`
    when Terraform input `enable_branch_protection=true`
-4. The wrapper workflow then copies template files and configures linting
+4. The wrapper workflow then copies template files and configures the selected quality profile
 
 Bootstrap workflows apply the default ruleset payload from
 `.github/config/ruleset-default.json` after repository creation.
 The default ruleset requires one approving review, approval after the latest
 push, resolved review threads, linear history, signed commits, squash-only
-pull requests, and the bootstrap-provided `Signed-off-by trailers` and `lint`
+pull requests, and the bootstrap-provided `Signed-off-by trailers` and `quality`
 checks. When workflows are explicitly reduced, the bootstrap rewrites the
 required contexts to match the installed checks. Custom checks must use exact
 check-run names validated in the target repository.
@@ -565,11 +582,18 @@ preset for the path you are validating (`api-*` or `terraform-*`).
 
 ## Requirements
 
-- Recommended: GitHub App credentials (`app_id` + `BOOTSTRAP_APP_PRIVATE_KEY`) installed in each target tenant owner
+- Recommended: GitHub App credentials (`client_id` + `BOOTSTRAP_APP_PRIVATE_KEY`) installed in each target tenant owner
 - Fallback: GitHub personal access token (PAT) with `repo` scope (add `admin:org` for organization repositories)
   — stored as a `GH_PAT` repository secret **or** provided via the `gh_token` workflow input
   — see [Setup](#setup)
 - One of: `micromamba`, `mise`, or system-installed tooling for local linting with `make lint`
+
+## Breaking change in issue #78
+
+The generated `lint.yml` workflow and `lint` required status check are removed.
+New repositories use the stable `quality` workflow and may select embedded or
+user-owned centralized reusable workflows. Existing repositories are not
+modified automatically; users choose and perform any manual migration.
 
 ## License
 

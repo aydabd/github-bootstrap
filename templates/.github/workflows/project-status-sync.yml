@@ -10,14 +10,18 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: project-status-sync-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   sync:
     name: Synchronize Project status
     runs-on: ubuntu-24.04
     permissions:
-      issues: read
-      pull-requests: read
-      repository-projects: write
+      issues: read # Required to read issue events and update their Project items.
+      pull-requests: read # Required to read pull-request events and update their Project items.
+      repository-projects: write # Required to update Project item status fields.
     steps:
       - name: Update configured Project item
         shell: bash

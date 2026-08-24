@@ -1,4 +1,5 @@
 name: Terraform Create Repository
+run-name: Terraform Create Repository - ${{ inputs.repo_name }}
 
 on:
   workflow_dispatch:
@@ -53,37 +54,25 @@ on:
           - mise
           - system
       python_version:
-        description: "Python runtime version for generated tooling (default: latest stable)"
+        description: "Python version for generated tooling"
         required: false
         default: "3.13"
-        type: choice
-        options:
-          - "3.13"
-          - "3.12"
+        type: string
       node_version:
-        description: "Node.js major LTS version for generated tooling"
+        description: "Node.js version for generated tooling"
         required: false
         default: "24"
-        type: choice
-        options:
-          - "24"
-          - "22"
+        type: string
       go_version:
-        description: "Go stable version for generated tooling"
+        description: "Go version for generated tooling"
         required: false
         default: "1.26"
-        type: choice
-        options:
-          - "1.26"
-          - "1.25"
+        type: string
       java_version:
-        description: "Java LTS version for generated tooling"
+        description: "Java version for generated tooling"
         required: false
         default: "25"
-        type: choice
-        options:
-          - "25"
-          - "21"
+        type: string
       release_tool:
         description: >-
           Release automation tool:
@@ -111,38 +100,35 @@ on:
       workflows:
         description: >-
           Comma-separated list of workflows to include, or 'all' to keep
-          everything, or 'none' to skip all. Valid names: lint, codeql,
+          everything, or 'none' to skip all. Valid names: quality, codeql,
           ai-code-review, release.
         required: false
         default: "all"
         type: string
       optional_features:
-        description: >-
-          Optional feature bundles. Use 'github-planning' to include issue
-          templates, tracker/roadmap skills, the roadmap agent, and Project
-          status automation. Default: none.
+        description: Optional feature bundles to include, such as github-planning.
         required: false
         default: "none"
         type: string
+      delivery_mode:
+        description: Embed workflows locally or reference a user-owned central repository.
+        required: false
+        default: embedded
+        type: choice
+        options:
+          - embedded
+          - centralized
+      central_repository:
+        description: User-owned central repository and immutable ref as OWNER/REPOSITORY@REF (required for centralized mode).
+        required: false
+        type: string
       github_host:
-        description: >-
-          GitHub hostname. Use 'github.com' for GitHub.com or your GHES
-          hostname (e.g. 'ghes.example.com') for Enterprise Server.
+        description: GitHub hostname for GitHub.com or GitHub Enterprise Server.
         required: false
         default: "github.com"
         type: string
-      gh_token:
-        description: >-
-          Personal Access Token with repo and admin:org scopes.
-          WARNING: This input is NOT treated as a secret — its value may be
-          visible in the run's inputs/metadata to anyone who can view the run.
-          Prefer using the repository secret GH_PAT whenever possible.
-          Only use this input when you do not have permission to set repository
-          secrets and use a short-lived token with minimum required scopes.
-        required: false
-        type: string
-      app_id:
-        description: "GitHub App ID for App-based auth (recommended)"
+      client_id:
+        description: "GitHub App client ID for App-based auth (recommended)"
         required: false
         type: string
       app_owner:
@@ -224,6 +210,24 @@ on:
         required: false
         default: "all"
         type: string
+      profile:
+        required: false
+        default: baseline
+        type: string
+      profile_capabilities:
+        required: false
+        default: lint-markdown,lint-json,lint-yaml,lint-actions,lint-shell,lint-python,lint-terraform,lint-format,lint-tests
+        type: string
+      delivery_mode:
+        required: false
+        default: embedded
+        type: string
+      central_repository:
+        required: false
+        type: string
+      central_ref:
+        required: false
+        type: string
       optional_features:
         required: false
         default: "none"
@@ -235,7 +239,7 @@ on:
       gh_token:
         required: false
         type: string
-      app_id:
+      client_id:
         required: false
         type: string
       app_owner:
@@ -327,7 +331,27 @@ jobs:
           NODE_VERSION: ${{ inputs.node_version }}
           GO_VERSION: ${{ inputs.go_version }}
           JAVA_VERSION: ${{ inputs.java_version }}
+          PROFILE: ${{ inputs.profile || 'baseline' }}
+          PROFILE_CAPABILITIES: ${{ inputs.profile_capabilities }}
+          DELIVERY_MODE: ${{ inputs.delivery_mode }}
+          CENTRAL_REPOSITORY: ${{ inputs.central_repository }}
+          CENTRAL_REF: ${{ inputs.central_ref }}
         run: |
+          PYTHON_VERSION="${PYTHON_VERSION:-3.13}"
+          NODE_VERSION="${NODE_VERSION:-24}"
+          GO_VERSION="${GO_VERSION:-1.26}"
+          JAVA_VERSION="${JAVA_VERSION:-25}"
+          PROFILE="${PROFILE:-baseline}"
+          PROFILE_CAPABILITIES="${PROFILE_CAPABILITIES:-lint-markdown,lint-json,lint-yaml,lint-actions,lint-shell,lint-python,lint-terraform,lint-format,lint-tests}"
+          PROFILE_CAPABILITIES="$(printf '%s' "$PROFILE_CAPABILITIES" | tr -d '[:space:]')"
+          DELIVERY_MODE="${DELIVERY_MODE:-embedded}"
+          if [ -z "$CENTRAL_REF" ] && [[ "$CENTRAL_REPOSITORY" == *@* ]]; then
+            CENTRAL_REF="${CENTRAL_REPOSITORY##*@}"
+            CENTRAL_REPOSITORY="${CENTRAL_REPOSITORY%@*}"
+          fi
+          if [ "$DELIVERY_MODE" = "embedded" ] && [ -n "$CENTRAL_REPOSITORY" ] && [ -n "$CENTRAL_REF" ]; then
+            DELIVERY_MODE=centralized
+          fi
           if ! [[ "$ENV_MANAGER" =~ ^(micromamba|mise|system)$ ]]; then
             echo "::error::Invalid env_manager '$ENV_MANAGER'. Allowed: micromamba, mise, system"
             exit 1
@@ -335,6 +359,31 @@ jobs:
 
           if ! [[ "$LANGUAGES" =~ ^[a-zA-Z0-9,_-]+$ ]]; then
             echo "::error::Invalid languages input '$LANGUAGES'. Use comma-separated language identifiers."
+            exit 1
+          fi
+
+          if [ "$PROFILE" != "baseline" ]; then
+            echo "::error::Invalid profile '$PROFILE'. Allowed: baseline"
+            exit 1
+          fi
+          if [ "$DELIVERY_MODE" != "embedded" ] && [ "$DELIVERY_MODE" != "centralized" ]; then
+            echo "::error::Invalid delivery_mode '$DELIVERY_MODE'. Allowed: embedded, centralized"
+            exit 1
+          fi
+          if [ "$DELIVERY_MODE" = "centralized" ] && { [ -z "$CENTRAL_REPOSITORY" ] || [ -z "$CENTRAL_REF" ]; }; then
+            echo "::error::central_repository (OWNER/REPOSITORY@REF for manual runs) and central_ref are required for centralized delivery"
+            exit 1
+          fi
+          if [ "$DELIVERY_MODE" = "centralized" ] && ! [[ "$CENTRAL_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "::error::central_repository must match OWNER/REPOSITORY"
+            exit 1
+          fi
+          if [ "$DELIVERY_MODE" = "centralized" ] && ! [[ "$CENTRAL_REF" =~ ^([0-9a-fA-F]{40}|v?[0-9][A-Za-z0-9._-]*)$ ]]; then
+            echo "::error::central_ref must be an immutable-looking version tag or 40-character commit SHA"
+            exit 1
+          fi
+          if ! printf '%s' "$PROFILE_CAPABILITIES" | grep -Eq '^(lint-markdown|lint-json|lint-yaml|lint-actions|lint-shell|lint-python|lint-terraform|lint-format|lint-tests)(,(lint-markdown|lint-json|lint-yaml|lint-actions|lint-shell|lint-python|lint-terraform|lint-format|lint-tests))*$'; then
+            echo "::error::profile_capabilities contains an unknown or malformed capability"
             exit 1
           fi
 
@@ -396,7 +445,7 @@ jobs:
         with:
           gh_token: ${{ inputs.gh_token }}
           gh_pat_secret: ${{ secrets.GH_PAT }}
-          app_id: ${{ inputs.app_id }}
+          client_id: ${{ inputs.client_id }}
           app_private_key: ${{ secrets.app_private_key || secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
           app_owner: ${{ inputs.app_owner || steps.set-owner.outputs.owner }}
 
@@ -484,7 +533,7 @@ jobs:
           cp -r templates/.claude new-repo/
 
           # Remove template-only helper trees that should not ship in generated repositories.
-          rm -rf new-repo/languages new-repo/providers new-repo/.github/workflows/providers
+          rm -rf new-repo/languages new-repo/providers new-repo/.github/workflows/providers new-repo/centralized-actions-workflows
 
           cp templates/.gitignore new-repo/
           cp templates/.gitattributes new-repo/
@@ -494,6 +543,8 @@ jobs:
           cp templates/.prettierrc.yaml new-repo/
           cp templates/.prettierignore new-repo/
           cp templates/.windsurfrules new-repo/
+          cp AGENTS.md new-repo/
+          cp WORKTREES.md new-repo/
 
           cp templates/.github/linters/.editorconfig new-repo/
 
@@ -517,6 +568,46 @@ jobs:
               echo "Release tool: **git-cliff** — tag-triggered changelog + GitHub Release (any language, ~9k ⭐)" >> $GITHUB_STEP_SUMMARY
               ;;
           esac
+
+      - name: Configure quality profile delivery
+        run: |
+          cd new-repo
+          PROFILE_CAPABILITIES='${{ inputs.profile_capabilities }}'
+          PROFILE_CAPABILITIES="${PROFILE_CAPABILITIES:-lint-markdown,lint-json,lint-yaml,lint-actions,lint-shell,lint-python,lint-terraform,lint-format,lint-tests}"
+          PROFILE_CAPABILITIES="$(printf '%s' "$PROFILE_CAPABILITIES" | tr -d '[:space:]')"
+          DELIVERY_MODE='${{ inputs.delivery_mode }}'
+          CENTRAL_REPOSITORY='${{ inputs.central_repository }}'
+          CENTRAL_REF='${{ inputs.central_ref }}'
+          if [ -z "$CENTRAL_REF" ] && [[ "$CENTRAL_REPOSITORY" == *@* ]]; then
+            CENTRAL_REF="${CENTRAL_REPOSITORY##*@}"
+            CENTRAL_REPOSITORY="${CENTRAL_REPOSITORY%@*}"
+          fi
+          if [ "$DELIVERY_MODE" = "embedded" ] && [ -n "$CENTRAL_REPOSITORY" ] && [ -n "$CENTRAL_REF" ]; then
+            DELIVERY_MODE=centralized
+          fi
+          if [ "$DELIVERY_MODE" = "centralized" ]; then
+            sed -i \
+              -e "s|{{CENTRAL_REPOSITORY}}|$CENTRAL_REPOSITORY|g" \
+              -e "s|{{CENTRAL_REF}}|$CENTRAL_REF|g" \
+              -e "s|{{QUALITY_CAPABILITIES}}|$PROFILE_CAPABILITIES|g" \
+              -e "s|{{ENV_MANAGER}}|${{ steps.validate-inputs.outputs.env_manager }}|g" \
+              .github/workflows/centralized-quality.yml
+            jq \
+              --arg repository "$CENTRAL_REPOSITORY" \
+              --arg ref "$CENTRAL_REF" \
+              '.delivery_modes.centralized.repository = $repository | .delivery_modes.centralized.ref = $ref' \
+              .github/config/bootstrap-profile.json > .github/config/bootstrap-profile.json.tmp
+            mv .github/config/bootstrap-profile.json.tmp .github/config/bootstrap-profile.json
+            rm -rf .github/actions/quality .github/workflows/quality.yml .github/workflows/quality-capability.yml
+            mv .github/workflows/centralized-quality.yml .github/workflows/quality.yml
+          else
+            sed -i \
+              -e "s|{{QUALITY_CAPABILITIES}}|$PROFILE_CAPABILITIES|g" \
+              -e "s|{{ENV_MANAGER}}|${{ steps.validate-inputs.outputs.env_manager }}|g" \
+              .github/workflows/quality.yml \
+              .github/workflows/quality-capability.yml
+            rm -f .github/workflows/centralized-quality.yml
+          fi
 
       - name: Configure CODEOWNERS
         run: |
@@ -574,9 +665,10 @@ jobs:
           java_version: ${{ steps.validate-inputs.outputs.java_version }}
 
       - name: Remove unselected workflows
+        id: filter-workflows
         run: |
           cd new-repo
-          OPTIONAL_FEATURES="${{ inputs.optional_features }}"
+          OPTIONAL_FEATURES="${{ inputs.optional_features || 'none' }}"
           case "$OPTIONAL_FEATURES" in
             ""|"none")
               rm -rf .github/ISSUE_TEMPLATE \
@@ -602,10 +694,12 @@ jobs:
 
           case "$WORKFLOWS_INPUT" in
             "all")
+              echo "quality_kept=true" >> "$GITHUB_OUTPUT"
               echo "✅ All workflows kept" >> $GITHUB_STEP_SUMMARY
               ;;
             "none")
-              rm -f .github/workflows/lint.yml \
+              echo "quality_kept=false" >> "$GITHUB_OUTPUT"
+              rm -f .github/workflows/quality.yml \
                 .github/workflows/codeql.yml \
                 .github/workflows/ai-code-review.yml
               case "${{ inputs.release_tool }}" in
@@ -615,13 +709,15 @@ jobs:
               echo "⏭️ All workflows removed (workflows=none)" >> $GITHUB_STEP_SUMMARY
               ;;
             *)
-              VALID_NAMES="lint codeql ai-code-review release"
+              VALID_NAMES="quality codeql ai-code-review release"
               KEEP_LIST=""
+              QUALITY_KEPT=false
               IFS=',' read -ra NAMES <<< "$WORKFLOWS_INPUT"
               for name in "${NAMES[@]}"; do
                 name=$(echo "$name" | xargs)
                 case "$name" in
-                  lint|codeql|ai-code-review|release) KEEP_LIST="$KEEP_LIST $name" ;;
+                  quality) KEEP_LIST="$KEEP_LIST $name"; QUALITY_KEPT=true ;;
+                  codeql|ai-code-review|release) KEEP_LIST="$KEEP_LIST $name" ;;
                   *) echo "⚠️ Unknown workflow name: $name (ignored)" >> $GITHUB_STEP_SUMMARY ;;
                 esac
               done
@@ -632,7 +728,7 @@ jobs:
               fi
 
               # Remove workflows not in keep list
-              for wf in lint codeql ai-code-review; do
+              for wf in quality codeql ai-code-review; do
                 if ! echo "$KEEP_LIST" | grep -qw "$wf"; then
                   rm -f ".github/workflows/${wf}.yml"
                 fi
@@ -644,6 +740,7 @@ jobs:
                 esac
               fi
               echo "✅ Selected workflows:$KEEP_LIST" >> $GITHUB_STEP_SUMMARY
+              echo "quality_kept=$QUALITY_KEPT" >> "$GITHUB_OUTPUT"
               ;;
           esac
 
@@ -684,7 +781,7 @@ jobs:
           owner: ${{ steps.set-owner.outputs.owner }}
           repo_name: ${{ inputs.repo_name }}
           gh_token: ${{ steps.resolve-token.outputs.token }}
-          required_status_checks: ${{ inputs.workflows == 'none' && 'Signed-off-by trailers' || 'Signed-off-by trailers,lint' }}
+          required_status_checks: ${{ steps.filter-workflows.outputs.quality_kept == 'true' && 'Signed-off-by trailers,quality' || 'Signed-off-by trailers' }}
 
       - name: Summary
         run: |
@@ -731,7 +828,7 @@ jobs:
           echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
           case "${{ inputs.workflows }}" in
             "all"|"")
-              echo "- ✅ Lint workflow (${{ steps.validate-inputs.outputs.env_manager }} + pre-commit)" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Quality workflow (${{ steps.validate-inputs.outputs.env_manager }} + selected capabilities)" >> $GITHUB_STEP_SUMMARY
               ;;
             "none")
               echo "- ⏭️ All workflows skipped" >> $GITHUB_STEP_SUMMARY
@@ -774,7 +871,7 @@ jobs:
       needs.terraform-create-repository.outputs.repo_created == 'true' &&
       needs.terraform-create-repository.result == 'failure' &&
       inputs.cleanup_on_failure == true &&
-      inputs.require_cleanup_approval == true
+      (inputs.require_cleanup_approval == true || github.event_name == 'workflow_dispatch')
     permissions: {}
     # Create this environment in repository settings and add required reviewers
     # to enforce manual approval for destructive cleanup.
@@ -796,7 +893,7 @@ jobs:
       needs.terraform-create-repository.outputs.repo_created == 'true' &&
       needs.terraform-create-repository.result == 'failure' &&
       inputs.cleanup_on_failure == true &&
-      inputs.require_cleanup_approval == true &&
+      (inputs.require_cleanup_approval == true || github.event_name == 'workflow_dispatch') &&
       needs.cleanup-approval.result == 'success'
     permissions:
       contents: read
@@ -822,7 +919,7 @@ jobs:
         with:
           gh_token: ${{ inputs.gh_token }}
           gh_pat_secret: ${{ secrets.GH_PAT }}
-          app_id: ${{ inputs.app_id }}
+          client_id: ${{ inputs.client_id }}
           app_private_key: ${{ secrets.app_private_key || secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
           app_owner: ${{ inputs.app_owner || needs.terraform-create-repository.outputs.owner }}
 
@@ -855,7 +952,7 @@ jobs:
       needs.terraform-create-repository.outputs.repo_created == 'true' &&
       needs.terraform-create-repository.result == 'failure' &&
       inputs.cleanup_on_failure == true &&
-      inputs.require_cleanup_approval == false
+      inputs.require_cleanup_approval == false && github.event_name != 'workflow_dispatch'
     permissions:
       contents: read
 
@@ -880,7 +977,7 @@ jobs:
         with:
           gh_token: ${{ inputs.gh_token }}
           gh_pat_secret: ${{ secrets.GH_PAT }}
-          app_id: ${{ inputs.app_id }}
+          client_id: ${{ inputs.client_id }}
           app_private_key: ${{ secrets.app_private_key || secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
           app_owner: ${{ inputs.app_owner || needs.terraform-create-repository.outputs.owner }}
 

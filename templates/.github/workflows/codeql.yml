@@ -34,9 +34,9 @@ jobs:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-24.04
     permissions:
-      actions: read
-      contents: read
-      security-events: write
+      actions: read # Read workflow metadata required by CodeQL.
+      contents: read # Read source code for analysis.
+      security-events: write # Upload CodeQL analysis results.
 
     strategy:
       fail-fast: false

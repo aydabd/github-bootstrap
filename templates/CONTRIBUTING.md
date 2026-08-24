@@ -96,7 +96,7 @@ Update all call sites accordingly.
 
 1. **Branch** from `main` and keep your PR focused on a single concern.
 2. **Tests** — add or update tests where applicable and ensure they all pass.
-3. **Lint** — run `make lint` and fix any reported issues before opening the PR.
+3. **Quality checks** — run `make lint` and fix any reported issues before opening the PR.
 4. **PR title** — use the same conventional commit format as your commits.
 5. **Fill in the template** — the PR template guides you through the required information.
 6. **Two approvals** are required from code owners before merging.
@@ -109,7 +109,7 @@ Update all call sites accordingly.
 - **No trailing whitespace**
 - **No hardcoded secrets or credentials**
 - **All public APIs must be documented**
-- Linting is enforced automatically by the `lint.yml` workflow on every PR
+- Quality is enforced automatically by the `quality.yml` workflow on every PR
 
 ## Reporting Issues
 

@@ -19,7 +19,7 @@ func TestGeneratedRepositoryRequiredFilesSnapshot(t *testing.T) {
 
 	requiredFiles := extractBashArray(t, script, "REQUIRED_FILES")
 	wantRequiredFiles := []string{
-		".github/workflows/lint.yml",
+		".github/workflows/quality.yml",
 		".github/CODEOWNERS",
 		".github/dependabot.yml",
 		".pre-commit-config.yaml",
@@ -71,17 +71,19 @@ func checkRequiredFileSources(t *testing.T, repoRoot string, requiredFiles []str
 	templatesRoot := filepath.Join(repoRoot, "templates")
 	for _, file := range requiredFiles {
 		switch file {
-		case ".github/workflows/lint.yml":
-			for _, envManager := range []string{"micromamba", "mise", "system"} {
-				lintTemplate := filepath.Join(
-					templatesRoot,
-					".github",
-					"workflows",
-					"providers",
-					"lint-"+envManager+".yml",
-				)
-				if _, err := os.Stat(lintTemplate); err != nil {
-					t.Fatalf("missing lint workflow template for %s: %v", envManager, err)
+		case ".github/workflows/quality.yml":
+			qualityTemplate := filepath.Join(templatesRoot, ".github", "workflows", "quality.yml")
+			if _, err := os.Stat(qualityTemplate); err != nil {
+				t.Fatalf("missing quality workflow template: %v", err)
+			}
+			for _, oldTemplate := range []string{
+				"lint.yml",
+				filepath.Join("providers", "lint-micromamba.yml"),
+				filepath.Join("providers", "lint-mise.yml"),
+				filepath.Join("providers", "lint-system.yml"),
+			} {
+				if _, err := os.Stat(filepath.Join(templatesRoot, ".github", "workflows", oldTemplate)); err == nil {
+					t.Fatalf("old lint workflow still exists: %s", oldTemplate)
 				}
 			}
 		case "Makefile":

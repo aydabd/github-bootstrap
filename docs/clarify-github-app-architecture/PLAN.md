@@ -10,7 +10,7 @@ Your assumption is **partially correct** but there's a nuance. External consumer
 
 - Any org/user can create their own GitHub App with the right permissions
 - They install the App on their target org(s)
-- They store `BOOTSTRAP_APP_PRIVATE_KEY` and `BOOTSTRAP_APP_ID` in their own launcher repo
+- They store `BOOTSTRAP_APP_PRIVATE_KEY` and `BOOTSTRAP_APP_CLIENT_ID` in their own launcher repo
 - They call `aydabd/github-bootstrap/.github/workflows/create-repository.yml@main` via `workflow_call`
 - The bootstrap repo is entirely credential-agnostic — it just receives and uses whatever the caller passes
 
@@ -51,7 +51,7 @@ fi
    - Reference the GitHub docs constraint explicitly
 
 2. **Update launcher examples** — add inline comments explaining when to use App vs PAT
-   - `examples/launcher-actions.yml` — add comment block near `app_id` input
+   - `examples/launcher-actions.yml` — add comment block near `client_id` input
    - `examples/launcher-terraform.yml` — same
 
 3. **Improve error message in workflows** — make the `Validate owner type` error more actionable

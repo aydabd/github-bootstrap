@@ -1,0 +1,19 @@
+name: Quality from owned central repository
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  quality:
+    name: quality
+    uses: my-org/shared-actions-workflows/.github/workflows/quality.yml@v1.0.0
+    with:
+      capabilities: lint-markdown,lint-json,lint-yaml,lint-actions,lint-shell,lint-format,lint-tests
+      environment-manager: system
+    permissions:
+      contents: read

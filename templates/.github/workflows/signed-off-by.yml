@@ -6,13 +6,17 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: signed-off-by-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   signed-off-by:
     name: Signed-off-by trailers
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: read # Required to read pull-request commits and verify trailers.
     steps:
       - name: Verify every pull-request commit has a Signed-off-by trailer
         shell: bash
