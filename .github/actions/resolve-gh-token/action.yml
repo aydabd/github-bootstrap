@@ -1,108 +1,109 @@
 ---
 name: Resolve GitHub Token
 description: >-
-  Resolves a GitHub token for bootstrap workflows.
-  Supports GitHub App installation tokens (recommended) with PAT fallback.
+  Resolves an isolated GitHub App installation token or user access token.
 
 inputs:
-  gh_token:
-    description: Optional user-supplied PAT from workflow_dispatch input.
-    required: false
-    default: ""
-  gh_pat_secret:
-    description: >-
-      Repository secret GH_PAT. Pass as
-      secrets.GH_PAT from the calling workflow.
-    required: false
-    default: ""
   client_id:
     description: GitHub App client ID for App-based auth.
-    required: false
-    default: ""
+    required: true
   app_private_key:
-    description: Optional GitHub App private key (PEM) for App-based auth.
+    description: GitHub App private key (PEM) for App-based auth.
     required: false
-    default: ""
+  app_user_token:
+    description: GitHub App user access token for the target personal account.
+    required: false
   app_owner:
-    description: Optional owner (user/org) to resolve the App installation token for.
+    description: Owner bound to the App installation or user access token.
+    required: true
+  target_owner:
+    description: Target repository owner; must match app_owner.
+    required: true
+  permission_profile:
+    description: Permission set required by the calling workflow phase.
+    required: true
+  repositories:
+    description: Comma- or newline-separated repository names; required except for repository-creation.
     required: false
     default: ""
 
 outputs:
   token:
-    description: Resolved and masked GitHub token (App installation token or PAT).
+    description: Resolved and masked GitHub App token.
     value: ${{ steps.finalize.outputs.token }}
   auth_mode:
-    description: Authentication mode used (app or pat).
+    description: Authentication mode used (app or app-user).
     value: ${{ steps.validate-auth-mode.outputs.mode }}
 
 runs:
   using: composite
   steps:
-    - name: Resolve PAT fallback
-      id: resolve-pat
-      shell: bash
-      env:
-        INPUT_TOKEN: ${{ inputs.gh_token }}
-        SECRET_TOKEN: ${{ inputs.gh_pat_secret }}
-      run: |
-        TOKEN="${INPUT_TOKEN:-$SECRET_TOKEN}"
-        if [ -n "$TOKEN" ]; then
-          echo "::add-mask::$TOKEN"
-        fi
-        echo "token=$TOKEN" >> $GITHUB_OUTPUT
-
-    - name: Validate authentication configuration
+    - name: Validate GitHub App configuration
       id: validate-auth-mode
       shell: bash
       env:
-        CLIENT_ID: ${{ inputs.client_id }}
+        APP_CLIENT_ID: ${{ inputs.client_id }}
         APP_PRIVATE_KEY: ${{ inputs.app_private_key }}
+        APP_USER_TOKEN: ${{ inputs.app_user_token }}
         APP_OWNER: ${{ inputs.app_owner }}
-        PAT_TOKEN: ${{ steps.resolve-pat.outputs.token }}
+        TARGET_OWNER: ${{ inputs.target_owner }}
+        PERMISSION_PROFILE: ${{ inputs.permission_profile }}
+        REPOSITORIES: ${{ inputs.repositories }}
       run: |
-        HAS_CLIENT_ID=false
-        HAS_APP_KEY=false
-        HAS_PAT=false
-
-        if [ -n "$CLIENT_ID" ]; then
-          HAS_CLIENT_ID=true
-        fi
-        if [ -n "$APP_PRIVATE_KEY" ]; then
-          HAS_APP_KEY=true
-        fi
-        if [ -n "$PAT_TOKEN" ]; then
-          HAS_PAT=true
-        fi
-
-        if [ "$HAS_CLIENT_ID" = true ] && [ "$HAS_APP_KEY" = true ]; then
-          if [ -z "$APP_OWNER" ]; then
-            echo "::error::GitHub App authentication requires the 'app_owner' input to scope the installation token to a specific tenant owner. Please provide this value."
-            exit 1
-          fi
-          echo "mode=app" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-
-        # Only fail on partial App config when client_id was explicitly provided.
-        # If only the private key is present (e.g. a repo-level secret always injected
-        # by the caller workflow) but no client_id, fall through to PAT gracefully.
-        if [ "$HAS_CLIENT_ID" = true ] && [ "$HAS_APP_KEY" = false ]; then
-          echo "::error::Incomplete GitHub App auth config: client_id is set but app_private_key is missing. Provide both or neither."
+        set -euo pipefail
+        case "$PERMISSION_PROFILE" in
+          repository-creation|repository-setup|repository-cleanup|weekly-tooling) ;;
+          *) echo "::error::Unsupported GitHub App permission profile '$PERMISSION_PROFILE'." >&2; exit 1 ;;
+        esac
+        if [ "$PERMISSION_PROFILE" != "repository-creation" ] && [ -z "$REPOSITORIES" ]; then
+          echo "::error::Repository scoping is required for the '$PERMISSION_PROFILE' permission profile." >&2
           exit 1
         fi
-
-        if [ "$HAS_PAT" = true ]; then
-          echo "mode=pat" >> $GITHUB_OUTPUT
-          exit 0
+        if [ -n "$APP_USER_TOKEN" ]; then
+          echo "::add-mask::$APP_USER_TOKEN"
         fi
+        AUTH_MODE=owner-only bash ./scripts/github-setup/validate-app-auth.sh
+        target_owner_type="$(env -u GH_TOKEN -u GITHUB_TOKEN gh api "/users/$TARGET_OWNER" --jq '.type')"
 
-        if [ "$HAS_APP_KEY" = true ]; then
-          echo "::error::No GitHub credentials available. app_private_key is set but client_id is missing (incomplete App config). Provide client_id to use App auth, or set GH_PAT/pass gh_token for PAT auth."
-        else
-          echo "::error::No GitHub credentials available. Provide GitHub App credentials (recommended) or set GH_PAT/pass gh_token."
-        fi
-        exit 1
+        case "$target_owner_type" in
+          User)
+            if [ -z "$APP_USER_TOKEN" ]; then
+              echo "::error::Personal-account creation requires BOOTSTRAP_APP_USER_TOKEN; installation credentials cannot create a personal repository." >&2
+              exit 1
+            fi
+            case "$PERMISSION_PROFILE" in
+              repository-creation|repository-cleanup) ;;
+              *)
+                echo "::error::GitHub App user access tokens are supported only for repository creation and its explicitly scoped cleanup." >&2
+                exit 1
+                ;;
+            esac
+            case "$APP_USER_TOKEN" in
+              ghu_*) ;;
+              *)
+                echo "::error::Personal-account creation requires a GitHub App user access token (ghu_ prefix); PATs and other token types are rejected." >&2
+                exit 1
+                ;;
+            esac
+            authenticated_user="$(GH_TOKEN="$APP_USER_TOKEN" gh api /user --jq '.login')"
+            normalized_user="$(printf '%s' "$authenticated_user" | tr '[:upper:]' '[:lower:]')"
+            normalized_target="$(printf '%s' "$TARGET_OWNER" | tr '[:upper:]' '[:lower:]')"
+            if [ "$normalized_user" != "$normalized_target" ]; then
+              echo "::error::GitHub App user token belongs to '$authenticated_user', not target owner '$TARGET_OWNER'." >&2
+              exit 1
+            fi
+            AUTH_MODE=app-user bash ./scripts/github-setup/validate-app-auth.sh
+            echo "mode=app-user" >> "$GITHUB_OUTPUT"
+            ;;
+          Organization)
+            AUTH_MODE=app bash ./scripts/github-setup/validate-app-auth.sh
+            echo "mode=app" >> "$GITHUB_OUTPUT"
+            ;;
+          *)
+            echo "::error::Unable to classify target owner '$TARGET_OWNER' as a GitHub User or Organization." >&2
+            exit 1
+            ;;
+        esac
 
     - name: Create GitHub App installation token
       id: app-token
@@ -112,23 +113,30 @@ runs:
         client-id: ${{ inputs.client_id }}
         private-key: ${{ inputs.app_private_key }}
         owner: ${{ inputs.app_owner }}
+        repositories: ${{ inputs.repositories }}
+        permission-administration: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'repository-cleanup') && 'write' || '' }}
+        permission-contents: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'weekly-tooling') && 'write' || '' }}
+        permission-issues: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup') && 'write' || '' }}
+        permission-organization-administration: ${{ inputs.permission_profile == 'repository-creation' && 'write' || '' }}
+        permission-pull-requests: ${{ inputs.permission_profile == 'weekly-tooling' && 'write' || '' }}
 
     - name: Finalize token output
       id: finalize
       shell: bash
       env:
         AUTH_MODE: ${{ steps.validate-auth-mode.outputs.mode }}
-        PAT_TOKEN: ${{ steps.resolve-pat.outputs.token }}
         APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        APP_USER_TOKEN: ${{ inputs.app_user_token }}
       run: |
-        case "$AUTH_MODE" in
-          "app") TOKEN="$APP_TOKEN" ;;
-          "pat") TOKEN="$PAT_TOKEN" ;;
-          *)
-            echo "::error::Unknown auth mode '$AUTH_MODE'."
-            exit 1
-            ;;
-        esac
+        set -euo pipefail
+        if [ "$AUTH_MODE" = "app-user" ]; then
+          TOKEN="$APP_USER_TOKEN"
+        elif [ "$AUTH_MODE" = "app" ]; then
+          TOKEN="$APP_TOKEN"
+        else
+          echo "::error::Unexpected authentication mode '$AUTH_MODE'." >&2
+          exit 1
+        fi
 
         if [ -z "$TOKEN" ]; then
           echo "::error::Resolved auth mode '$AUTH_MODE' but no token was produced."
@@ -136,4 +144,4 @@ runs:
         fi
 
         echo "::add-mask::$TOKEN"
-        echo "token=$TOKEN" >> $GITHUB_OUTPUT
+        echo "token=$TOKEN" >> "$GITHUB_OUTPUT"

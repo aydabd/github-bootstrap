@@ -121,15 +121,13 @@ on:
         required: false
         default: "all"
         type: string
-      gh_token:
-        description: >-
-          Personal Access Token with repo and admin:org scopes.
-          WARNING: This input is NOT treated as a secret — its value may be
-          visible in the run's inputs/metadata to anyone who can view the run.
-          Prefer using the repository secret GH_PAT whenever possible.
-          Only use this input when you do not have permission to set repository
-          secrets and use a short-lived token with minimum required scopes.
-        required: false
+      client_id:
+        description: GitHub App client ID.
+        required: true
+        type: string
+      app_owner:
+        description: Organization whose installation owns the test repository.
+        required: true
         type: string
 
 jobs:
@@ -161,15 +159,18 @@ jobs:
         run: |
           TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
           REPO_NAME="test-${{ github.event.inputs.test_repo_name }}-${TIMESTAMP}"
-          echo "repo_name=${REPO_NAME}" >> $GITHUB_OUTPUT
+          echo "repo_name=${REPO_NAME}" >> "$GITHUB_OUTPUT"
           echo "Generated test repository name: ${REPO_NAME}"
 
       - name: Resolve GitHub token
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          gh_token: ${{ github.event.inputs.gh_token }}
-          gh_pat_secret: ${{ secrets.GH_PAT }}
+          client_id: ${{ inputs.client_id }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: repository-creation
 
       - name: Validate test inputs
         id: validate-inputs
@@ -452,10 +453,10 @@ jobs:
 
           if gh repo view ${{ github.repository_owner }}/${REPO_NAME} &>/dev/null; then
             echo "✅ Repository verified: https://github.com/${{ github.repository_owner }}/${REPO_NAME}"
-            echo "created=true" >> $GITHUB_OUTPUT
+            echo "created=true" >> "$GITHUB_OUTPUT"
           else
             echo "❌ Repository not found after workflow completion"
-            echo "created=false" >> $GITHUB_OUTPUT
+            echo "created=false" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
@@ -804,7 +805,7 @@ jobs:
           OWNER="${{ github.repository_owner }}"
           REPO_URL="https://github.com/${OWNER}/${REPO_NAME}"
 
-          cat >> $GITHUB_STEP_SUMMARY << EOF
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
           ## Test Repository Created
 
           | Item | Status |
@@ -846,8 +847,12 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          gh_token: ${{ github.event.inputs.gh_token }}
-          gh_pat_secret: ${{ secrets.GH_PAT }}
+          client_id: ${{ inputs.client_id }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: repository-cleanup
+          repositories: ${{ needs.create-test-repo.outputs.test_repo_name }}
 
       - name: Delete test repository
         env:
@@ -864,7 +869,7 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               /repos/${OWNER}/${REPO_NAME}
 
-            echo "✅ Repository deleted successfully" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Repository deleted successfully" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "ℹ️ Repository does not exist or was already deleted" >> $GITHUB_STEP_SUMMARY
+            echo "ℹ️ Repository does not exist or was already deleted" >> "$GITHUB_STEP_SUMMARY"
           fi

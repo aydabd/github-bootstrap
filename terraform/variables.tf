@@ -1,5 +1,5 @@
 variable "github_token" {
-  description = "GitHub personal access token with repository permissions"
+  description = "GitHub App installation or user access token supplied by the workflow"
   type        = string
   sensitive   = true
 }
@@ -10,7 +10,7 @@ variable "repo_name" {
 }
 
 variable "repo_owner" {
-  description = "Repository owner (user or organization). Defaults to the token owner."
+  description = "Repository owner (organization or authorized personal account); empty uses the authenticated token owner"
   type        = string
   default     = ""
 }

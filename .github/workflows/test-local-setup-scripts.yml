@@ -31,12 +31,13 @@ on:
         required: false
         default: true
         type: boolean
-      gh_token:
-        description: >-
-          Personal Access Token with repository creation, administration, and
-          label/Issues write access. Prefer using the repository secret GH_PAT
-          whenever possible.
-        required: false
+      client_id:
+        description: GitHub App client ID.
+        required: true
+        type: string
+      app_owner:
+        description: Organization whose installation owns the test repository.
+        required: true
         type: string
 
 permissions: {}
@@ -60,8 +61,11 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          gh_token: ${{ inputs.gh_token }}
-          gh_pat_secret: ${{ secrets.GH_PAT }}
+          client_id: ${{ inputs.client_id }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: repository-creation
 
       - name: Generate unique test repository name
         id: generate-name
@@ -175,8 +179,12 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          gh_token: ${{ inputs.gh_token }}
-          gh_pat_secret: ${{ secrets.GH_PAT }}
+          client_id: ${{ inputs.client_id }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: repository-cleanup
+          repositories: ${{ needs.test-local-setup-scripts.outputs.test_repo_name }}
 
       - name: Cleanup temporary test repository
         env:

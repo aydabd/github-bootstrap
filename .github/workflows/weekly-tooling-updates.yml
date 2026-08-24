@@ -13,12 +13,9 @@ jobs:
   update-tooling:
     name: Update non-Dependabot tooling
     runs-on: ubuntu-latest
-    # Required to commit/push changes and create/edit/merge the weekly PR.
+    # The App installation token handles repository writes and PR operations.
     permissions:
-      contents: write
-      pull-requests: write
-    env:
-      GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
+      contents: read
 
     steps:
       - name: Checkout code
@@ -26,6 +23,28 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      - name: Derive repository name
+        id: repository
+        shell: bash
+        env:
+          GITHUB_REPOSITORY_NAME: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          repository_name="${GITHUB_REPOSITORY_NAME#*/}"
+          [ -n "$repository_name" ] || { echo "Unable to derive repository name" >&2; exit 1; }
+          echo "name=$repository_name" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve GitHub App token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: weekly-tooling
+          repositories: ${{ steps.repository.outputs.name }}
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -55,6 +74,8 @@ jobs:
 
       - name: Create or update tooling update PR (gh CLI)
         shell: bash
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           set -euo pipefail
 

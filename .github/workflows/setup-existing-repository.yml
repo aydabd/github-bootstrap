@@ -91,22 +91,17 @@ on:
         required: false
         default: github.com
         type: string
-      gh_token:
-        description: >-
-          PAT fallback. Prefer GH_PAT secret or GitHub App auth for shared usage.
-        required: false
-        type: string
       client_id:
-        description: "GitHub App client ID for App-based auth"
-        required: false
+        description: "GitHub App client ID"
+        required: true
         type: string
       app_owner:
-        description: "Owner whose GitHub App installation token should be used"
-        required: false
+        description: "Organization whose GitHub App installation token should be used"
+        required: true
         type: string
       allowed_repo_owners:
-        description: "Optional comma-separated allowlist of target owners"
-        required: false
+        description: "Comma-separated allowlist of target owners"
+        required: true
         type: string
   workflow_call:
     inputs:
@@ -160,25 +155,18 @@ on:
         required: false
         default: github.com
         type: string
-      gh_token:
-        required: false
-        type: string
       client_id:
-        required: false
+        required: true
         type: string
       app_owner:
-        required: false
+        required: true
         type: string
       allowed_repo_owners:
-        required: false
+        required: true
         type: string
     secrets:
-      GH_PAT:
-        required: false
-      app_private_key:
-        required: false
       BOOTSTRAP_APP_PRIVATE_KEY:
-        required: false
+        required: true
     outputs:
       labels_changed:
         description: Whether labels were created or updated.
@@ -271,11 +259,12 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          gh_token: ${{ inputs.gh_token }}
-          gh_pat_secret: ${{ secrets.GH_PAT }}
           client_id: ${{ inputs.client_id }}
-          app_private_key: ${{ secrets.app_private_key || secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
-          app_owner: ${{ inputs.app_owner || inputs.repo_owner }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ inputs.repo_owner }}
+          permission_profile: repository-setup
+          repositories: ${{ inputs.repo_name }}
 
       - name: Apply repository settings
         id: apply_repo_settings

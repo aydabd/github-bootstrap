@@ -1,15 +1,14 @@
 ---
 name: Validate Bootstrap Owner
-description: Validate the target repository owner against the optional allowlist.
+description: Validate the target repository owner against a required allowlist.
 
 inputs:
   owner:
     description: Target repository owner.
     required: true
   allowed_repo_owners:
-    description: Optional comma-separated allowlist of permitted target owners.
-    required: false
-    default: ""
+    description: Comma-separated allowlist of permitted target owners.
+    required: true
 
 runs:
   using: composite
@@ -23,8 +22,8 @@ runs:
         CLEAN_ALLOWLIST=$(printf '%s' "$ALLOWLIST" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
 
         if [ -z "$CLEAN_ALLOWLIST" ]; then
-          echo "No owner allowlist configured; all owners allowed."
-          exit 0
+          echo "::error::Owner allowlist is required; refusing an unrestricted target owner." >&2
+          exit 1
         fi
         OWNER_LC=$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')
 
