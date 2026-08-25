@@ -18,6 +18,10 @@ grep -Fq 'gh api /user --jq' "$workflow"
 grep -Fq "gh api \"/users/\$PERSONAL_OWNER\" --jq" "$workflow"
 grep -Fq 'App user token identity does not match personal owner' "$workflow"
 grep -Fq 'GitHub owner is not a personal user' "$workflow"
+if [ "$(grep -Fc 'workflows: none' "$workflow")" -ne 2 ]; then
+    echo "personal E2E must avoid workflow files because the least-privilege App has no Workflows permission" >&2
+    exit 1
+fi
 create_workflow="$repo_root/.github/workflows/create-repository.yml"
 grep -Fq "printf 'x-access-token:%s' \"\$GH_TOKEN\" | base64" "$create_workflow"
 grep -Fq "http.extraheader=\"AUTHORIZATION: basic \$GIT_AUTH_HEADER\"" "$create_workflow"
