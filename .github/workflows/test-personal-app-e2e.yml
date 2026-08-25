@@ -1,0 +1,112 @@
+name: Test Personal GitHub App E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      personal_owner:
+        description: Personal GitHub owner authorized for the App user token.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  contract-preflight:
+    name: Personal auth negative contracts
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Verify personal fail-closed contracts
+        env:
+          PERSONAL_OWNER: ${{ inputs.personal_owner }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "Internal visibility is supported only for organization repositories" .github/workflows/create-repository.yml
+          grep -Fq "requires a GitHub App user access token (ghu_ prefix)" .github/actions/resolve-gh-token/action.yml
+          grep -Fq "does not match target repository owner" scripts/github-setup/validate-app-auth.sh
+          grep -Fq "User access tokens cannot be used for organization targets" .github/actions/resolve-gh-token/action.yml
+          [[ "$PERSONAL_OWNER" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$ ]]
+
+  create-public:
+    name: Create public personal repository
+    needs: contract-preflight
+    uses: ./.github/workflows/create-repository.yml
+    with:
+      repo_name: bootstrap-app-e2e-${{ github.run_id }}-public
+      repo_owner: ${{ inputs.personal_owner }}
+      visibility: public
+      cleanup_on_failure: true
+      env_manager: system
+      client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
+      app_owner: ${{ inputs.personal_owner }}
+      allowed_repo_owners: ${{ inputs.personal_owner }}
+      require_cleanup_approval: false
+    secrets:
+      BOOTSTRAP_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+      BOOTSTRAP_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}
+
+  create-private:
+    name: Create private personal repository
+    needs: create-public
+    uses: ./.github/workflows/create-repository.yml
+    with:
+      repo_name: bootstrap-app-e2e-${{ github.run_id }}-private
+      repo_owner: ${{ inputs.personal_owner }}
+      visibility: private
+      cleanup_on_failure: true
+      env_manager: system
+      client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
+      app_owner: ${{ inputs.personal_owner }}
+      allowed_repo_owners: ${{ inputs.personal_owner }}
+      require_cleanup_approval: false
+    secrets:
+      BOOTSTRAP_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+      BOOTSTRAP_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}
+
+  cleanup:
+    name: Delete only personal E2E repositories
+    if: ${{ always() }}
+    needs: [create-public, create-private]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Delete exact test repositories
+        env:
+          GH_TOKEN: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}
+          PERSONAL_OWNER: ${{ inputs.personal_owner }}
+          PUBLIC_REPO: bootstrap-app-e2e-${{ github.run_id }}-public
+          PRIVATE_REPO: bootstrap-app-e2e-${{ github.run_id }}-private
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! [[ "$PERSONAL_OWNER" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$ ]]; then
+            echo "Invalid personal owner; refusing cleanup API calls" >&2
+            exit 1
+          fi
+          owner_type="$(gh api "/users/$PERSONAL_OWNER" --jq '.type')"
+          if [ "$owner_type" != "User" ]; then
+            echo "GitHub owner is not a personal user; refusing cleanup API calls" >&2
+            exit 1
+          fi
+          authenticated_user="$(gh api /user --jq '.login')"
+          normalized_user="$(printf '%s' "$authenticated_user" | tr '[:upper:]' '[:lower:]')"
+          normalized_owner="$(printf '%s' "$PERSONAL_OWNER" | tr '[:upper:]' '[:lower:]')"
+          if [ "$normalized_user" != "$normalized_owner" ]; then
+            echo "App user token identity does not match personal owner; refusing cleanup API calls" >&2
+            exit 1
+          fi
+          for repository in "$PUBLIC_REPO" "$PRIVATE_REPO"; do
+            if gh api "/repos/$PERSONAL_OWNER/$repository" >/dev/null 2>&1; then
+              gh api --method DELETE "/repos/$PERSONAL_OWNER/$repository" >/dev/null
+              echo "Deleted $PERSONAL_OWNER/$repository"
+            else
+              echo "No repository found at $PERSONAL_OWNER/$repository"
+            fi
+          done

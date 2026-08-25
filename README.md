@@ -67,6 +67,55 @@ the App user access token, verifies its `/user` login against the target owner, 
 
 **Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
 
+### Personal App Manifest E2E setup
+
+For a disposable personal-account E2E, create the App through GitHub's App Manifest flow. GitHub
+generates the private key during conversion; do not generate one locally:
+
+```bash
+credential_dir="$HOME/.local/state/github-bootstrap"
+scripts/github-setup/github-app-manifest.sh url
+# Open the printed URL, approve the App, and copy the one-time conversion code.
+scripts/github-setup/github-app-manifest.sh convert CODE "$credential_dir"
+```
+
+The conversion command writes GitHub's private key, client ID, and client secret only under the
+0700 output directory, with each file set to 0600. The example keeps that directory outside the
+repository checkout; remove it after setup. Use the App client ID and secret to authorize the
+personal account, then exchange the callback code:
+
+```bash
+credential_dir="$HOME/.local/state/github-bootstrap"
+redirect_uri="https://github.com/settings/apps/new"
+scripts/github-setup/github-app-user-token.sh url CLIENT_ID OWNER "$redirect_uri" STATE
+APP_CLIENT_SECRET_FILE="$credential_dir/app-client-secret" \
+APP_REDIRECT_URI="$redirect_uri" \
+  scripts/github-setup/github-app-user-token.sh exchange CLIENT_ID CODE OWNER "$credential_dir/app-user-token"
+scripts/github-setup/install-app-secrets.sh OWNER/github-bootstrap \
+  "$credential_dir/app-client-id" \
+  "$credential_dir/app-private-key.pem" \
+  "$credential_dir/app-user-token"
+```
+
+The installer sets `BOOTSTRAP_APP_CLIENT_ID` as a repository variable and installs only
+`BOOTSTRAP_APP_PRIVATE_KEY` and the verified `BOOTSTRAP_APP_USER_TOKEN` as repository secrets. It
+never accepts a PAT or passes credentials through workflow-dispatch inputs. Run
+`Test Personal GitHub App E2E` with the personal owner; it creates and cleans up only the two
+repositories named for that run. Organization installation-token E2E remains pending without a
+disposable organization.
+
+After the disposable E2E, remove the repository configuration and revoke or rotate the App
+credentials. This deletes the stored values without exposing them:
+
+```bash
+gh secret delete BOOTSTRAP_APP_PRIVATE_KEY --repo OWNER/github-bootstrap --confirm
+gh secret delete BOOTSTRAP_APP_USER_TOKEN --repo OWNER/github-bootstrap --confirm
+gh variable delete BOOTSTRAP_APP_CLIENT_ID --repo OWNER/github-bootstrap --confirm
+```
+
+Also revoke the App user authorization and delete or rotate the App private key in GitHub if the
+App will not be reused. Remove the external local credential directory afterward.
+
 ## Quick Start
 
 Choose one of three methods to bootstrap a new repository:

@@ -35,6 +35,7 @@ assert_contains "AUTH_MODE=app-user bash ./scripts/github-setup/validate-app-aut
 assert_contains "echo \"::add-mask::\$APP_USER_TOKEN\"" "$resolver"
 assert_contains "case \"\$target_owner_type\" in" "$resolver"
 assert_contains "Organization)" "$resolver"
+assert_contains "User access tokens cannot be used for organization targets" "$resolver"
 assert_contains "repository-creation|repository-cleanup" "$resolver"
 assert_contains "mode=app-user" "$resolver"
 assert_contains "owner: \${{ inputs.app_owner }}" "$resolver"
