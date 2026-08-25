@@ -21,6 +21,8 @@ grep -Fq 'GitHub owner is not a personal user' "$workflow"
 create_workflow="$repo_root/.github/workflows/create-repository.yml"
 grep -Fq "printf 'x-access-token:%s' \"\$GH_TOKEN\" | base64" "$create_workflow"
 grep -Fq "http.extraheader=\"AUTHORIZATION: basic \$GIT_AUTH_HEADER\"" "$create_workflow"
+grep -Fq "git -c http.extraheader=\"AUTHORIZATION: basic \$GIT_AUTH_HEADER\" clone" "$create_workflow"
+grep -Fq "git -c http.extraheader=\"AUTHORIZATION: basic \$GIT_AUTH_HEADER\" push" "$create_workflow"
 grep -Fq "git remote set-url origin \"https://\${GH_HOST}/\${OWNER}/\${REPO_NAME}.git\"" "$create_workflow"
 if grep -Fq "http.extraheader=\"AUTHORIZATION: bearer \$GH_TOKEN\"" "$create_workflow"; then
     echo "repository Git operations must not use bearer authentication" >&2
