@@ -50,7 +50,9 @@ runs:
                   "$WORKING_DIRECTORY"
                 ;;
               lint-json)
-                provider_run bash -c "cd \"$WORKING_DIRECTORY\" && find . -path './.git' -prune -o -path './node_modules' -prune -o -type f -name '*.json' -exec jq empty {} +"
+                provider_run bash -c "cd \"$WORKING_DIRECTORY\" && find . \\
+                  -path './.git' -prune -o -path './node_modules' -prune -o \\
+                  -type f -name '*.json' -exec jq empty {} +"
                 ;;
               lint-yaml) provider_run yamllint --config-file "$WORKING_DIRECTORY/.github/linters/.yaml-lint.yml" "$WORKING_DIRECTORY" ;;
               lint-actions)

@@ -19,73 +19,36 @@ This Terraform module creates a fully configured GitHub repository with the same
 
 ### Prerequisites
 
-Recommended: a tenant-installed GitHub App with `app_id` + private key.
-Fallback: a GitHub Personal Access Token (PAT).
+Use the Terraform workflow with a GitHub App. Organization targets use a tenant-installed App and
+a short-lived installation token. Personal targets use an App user access token; personal access
+tokens are not supported.
 Terraform CLI version **1.5 or later** is required (see `versions.tf`).
-
-| Use case                                           | Required PAT scopes (fallback mode)  |
-| -------------------------------------------------- | ------------------------------------ |
-| Personal account repository                        | `repo`                               |
-| Organization repository                            | `repo` + `admin:org`                 |
-| Cleanup on failure (`delete_repo`) — personal repo | `repo` + `delete_repo`               |
-| Cleanup on failure (`delete_repo`) — org repo      | `repo` + `admin:org` + `delete_repo` |
-
-### Apply via CLI — personal repository
-
-```bash
-# Option 1: pass token via environment variable (recommended — avoids shell history)
-export TF_VAR_github_token="ghp_yourtoken"
-
-cd terraform
-terraform init
-terraform apply \
-  -var="repo_name=my-new-repo"
-
-# Option 2: pass token inline
-cd terraform
-terraform init
-terraform apply \
-  -var="github_token=ghp_yourtoken" \
-  -var="repo_name=my-new-repo"
-```
-
-### Apply via CLI — organization repository
-
-```bash
-cd terraform
-
-terraform init
-
-terraform apply \
-  -var="github_token=ghp_yourtoken" \
-  -var="repo_name=my-new-repo" \
-  -var="repo_owner=my-org" \
-  -var="visibility=private" \
-  -var="team_name=my-team"
-```
-
-> **Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
 
 ### Apply via GitHub Actions
 
 1. Fork this repository **or** click **Use this template** inside your organization
-2. Recommended App mode:
-   - add `BOOTSTRAP_APP_PRIVATE_KEY` as an Actions secret
-   - pass `app_id` and `app_owner` when running the workflow
-3. PAT fallback mode:
-   - add a `GH_PAT` repository secret (see [Setup](../README.md#setup))
-4. Trigger the
+2. Configure App mode:
+   - for an organization target, add `BOOTSTRAP_APP_PRIVATE_KEY` as a protected Actions secret
+   - for a personal target, add the authorized App user access token as the protected
+     `BOOTSTRAP_APP_USER_TOKEN` reusable-workflow secret
+   - pass `client_id`, the target owner as `app_owner`, and a comma-separated
+     `allowed_repo_owners` value containing the permitted target owners when running the workflow
+   - never pass credentials through workflow inputs
+3. Trigger the
    [**Terraform Create Repository**](../.github/workflows/terraform-create-repository.yml) workflow
    from the **Actions** tab. It runs `terraform apply` and then copies the bootstrap template files
    into the new repository.
+
+The target owner must be present in `allowed_repo_owners`; the workflow rejects empty
+allowlists and targets outside that explicit list.
 
 ## Input Variables
 
 | Variable                   | Required | Default                                    | Description                                                                                                                                                                                                                                |
 | -------------------------- | -------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `github_token`             | **Yes**  | -                                          | GitHub PAT — `repo` scope for personal repos; add `admin:org` for organization repos                                                                                                                                                       |
+| `github_token`             | **Yes**  | -                                          | GitHub App installation token for organization targets or GitHub App user access token for personal targets, supplied internally by the workflow                                                                                           |
 | `repo_name`                | **Yes**  | -                                          | New repository name                                                                                                                                                                                                                        |
-| `repo_owner`               | No       | `""` (uses token owner)                    | Repository owner (user or organization)                                                                                                                                                                                                    |
+| `repo_owner`               | No       | `""`                                       | Repository owner; may be an organization or the authorized personal account. When empty, the GitHub provider uses the authenticated token owner.                                                                                           |
 | `repo_description`         | No       | `"Repository following SOLID principles…"` | Repository description                                                                                                                                                                                                                     |
 | `visibility`               | No       | `"public"`                                 | `public`, `private`, or `internal`                                                                                                                                                                                                         |
 | `enable_branch_protection` | No       | `false`                                    | Opt-in: create a Terraform-managed branch protection ruleset for `main`. Disabled by default; bootstrap workflows apply the default ruleset via `apply-repository-ruleset`. Enable only when managing rulesets through Terraform directly. |
@@ -159,7 +122,7 @@ Common failure signatures and quick triage:
 
 | Failure signature                                      | Where it appears                                 | Likely cause                                                    | What to do                                                                                                                              |
 | ------------------------------------------------------ | ------------------------------------------------ | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `Error: creating repository`                           | Terraform apply output                           | token lacks required permissions/scopes                         | Verify App installation scope or PAT scopes (`repo`, plus `admin:org` for org repos).                                                   |
+| `Error: creating repository`                           | Terraform apply output                           | App installation lacks required permissions                     | Verify the App installation and the [permission matrix](../docs/github-app-permission-matrix.md).                                       |
 | `Error: creating repository ruleset`                   | Terraform apply output                           | plan/features do not support rulesets or settings conflict      | Keep `enable_branch_protection=false` unless Terraform should own rulesets, and avoid dual ownership with workflow ruleset application. |
 | `Error: creating environment`                          | Terraform apply output                           | missing admin rights or existing environment policy constraints | Confirm token has administration rights and inspect existing environment configuration.                                                 |
 | Workflow succeeds but expected files are missing       | Post-apply template copy step                    | wrapper workflow failed after Terraform apply                   | Inspect `terraform-create-repository.yml` run logs after the apply step.                                                                |

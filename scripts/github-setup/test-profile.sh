@@ -79,7 +79,7 @@ for creation_workflow in \
     "$repo_root/.github/workflows/terraform-create-repository.yml"; do
     grep -q 'cp AGENTS.md new-repo/' "$creation_workflow"
     grep -q 'cp WORKTREES.md new-repo/' "$creation_workflow"
-    grep -q 'tr -d '\''[:space:]'\''' "$creation_workflow"
+    grep -qF "tr -d '[:space:]'" "$creation_workflow"
     grep -q 'DELIVERY_MODE.*CENTRAL_REPOSITORY.*CENTRAL_REF' "$creation_workflow"
     grep -q '^      app_owner:' "$creation_workflow"
     grep -q '^      allowed_repo_owners:' "$creation_workflow"
@@ -94,7 +94,7 @@ if grep -Eq '^    if: .*matrix\.' "$repo_root/.github/workflows/test-generated-r
 fi
 grep -q '^      - name: Select requested creation workflow$' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 for runtime_input in python_version node_version go_version java_version; do
-    runtime_env="${runtime_input^^}"
+    runtime_env="$(printf '%s' "$runtime_input" | tr '[:lower:]' '[:upper:]')"
     grep -q -- "--field ${runtime_input}=\"\$${runtime_env}\"" \
         "$repo_root/.github/workflows/test-repository-creation.yml"
 done
@@ -138,7 +138,8 @@ for json_quality_file in \
     "$repo_root/templates/.github/actions/quality/run-capability/action.yml" \
     "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"; do
     grep -q 'provider_run bash -c' "$json_quality_file"
-    grep -q "cd \"\$WORKING_DIRECTORY\" && find" "$json_quality_file"
+    grep -Eq -- "-path ['\"]\\./\\.git['\"] -prune -o -path ['\"]\\./node_modules['\"] -prune -o" "$json_quality_file"
+    grep -Eq -- "-type f -name ['\"]\\*\.json['\"] -exec jq empty \\{\\} \\+" "$json_quality_file"
     if grep -Eq 'while .*provider_run jq empty' "$json_quality_file"; then
         echo "lint-json must enter the provider once per capability: $json_quality_file" >&2
         exit 1

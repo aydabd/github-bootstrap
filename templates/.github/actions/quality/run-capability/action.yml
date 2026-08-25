@@ -46,7 +46,9 @@ runs:
             provider_run markdownlint --config .github/linters/.markdownlint.json --ignore CHANGELOG.md --ignore node_modules --ignore .git .
             ;;
           lint-json)
-            provider_run bash -c "cd \"$WORKING_DIRECTORY\" && find . -path './.git' -prune -o -path './node_modules' -prune -o -type f -name '*.json' -exec jq empty {} +"
+            provider_run bash -c "cd \"$WORKING_DIRECTORY\" && find . \\
+              -path './.git' -prune -o -path './node_modules' -prune -o \\
+              -type f -name '*.json' -exec jq empty {} +"
             ;;
           lint-yaml)
             provider_run yamllint --config-file .github/linters/.yaml-lint.yml .

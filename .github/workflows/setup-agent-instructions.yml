@@ -33,16 +33,16 @@ on:
           - pull-request
           - direct
       client_id:
-        description: "GitHub App client ID for App-based auth"
-        required: false
+        description: "GitHub App client ID"
+        required: true
         type: string
       app_owner:
-        description: "Owner whose GitHub App installation token should be used"
-        required: false
+        description: "Organization whose GitHub App installation token should be used"
+        required: true
         type: string
       allowed_repo_owners:
-        description: "Optional comma-separated allowlist of target owners"
-        required: false
+        description: "Comma-separated allowlist of target owners"
+        required: true
         type: string
   workflow_call:
     inputs:
@@ -60,21 +60,17 @@ on:
         default: pull-request
         type: string
       client_id:
-        required: false
+        required: true
         type: string
       app_owner:
-        required: false
+        required: true
         type: string
       allowed_repo_owners:
-        required: false
+        required: true
         type: string
     secrets:
-      GH_PAT:
-        required: false
-      app_private_key:
-        required: false
       BOOTSTRAP_APP_PRIVATE_KEY:
-        required: false
+        required: true
 
 permissions:
   contents: read

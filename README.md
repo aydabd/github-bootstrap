@@ -26,17 +26,21 @@ Creates fully configured repositories with:
 ## Setup
 
 Recommended: use a **tenant-installed GitHub App** (safer, short-lived installation tokens).
-Fallback: use a PAT when App setup is not available.
 
-### Option A — GitHub App (recommended)
+### GitHub App setup
 
 1. Create or use an existing GitHub App with the following minimum permissions:
 
-   | Permission scope | Level          | Required for                                   |
-   | ---------------- | -------------- | ---------------------------------------------- |
-   | `Contents`       | Read and write | Clone template, push initial commits           |
-   | `Administration` | Read and write | Create repos, configure settings, delete repos |
-   | `Metadata`       | Read-only      | Read repository info (auto-granted)            |
+   | Permission scope              | Level          | Required for                                            |
+   | ----------------------------- | -------------- | ------------------------------------------------------- |
+   | `Contents`                    | Read and write | Clone template, push initial commits                    |
+   | `Administration`              | Read and write | Configure settings, environments, rulesets, and cleanup |
+   | `Metadata`                    | Read-only      | Read repository info (auto-granted)                     |
+   | `Organization administration` | Read and write | Create repositories in the target organization          |
+   | `Issues`                      | Read and write | Create and update repository labels                     |
+
+   The weekly tooling workflow additionally requires `Pull requests` write permission when
+   App-authenticated weekly PR creation and auto-merge are enabled.
 
    For **organization** repositories also add:
 
@@ -44,54 +48,24 @@ Fallback: use a PAT when App setup is not available.
    | ---------------- | --------- | ------------------------------------- |
    | `Members`        | Read-only | Resolve org membership for team setup |
 
-2. Install the App in each target user/org (tenant isolation). The App must be installed
-   on every `app_owner` value you intend to target.
+2. Install the App in each target organization (tenant isolation), or authorize it for the
+   personal account that will own a personal repository. The `app_owner` value must match the
+   target owner.
 3. In the repository that runs bootstrap, set:
-   - `BOOTSTRAP_APP_PRIVATE_KEY` (Actions secret — the PEM private key of the App)
+   - `BOOTSTRAP_APP_PRIVATE_KEY` (protected Actions secret — required for organization installation-token mode)
+   - `BOOTSTRAP_APP_USER_TOKEN` (protected reusable-workflow secret — required for personal-account mode; must be the `ghu_` GitHub App user token)
 4. When running the workflow, provide:
    - `client_id` (the GitHub App client ID, visible in the App's settings)
-   - `app_owner` (target tenant owner)
+   - `app_owner` (target organization or personal-account owner)
 
-The workflow mints a short-lived installation token for that owner and uses it for all API calls.
+Organization creation mints a short-lived installation token for that owner. Personal creation uses
+the App user access token, verifies its `/user` login against the target owner, and then calls
+`/user/repos`. No PAT fallback exists.
 
-> **Organization targets only:** GitHub App installation tokens (server-to-server) cannot
-> create repositories under a personal user account — this is a GitHub API constraint.
-> The target `repo_owner` must be a GitHub **Organization**.
-> For personal user account targets, use the PAT fallback (Option B) instead.
-
-### Option B — PAT (fallback)
-
-There are two ways to supply the token, listed from most to least recommended:
-
-#### Option A — Repository secret (recommended for shared/team use)
-
-1. Fork this repository **or** click **Use this template** → **Create a new repository**
-   (for company use, create the fork/template repo inside your organization)
-2. Go to your fork → **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Name: `GH_PAT`, Value: your token from step 1
-5. Click **Add secret**
-
-The workflows will automatically pick up `GH_PAT` without any extra input.
-
-#### Option B — Workflow input (for users without secret-management access)
-
-If you are working in an enterprise or internal repository where you cannot add repository secrets,
-you can pass your token directly when triggering a workflow:
-
-1. Go to **Actions** → select the workflow → **Run workflow**
-2. Fill in the **Personal Access Token (gh_token)** field with your `ghp_…` token
-
-> **Security note:** The token is immediately masked with `::add-mask::` at the start of each job
-> so it never appears in plain text in the workflow logs. Masking only prevents the token from
-> being printed in logs; the raw workflow input value may still be visible in the run's
-> inputs/metadata to anyone who can view the run. Prefer
-> [Option A — Repository secret](#option-a--repository-secret-recommended-for-sharedteam-use)
-> whenever possible, and if you must use Option B, use a short-lived token with the minimum
-> required scopes.
+> Private keys and user access tokens are accepted only as protected caller secrets. Never put a
+> private key, token, PAT, or credential in workflow inputs, generated repositories, or this repository.
 
 **Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
-Use `private` for personal account repositories.
 
 ## Quick Start
 
@@ -134,7 +108,9 @@ jobs:
       allowed_repo_owners: ${{ vars.ALLOWED_REPO_OWNERS }}
       require_cleanup_approval: true
     secrets:
-      app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+      BOOTSTRAP_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+      # For personal-account creation, use this App user access token instead.
+      BOOTSTRAP_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}
 ```
 
 This example calls the standard Actions bootstrap workflow (`create-repository.yml`).
@@ -165,18 +141,10 @@ If you prefer Terraform orchestration, call
 
 ### Option C — Terraform IaC
 
-1. Complete the [Setup](#setup) steps above
-2. Go to **Actions** → **Terraform Create Repository**
-3. Click **Run workflow** and fill in the inputs, **or** apply locally:
-
-   ```bash
-   cd terraform
-   terraform init
-   terraform apply \
-     -var="github_token=ghp_yourtoken" \
-     -var="repo_name=my-new-repo" \
-     -var="repo_owner=my-org"
-   ```
+1. Complete the [Setup](#setup) steps above.
+2. Go to **Actions** → **Terraform Create Repository**.
+3. Click **Run workflow** and fill in the App client ID, target owner,
+   approved-owner allowlist, and repository settings.
 
 See [`terraform/README.md`](terraform/README.md) for full documentation.
 
@@ -206,23 +174,14 @@ For exact workflow inputs, secrets, and outputs, read the `workflow_call` block 
 the reusable workflow file. For capability behavior, read the relevant composite
 action metadata under [`.github/actions/`](.github/actions/).
 
-Launcher workflows pass non-secret values as explicit inputs and private values
-as secrets from the launcher repository. Target repository access comes from the
-resolved GitHub App token or PAT.
+Launcher workflows pass non-secret values as explicit inputs and the private key as a secret from
+the launcher repository. Target repository access comes from the resolved GitHub App token.
 
 ### Permissions and Authentication
 
-For organization usage, prefer a GitHub App installation token. For personal
-repositories or local use, a PAT can be used as a fallback.
-
-Typical permissions needed by the resolved token:
-
-| Capability area        | Required access                                                                 |
-| ---------------------- | ------------------------------------------------------------------------------- |
-| Repo settings/rulesets | Repository administration read/write                                            |
-| Security settings      | Repository administration read/write; some features require GitHub plan support |
-| Labels                 | Issue/label write access or repository administration access                    |
-| File pull requests     | Contents read/write and pull requests write                                     |
+Organization repository creation uses a short-lived GitHub App installation token; personal-account
+creation uses a verified GitHub App user access token. See the
+[permission-to-endpoint matrix](docs/github-app-permission-matrix.md) for the exact scope rationale.
 
 CodeRabbit setup has one extra prerequisite: install the
 [CodeRabbit GitHub App](https://github.com/apps/coderabbitai) on the target
@@ -582,9 +541,8 @@ preset for the path you are validating (`api-*` or `terraform-*`).
 
 ## Requirements
 
-- Recommended: GitHub App credentials (`client_id` + `BOOTSTRAP_APP_PRIVATE_KEY`) installed in each target tenant owner
-- Fallback: GitHub personal access token (PAT) with `repo` scope (add `admin:org` for organization repositories)
-  — stored as a `GH_PAT` repository secret **or** provided via the `gh_token` workflow input
+- GitHub App credentials: `client_id` plus either the protected installation private key for an
+  organization or the protected App user access token for a personal account
   — see [Setup](#setup)
 - One of: `micromamba`, `mise`, or system-installed tooling for local linting with `make lint`
 

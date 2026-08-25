@@ -12,27 +12,24 @@ on:
         required: false
         default: false
         type: boolean
-      gh_token:
-        description: >-
-          Personal Access Token with delete_repo scope.
-          WARNING: This input is NOT treated as a secret — its value may be
-          visible in the run's inputs/metadata to anyone who can view the run.
-          Prefer using the repository secret GH_PAT whenever possible.
-          Only use this input when you do not have permission to set repository
-          secrets and use a short-lived token with minimum required scopes.
-        required: false
+      client_id:
+        description: GitHub App client ID.
+        required: true
+        type: string
+      app_owner:
+        description: Organization whose installation owns the repository.
+        required: true
         type: string
 
 jobs:
   delete-repo:
     runs-on: ubuntu-latest
-    # This workflow uses a personal access token (GH_PAT or gh_token input) with repo deletion permissions.
-    # Create a secret named GH_PAT with `delete_repo` scope (or an admin token) in the repository where you run this,
-    # or provide the token directly via the 'gh_token' workflow input.
     steps:
       - name: Dry-run check
+        env:
+          FORCE: ${{ github.event.inputs.force }}
         run: |
-          if [ "${{ github.event.inputs.force }}" != "true" ]; then
+          if [ "$FORCE" != "true" ]; then
             echo "Force flag is not set. This is a dry run. No deletion will occur."
             echo "To actually delete, re-run the workflow and set 'force' to true."
             exit 0
@@ -43,17 +40,44 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Validate delete target
+        id: target
+        env:
+          REPO_INPUT: ${{ inputs.repo }}
+          APP_OWNER: ${{ inputs.app_owner }}
+        run: |
+          set -euo pipefail
+          case "$REPO_INPUT" in
+            */*) ;;
+            *) echo "::error::Repository must be provided as OWNER/REPOSITORY." >&2; exit 1 ;;
+          esac
+          TARGET_OWNER="${REPO_INPUT%%/*}"
+          TARGET_REPOSITORY="${REPO_INPUT#*/}"
+          case "$TARGET_OWNER/$TARGET_REPOSITORY" in
+            */*/*|*/|/*) echo "::error::Repository must contain exactly one non-empty owner and repository." >&2; exit 1 ;;
+          esac
+          if [ "${TARGET_OWNER,,}" != "${APP_OWNER,,}" ]; then
+            echo "::error::Repository owner '$TARGET_OWNER' must match app_owner '$APP_OWNER'." >&2
+            exit 1
+          fi
+          echo "owner=$TARGET_OWNER" >> "$GITHUB_OUTPUT"
+          echo "repository=$TARGET_REPOSITORY" >> "$GITHUB_OUTPUT"
+
       - name: Resolve GitHub token
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          gh_token: ${{ github.event.inputs.gh_token }}
-          gh_pat_secret: ${{ secrets.GH_PAT }}
+          client_id: ${{ inputs.client_id }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ steps.target.outputs.owner }}
+          permission_profile: repository-cleanup
+          repositories: ${{ steps.target.outputs.repository }}
 
       - name: Delete repository via REST API
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-          REPO_FULL: ${{ inputs.repo }}
+          REPO_FULL: ${{ steps.target.outputs.owner }}/${{ steps.target.outputs.repository }}
         run: |
           echo "Deleting repository: $REPO_FULL"
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \

@@ -128,16 +128,16 @@ on:
         default: "github.com"
         type: string
       client_id:
-        description: "GitHub App client ID for App-based auth (recommended)"
-        required: false
+        description: "GitHub App client ID"
+        required: true
         type: string
       app_owner:
-        description: "Owner (user/org) whose GitHub App installation token should be used"
-        required: false
+        description: "Owner whose GitHub App installation or user token should be used"
+        required: true
         type: string
       allowed_repo_owners:
-        description: "Optional comma-separated allowlist of permitted target owners"
-        required: false
+        description: "Comma-separated allowlist of permitted target owners"
+        required: true
         type: string
       require_cleanup_approval:
         description: "Require environment approval before deleting a failed repo"
@@ -236,28 +236,23 @@ on:
         required: false
         default: "github.com"
         type: string
-      gh_token:
-        required: false
-        type: string
       client_id:
-        required: false
+        required: true
         type: string
       app_owner:
-        required: false
+        required: true
         type: string
       allowed_repo_owners:
-        required: false
+        required: true
         type: string
       require_cleanup_approval:
         required: false
         default: true
         type: boolean
     secrets:
-      GH_PAT:
-        required: false
-      app_private_key:
-        required: false
       BOOTSTRAP_APP_PRIVATE_KEY:
+        required: false
+      BOOTSTRAP_APP_USER_TOKEN:
         required: false
 
 jobs:
@@ -298,21 +293,26 @@ jobs:
 
       - name: Set repository owner
         id: set-owner
+        env:
+          INPUT_REPO_OWNER: ${{ inputs.repo_owner }}
+          DEFAULT_REPO_OWNER: ${{ github.repository_owner }}
         run: |
-          if [ -z "${{ inputs.repo_owner }}" ]; then
-            echo "owner=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          if [ -z "$INPUT_REPO_OWNER" ]; then
+            echo "owner=$DEFAULT_REPO_OWNER" >> "$GITHUB_OUTPUT"
           else
-            echo "owner=${{ inputs.repo_owner }}" >> $GITHUB_OUTPUT
+            echo "owner=$INPUT_REPO_OWNER" >> "$GITHUB_OUTPUT"
           fi
-          echo "repo_created=false" >> $GITHUB_OUTPUT
 
       - name: Set license holder
         id: set-license
+        env:
+          INPUT_LICENSE_HOLDER: ${{ inputs.license_holder }}
+          DEFAULT_LICENSE_HOLDER: ${{ github.repository_owner }}
         run: |
-          if [ -z "${{ inputs.license_holder }}" ]; then
-            echo "holder=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          if [ -z "$INPUT_LICENSE_HOLDER" ]; then
+            echo "holder=$DEFAULT_LICENSE_HOLDER" >> "$GITHUB_OUTPUT"
           else
-            echo "holder=${{ inputs.license_holder }}" >> $GITHUB_OUTPUT
+            echo "holder=$INPUT_LICENSE_HOLDER" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Validate bootstrap inputs
@@ -437,11 +437,19 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          gh_token: ${{ inputs.gh_token }}
-          gh_pat_secret: ${{ secrets.GH_PAT }}
           client_id: ${{ inputs.client_id }}
-          app_private_key: ${{ secrets.app_private_key || secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
-          app_owner: ${{ inputs.app_owner || steps.set-owner.outputs.owner }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_user_token: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ steps.set-owner.outputs.owner }}
+          permission_profile: repository-creation
+
+      - name: Reject internal visibility for personal accounts
+        if: steps.resolve-token.outputs.auth_mode == 'app-user' && inputs.visibility == 'internal'
+        shell: bash
+        run: |
+          echo "::error::Internal visibility is supported only for organization repositories; personal-account repositories must use public or private visibility." >&2
+          exit 1
 
       - name: Audit bootstrap request
         uses: ./.github/actions/audit-bootstrap-request
@@ -455,28 +463,21 @@ jobs:
         id: create-repo
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          OWNER: ${{ steps.set-owner.outputs.owner }}
+          AUTH_MODE: ${{ steps.resolve-token.outputs.auth_mode }}
+          VISIBILITY: ${{ inputs.visibility }}
+          REPO_NAME: ${{ inputs.repo_name }}
+          REPO_DESC: ${{ inputs.repo_description }}
         run: |
-          OWNER="${{ steps.set-owner.outputs.owner }}"
-          VISIBILITY="${{ inputs.visibility }}"
-
+          set -euo pipefail
           # Determine if creating under user or organization
-          if [ "$OWNER" = "${{ github.repository_owner }}" ]; then
-            # Check if it's a user or organization
-            ORG_TYPE=$(gh api /users/$OWNER --jq '.type')
-            if [ "$ORG_TYPE" = "Organization" ]; then
-              ENDPOINT="/orgs/$OWNER/repos"
-            else
-              ENDPOINT="/user/repos"
-            fi
+          if [ "$AUTH_MODE" = "app-user" ]; then
+            ENDPOINT="/user/repos"
           else
-            # Assume organization if owner is specified
             ENDPOINT="/orgs/$OWNER/repos"
           fi
 
           # Create repository with appropriate visibility
-          REPO_NAME="${{ inputs.repo_name }}"
-          REPO_DESC="${{ inputs.repo_description }}"
-
           if [ "$ENDPOINT" = "/user/repos" ]; then
             # User repos: use 'private' field (boolean)
             if [ "$VISIBILITY" = "public" ]; then
@@ -509,7 +510,7 @@ jobs:
               "$ENDPOINT" \
               --input -
           fi
-          echo "repo_created=true" >> $GITHUB_OUTPUT
+            echo "repo_created=true" >> "$GITHUB_OUTPUT"
 
       - name: Wait for repository initialization
         run: sleep 5
@@ -517,9 +518,12 @@ jobs:
       - name: Clone new repository
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          OWNER: ${{ steps.set-owner.outputs.owner }}
+          REPO_NAME: ${{ inputs.repo_name }}
         run: |
-          git clone https://x-access-token:${GH_TOKEN}@${GH_HOST}/${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}.git new-repo
+          git -c http.extraheader="AUTHORIZATION: bearer $GH_TOKEN" clone "https://${GH_HOST}/${OWNER}/${REPO_NAME}.git" new-repo
           cd new-repo
+          git remote set-url origin "https://${GH_HOST}/${OWNER}/${REPO_NAME}.git"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -561,12 +565,12 @@ jobs:
           case "$RELEASE_TOOL" in
             "release-please")
               rm -f $GC_FILES
-              echo "Release tool: **release-please** — PR-based semantic versioning (language-aware, ~7k ⭐)" >> $GITHUB_STEP_SUMMARY
+              echo "Release tool: **release-please** — PR-based semantic versioning (language-aware, ~7k ⭐)" >> "$GITHUB_STEP_SUMMARY"
               ;;
             *)
               # Default: git-cliff
               rm -f $RP_FILES
-              echo "Release tool: **git-cliff** — tag-triggered changelog + GitHub Release (any language, ~9k ⭐)" >> $GITHUB_STEP_SUMMARY
+              echo "Release tool: **git-cliff** — tag-triggered changelog + GitHub Release (any language, ~9k ⭐)" >> "$GITHUB_STEP_SUMMARY"
               ;;
           esac
 
@@ -644,7 +648,7 @@ jobs:
           case "$WORKFLOWS_INPUT" in
             "all"|"")
               echo "quality_kept=true" >> "$GITHUB_OUTPUT"
-              echo "Keeping all workflows" >> $GITHUB_STEP_SUMMARY
+              echo "Keeping all workflows" >> "$GITHUB_STEP_SUMMARY"
               exit 0
               ;;
           esac
@@ -674,7 +678,7 @@ jobs:
                     esac
                     ;;
                   *)
-                    echo "⚠️ Unknown workflow name: '$name' (valid: quality, codeql, ai-code-review, release; signed-off-by is always included)" >> $GITHUB_STEP_SUMMARY
+                    echo "⚠️ Unknown workflow name: '$name' (valid: quality, codeql, ai-code-review, release; signed-off-by is always included)" >> "$GITHUB_STEP_SUMMARY"
                     ;;
                 esac
               done
@@ -691,7 +695,7 @@ jobs:
             filename=$(basename "$file")
             [[ " $KEEP_FILES " == *" $filename "* ]] && continue
             rm -f "$file"
-            echo "⏭️ Skipped workflow: $filename" >> $GITHUB_STEP_SUMMARY
+            echo "⏭️ Skipped workflow: $filename" >> "$GITHUB_STEP_SUMMARY"
           done
 
           echo "quality_kept=$QUALITY_KEPT" >> "$GITHUB_OUTPUT"
@@ -701,40 +705,66 @@ jobs:
             case "${{ inputs.release_tool }}" in
               "release-please")
                 rm -f release-please-config.json .release-please-manifest.json
-                echo "⏭️ Removed release-please config files" >> $GITHUB_STEP_SUMMARY
+                echo "⏭️ Removed release-please config files" >> "$GITHUB_STEP_SUMMARY"
                 ;;
               *)
                 rm -f cliff.toml
-                echo "⏭️ Removed git-cliff config file" >> $GITHUB_STEP_SUMMARY
+                echo "⏭️ Removed git-cliff config file" >> "$GITHUB_STEP_SUMMARY"
                 ;;
             esac
           fi
 
       - name: Configure CODEOWNERS
+        env:
+          ENABLE_CODEOWNERS: ${{ inputs.enable_codeowners }}
+          TEAM_NAME: ${{ inputs.team_name }}
         run: |
           cd new-repo
-          case "${{ inputs.enable_codeowners }}" in
+          case "$ENABLE_CODEOWNERS" in
             "true")
-              sed -i "s/team-leads/${{ inputs.team_name }}/g" .github/CODEOWNERS
+              TEAM_NAME="$TEAM_NAME" python - <<'PY'
+          from pathlib import Path
+          import os
+
+          path = Path(".github/CODEOWNERS")
+          path.write_text(path.read_text().replace("team-leads", os.environ["TEAM_NAME"]))
+          PY
               ;;
             *)
               rm -f .github/CODEOWNERS
-              echo "⏭️ CODEOWNERS skipped" >> $GITHUB_STEP_SUMMARY
+              echo "⏭️ CODEOWNERS skipped" >> "$GITHUB_STEP_SUMMARY"
               ;;
           esac
 
       - name: Update LICENSE with current year and holder
+        env:
+          LICENSE_HOLDER: ${{ steps.set-license.outputs.holder }}
         run: |
           cd new-repo
-          CURRENT_YEAR=$(date +%Y)
-          sed -i "s/\[year\]/$CURRENT_YEAR/g" LICENSE
-          sed -i "s/\[fullname\]/${{ steps.set-license.outputs.holder }}/g" LICENSE
+          CURRENT_YEAR=$(date +%Y) LICENSE_HOLDER="$LICENSE_HOLDER" python - <<'PY'
+          from pathlib import Path
+          import os
+
+          path = Path("LICENSE")
+          text = path.read_text()
+          text = text.replace("[year]", os.environ["CURRENT_YEAR"])
+          path.write_text(text.replace("[fullname]", os.environ["LICENSE_HOLDER"]))
+          PY
 
       - name: Update README with repository details
+        env:
+          REPOSITORY_OWNER: ${{ steps.set-owner.outputs.owner }}
+          REPOSITORY_NAME: ${{ inputs.repo_name }}
         run: |
           cd new-repo
-          sed -i "s/{{REPOSITORY_OWNER}}/${{ steps.set-owner.outputs.owner }}/g" README.md
-          sed -i "s/{{REPOSITORY_NAME}}/${{ inputs.repo_name }}/g" README.md
+          REPOSITORY_OWNER="$REPOSITORY_OWNER" REPOSITORY_NAME="$REPOSITORY_NAME" python - <<'PY'
+          from pathlib import Path
+          import os
+
+          path = Path("README.md")
+          text = path.read_text().replace("{{REPOSITORY_OWNER}}", os.environ["REPOSITORY_OWNER"])
+          path.write_text(text.replace("{{REPOSITORY_NAME}}", os.environ["REPOSITORY_NAME"]))
+          PY
 
       - name: Log language tooling selection
         run: |
@@ -777,12 +807,14 @@ jobs:
 
       - name: Commit and push files
         id: push-files
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
           cd new-repo
           git add .
           git commit -m "chore: initialize repository from bootstrap template"
-          git push
-          echo "✅ Template files pushed" >> $GITHUB_STEP_SUMMARY
+          git -c http.extraheader="AUTHORIZATION: bearer $GH_TOKEN" push
+          echo "✅ Template files pushed" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Apply repository settings
         uses: ./.github/actions/apply-repo-settings
@@ -802,74 +834,74 @@ jobs:
 
       - name: Summary
         run: |
-          echo "✅ Repository created successfully!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Repository:** https://github.com/${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Visibility:** ${{ inputs.visibility }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Languages:** ${{ steps.validate-inputs.outputs.languages }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment manager:** ${{ steps.validate-inputs.outputs.env_manager }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Runtime versions:** python=${{ steps.validate-inputs.outputs.python_version }}, node=${{ steps.validate-inputs.outputs.node_version }}, go=${{ steps.validate-inputs.outputs.go_version }}, java=${{ steps.validate-inputs.outputs.java_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Release tool:** ${{ inputs.release_tool || 'git-cliff' }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Created Resources" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Repository created successfully!" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Repository:** https://github.com/${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Visibility:** ${{ inputs.visibility }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Languages:** ${{ steps.validate-inputs.outputs.languages }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Environment manager:** ${{ steps.validate-inputs.outputs.env_manager }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Runtime versions:** python=${{ steps.validate-inputs.outputs.python_version }}, node=${{ steps.validate-inputs.outputs.node_version }}, go=${{ steps.validate-inputs.outputs.go_version }}, java=${{ steps.validate-inputs.outputs.java_version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Release tool:** ${{ inputs.release_tool || 'git-cliff' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Created Resources" >> "$GITHUB_STEP_SUMMARY"
 
           case "${{ inputs.enable_codeowners }}" in
-            "true") echo "- ✅ CODEOWNERS" >> $GITHUB_STEP_SUMMARY ;;
-            *)      echo "- ⏭️ CODEOWNERS (skipped)" >> $GITHUB_STEP_SUMMARY ;;
+            "true") echo "- ✅ CODEOWNERS" >> "$GITHUB_STEP_SUMMARY" ;;
+            *)      echo "- ⏭️ CODEOWNERS (skipped)" >> "$GITHUB_STEP_SUMMARY" ;;
           esac
 
           case "${{ inputs.enable_repo_settings }}" in
             "true")
-              echo "- ✅ Vulnerability alerts and Dependabot security updates enabled" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ Development environment" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ Production environment" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Vulnerability alerts and Dependabot security updates enabled" >> "$GITHUB_STEP_SUMMARY"
+              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> "$GITHUB_STEP_SUMMARY"
+              echo "- ✅ Development environment" >> "$GITHUB_STEP_SUMMARY"
+              echo "- ✅ Production environment" >> "$GITHUB_STEP_SUMMARY"
               ;;
             *)
-              echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
-              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Development environment (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
-              echo "- ⏭️ Production environment (skipped; enable_repo_settings=false)" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ Vulnerability alerts and Dependabot security updates (skipped; enable_repo_settings=false)" >> "$GITHUB_STEP_SUMMARY"
+              echo "- ✅ Repository ruleset applied (or skipped with warning on unsupported plans)" >> "$GITHUB_STEP_SUMMARY"
+              echo "- ⏭️ Development environment (skipped; enable_repo_settings=false)" >> "$GITHUB_STEP_SUMMARY"
+              echo "- ⏭️ Production environment (skipped; enable_repo_settings=false)" >> "$GITHUB_STEP_SUMMARY"
               ;;
           esac
 
-          echo "- ✅ Dependabot configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dependabot configuration" >> "$GITHUB_STEP_SUMMARY"
 
-          echo "- ✅ .editorconfig (4 spaces code, 2 spaces config)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ .gitignore, .gitattributes" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Documentation templates" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ SECURITY.md (security policy)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ CONTRIBUTING.md (contribution guide)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ LICENSE (MIT)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ .editorconfig (4 spaces code, 2 spaces config)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ .gitignore, .gitattributes" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Documentation templates" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ SECURITY.md (security policy)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ CONTRIBUTING.md (contribution guide)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ LICENSE (MIT)" >> "$GITHUB_STEP_SUMMARY"
           if [ -f new-repo/environment.yml ]; then
-            echo "- ✅ provider/micromamba config selected (environment.yml)" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ provider/micromamba config selected (environment.yml)" >> "$GITHUB_STEP_SUMMARY"
           elif [ -f new-repo/mise.toml ]; then
-            echo "- ✅ provider/mise config selected (mise.toml)" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ provider/mise config selected (mise.toml)" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "- ✅ provider/system config selected (Makefile only)" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ provider/system config selected (Makefile only)" >> "$GITHUB_STEP_SUMMARY"
           fi
-          echo "- ✅ .pre-commit-config.yaml (all language: system hooks)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Conventional commits (pre-commit)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Makefile (run 'make lint' locally)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ .pre-commit-config.yaml (all language: system hooks)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Conventional commits (pre-commit)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Makefile (run 'make lint' locally)" >> "$GITHUB_STEP_SUMMARY"
 
           case "${{ inputs.workflows }}" in
             "all"|"")
-              echo "- ✅ Quality workflow (${{ steps.validate-inputs.outputs.env_manager }} + selected capabilities)" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Quality workflow (${{ steps.validate-inputs.outputs.env_manager }} + selected capabilities)" >> "$GITHUB_STEP_SUMMARY"
               case "${{ inputs.release_tool }}" in
                 "release-please")
-                  echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ Release Please workflow (PR-based semantic versioning)" >> "$GITHUB_STEP_SUMMARY"
                   ;;
                 *)
-                  echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> $GITHUB_STEP_SUMMARY
-                  echo "- ✅ cliff.toml (changelog configuration)" >> $GITHUB_STEP_SUMMARY
+                  echo "- ✅ git-cliff release workflow (tag-based changelog + GitHub Release)" >> "$GITHUB_STEP_SUMMARY"
+                  echo "- ✅ cliff.toml (changelog configuration)" >> "$GITHUB_STEP_SUMMARY"
                   ;;
               esac
               ;;
             "none")
-              echo "- ⏭️ All workflows skipped" >> $GITHUB_STEP_SUMMARY
+              echo "- ⏭️ All workflows skipped" >> "$GITHUB_STEP_SUMMARY"
               ;;
             *)
-              echo "- ✅ Selected workflows: ${{ inputs.workflows }}" >> $GITHUB_STEP_SUMMARY
+              echo "- ✅ Selected workflows: ${{ inputs.workflows }}" >> "$GITHUB_STEP_SUMMARY"
               ;;
           esac
 
@@ -929,22 +961,23 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          gh_token: ${{ inputs.gh_token }}
-          gh_pat_secret: ${{ secrets.GH_PAT }}
           client_id: ${{ inputs.client_id }}
-          app_private_key: ${{ secrets.app_private_key || secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
-          app_owner: ${{ inputs.app_owner || needs.create-repository.outputs.owner }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_user_token: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ needs.create-repository.outputs.owner }}
+          permission_profile: repository-cleanup
+          repositories: ${{ inputs.repo_name }}
 
       - name: Delete repository on failure
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          OWNER: ${{ needs.create-repository.outputs.owner }}
+          REPO: ${{ inputs.repo_name }}
         run: |
-          OWNER="${{ needs.create-repository.outputs.owner }}"
-          REPO="${{ inputs.repo_name }}"
-
           # Check if repository exists before attempting deletion
           if gh repo view "$OWNER/$REPO" &>/dev/null; then
-            echo "🗑️ Deleting repository $OWNER/$REPO due to failure..." >> $GITHUB_STEP_SUMMARY
+            echo "🗑️ Deleting repository $OWNER/$REPO due to failure..." >> "$GITHUB_STEP_SUMMARY"
 
             # Delete the repository
             gh api \
@@ -952,9 +985,9 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               /repos/$OWNER/$REPO
 
-            echo "✅ Repository deleted successfully" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Repository deleted successfully" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "ℹ️ Repository does not exist, nothing to clean up" >> $GITHUB_STEP_SUMMARY
+            echo "ℹ️ Repository does not exist, nothing to clean up" >> "$GITHUB_STEP_SUMMARY"
           fi
 
   teardown-no-approval:
@@ -991,22 +1024,23 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          gh_token: ${{ inputs.gh_token }}
-          gh_pat_secret: ${{ secrets.GH_PAT }}
           client_id: ${{ inputs.client_id }}
-          app_private_key: ${{ secrets.app_private_key || secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
-          app_owner: ${{ inputs.app_owner || needs.create-repository.outputs.owner }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_user_token: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ needs.create-repository.outputs.owner }}
+          permission_profile: repository-cleanup
+          repositories: ${{ inputs.repo_name }}
 
       - name: Delete repository on failure
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          OWNER: ${{ needs.create-repository.outputs.owner }}
+          REPO: ${{ inputs.repo_name }}
         run: |
-          OWNER="${{ needs.create-repository.outputs.owner }}"
-          REPO="${{ inputs.repo_name }}"
-
           # Check if repository exists before attempting deletion
           if gh repo view "$OWNER/$REPO" &>/dev/null; then
-            echo "🗑️ Deleting repository $OWNER/$REPO due to failure..." >> $GITHUB_STEP_SUMMARY
+            echo "🗑️ Deleting repository $OWNER/$REPO due to failure..." >> "$GITHUB_STEP_SUMMARY"
 
             # Delete the repository
             gh api \
@@ -1014,7 +1048,7 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               /repos/$OWNER/$REPO
 
-            echo "✅ Repository deleted successfully" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Repository deleted successfully" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "ℹ️ Repository does not exist, nothing to clean up" >> $GITHUB_STEP_SUMMARY
+            echo "ℹ️ Repository does not exist, nothing to clean up" >> "$GITHUB_STEP_SUMMARY"
           fi

@@ -8,9 +8,9 @@
 # Recommended auth:
 # - Create these in THIS launcher repository, not in the target repo:
 #   - Secret: BOOTSTRAP_APP_PRIVATE_KEY
-#   - Workflow input: app_id
-#   - Optional workflow input: allowed_repo_owners
-# The GitHub App or PAT must have access to the target repository selected by
+#   - Workflow input: client_id
+#   - Required workflow input: allowed_repo_owners
+# The GitHub App must have access to the target repository selected by
 # repo_owner/repo_name.
 
 name: Setup Existing Repository
@@ -26,13 +26,13 @@ on:
         description: "Existing repository name"
         required: true
         type: string
-      app_id:
-        description: "GitHub App ID used to configure the target repository"
+      client_id:
+        description: "GitHub App client ID used to configure the target repository"
         required: true
         type: string
       allowed_repo_owners:
-        description: "Optional comma-separated allowlist of target owners"
-        required: false
+        description: "Comma-separated allowlist of target owners"
+        required: true
         type: string
       apply_labels:
         description: "Apply default labels"
@@ -92,8 +92,8 @@ jobs:
       ruleset_profile: ${{ inputs.ruleset_profile }}
       coderabbit_mode: ${{ inputs.coderabbit_mode }}
       agent_provider: ${{ inputs.agent_provider }}
-      app_id: ${{ inputs.app_id }}
+      client_id: ${{ inputs.client_id }}
       app_owner: ${{ inputs.repo_owner }}
       allowed_repo_owners: ${{ inputs.allowed_repo_owners }}
     secrets:
-      app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+      BOOTSTRAP_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}

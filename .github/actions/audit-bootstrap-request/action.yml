@@ -44,11 +44,18 @@ runs:
         OWNER: ${{ inputs.owner }}
         AUTH_MODE: ${{ inputs.auth_mode }}
       run: |
+        set -euo pipefail
         OWNER_TYPE=$(gh api "/users/$OWNER" --jq '.type')
         echo "Owner type: $OWNER_TYPE, Auth mode: $AUTH_MODE"
         if [ "$AUTH_MODE" = "app" ] && [ "$OWNER_TYPE" = "User" ]; then
-          ERROR_MESSAGE="GitHub App installation tokens cannot create repositories under a personal user account ('$OWNER' is a User, not an Organization)."
-          ERROR_MESSAGE+=" Use a PAT (GH_PAT secret or gh_token input) for personal account targets, or use an organization as the target repo_owner."
+          ERROR_MESSAGE="GitHub App installation tokens cannot create repositories under a personal user account ('$OWNER' is a User)."
+          ERROR_MESSAGE+=" Use an App user access token for personal-account creation."
+          echo "::error::$ERROR_MESSAGE"
+          exit 1
+        fi
+        if [ "$AUTH_MODE" = "app-user" ] && [ "$OWNER_TYPE" != "User" ]; then
+          ERROR_MESSAGE="GitHub App user access tokens are reserved for personal-account creation ('$OWNER' is $OWNER_TYPE)."
+          ERROR_MESSAGE+=" Use the installation-token mode for organization creation."
           echo "::error::$ERROR_MESSAGE"
           exit 1
         fi

@@ -9,10 +9,11 @@
 # Prerequisites in YOUR launcher repository
 # ──────────────────────────────────────────
 # Secrets:
-#   BOOTSTRAP_APP_PRIVATE_KEY — PEM private key of your GitHub App
+#   BOOTSTRAP_APP_PRIVATE_KEY — PEM private key of your GitHub App (organization mode)
+#   BOOTSTRAP_APP_USER_TOKEN — authorized App user access token (personal mode)
 #
 # Variables (Settings → Secrets and variables → Actions → Variables):
-#   BOOTSTRAP_APP_ID          — Numeric App ID (found in the App's settings page)
+#   BOOTSTRAP_APP_CLIENT_ID   — App client ID (found in the App's settings page)
 #
 # GitHub App requirements:
 #   Same as launcher-actions.yml. See that file for the full list.
@@ -26,7 +27,7 @@
 # ──────
 # 1. Copy this file to .github/workflows/bootstrap-repository-terraform.yml
 # 2. Replace BOOTSTRAP_OWNER with the GitHub user/org that owns github-bootstrap
-# 3. Set BOOTSTRAP_APP_PRIVATE_KEY secret and BOOTSTRAP_APP_ID variable
+# 3. Set the protected App secret for the target type and BOOTSTRAP_APP_CLIENT_ID variable
 # 4. Create the bootstrap-cleanup environment (or set require_cleanup_approval: false)
 # 5. Go to Actions → Bootstrap Repository (Terraform) → Run workflow
 # ============================================================================
@@ -115,8 +116,8 @@ jobs:
       java_version: ${{ inputs.java_version }}
       release_tool: ${{ inputs.release_tool }}
       cleanup_on_failure: ${{ inputs.cleanup_on_failure }}
-      # GitHub App auth — recommended over PAT
-      app_id: ${{ vars.BOOTSTRAP_APP_ID }}
+      # GitHub App authentication
+      client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
       app_owner: ${{ inputs.repo_owner }}
       # Restrict which owners this launcher may target.
       # Use a fixed owner or a repo/org variable — NOT a user-controlled input.
@@ -131,4 +132,6 @@ jobs:
       # Needs a "bootstrap-cleanup" environment in THIS repository.
       require_cleanup_approval: true
     secrets:
-      app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+      BOOTSTRAP_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+      # Use this instead of the private key for personal-account creation.
+      BOOTSTRAP_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}

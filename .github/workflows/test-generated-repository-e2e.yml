@@ -8,6 +8,14 @@ on:
         required: false
         default: main
         type: string
+      client_id:
+        description: GitHub App client ID for the credentialed E2E run.
+        required: true
+        type: string
+      app_owner:
+        description: Organization used by the credentialed E2E run.
+        required: true
+        type: string
       central_repository:
         description: Existing user-owned central workflow repository for centralized scenarios.
         required: false
@@ -97,8 +105,12 @@ jobs:
         id: token
         uses: ./.github/actions/resolve-gh-token
         with:
-          gh_token: ${{ secrets.GH_PAT }}
-          gh_pat_secret: ${{ secrets.GH_PAT }}
+          client_id: ${{ inputs.client_id }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: repository-setup
+          repositories: ${{ github.event.repository.name }}
 
       - name: Select requested creation workflow
         id: scenario
