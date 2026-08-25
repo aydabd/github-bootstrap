@@ -43,7 +43,6 @@ jobs:
       visibility: public
       cleanup_on_failure: true
       env_manager: system
-      workflows: none
       client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
       app_owner: ${{ inputs.personal_owner }}
       allowed_repo_owners: ${{ inputs.personal_owner }}
@@ -62,7 +61,6 @@ jobs:
       visibility: private
       cleanup_on_failure: true
       env_manager: system
-      workflows: none
       client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
       app_owner: ${{ inputs.personal_owner }}
       allowed_repo_owners: ${{ inputs.personal_owner }}
