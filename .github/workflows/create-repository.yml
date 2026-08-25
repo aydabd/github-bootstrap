@@ -521,7 +521,8 @@ jobs:
           OWNER: ${{ steps.set-owner.outputs.owner }}
           REPO_NAME: ${{ inputs.repo_name }}
         run: |
-          git -c http.extraheader="AUTHORIZATION: bearer $GH_TOKEN" clone "https://${GH_HOST}/${OWNER}/${REPO_NAME}.git" new-repo
+          GIT_AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\r\n')"
+          git -c http.extraheader="AUTHORIZATION: basic $GIT_AUTH_HEADER" clone "https://${GH_HOST}/${OWNER}/${REPO_NAME}.git" new-repo
           cd new-repo
           git remote set-url origin "https://${GH_HOST}/${OWNER}/${REPO_NAME}.git"
           git config user.name "github-actions[bot]"
@@ -813,7 +814,8 @@ jobs:
           cd new-repo
           git add .
           git commit -m "chore: initialize repository from bootstrap template"
-          git -c http.extraheader="AUTHORIZATION: bearer $GH_TOKEN" push
+          GIT_AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\r\n')"
+          git -c http.extraheader="AUTHORIZATION: basic $GIT_AUTH_HEADER" push
           echo "✅ Template files pushed" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Apply repository settings
