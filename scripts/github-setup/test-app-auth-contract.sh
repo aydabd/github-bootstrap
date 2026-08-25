@@ -63,7 +63,11 @@ for workflow in create-repository.yml terraform-create-repository.yml; do
     assert_contains "inputs.visibility == 'internal'" "$workflow_path"
     assert_contains "Internal visibility is supported only for organization repositories" "$workflow_path"
     assert_contains "git remote set-url origin" "$workflow_path"
-    assert_contains "http.extraheader=\"AUTHORIZATION: bearer \$GH_TOKEN\"" "$workflow_path"
+    if [ "$workflow" = create-repository.yml ]; then
+        assert_contains "http.extraheader=\"AUTHORIZATION: basic \$GIT_AUTH_HEADER\"" "$workflow_path"
+    else
+        assert_contains "http.extraheader=\"AUTHORIZATION: bearer \$GH_TOKEN\"" "$workflow_path"
+    fi
     assert_contains "allowed_repo_owners:" "$workflow_path"
     assert_not_contains "GH_PAT" "$workflow_path"
     assert_not_contains "gh_token: \${{ inputs.gh_token }}" "$workflow_path"

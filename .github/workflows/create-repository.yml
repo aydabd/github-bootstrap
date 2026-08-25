@@ -522,6 +522,7 @@ jobs:
           REPO_NAME: ${{ inputs.repo_name }}
         run: |
           GIT_AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\r\n')"
+          printf '::add-mask::%s\n' "$GIT_AUTH_HEADER"
           git -c http.extraheader="AUTHORIZATION: basic $GIT_AUTH_HEADER" clone "https://${GH_HOST}/${OWNER}/${REPO_NAME}.git" new-repo
           cd new-repo
           git remote set-url origin "https://${GH_HOST}/${OWNER}/${REPO_NAME}.git"
@@ -815,6 +816,7 @@ jobs:
           git add .
           git commit -m "chore: initialize repository from bootstrap template"
           GIT_AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\r\n')"
+          printf '::add-mask::%s\n' "$GIT_AUTH_HEADER"
           git -c http.extraheader="AUTHORIZATION: basic $GIT_AUTH_HEADER" push
           echo "✅ Template files pushed" >> "$GITHUB_STEP_SUMMARY"
 
