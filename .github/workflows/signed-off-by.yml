@@ -1,0 +1,58 @@
+name: Signed-off-by trailers
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: signed-off-by-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  signed-off-by:
+    name: Signed-off-by trailers
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read # Required to read pull-request commits and verify trailers.
+    steps:
+      - name: Verify every pull-request commit has a Signed-off-by trailer
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.request
+
+          url = f"https://api.github.com/repos/{os.environ['REPOSITORY']}/pulls/{os.environ['PR_NUMBER']}/commits?per_page=100"
+          commits = []
+          while url:
+              request = urllib.request.Request(
+                  url,
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                      "User-Agent": "github-bootstrap-signed-off-by",
+                  },
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  commits.extend(json.load(response))
+                  links = response.headers.get("Link", "")
+              url = next((part.split(";")[0].strip("<>") for part in links.split(",") if 'rel="next"' in part), "")
+
+          trailer = re.compile(r"^Signed-off-by:\s+[^<>\r\n]+ <[^<>\r\n]+>$", re.MULTILINE)
+          missing = [item["sha"] for item in commits if not trailer.search(item["commit"]["message"])]
+          if missing:
+              print("Missing Signed-off-by: Name <email> trailer in commit(s):")
+              print("\n".join(missing))
+              raise SystemExit(1)
+          print(f"Verified Signed-off-by trailer on all {len(commits)} pull-request commit(s).")
+          PY
