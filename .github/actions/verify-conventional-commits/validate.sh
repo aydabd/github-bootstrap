@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+commits_file="$(mktemp)"
+trap 'rm -f "$commits_file" "$messages_file"' EXIT
 gh api --paginate --slurp \
     "/repos/$REPOSITORY/pulls/$PR_NUMBER/commits?per_page=100" \
-    > commits.json
-jq -e 'flatten | length > 0' commits.json > /dev/null
+    > "$commits_file"
+jq -e 'flatten | length > 0' "$commits_file" > /dev/null
 
 messages_file="$(mktemp)"
 export messages_file
 trap 'rm -f "$messages_file"' EXIT
-jq -jr 'flatten[] | .commit.message, "\u0000"' commits.json > "$messages_file"
+jq -jr 'flatten[] | .commit.message, "\u0000"' "$commits_file" > "$messages_file"
 
 if [ -n "$CONFIG_PATH" ]; then
     # shellcheck disable=SC2016
