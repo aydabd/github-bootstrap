@@ -11,6 +11,13 @@ policy_actions=(
     ".github/actions/verify-signed-off-by/action.yml"
 )
 
+weekly_workflow="$ROOT_DIR/.github/workflows/weekly-tooling-updates.yml"
+# shellcheck disable=SC2016
+if ! grep -qF 'git commit --no-verify -s -m "$commit_msg"' "$weekly_workflow"; then
+    echo "MISSING_SIGNED_OFF_BY: weekly tooling workflow commit" >&2
+    exit 1
+fi
+
 for relative_path in "${policy_actions[@]}"; do
     root_path="$ROOT_DIR/$relative_path"
     template_path="$ROOT_DIR/templates/$relative_path"
