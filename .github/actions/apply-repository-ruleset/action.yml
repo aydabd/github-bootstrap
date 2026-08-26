@@ -128,7 +128,7 @@ runs:
               END { exit(found ? 0 : 1) }
             '
           }
-          if workflow_has_check .github/workflows/signed-off-by.yml "Signed-off-by trailers"; then
+          if workflow_has_check .github/workflows/commit-policy.yml "Signed-off-by trailers"; then
             REQUIRED_STATUS_CHECKS="Signed-off-by trailers"
           else
             REQUIRED_STATUS_CHECKS=""

@@ -656,7 +656,7 @@ jobs:
           esac
 
           # Build a space-separated list of workflow filenames to keep
-          KEEP_FILES=" signed-off-by.yml"
+          KEEP_FILES=" commit-policy.yml"
           QUALITY_KEPT=false
           RELEASE_KEPT=false
           VALID_WORKFLOW_FOUND=false
@@ -680,7 +680,7 @@ jobs:
                     esac
                     ;;
                   *)
-                    echo "⚠️ Unknown workflow name: '$name' (valid: quality, codeql, ai-code-review, release; signed-off-by is always included)" >> "$GITHUB_STEP_SUMMARY"
+                    echo "⚠️ Unknown workflow name: '$name' (valid: quality, codeql, ai-code-review, release; commit-policy is always included)" >> "$GITHUB_STEP_SUMMARY"
                     ;;
                 esac
               done

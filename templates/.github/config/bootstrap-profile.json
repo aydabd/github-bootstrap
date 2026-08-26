@@ -41,7 +41,7 @@
     }
   },
   "assets": [
-    { "path": ".github/workflows/signed-off-by.yml", "classification": "baseline", "owned": true },
+    { "path": ".github/workflows/commit-policy.yml", "classification": "baseline", "owned": true },
     { "path": ".github/workflows/quality.yml", "classification": "baseline", "owned": true },
     { "path": ".github/actions/quality", "classification": "baseline", "owned": true },
     { "path": ".github/skills/git-worktree-stack", "classification": "baseline", "owned": true },
