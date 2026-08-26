@@ -81,8 +81,8 @@ jobs:
             exit 0
           fi
 
-          automation_login="$(gh api /user --jq '.login')"
-          automation_id="$(gh api /user --jq '.id')"
+          automation_login="$GITHUB_ACTOR"
+          automation_id="$GITHUB_ACTOR_ID"
 
           git config user.name "$automation_login"
           git config user.email "${automation_id}+${automation_login}@users.noreply.github.com"
