@@ -127,6 +127,10 @@ if [ -n "$local_config" ]; then
         echo "missing local config: $local_config" >&2
         exit 1
     fi
+    if ! grep -qF "'type-enum': [2, 'always', ['feat']]" "$local_config"; then
+        echo "unexpected local config type-enum rule: $local_config" >&2
+        exit 1
+    fi
     if [[ "$message" =~ ^feat:\ .+ ]]; then
         exit 0
     fi
@@ -173,6 +177,14 @@ cat > "$fixture_dir/run/monorepo/commitlint.config.cjs" <<'EOF'
 module.exports = {
     rules: {
         'type-enum': [2, 'always', ['feat']],
+    },
+};
+EOF
+
+cat > "$fixture_dir/run/monorepo/unexpected-commitlint.config.cjs" <<'EOF'
+module.exports = {
+    rules: {
+        'type-enum': [2, 'always', ['fix']],
     },
 };
 EOF
@@ -230,6 +242,7 @@ expect_valid "default pull-request title" run_title_action "fix: reject invalid 
 expect_invalid "invalid default pull-request title" run_title_action "reject invalid pull-request titles" ""
 expect_valid "local config commit" run_conventional_action local-valid.json "commitlint.config.cjs" "monorepo"
 expect_invalid "local config commit" run_conventional_action local-invalid.json "commitlint.config.cjs" "monorepo"
+expect_invalid "unexpected local config rule" run_conventional_action local-valid.json "unexpected-commitlint.config.cjs" "monorepo"
 expect_valid "local config pull-request title" run_title_action "feat: accept repository title policy" "$fixture_dir/run/monorepo/commitlint.config.cjs"
 expect_invalid "local config pull-request title" run_title_action "fix: reject repository title policy" "$fixture_dir/run/monorepo/commitlint.config.cjs"
 
