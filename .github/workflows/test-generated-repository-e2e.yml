@@ -212,7 +212,7 @@ jobs:
 
           has_file() { gh api "/repos/$OWNER/$REPO_NAME/contents/$1" >/dev/null 2>&1; }
           file_text() { gh api "/repos/$OWNER/$REPO_NAME/contents/$1" --jq .content | base64 -d; }
-          for file in .github/workflows/quality.yml .github/workflows/signed-off-by.yml .github/config/bootstrap-profile.json; do
+          for file in .github/workflows/quality.yml .github/workflows/commit-policy.yml .github/config/bootstrap-profile.json; do
             has_file "$file" || { echo "missing generated file: $file" >&2; exit 1; }
           done
           for file in Makefile scripts/provider-run.sh .github/actions/setup-lint-mise/action.yml .github/actions/setup-lint-system/action.yml; do

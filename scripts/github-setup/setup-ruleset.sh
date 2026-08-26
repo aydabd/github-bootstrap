@@ -136,7 +136,7 @@ validate_selected_profile() {
 
 derive_required_status_checks() {
     local checks=()
-    if workflow_has_check "$installed_root/.github/workflows/signed-off-by.yml" "Signed-off-by trailers"; then
+    if workflow_has_check "$installed_root/.github/workflows/commit-policy.yml" "Signed-off-by trailers"; then
         checks+=("Signed-off-by trailers")
     fi
     if workflow_has_check "$installed_root/.github/workflows/quality.yml" "quality"; then

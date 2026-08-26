@@ -228,7 +228,7 @@ fi
 
 mkdir -p "$ruleset_test_root/.github/workflows"
 printf '%s\n' 'name: quality' > "$ruleset_test_root/.github/workflows/quality.yml"
-printf '%s\n' 'name: Signed-off-by trailers' > "$ruleset_test_root/.github/workflows/signed-off-by.yml"
+printf '%s\n' 'name: Signed-off-by trailers' > "$ruleset_test_root/.github/workflows/commit-policy.yml"
 invalid_ruleset_profile_output="$(
     "$repo_root/scripts/github-setup/setup-ruleset.sh" \
         --owner test-owner \
@@ -245,6 +245,13 @@ fi
 grep -q -- "derive checks from validated workflow files under" \
     "$repo_root/scripts/github-setup/setup-ruleset.sh"
 grep -q -- "--installed-root" "$repo_root/scripts/github-setup/setup-ruleset.sh"
+grep -q -- ".github/workflows/commit-policy.yml" \
+    "$repo_root/scripts/github-setup/setup-ruleset.sh"
+if grep -q -- ".github/workflows/signed-off-by.yml" \
+    "$repo_root/scripts/github-setup/setup-ruleset.sh"; then
+    echo "ruleset setup must use the commit-policy workflow" >&2
+    exit 1
+fi
 
 jq '.capabilities[0].classification = "optional:planning"' "$profile_file" > "$temp_file"
 "$validator" --profile-file "$temp_file" --profile baseline --delivery-mode embedded
