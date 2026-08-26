@@ -886,7 +886,7 @@ jobs:
           fi
           echo "- ✅ .pre-commit-config.yaml (all language: system hooks)" >> "$GITHUB_STEP_SUMMARY"
           echo "- ✅ Conventional commits (pre-commit)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- ✅ Makefile (run 'make lint' locally)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Makefile (run 'make quality' locally)" >> "$GITHUB_STEP_SUMMARY"
 
           case "${{ inputs.workflows }}" in
             "all"|"")

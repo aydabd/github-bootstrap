@@ -1,7 +1,7 @@
 # =============================================================================
 # Environment Setup
 # =============================================================================
-setup-env: ## Setup selected environment manager (ENV_MANAGER=micromamba|mise|system)
+setup-env: ## Setup selected environment (ENV_MANAGER=micromamba|mise|system)
 	@set -euo pipefail; $(SETUP_TRACE) \
 	case "$(ENV_MANAGER)" in \
 		micromamba) \

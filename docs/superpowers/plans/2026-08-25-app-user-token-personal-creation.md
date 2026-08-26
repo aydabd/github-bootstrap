@@ -126,7 +126,7 @@ Require credentialed tests for organization installation-token creation and pers
 scripts/github-setup/test-app-auth-contract.sh
 scripts/github-setup/test-profile.sh
 actionlint -ignore 'SC[0-9]+' .github/workflows/*.yml
-LINT_MODE=check make lint
+LINT_MODE=check make quality
 git diff --check
 ```
 

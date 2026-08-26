@@ -7,8 +7,8 @@
 #
 # Quick start:
 #   make install              Bootstrap env + hooks
-#   make lint                 Auto-format + lint (local dev)
-#   LINT_MODE=check make lint Check-only (CI mode, no auto-fix)
+#   make quality              Auto-format + quality checks (local dev)
+#   LINT_MODE=check make quality  Check-only (CI mode, no auto-fix)
 #   make test                 Trigger repository creation tests
 #
 # Env manager options:

@@ -35,8 +35,8 @@ cd github-bootstrap
 git checkout -b feat/your-feature-name
 
 # 3. Make your changes and test locally
-make lint        # run the linter (requires Docker)
-make lint-fix    # run the linter with auto-fix
+make quality     # run quality checks with auto-fix
+LINT_MODE=check make quality  # run CI-equivalent check-only quality checks
 
 # 4. Commit using conventional commits (see below)
 git commit -m "feat: add new repository setting"
@@ -103,7 +103,7 @@ Update any saved workflow dispatch calls accordingly.
 
 1. **Branch** from `main` and keep your PR focused on a single concern.
 2. **Tests** — add or update tests where applicable.
-3. **Lint** — run `make lint` and fix any reported issues before opening the PR.
+3. **Quality checks** — run `make quality` and fix any reported issues before opening the PR.
 4. **PR title** — use the same conventional commit format as your commits.
 5. **Fill in the template** — the PR template guides you through the required information.
 6. **Two approvals** are required from code owners before merging.

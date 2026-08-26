@@ -33,6 +33,6 @@ jobs:
           environment-name: github-bootstrap
           cache-environment: true
           cache-downloads: true
-      - name: Run quality checks
+      - name: Run quality checks (micromamba)
         shell: bash
-        run: LINT_MODE=check ENV_MANAGER=micromamba MICROMAMBA="$(command -v micromamba)" make lint
+        run: LINT_MODE=check ENV_MANAGER=micromamba MICROMAMBA="$(command -v micromamba)" make quality

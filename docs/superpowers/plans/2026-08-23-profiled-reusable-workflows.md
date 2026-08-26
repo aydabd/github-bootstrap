@@ -19,7 +19,7 @@
 - Existing repositories are not automatically migrated or modified.
 - Generated workflows and actions use SHA-pinned third-party actions and least-privilege permissions.
 - Release metadata must use a `feat!` commit and `BREAKING CHANGE:` footer so release-please emits a major release.
-- `LINT_MODE=check make lint` must pass before completion.
+- `LINT_MODE=check make quality` must pass before completion.
 
 ---
 
@@ -168,12 +168,12 @@
 - Modify: `.github/workflows/test-repository-creation.yml`
 - Modify: `scripts/check-github-workflow-assets.sh`
 - Test: `go test ./...` from `tools/`
-- Test: `LINT_MODE=check make lint`
+- Test: `LINT_MODE=check make quality`
 
 - [ ] Add migration guidance stating that existing repositories are not changed automatically and that the old `lint` contract is removed.
 - [ ] Add embedded/centralized usage examples and central repository ownership/versioning guidance.
 - [ ] Add a release note with the exact breaking change and `quality` replacement.
 - [ ] Run generated-file, workflow-asset, shell, API contract, and Terraform tests.
-- [ ] Run `go test ./...` from `tools/` and `LINT_MODE=check make lint`.
+- [ ] Run `go test ./...` from `tools/` and `LINT_MODE=check make quality`.
 - [ ] Verify `git diff --check`, no `lint` workflow/check references remain in generated contracts, and release-please sees the breaking commit metadata.
 - [ ] Commit: `docs: document profiled workflow delivery and breaking migration`.

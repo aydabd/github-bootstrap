@@ -66,7 +66,7 @@ Keep each action single-purpose and declarative.
    - `terraform-create-repository.yml`
    - `test-repository-creation.yml`
 4. Update provider selection logic in `configure-provider-tooling-files` if needed.
-5. Validate local lint flow with `make lint` for the provider mode.
+5. Validate local quality flow with `make quality` for the provider mode.
 
 ## Add/Change Runtime Versions
 
@@ -80,7 +80,7 @@ Keep each action single-purpose and declarative.
 Run all required checks before opening a PR:
 
 ```bash
-LINT_MODE=check make lint
+LINT_MODE=check make quality
 ```
 
 When changing language/provider behavior, also run the manual test harness:

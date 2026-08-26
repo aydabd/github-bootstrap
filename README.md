@@ -18,7 +18,7 @@ Creates fully configured repositories with:
 - Release Please workflow for automated semantic versioning
 - Profiled quality workflow for PR and push (embedded or user-owned centralized delivery)
 - AI code review with CodeRabbit and Claude (see [AI Code Review](#ai-code-review))
-- Makefile for local quality checks (`make lint` via selected environment provider)
+- Makefile for local quality checks (`make quality ENV_MANAGER=...`)
 - SECURITY.md and CONTRIBUTING.md
 - CodeQL security scanning workflow (language-aware)
 - Vulnerability alerts and Dependabot security updates enabled automatically
@@ -296,7 +296,7 @@ Project readme and AI assistant instructions (Agent, Claude, Copilot) following 
 - **Monorepo behavior** — generated `.pre-commit/languages/*.yaml` files are emitted for all selected languages for explicit per-project opt-in
 - **One linter per file type** — prettier (JSON/YAML/Markdown), shellcheck + shfmt (shell),
   markdownlint, editorconfig-checker, yamllint, taplo (TOML), terraform fmt
-- **Local and CI** — `make lint` auto-fixes locally; `LINT_MODE=check make lint` fails on violations in CI
+- **Local and CI** — `make quality` auto-fixes locally; `LINT_MODE=check make quality` fails on violations in CI
 - **Language-specific linters** — Add language linters to `.pre-commit-config.yaml` as needed
 - **Profile manifest** — `templates/.github/config/bootstrap-profile.json` classifies baseline,
   optional planning, and provider-specific assets
@@ -593,7 +593,7 @@ preset for the path you are validating (`api-*` or `terraform-*`).
 - GitHub App credentials: `client_id` plus either the protected installation private key for an
   organization or the protected App user access token for a personal account
   — see [Setup](#setup)
-- One of: `micromamba`, `mise`, or system-installed tooling for local linting with `make lint`
+- One of: `micromamba`, `mise`, or system-installed tooling for local quality checks with `make quality`
 
 ## Breaking change in issue #78
 
