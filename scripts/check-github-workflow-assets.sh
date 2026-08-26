@@ -39,7 +39,7 @@ shared_assets=(
     ".github/actions/verify-signed-off-by/action.yml"
 )
 for relative_path in "${shared_assets[@]}"; do
-    if ! cmp -s "$ROOT_DIR/$relative_path" "$ROOT_DIR/templates/$relative_path"; then
+    if ! cmp -s "$ROOT_DIR/$relative_path" "$ROOT_DIR/templates/$relative_path" 2>/dev/null; then
         echo "OUT_OF_SYNC: $relative_path differs between root and templates" >&2
         errors=$((errors + 1))
     fi

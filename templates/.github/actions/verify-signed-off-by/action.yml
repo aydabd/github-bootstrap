@@ -27,6 +27,8 @@ runs:
         import json
         import os
         import re
+        import sys
+        import urllib.error
         import urllib.request
 
         base_url = (
@@ -45,8 +47,12 @@ runs:
                     "User-Agent": "github-bootstrap-signed-off-by",
                 },
             )
-            with urllib.request.urlopen(request, timeout=30) as response:
-                page_commits = json.load(response)
+            try:
+                with urllib.request.urlopen(request, timeout=30) as response:
+                    page_commits = json.load(response)
+            except (OSError, urllib.error.URLError) as error:
+                print(f"Unable to fetch pull-request commits: {error}", file=sys.stderr)
+                raise SystemExit(1)
             if not page_commits:
                 break
             commits.extend(page_commits)
