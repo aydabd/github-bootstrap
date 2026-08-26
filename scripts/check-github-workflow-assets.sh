@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 required_assets=(
     ".github/workflows/quality.yml"
-    ".github/workflows/signed-off-by.yml"
+    ".github/workflows/commit-policy.yml"
     ".github/actions/verify-conventional-commits/action.yml"
     ".github/actions/verify-pull-request-title/action.yml"
     ".github/actions/verify-signed-off-by/action.yml"
@@ -37,7 +37,7 @@ for relative_path in "${required_assets[@]}"; do
 done
 
 shared_assets=(
-    ".github/workflows/signed-off-by.yml"
+    ".github/workflows/commit-policy.yml"
     ".github/actions/verify-conventional-commits/action.yml"
     ".github/actions/verify-pull-request-title/action.yml"
     ".github/actions/verify-signed-off-by/action.yml"
@@ -47,6 +47,19 @@ for relative_path in "${shared_assets[@]}"; do
         echo "OUT_OF_SYNC: $relative_path differs between root and templates" >&2
         errors=$((errors + 1))
     fi
+done
+
+obsolete_assets=(
+    ".github/workflows/signed-off-by.yml"
+)
+for relative_path in "${obsolete_assets[@]}"; do
+    for base_dir in "$ROOT_DIR" "$ROOT_DIR/templates"; do
+        path="$base_dir/$relative_path"
+        if [ -e "$path" ]; then
+            echo "OBSOLETE_ASSET: $path must be removed" >&2
+            errors=$((errors + 1))
+        fi
+    done
 done
 
 template_quality_assets=(
