@@ -18,6 +18,8 @@ jobs:
       contents: read
       pull-requests: read # Required to read pull-request commits and verify trailers.
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
       - name: Verify Signed-off-by trailers
         uses: ./.github/actions/verify-signed-off-by
         with:
