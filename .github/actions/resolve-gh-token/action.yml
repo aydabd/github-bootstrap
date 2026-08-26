@@ -45,6 +45,7 @@ runs:
         APP_CLIENT_ID: ${{ inputs.client_id }}
         APP_PRIVATE_KEY: ${{ inputs.app_private_key }}
         APP_USER_TOKEN: ${{ inputs.app_user_token }}
+        GH_TOKEN: ${{ github.token }}
         APP_OWNER: ${{ inputs.app_owner }}
         TARGET_OWNER: ${{ inputs.target_owner }}
         PERMISSION_PROFILE: ${{ inputs.permission_profile }}
@@ -63,7 +64,7 @@ runs:
           echo "::add-mask::$APP_USER_TOKEN"
         fi
         AUTH_MODE=owner-only bash ./scripts/github-setup/validate-app-auth.sh
-        target_owner_type="$(env -u GH_TOKEN -u GITHUB_TOKEN gh api "/users/$TARGET_OWNER" --jq '.type')"
+        target_owner_type="$(gh api "/users/$TARGET_OWNER" --jq '.type')"
 
         case "$target_owner_type" in
           User)
