@@ -175,7 +175,7 @@ repos:
           - |
             if [ "$LINT_MODE" = "check" ]; then
               prettier --check --config .prettierrc.yaml --ignore-path .prettierignore "$@" || {
-                echo "Files need formatting. Run: make lint"
+                echo "Files need formatting. Run: make quality"
                 exit 1
               }
             else
