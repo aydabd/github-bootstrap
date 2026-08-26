@@ -10,3 +10,7 @@ quality: setup-env ## Run all quality checks via pre-commit (ENV_MANAGER=microma
 	@$(RUN) pre-commit install --install-hooks >/dev/null 2>&1 || true
 	@$(CMD_ECHO) "+ LINT_MODE=$(LINT_MODE) $(RUN) pre-commit run --all-files --color=always"
 	@LINT_MODE=$(LINT_MODE) $(RUN) pre-commit run --all-files --color=always
+
+quality-actions: setup-env ## Opt-in GitHub Actions linting with actionlint and zizmor
+	@$(CMD_ECHO) "+ $(RUN) pre-commit run lint-actions --all-files --color=always"
+	@$(RUN) pre-commit run lint-actions --all-files --color=always

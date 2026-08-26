@@ -145,8 +145,8 @@ for json_quality_file in \
         exit 1
     fi
 done
-grep -q 'zizmor.*3c116961091b50bd1a08ffefe916469d4d90093c' "$repo_root/environment.yml"
-grep -q 'zizmor.*3c116961091b50bd1a08ffefe916469d4d90093c' "$repo_root/mise.toml"
+grep -q 'zizmor.*1.29.0' "$repo_root/environment.yml"
+grep -q 'zizmor.*1.29.0' "$repo_root/mise.toml"
 grep -q 'actionlint=1.7.12' "$repo_root/environment.yml"
 grep -q 'actionlint = "1.7.12"' "$repo_root/mise.toml"
 for setup_action in \
@@ -157,10 +157,10 @@ for setup_action in \
     grep -q 'cache: false' "$setup_action"
     grep -q "mkdir -p \"\\\$HOME/.local/bin\"" "$setup_action"
     grep -q 'setup-terraform' "$setup_action"
-    grep -q 'zizmor.*3c116961091b50bd1a08ffefe916469d4d90093c' "$setup_action"
+    grep -q 'zizmor.*1.29.0' "$setup_action"
     grep -q 'actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae' "$setup_action"
     grep -q 'path: ~/.cache/pip' "$setup_action"
-    grep -q 'pip-zizmor-3c116961091b50bd1a08ffefe916469d4d90093c' "$setup_action"
+    grep -q 'pip-zizmor-1.29.0' "$setup_action"
 done
 for rendered_quality_file in \
     "$repo_root/templates/.github/workflows/quality.yml" \
@@ -191,11 +191,11 @@ awk '/lint-shell\)/ { in_block=1 } in_block && /node_modules/ { found=1 } in_blo
     "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
 for provider_file in "$repo_root"/templates/languages/*/providers/micromamba/environment.yml; do
     grep -q 'actionlint=1.7.12' "$provider_file"
-    grep -q 'zizmor.*3c116961091b50bd1a08ffefe916469d4d90093c' "$provider_file"
+    grep -q 'zizmor.*1.29.0' "$provider_file"
 done
 for provider_file in "$repo_root"/templates/languages/*/providers/mise/mise.toml; do
     grep -q 'actionlint = "1.7.12"' "$provider_file"
-    grep -q 'zizmor.*3c116961091b50bd1a08ffefe916469d4d90093c' "$provider_file"
+    grep -q 'zizmor.*1.29.0' "$provider_file"
 done
 for provider_file in "$repo_root"/templates/languages/*/providers/micromamba/environment.yml; do
     grep -q 'terraform' "$provider_file"

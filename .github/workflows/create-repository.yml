@@ -216,7 +216,7 @@ on:
         type: string
       profile_capabilities:
         required: false
-        default: lint-markdown,lint-json,lint-yaml,lint-actions,lint-shell,lint-python,lint-terraform,lint-format,lint-tests
+        default: lint-markdown,lint-json,lint-yaml,lint-shell,lint-python,lint-terraform,lint-format,lint-tests
         type: string
       delivery_mode:
         required: false
@@ -336,7 +336,7 @@ jobs:
           GO_VERSION="${GO_VERSION:-1.26}"
           JAVA_VERSION="${JAVA_VERSION:-25}"
           PROFILE="${PROFILE:-baseline}"
-          PROFILE_CAPABILITIES="${PROFILE_CAPABILITIES:-lint-markdown,lint-json,lint-yaml,lint-actions,lint-shell,lint-python,lint-terraform,lint-format,lint-tests}"
+          PROFILE_CAPABILITIES="${PROFILE_CAPABILITIES:-lint-markdown,lint-json,lint-yaml,lint-shell,lint-python,lint-terraform,lint-format,lint-tests}"
           PROFILE_CAPABILITIES="$(printf '%s' "$PROFILE_CAPABILITIES" | tr -d '[:space:]')"
           DELIVERY_MODE="${DELIVERY_MODE:-embedded}"
           if [ -z "$CENTRAL_REF" ] && [[ "$CENTRAL_REPOSITORY" == *@* ]]; then
@@ -580,7 +580,7 @@ jobs:
         run: |
           cd new-repo
           PROFILE_CAPABILITIES='${{ inputs.profile_capabilities }}'
-          PROFILE_CAPABILITIES="${PROFILE_CAPABILITIES:-lint-markdown,lint-json,lint-yaml,lint-actions,lint-shell,lint-python,lint-terraform,lint-format,lint-tests}"
+            PROFILE_CAPABILITIES="${PROFILE_CAPABILITIES:-lint-markdown,lint-json,lint-yaml,lint-shell,lint-python,lint-terraform,lint-format,lint-tests}"
           PROFILE_CAPABILITIES="$(printf '%s' "$PROFILE_CAPABILITIES" | tr -d '[:space:]')"
           DELIVERY_MODE='${{ inputs.delivery_mode }}'
           CENTRAL_REPOSITORY='${{ inputs.central_repository }}'

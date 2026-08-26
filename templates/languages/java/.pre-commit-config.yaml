@@ -181,6 +181,14 @@ repos:
         language: system
         types_or: [json, yaml, markdown]
 
+      - id: lint-actions
+        name: actionlint and zizmor
+        entry: ./scripts/lint-github-actions.sh
+        language: system
+        pass_filenames: false
+        stages: [manual]
+        files: '^\.github/(workflows|actions)/.*\.ya?ml$'
+
   # ── Commit message: conventional commits ──────────────────────────────────
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.4.0

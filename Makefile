@@ -9,6 +9,7 @@
 #   make install              Bootstrap env + hooks
 #   make quality              Auto-format + quality checks (local dev)
 #   LINT_MODE=check make quality  Check-only (CI mode, no auto-fix)
+#   make quality-actions         Opt-in actionlint + zizmor checks
 #   make test                 Trigger repository creation tests
 #
 # Env manager options:
