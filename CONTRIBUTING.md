@@ -99,6 +99,26 @@ BREAKING CHANGE: the workflow input `repo_owner` has been renamed to `owner`.
 Update any saved workflow dispatch calls accordingly.
 ```
 
+### Commit Policy Configuration
+
+The pull-request commit policy uses the centralized
+`@commitlint/config-conventional` default, so repositories do not need a
+commitlint configuration file. A monorepo that needs a local policy can reuse
+the same action with a working directory and a config path relative to it:
+
+```yaml
+- uses: ./.github/actions/verify-conventional-commits
+  with:
+    token: ${{ github.token }}
+    repository: ${{ github.repository }}
+    pull-request-number: ${{ github.event.pull_request.number }}
+    working-directory: packages/api
+    config-path: commitlint.config.cjs
+```
+
+Signed-off-by trailers are checked separately for DCO compliance; a commitlint
+configuration override does not change that check.
+
 ## Pull Request Process
 
 1. **Branch** from `main` and keep your PR focused on a single concern.

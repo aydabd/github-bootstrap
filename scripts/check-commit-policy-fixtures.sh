@@ -26,6 +26,7 @@ done
 
 conventional_script="$ROOT_DIR/.github/actions/verify-conventional-commits/validate.sh"
 title_script="$ROOT_DIR/.github/actions/verify-pull-request-title/validate.sh"
+conventional_action="$ROOT_DIR/.github/actions/verify-conventional-commits/action.yml"
 for script_path in "$conventional_script" "$title_script"; do
     if [ ! -s "$script_path" ]; then
         echo "MISSING_OR_EMPTY: $script_path" >&2
@@ -33,9 +34,17 @@ for script_path in "$conventional_script" "$title_script"; do
     fi
 done
 
+# shellcheck disable=SC2016
+if ! grep -qF '  working-directory:' "$conventional_action" \
+    || ! grep -qF '    default: "."' "$conventional_action" \
+    || ! grep -qF '      working-directory: ${{ inputs.working-directory }}' "$conventional_action"; then
+    echo "MISSING_WORKING_DIRECTORY_INPUT: verify-conventional-commits action" >&2
+    exit 1
+fi
+
 fixture_dir="$(mktemp -d)"
 trap 'rm -rf "$fixture_dir"' EXIT
-mkdir -p "$fixture_dir/bin" "$fixture_dir/run"
+mkdir -p "$fixture_dir/bin" "$fixture_dir/run/monorepo"
 
 cat > "$fixture_dir/bin/gh" <<'EOF'
 #!/usr/bin/env bash
@@ -160,7 +169,7 @@ cat > "$fixture_dir/local-invalid.json" <<'EOF'
 [[{"commit": {"message": "fix: reject repository policy"}}]]
 EOF
 
-cat > "$fixture_dir/commitlint.config.cjs" <<'EOF'
+cat > "$fixture_dir/run/monorepo/commitlint.config.cjs" <<'EOF'
 module.exports = {
     rules: {
         'type-enum': [2, 'always', ['feat']],
@@ -171,9 +180,10 @@ EOF
 run_conventional_action() {
     local fixture_name="$1"
     local config_path="$2"
+    local working_directory="$3"
 
     (
-        cd "$fixture_dir/run"
+        cd "$fixture_dir/run/$working_directory"
         PATH="$fixture_dir/bin:$PATH" \
             GH_FIXTURE="$fixture_dir/$fixture_name" \
             GH_TOKEN="fixture-token" \
@@ -214,13 +224,13 @@ expect_invalid() {
     fi
 }
 
-expect_valid "every default commit" run_conventional_action default-valid.json ""
-expect_invalid "invalid default commit" run_conventional_action default-invalid.json ""
+expect_valid "every default commit" run_conventional_action default-valid.json "" "."
+expect_invalid "invalid default commit" run_conventional_action default-invalid.json "" "."
 expect_valid "default pull-request title" run_title_action "fix: reject invalid pull-request titles" ""
 expect_invalid "invalid default pull-request title" run_title_action "reject invalid pull-request titles" ""
-expect_valid "local config commit" run_conventional_action local-valid.json "$fixture_dir/commitlint.config.cjs"
-expect_invalid "local config commit" run_conventional_action local-invalid.json "$fixture_dir/commitlint.config.cjs"
-expect_valid "local config pull-request title" run_title_action "feat: accept repository title policy" "$fixture_dir/commitlint.config.cjs"
-expect_invalid "local config pull-request title" run_title_action "fix: reject repository title policy" "$fixture_dir/commitlint.config.cjs"
+expect_valid "local config commit" run_conventional_action local-valid.json "commitlint.config.cjs" "monorepo"
+expect_invalid "local config commit" run_conventional_action local-invalid.json "commitlint.config.cjs" "monorepo"
+expect_valid "local config pull-request title" run_title_action "feat: accept repository title policy" "$fixture_dir/run/monorepo/commitlint.config.cjs"
+expect_invalid "local config pull-request title" run_title_action "fix: reject repository title policy" "$fixture_dir/run/monorepo/commitlint.config.cjs"
 
 echo "OK: shared policy action validation accepted valid fixtures and rejected invalid fixtures."

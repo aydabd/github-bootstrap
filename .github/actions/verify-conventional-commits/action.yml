@@ -15,6 +15,10 @@ inputs:
     description: Optional path to a repository commitlint configuration file
     required: false
     default: ""
+  working-directory:
+    description: Repository directory where commitlint configuration paths are resolved
+    required: false
+    default: "."
 
 runs:
   using: composite
@@ -31,5 +35,6 @@ runs:
         PR_NUMBER: ${{ inputs.pull-request-number }}
         CONFIG_PATH: ${{ inputs.config-path }}
         ACTION_PATH: ${{ github.action_path }}
+      working-directory: ${{ inputs.working-directory }}
       run: |
         bash "$ACTION_PATH/validate.sh"

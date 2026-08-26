@@ -46,6 +46,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Verify conventional commits
         uses: ./.github/actions/verify-conventional-commits
+        # The action uses the centralized Conventional Commits default. Monorepo
+        # consumers can set its working-directory and config-path inputs.
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
