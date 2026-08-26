@@ -49,7 +49,7 @@ help: ## Show available make targets
 		function category(name) { \
 			if (name == "help") return "Core"; \
 			if (name ~ /^(setup-env|install|install-hooks)$$/) return "Environment Setup"; \
-			if (name ~ /^(lint|test($$|-))/) return "Quality and Testing"; \
+			if (name ~ /^(quality|test($$|-))/) return "Quality and Testing"; \
 			if (name ~ /^tooling-/) return "Tooling Updates"; \
 			if (name ~ /^render-/) return "Template Generation"; \
 			if (name ~ /^(clean|verify-makefile|verify-template-makefiles)$$/) return "Maintenance"; \

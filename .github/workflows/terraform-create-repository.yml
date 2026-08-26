@@ -902,7 +902,7 @@ jobs:
               esac
               ;;
           esac
-          echo "- ✅ Makefile (run 'make lint' locally)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ✅ Makefile (run 'make quality' locally)" >> "$GITHUB_STEP_SUMMARY"
 
   cleanup-approval:
     name: Await Cleanup Approval

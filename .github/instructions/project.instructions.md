@@ -24,7 +24,7 @@ scripts/                 # Utility scripts (sync-skills.sh)
 2. **Templates are the product** — every file under `templates/` ships to new repos.
 3. **Single source of truth** — skills live in `.github/skills/`, symlinked to `.claude/skills/`.
 4. **Zero-install agents** — agents must work with only `git`, `grep`, `gh`, and standard POSIX tools.
-5. **Lint before commit** — `LINT_MODE=check make lint` must pass.
+5. **Quality before commit** — `LINT_MODE=check make quality` must pass.
 
 ## Code Style
 

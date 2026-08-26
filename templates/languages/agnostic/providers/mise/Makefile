@@ -9,7 +9,7 @@ SHELL := /bin/bash
 .DELETE_ON_ERROR:
 MAKEFLAGS += --no-builtin-rules
 
-.PHONY: help install install-hooks setup-env lint test clean verify-makefile
+.PHONY: help install install-hooks setup-env quality test clean verify-makefile
 
 LINT_MODE ?= fix
 BUILD_DIR := build
@@ -60,7 +60,7 @@ _install-hooks:
 		fi; \
 	done
 
-lint: setup-env ## Run all checks via pre-commit
+quality: setup-env ## Run all quality checks via pre-commit
 	@echo "Running all checks via pre-commit (LINT_MODE=$(LINT_MODE))..."
 	@$(RUN) pre-commit install --install-hooks >/dev/null 2>&1 || true
 	@LINT_MODE=$(LINT_MODE) $(RUN) pre-commit run --all-files --color=always

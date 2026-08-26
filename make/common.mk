@@ -11,7 +11,7 @@ MAKEFLAGS += --no-builtin-rules
 
 CORE_TARGETS := help
 ENV_TARGETS := setup-env install install-hooks
-QUALITY_TARGETS := lint test
+QUALITY_TARGETS := quality test
 QUALITY_TARGETS += test-api-default test-terraform-default
 QUALITY_TARGETS += test-api-no-repo-settings test-terraform-no-repo-settings
 QUALITY_TARGETS += test-api-all-languages test-terraform-all-languages
@@ -28,6 +28,8 @@ MAMBA_SPEC := $(CURDIR)/environment.yml
 MICROMAMBA ?= $(CURDIR)/.provider/bin/micromamba
 MISE ?= $(CURDIR)/.provider/bin/mise
 
+# ENV_MANAGER: micromamba (default), mise, or system
+ENV_MANAGER ?= micromamba
 # LINT_MODE: fix (default, local dev) or check (CI, no auto-fix)
 LINT_MODE ?= fix
 SHOW_COMMANDS ?= 1
@@ -38,18 +40,6 @@ CMD_ECHO := echo
 else
 SETUP_TRACE :=
 CMD_ECHO := :
-endif
-
-# Backward compatibility:
-# USE_MAMBA=0 implies ENV_MANAGER=system.
-USE_MAMBA ?= 1
-
-ENV_MANAGER ?= micromamba
-
-ifeq ($(USE_MAMBA),0)
-ifeq ($(origin ENV_MANAGER),default)
-ENV_MANAGER := system
-endif
 endif
 
 ifeq ($(ENV_MANAGER),micromamba)

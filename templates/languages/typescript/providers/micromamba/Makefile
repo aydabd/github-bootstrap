@@ -8,12 +8,12 @@
 #
 # Quick start:
 #   make install              Bootstrap env + hooks + npm deps
-#   make lint                 Auto-format + lint (local dev)
-#   LINT_MODE=check make lint Check-only (CI mode, no auto-fix)
+#   make quality              Auto-format + quality checks (local dev)
+#   LINT_MODE=check make quality  Check-only (CI mode, no auto-fix)
 #   make test                 Run tests
 #   make build                Compile TypeScript
 #
-# Skip micromamba: USE_MAMBA=0 make lint   (uses system tools)
+# Skip micromamba: USE_MAMBA=0 make quality   (uses system tools)
 # =============================================================================
 
 .DEFAULT_GOAL := help
@@ -24,7 +24,7 @@ SHELL := /bin/bash
 .DELETE_ON_ERROR:
 MAKEFLAGS += --no-builtin-rules
 
-.PHONY: help install install-hooks setup-env lint test build clean verify-makefile
+.PHONY: help install install-hooks setup-env quality test build clean verify-makefile
 
 # =============================================================================
 # Configuration
@@ -129,7 +129,7 @@ endif
 # Pre-commit is the single source of truth for ALL quality checks.
 # LINT_MODE=fix  → auto-fix formatting (default for local development)
 # LINT_MODE=check → check-only, fail on violations (CI)
-lint: setup-env ## Run all checks via pre-commit (LINT_MODE=fix|check)
+quality: setup-env ## Run all quality checks via pre-commit (LINT_MODE=fix|check)
 	@echo "Running all checks via pre-commit (LINT_MODE=$(LINT_MODE))..."
 	@$(MAMBA_RUN) pre-commit install --install-hooks >/dev/null 2>&1 || true
 	@LINT_MODE=$(LINT_MODE) $(MAMBA_RUN) pre-commit run --all-files --color=always
