@@ -50,6 +50,9 @@ make quality
 
 # Run quality checks in check-only mode (CI-equivalent)
 LINT_MODE=check make quality
+
+# Opt-in GitHub Actions validation while the migration is in progress
+pre-commit run lint-actions --all-files
 ```
 
 The repository includes a GitHub quality workflow backed by explicit

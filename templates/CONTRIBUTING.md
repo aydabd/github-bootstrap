@@ -37,6 +37,8 @@ git checkout -b feat/your-feature-name
 # 3. Make your changes and test locally
 make quality     # run quality checks with auto-fix
 LINT_MODE=check make quality  # run CI-equivalent check-only quality checks
+# Optional during the action-lint migration:
+pre-commit run lint-actions --all-files
 
 # 4. Commit using conventional commits (see below)
 git commit -m "feat: add your feature"

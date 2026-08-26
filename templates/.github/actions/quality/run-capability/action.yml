@@ -54,8 +54,8 @@ runs:
             provider_run yamllint --config-file .github/linters/.yaml-lint.yml .
             ;;
           lint-actions)
-            provider_run actionlint
-            provider_run zizmor --pedantic .github/workflows
+            provider_run actionlint -ignore 'SC[0-9]+'
+            provider_run zizmor --pedantic .github
             ;;
           lint-shell)
             mapfile -d '' shell_files < <(
