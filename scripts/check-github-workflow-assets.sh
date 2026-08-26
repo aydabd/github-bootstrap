@@ -6,6 +6,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 required_assets=(
     ".github/workflows/quality.yml"
     ".github/workflows/signed-off-by.yml"
+    ".github/actions/verify-conventional-commits/action.yml"
+    ".github/actions/verify-pull-request-title/action.yml"
     ".github/actions/verify-signed-off-by/action.yml"
     ".github/skills/github-stack/SKILL.md"
     ".github/skills/git-worktree/SKILL.md"
@@ -36,10 +38,12 @@ done
 
 shared_assets=(
     ".github/workflows/signed-off-by.yml"
+    ".github/actions/verify-conventional-commits/action.yml"
+    ".github/actions/verify-pull-request-title/action.yml"
     ".github/actions/verify-signed-off-by/action.yml"
 )
 for relative_path in "${shared_assets[@]}"; do
-    if ! cmp -s "$ROOT_DIR/$relative_path" "$ROOT_DIR/templates/$relative_path" 2>/dev/null; then
+    if ! cmp -s "$ROOT_DIR/$relative_path" "$ROOT_DIR/templates/$relative_path" 2> /dev/null; then
         echo "OUT_OF_SYNC: $relative_path differs between root and templates" >&2
         errors=$((errors + 1))
     fi

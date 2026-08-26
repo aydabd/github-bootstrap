@@ -1,0 +1,41 @@
+name: Verify Pull Request Title
+description: Verify a pull-request title follows the configured commitlint policy
+
+inputs:
+  title:
+    description: Pull request title to verify
+    required: true
+  config-path:
+    description: Optional path to a repository commitlint configuration file
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Set up mise
+      uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
+      with:
+        install: true
+    - name: Verify pull-request title follows commitlint policy
+      shell: bash
+      env:
+        TITLE: ${{ inputs.title }}
+        CONFIG_PATH: ${{ inputs.config-path }}
+      run: |
+        set -euo pipefail
+        if [ -n "$CONFIG_PATH" ]; then
+          printf '%s\n' "$TITLE" | mise x node@26.6.0 -- npm exec --yes \
+            --package=@commitlint/cli@19.8.1 \
+            --package=@commitlint/config-conventional@19.8.1 \
+            -- commitlint --config "$CONFIG_PATH"
+        else
+          mise x node@26.6.0 -- npm exec --yes \
+            --package=@commitlint/cli@19.8.1 \
+            --package=@commitlint/config-conventional@19.8.1 \
+            -- bash -euo pipefail -c '
+              package_root="$(cd "$(dirname "$(command -v commitlint)")/.." && pwd)"
+              printf "%s\\n" "$TITLE" | commitlint --cwd "$package_root" --extends @commitlint/config-conventional
+            '
+        fi
+        echo "Pull-request title follows the commitlint policy."
