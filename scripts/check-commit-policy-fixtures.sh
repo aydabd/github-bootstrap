@@ -24,58 +24,141 @@ for relative_path in "${policy_actions[@]}"; do
     fi
 done
 
-if ! command -v mise >/dev/null 2>&1; then
-    echo "mise is required to run commit-policy fixtures" >&2
-    exit 1
-fi
+conventional_script="$ROOT_DIR/.github/actions/verify-conventional-commits/validate.sh"
+title_script="$ROOT_DIR/.github/actions/verify-pull-request-title/validate.sh"
+for script_path in "$conventional_script" "$title_script"; do
+    if [ ! -s "$script_path" ]; then
+        echo "MISSING_OR_EMPTY: $script_path" >&2
+        exit 1
+    fi
+done
 
 fixture_dir="$(mktemp -d)"
 trap 'rm -rf "$fixture_dir"' EXIT
+mkdir -p "$fixture_dir/bin" "$fixture_dir/run"
 
-run_default_policy() {
-    # shellcheck disable=SC2016
-    MISE_LOCKED=0 mise x node@26.6.0 -- npm exec --yes \
-        "--package=@commitlint/cli@$COMMITLINT_CLI_VERSION" \
-        "--package=@commitlint/config-conventional@$COMMITLINT_CONFIG_CONVENTIONAL_VERSION" \
-        -- bash -euo pipefail -c '
-            package_root="$(cd "$(dirname "$(command -v commitlint)")/.." && pwd)"
-            commitlint --cwd "$package_root" --extends @commitlint/config-conventional
-        '
-}
+cat > "$fixture_dir/bin/gh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
 
-run_local_policy() {
-    MISE_LOCKED=0 mise x node@26.6.0 -- npm exec --yes \
-        "--package=@commitlint/cli@$COMMITLINT_CLI_VERSION" \
-        "--package=@commitlint/config-conventional@$COMMITLINT_CONFIG_CONVENTIONAL_VERSION" \
-        -- commitlint --config "$fixture_dir/commitlint.config.cjs"
-}
+if [ "$#" -ne 4 ] || [ "$1" != "api" ] || [ "$2" != "--paginate" ] || [ "$3" != "--slurp" ] || [ "$4" != "/repos/owner/repository/pulls/42/commits?per_page=100" ]; then
+    echo "unexpected gh invocation: $*" >&2
+    exit 1
+fi
 
-expect_valid() {
-    local description="$1"
-    local message="$2"
-    local validator="$3"
+cat "$GH_FIXTURE"
+EOF
 
-    if ! printf '%s\n' "$message" | "$validator"; then
-        echo "EXPECTED_VALID: $description" >&2
+cat > "$fixture_dir/bin/mise" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "\$#" -lt 8 ] || [ "\$1" != "x" ] || [ "\$2" != "node@26.6.0" ] || [ "\$3" != "--" ] || [ "\$4" != "npm" ] || [ "\$5" != "exec" ] || [ "\$6" != "--yes" ]; then
+    echo "unexpected mise invocation: \$*" >&2
+    exit 1
+fi
+shift 6
+
+has_cli=false
+has_default_config=false
+while [ "\$1" != "--" ]; do
+    case "\$1" in
+        "--package=@commitlint/cli@$COMMITLINT_CLI_VERSION") has_cli=true ;;
+        "--package=@commitlint/config-conventional@$COMMITLINT_CONFIG_CONVENTIONAL_VERSION") has_default_config=true ;;
+        *)
+            echo "unexpected npm package argument: \$1" >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+if [ "\$has_cli" != true ] || [ "\$has_default_config" != true ]; then
+    echo "missing pinned commitlint package" >&2
+    exit 1
+fi
+shift
+exec "\$@"
+EOF
+
+cat > "$fixture_dir/bin/commitlint" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+default_policy=false
+local_config=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --cwd)
+            default_policy=true
+            shift 2
+            ;;
+        --extends)
+            if [ "${2:-}" != "@commitlint/config-conventional" ]; then
+                echo "unexpected commitlint preset: ${2:-}" >&2
+                exit 1
+            fi
+            default_policy=true
+            shift 2
+            ;;
+        --config)
+            local_config="${2:-}"
+            shift 2
+            ;;
+        *)
+            echo "unexpected commitlint argument: $1" >&2
+            exit 1
+            ;;
+    esac
+done
+
+message="$(cat)"
+if [ -n "$local_config" ]; then
+    if [ ! -f "$local_config" ]; then
+        echo "missing local config: $local_config" >&2
         exit 1
     fi
-}
-
-expect_invalid() {
-    local description="$1"
-    local message="$2"
-    local validator="$3"
-
-    if printf '%s\n' "$message" | "$validator"; then
-        echo "EXPECTED_INVALID: $description" >&2
-        exit 1
+    if [[ "$message" =~ ^feat:\ .+ ]]; then
+        exit 0
     fi
-}
+    echo "local policy rejected: $message" >&2
+    exit 1
+fi
 
-expect_valid "default commit without local configuration" "feat: add reusable policy actions" run_default_policy
-expect_invalid "default commit without local configuration" "add reusable policy actions" run_default_policy
-expect_valid "default pull-request title without local configuration" "fix: reject invalid pull-request titles" run_default_policy
-expect_invalid "default pull-request title without local configuration" "reject invalid pull-request titles" run_default_policy
+if [ "$default_policy" != true ]; then
+    echo "default policy did not receive a conventional preset" >&2
+    exit 1
+fi
+if [[ "$message" =~ ^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([[:alnum:]._-]+\))?!?:\ .+ ]]; then
+    exit 0
+fi
+echo "default policy rejected: $message" >&2
+exit 1
+EOF
+
+chmod +x "$fixture_dir/bin/gh" "$fixture_dir/bin/mise" "$fixture_dir/bin/commitlint"
+
+cat > "$fixture_dir/default-valid.json" <<'EOF'
+[[
+  {"commit": {"message": "feat: add reusable policy actions"}},
+  {"commit": {"message": "fix: reject invalid pull-request titles"}}
+]]
+EOF
+
+cat > "$fixture_dir/default-invalid.json" <<'EOF'
+[[
+  {"commit": {"message": "feat: add reusable policy actions"}},
+  {"commit": {"message": "add reusable policy actions"}}
+]]
+EOF
+
+cat > "$fixture_dir/local-valid.json" <<'EOF'
+[[{"commit": {"message": "feat: accept repository policy"}}]]
+EOF
+
+cat > "$fixture_dir/local-invalid.json" <<'EOF'
+[[{"commit": {"message": "fix: reject repository policy"}}]]
+EOF
 
 cat > "$fixture_dir/commitlint.config.cjs" <<'EOF'
 module.exports = {
@@ -85,9 +168,59 @@ module.exports = {
 };
 EOF
 
-expect_valid "local config commit" "feat: accept repository policy" run_local_policy
-expect_invalid "local config commit" "fix: reject repository policy" run_local_policy
-expect_valid "local config pull-request title" "feat: accept repository title policy" run_local_policy
-expect_invalid "local config pull-request title" "fix: reject repository title policy" run_local_policy
+run_conventional_action() {
+    local fixture_name="$1"
+    local config_path="$2"
 
-echo "OK: commit-policy fixtures accepted valid messages and rejected invalid messages."
+    (
+        cd "$fixture_dir/run"
+        PATH="$fixture_dir/bin:$PATH" \
+            GH_FIXTURE="$fixture_dir/$fixture_name" \
+            GH_TOKEN="fixture-token" \
+            REPOSITORY="owner/repository" \
+            PR_NUMBER="42" \
+            CONFIG_PATH="$config_path" \
+            bash "$conventional_script"
+    )
+}
+
+run_title_action() {
+    local title="$1"
+    local config_path="$2"
+
+    PATH="$fixture_dir/bin:$PATH" \
+        TITLE="$title" \
+        CONFIG_PATH="$config_path" \
+        bash "$title_script"
+}
+
+expect_valid() {
+    local description="$1"
+    shift
+
+    if ! "$@"; then
+        echo "EXPECTED_VALID: $description" >&2
+        exit 1
+    fi
+}
+
+expect_invalid() {
+    local description="$1"
+    shift
+
+    if "$@"; then
+        echo "EXPECTED_INVALID: $description" >&2
+        exit 1
+    fi
+}
+
+expect_valid "every default commit" run_conventional_action default-valid.json ""
+expect_invalid "invalid default commit" run_conventional_action default-invalid.json ""
+expect_valid "default pull-request title" run_title_action "fix: reject invalid pull-request titles" ""
+expect_invalid "invalid default pull-request title" run_title_action "reject invalid pull-request titles" ""
+expect_valid "local config commit" run_conventional_action local-valid.json "$fixture_dir/commitlint.config.cjs"
+expect_invalid "local config commit" run_conventional_action local-invalid.json "$fixture_dir/commitlint.config.cjs"
+expect_valid "local config pull-request title" run_title_action "feat: accept repository title policy" "$fixture_dir/commitlint.config.cjs"
+expect_invalid "local config pull-request title" run_title_action "fix: reject repository title policy" "$fixture_dir/commitlint.config.cjs"
+
+echo "OK: shared policy action validation accepted valid fixtures and rejected invalid fixtures."

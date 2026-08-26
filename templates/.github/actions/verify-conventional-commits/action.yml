@@ -30,32 +30,6 @@ runs:
         REPOSITORY: ${{ inputs.repository }}
         PR_NUMBER: ${{ inputs.pull-request-number }}
         CONFIG_PATH: ${{ inputs.config-path }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
-        set -euo pipefail
-        gh api --paginate --slurp \
-          "/repos/$REPOSITORY/pulls/$PR_NUMBER/commits?per_page=100" \
-          > commits.json
-        jq -e 'flatten | length > 0' commits.json >/dev/null
-
-        if [ -n "$CONFIG_PATH" ]; then
-          mise x node@26.6.0 -- npm exec --yes \
-            --package=@commitlint/cli@19.8.1 \
-            --package=@commitlint/config-conventional@19.8.1 \
-            -- bash -euo pipefail -c '
-              while IFS= read -r -d "" message; do
-                printf "%s\\n" "$message" | commitlint --config "$CONFIG_PATH"
-              done < <(jq -jr "flatten[] | .commit.message, \\\"\\u0000\\\"" commits.json)
-            '
-        else
-          mise x node@26.6.0 -- npm exec --yes \
-            --package=@commitlint/cli@19.8.1 \
-            --package=@commitlint/config-conventional@19.8.1 \
-            -- bash -euo pipefail -c '
-              package_root="$(cd "$(dirname "$(command -v commitlint)")/.." && pwd)"
-              while IFS= read -r -d "" message; do
-                printf "%s\\n" "$message" | commitlint --cwd "$package_root" --extends @commitlint/config-conventional
-              done < <(jq -jr "flatten[] | .commit.message, \\\"\\u0000\\\"" commits.json)
-            '
-        fi
-
-        echo "All pull-request commits follow the commitlint policy."
+        bash "$ACTION_PATH/validate.sh"
