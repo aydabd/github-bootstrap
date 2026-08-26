@@ -39,7 +39,9 @@ done
 shared_assets=(
     ".github/workflows/commit-policy.yml"
     ".github/actions/verify-conventional-commits/action.yml"
+    ".github/actions/verify-conventional-commits/validate.sh"
     ".github/actions/verify-pull-request-title/action.yml"
+    ".github/actions/verify-pull-request-title/validate.sh"
     ".github/actions/verify-signed-off-by/action.yml"
 )
 for relative_path in "${shared_assets[@]}"; do

@@ -26,6 +26,7 @@
 ### Task 1: Define reusable policy action interfaces
 
 **Files:**
+
 - Create: `templates/.github/actions/verify-conventional-commits/action.yml`
 - Create: `.github/actions/verify-conventional-commits/action.yml`
 - Create: `templates/.github/actions/verify-pull-request-title/action.yml`
@@ -33,6 +34,7 @@
 - Modify: existing sign-off action files to retain the finalized `gh`/`jq` implementation
 
 **Interfaces:**
+
 - Conventional-commit action consumes `token`, `repository`, `pull-request-number`, and optional `config-path`; it checks every PR commit and uses `@commitlint/config-conventional` when `config-path` is absent.
 - PR-title action consumes `title` and optional `config-path`; it validates the supplied title using the repository’s commitlint configuration or centralized conventional default.
 - Sign-off action continues to consume `token`, `repository`, and `pull-request-number` and remains independent of commitlint.
@@ -60,12 +62,14 @@
 ### Task 2: Add the thin commit-policy workflow
 
 **Files:**
+
 - Create: `templates/.github/workflows/commit-policy.yml`
 - Create: `.github/workflows/commit-policy.yml`
 - Remove: `.github/workflows/signed-off-by.yml`
 - Remove: `templates/.github/workflows/signed-off-by.yml`
 
 **Interfaces:**
+
 - The workflow invokes the three independent local actions and passes only event context and explicit policy inputs.
 - Each policy responsibility is an independent job with its own check name, timeout, permissions, and failure result.
 
@@ -92,6 +96,7 @@
 ### Task 3: Support default and monorepo-specific commitlint configuration
 
 **Files:**
+
 - Modify: `templates/.github/actions/verify-conventional-commits/action.yml`
 - Modify: `.github/actions/verify-conventional-commits/action.yml`
 - Modify: `templates/.github/workflows/commit-policy.yml`
@@ -99,6 +104,7 @@
 - Document: `templates/CONTRIBUTING.md` and `CONTRIBUTING.md`
 
 **Interfaces:**
+
 - Default mode installs and invokes `@commitlint/config-conventional` without requiring a repository config file.
 - Override mode accepts a repository-local config path and invokes it without changing the shared action implementation.
 - Monorepo callers can select the working directory/config path while retaining the same policy action.
@@ -126,6 +132,7 @@
 ### Task 4: Final repository verification
 
 **Files:**
+
 - Modify: `scripts/check-github-workflow-assets.sh` only if a missing parity assertion is discovered
 
 - [ ] **Step 1: Run the complete local verification set**

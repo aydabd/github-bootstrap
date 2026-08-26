@@ -35,9 +35,9 @@ for script_path in "$conventional_script" "$title_script"; do
 done
 
 # shellcheck disable=SC2016
-if ! grep -qF '  working-directory:' "$conventional_action" \
-    || ! grep -qF '    default: "."' "$conventional_action" \
-    || ! grep -qF '      working-directory: ${{ inputs.working-directory }}' "$conventional_action"; then
+if ! grep -qF '  working-directory:' "$conventional_action" ||
+    ! grep -qF '    default: "."' "$conventional_action" ||
+    ! grep -qF '      working-directory: ${{ inputs.working-directory }}' "$conventional_action"; then
     echo "MISSING_WORKING_DIRECTORY_INPUT: verify-conventional-commits action" >&2
     exit 1
 fi
@@ -46,7 +46,7 @@ fixture_dir="$(mktemp -d)"
 trap 'rm -rf "$fixture_dir"' EXIT
 mkdir -p "$fixture_dir/bin" "$fixture_dir/run/monorepo"
 
-cat > "$fixture_dir/bin/gh" <<'EOF'
+cat > "$fixture_dir/bin/gh" << 'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -58,7 +58,7 @@ fi
 cat "$GH_FIXTURE"
 EOF
 
-cat > "$fixture_dir/bin/mise" <<EOF
+cat > "$fixture_dir/bin/mise" << EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -90,7 +90,7 @@ shift
 exec "\$@"
 EOF
 
-cat > "$fixture_dir/bin/commitlint" <<'EOF'
+cat > "$fixture_dir/bin/commitlint" << 'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -151,29 +151,29 @@ EOF
 
 chmod +x "$fixture_dir/bin/gh" "$fixture_dir/bin/mise" "$fixture_dir/bin/commitlint"
 
-cat > "$fixture_dir/default-valid.json" <<'EOF'
+cat > "$fixture_dir/default-valid.json" << 'EOF'
 [[
-  {"commit": {"message": "feat: add reusable policy actions"}},
-  {"commit": {"message": "fix: reject invalid pull-request titles"}}
+    {"commit": {"message": "feat: add reusable policy actions"}},
+    {"commit": {"message": "fix: reject invalid pull-request titles"}}
 ]]
 EOF
 
-cat > "$fixture_dir/default-invalid.json" <<'EOF'
+cat > "$fixture_dir/default-invalid.json" << 'EOF'
 [[
-  {"commit": {"message": "feat: add reusable policy actions"}},
-  {"commit": {"message": "add reusable policy actions"}}
+    {"commit": {"message": "feat: add reusable policy actions"}},
+    {"commit": {"message": "add reusable policy actions"}}
 ]]
 EOF
 
-cat > "$fixture_dir/local-valid.json" <<'EOF'
+cat > "$fixture_dir/local-valid.json" << 'EOF'
 [[{"commit": {"message": "feat: accept repository policy"}}]]
 EOF
 
-cat > "$fixture_dir/local-invalid.json" <<'EOF'
+cat > "$fixture_dir/local-invalid.json" << 'EOF'
 [[{"commit": {"message": "fix: reject repository policy"}}]]
 EOF
 
-cat > "$fixture_dir/run/monorepo/commitlint.config.cjs" <<'EOF'
+cat > "$fixture_dir/run/monorepo/commitlint.config.cjs" << 'EOF'
 module.exports = {
     rules: {
         'type-enum': [2, 'always', ['feat']],
@@ -181,7 +181,7 @@ module.exports = {
 };
 EOF
 
-cat > "$fixture_dir/run/monorepo/unexpected-commitlint.config.cjs" <<'EOF'
+cat > "$fixture_dir/run/monorepo/unexpected-commitlint.config.cjs" << 'EOF'
 module.exports = {
     rules: {
         'type-enum': [2, 'always', ['fix']],
