@@ -29,9 +29,14 @@ runs:
         import re
         import urllib.request
 
-        url = f"https://api.github.com/repos/{os.environ['REPOSITORY']}/pulls/{os.environ['PR_NUMBER']}/commits?per_page=100"
+        base_url = (
+            f"https://api.github.com/repos/{os.environ['REPOSITORY']}"
+            f"/pulls/{os.environ['PR_NUMBER']}/commits"
+        )
         commits = []
-        while url:
+        page = 1
+        while True:
+            url = f"{base_url}?per_page=100&page={page}"
             request = urllib.request.Request(
                 url,
                 headers={
@@ -41,9 +46,11 @@ runs:
                 },
             )
             with urllib.request.urlopen(request, timeout=30) as response:
-                commits.extend(json.load(response))
-                links = response.headers.get("Link", "")
-            url = next((part.split(";")[0].strip("<>") for part in links.split(",") if 'rel="next"' in part), "")
+                page_commits = json.load(response)
+            if not page_commits:
+                break
+            commits.extend(page_commits)
+            page += 1
 
         trailer = re.compile(r"^Signed-off-by:\s+[^<>\r\n]+ <[^<>\r\n]+>$", re.MULTILINE)
         missing = [item["sha"] for item in commits if not trailer.search(item["commit"]["message"])]
