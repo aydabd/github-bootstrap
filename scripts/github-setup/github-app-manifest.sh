@@ -52,7 +52,9 @@ PY
             require_command jq
             code="${2:-}"
             output_dir="${3:-}"
-            [ -n "$code" ] && [ -n "$output_dir" ] || usage
+            if [ -z "$code" ] || [ -z "$output_dir" ]; then
+                usage
+            fi
             [[ "$code" =~ ^[A-Za-z0-9_-]+$ ]] || {
                 echo "invalid App Manifest conversion code" >&2
                 exit 1

@@ -53,7 +53,9 @@ device_start() {
     require_command jq
     client_id="${2:-}"
     response_file="${3:-}"
-    [ -n "$client_id" ] && [ -n "$response_file" ] || usage
+    if [ -z "$client_id" ] || [ -z "$response_file" ]; then
+        usage
+    fi
     curl --fail --silent --show-error --location \
         --header 'Accept: application/json' \
         --data-urlencode "client_id=$client_id" \
@@ -90,7 +92,9 @@ device_poll() {
     response_file="${3:-}"
     owner="${4:-}"
     token_file="${5:-}"
-    [ -n "$client_id" ] && [ -f "$response_file" ] && [ -n "$owner" ] && [ -n "$token_file" ] || usage
+    if [ -z "$client_id" ] || [ ! -f "$response_file" ] || [ -z "$owner" ] || [ -z "$token_file" ]; then
+        usage
+    fi
     device_code="$(jq -er '.device_code' "$response_file")"
     interval="$(jq -er '.interval // 5' "$response_file")"
     expires_in="$(jq -er '.expires_in // 900' "$response_file")"
@@ -141,7 +145,9 @@ print_url() {
     owner="${3:-}"
     redirect_uri="${4:-}"
     state="${5:-}"
-    [ -n "$client_id" ] && [ -n "$owner" ] && [ -n "$redirect_uri" ] && [ -n "$state" ] || usage
+    if [ -z "$client_id" ] || [ -z "$owner" ] || [ -z "$redirect_uri" ] || [ -z "$state" ]; then
+        usage
+    fi
     python3 - "$client_id" "$owner" "$redirect_uri" "$state" << 'PY'
 import sys
 import urllib.parse
@@ -171,11 +177,13 @@ exchange_token() {
         echo "OAuth authorization code file is missing" >&2
         exit 1
     fi
-    [ -n "${APP_CLIENT_SECRET_FILE:-}" ] && [ -f "$APP_CLIENT_SECRET_FILE" ] || {
+    if [ -z "${APP_CLIENT_SECRET_FILE:-}" ] || [ ! -f "$APP_CLIENT_SECRET_FILE" ]; then
         echo "APP_CLIENT_SECRET_FILE must name a protected App client secret file" >&2
         exit 1
-    }
-    [ -n "$client_id" ] && [ -n "$code_or_file" ] && [ -n "$owner" ] && [ -n "$token_file" ] && [ -n "$redirect_uri" ] || usage
+    fi
+    if [ -z "$client_id" ] || [ -z "$code_or_file" ] || [ -z "$owner" ] || [ -z "$token_file" ] || [ -z "$redirect_uri" ]; then
+        usage
+    fi
     response_file="$(mktemp)"
     chmod 600 "$response_file"
     sanitized_code_file=""
