@@ -72,8 +72,8 @@ jobs:
       - name: Normalize generated files
         shell: bash
         run: |
-          ENV_MANAGER=micromamba make lint || true
-          LINT_MODE=check ENV_MANAGER=micromamba make lint
+          ENV_MANAGER=micromamba make quality || true
+          LINT_MODE=check ENV_MANAGER=micromamba make quality
 
       - name: Create or update tooling update PR (gh CLI)
         shell: bash

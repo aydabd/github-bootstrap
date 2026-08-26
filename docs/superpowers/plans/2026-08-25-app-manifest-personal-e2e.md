@@ -59,6 +59,6 @@
 
 - [ ] Run deterministic resolver and profile tests.
 - [ ] Run YAML/action validation.
-- [ ] Run `LINT_MODE=check make lint`.
+- [ ] Run `LINT_MODE=check make quality`.
 - [ ] Run the guarded live personal E2E only if real App authorization and protected secrets are present.
 - [ ] Re-run final status, diff, and verification checks.

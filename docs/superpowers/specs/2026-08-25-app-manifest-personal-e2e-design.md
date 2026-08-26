@@ -26,4 +26,4 @@ Every helper uses strict shell mode, validates owner and token identity before r
 
 ## Verification
 
-Run deterministic auth/profile contracts, helper shell syntax checks, YAML/action validation, complete `LINT_MODE=check make lint`, then the explicitly enabled personal E2E. Report organization E2E as pending.
+Run deterministic auth/profile contracts, helper shell syntax checks, YAML/action validation, complete `LINT_MODE=check make quality`, then the explicitly enabled personal E2E. Report organization E2E as pending.
