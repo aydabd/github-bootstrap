@@ -6,6 +6,7 @@ issues, requesting features, and submitting changes.
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
+- [Developer Certificate of Origin](#developer-certificate-of-origin)
 - [Getting Started](#getting-started)
 - [Branching Strategy](#branching-strategy)
 - [Commit Conventions](#commit-conventions)
@@ -16,6 +17,12 @@ issues, requesting features, and submitting changes.
 ## Code of Conduct
 
 Be respectful, inclusive, and constructive. Harassment or abusive behaviour will not be tolerated.
+
+## Developer Certificate of Origin
+
+Contributions must comply with the
+[Developer Certificate of Origin 1.1](https://developercertificate.org/).
+Add a `Signed-off-by: Name <email>` trailer to every commit with `git commit -s`.
 
 ## Getting Started
 

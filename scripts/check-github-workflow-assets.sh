@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 required_assets=(
+    "DCO.md"
     ".github/workflows/quality.yml"
     ".github/skills/github-stack/SKILL.md"
     ".github/skills/git-worktree/SKILL.md"
@@ -31,6 +32,11 @@ for relative_path in "${required_assets[@]}"; do
         fi
     done
 done
+
+if ! cmp -s "$ROOT_DIR/DCO.md" "$ROOT_DIR/templates/DCO.md"; then
+    echo "MISMATCH: $ROOT_DIR/DCO.md and $ROOT_DIR/templates/DCO.md" >&2
+    errors=$((errors + 1))
+fi
 
 template_quality_assets=(
     ".github/workflows/quality-capability.yml"
