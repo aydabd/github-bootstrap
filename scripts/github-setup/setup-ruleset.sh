@@ -142,6 +142,9 @@ derive_required_status_checks() {
     if workflow_has_check "$installed_root/.github/workflows/quality.yml" "quality"; then
         checks+=("quality")
     fi
+    if workflow_has_check "$installed_root/.github/workflows/maintenance-safety.yml" "Maintenance safety"; then
+        checks+=("Maintenance safety")
+    fi
     if [ "${#checks[@]}" -eq 0 ]; then
         echo "no validated profile workflows are installed under $installed_root" >&2
         exit 1

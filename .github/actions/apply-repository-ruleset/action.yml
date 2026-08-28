@@ -136,6 +136,9 @@ runs:
           if workflow_has_check .github/workflows/quality.yml quality; then
             REQUIRED_STATUS_CHECKS="$REQUIRED_STATUS_CHECKS,quality"
           fi
+          if workflow_has_check .github/workflows/maintenance-safety.yml "Maintenance safety"; then
+            REQUIRED_STATUS_CHECKS="$REQUIRED_STATUS_CHECKS,Maintenance safety"
+          fi
           REQUIRED_STATUS_CHECKS="${REQUIRED_STATUS_CHECKS#,}"
           [ -n "$REQUIRED_STATUS_CHECKS" ] || {
             echo "::error::Target repository has no validated bootstrap status workflows."
