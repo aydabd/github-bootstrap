@@ -15,6 +15,7 @@ contract_tests=(
     "$script_dir/github-setup/test-app-user-token-contract.sh"
     "$script_dir/github-setup/test-commit-verification-contract.sh"
     "$script_dir/github-setup/test-tooling-metadata-contract.sh"
+    "$script_dir/github-setup/test-generated-e2e-head-contract.sh"
     "$script_dir/github-setup/test-workflow-approval-contract.sh"
     "$script_dir/github-setup/test-install-app-secrets-contract.sh"
     "$script_dir/github-setup/test-payloads.sh"

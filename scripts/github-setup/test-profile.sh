@@ -93,6 +93,14 @@ if grep -Eq '^    if: .*matrix\.' "$repo_root/.github/workflows/test-generated-r
     exit 1
 fi
 grep -q '^      - name: Select requested creation workflow$' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+grep -q '^      head_sha:' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+grep -q '^    name: .*matrix.creation_workflow.*matrix.delivery.*matrix.provider' \
+    "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+grep -q '@ .*inputs.head_sha' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+grep -q 'validate-generated-e2e-head.sh' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+grep -q 'git/refs' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+grep -q 'DISPATCH_REF' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+grep -q 'requested_head_sha=' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 for runtime_input in python_version node_version go_version java_version; do
     runtime_env="$(printf '%s' "$runtime_input" | tr '[:lower:]' '[:upper:]')"
     grep -q -- "--field ${runtime_input}=\"\$${runtime_env}\"" \

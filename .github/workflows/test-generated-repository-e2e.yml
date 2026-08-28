@@ -1,4 +1,5 @@
 name: Test Generated Repository E2E
+run-name: Generated Repository E2E / ${{ inputs.head_sha || inputs.target_ref || 'main' }}
 
 on:
   workflow_dispatch:
@@ -7,6 +8,10 @@ on:
         description: Branch or tag containing the creation workflow to test.
         required: false
         default: main
+        type: string
+      head_sha:
+        description: Exact 40-character PR head commit SHA to test instead of target_ref.
+        required: false
         type: string
       client_id:
         description: GitHub App client ID for the credentialed E2E run.
@@ -53,7 +58,7 @@ permissions:
 
 jobs:
   generated-repository:
-    name: ${{ matrix.creation_workflow }} / ${{ matrix.delivery }} / ${{ matrix.provider }}
+    name: ${{ matrix.creation_workflow }} / ${{ matrix.delivery }} / ${{ matrix.provider }} @ ${{ inputs.head_sha || inputs.target_ref || 'main' }}
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -142,7 +147,8 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           OWNER: ${{ github.repository_owner }}
-          TARGET_REF: ${{ inputs.target_ref || 'main' }}
+          TARGET_REF: ${{ inputs.head_sha || inputs.target_ref || 'main' }}
+          REQUESTED_HEAD_SHA: ${{ inputs.head_sha }}
           PROVIDER: ${{ matrix.provider }}
           DELIVERY: ${{ matrix.delivery }}
           CENTRAL_REPOSITORY: ${{ inputs.central_repository }}
@@ -168,7 +174,12 @@ jobs:
 
           REPO_NAME="e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${PROVIDER}-${DELIVERY}-${CREATION_WORKFLOW%.yml}"
 
+          DISPATCH_REF="$TARGET_REF"
+          TEMP_REF_CREATED=false
           cleanup() {
+            if [ "$TEMP_REF_CREATED" = true ]; then
+              gh api --method DELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$DISPATCH_REF" >/dev/null 2>&1 || true
+            fi
             if [ "$CLEANUP" = true ] && gh repo view "$OWNER/$REPO_NAME" >/dev/null 2>&1; then
               gh repo delete "$OWNER/$REPO_NAME" --yes >/dev/null
               echo "Deleted $OWNER/$REPO_NAME"
@@ -176,7 +187,18 @@ jobs:
           }
           trap cleanup EXIT
 
-          gh workflow run "$CREATION_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref "$TARGET_REF" \
+          if [ -n "$REQUESTED_HEAD_SHA" ] && ! [[ "$REQUESTED_HEAD_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "head_sha must be a 40-character commit SHA" >&2
+            exit 1
+          fi
+          if [ -n "$REQUESTED_HEAD_SHA" ]; then
+            DISPATCH_REF="e2e-head-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${PROVIDER}-${DELIVERY}-${CREATION_WORKFLOW%.yml}"
+            gh api --method POST "/repos/$GITHUB_REPOSITORY/git/refs" \
+              -f "ref=refs/heads/$DISPATCH_REF" -f "sha=$REQUESTED_HEAD_SHA" >/dev/null
+            TEMP_REF_CREATED=true
+          fi
+
+          gh workflow run "$CREATION_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref "$DISPATCH_REF" \
             --field repo_name="$REPO_NAME" \
             --field repo_description="Generated repository E2E scenario" \
             --field visibility=private --field team_name="* @$OWNER" --field license_holder="$OWNER" \
@@ -185,6 +207,8 @@ jobs:
             --field workflows=quality --field delivery_mode="$DELIVERY" \
             --field central_repository="$CENTRAL_SOURCE" \
             --field cleanup_on_failure=true
+
+          echo "requested_head_sha=$TARGET_REF" >> "$GITHUB_STEP_SUMMARY"
 
           CREATION_RUN=""
           for _ in $(seq 1 60); do
@@ -197,6 +221,15 @@ jobs:
             sleep 10
           done
           [ -n "$CREATION_RUN" ] || { echo "creation run not found" >&2; exit 1; }
+
+          CREATION_RUN_JSON="$RUNNER_TEMP/creation-run-$REPO_NAME.json"
+          gh run view "$CREATION_RUN" --repo "$GITHUB_REPOSITORY" --json headSha,status,conclusion > "$CREATION_RUN_JSON"
+          if [ -n "$REQUESTED_HEAD_SHA" ]; then
+            "$GITHUB_WORKSPACE/scripts/github-setup/validate-generated-e2e-head.sh" \
+              "$REQUESTED_HEAD_SHA" "$CREATION_RUN_JSON"
+          fi
+          CREATION_HEAD_SHA=$(jq -r '.headSha // empty' "$CREATION_RUN_JSON")
+          echo "creation_head_sha=$CREATION_HEAD_SHA" >> "$GITHUB_STEP_SUMMARY"
 
           for _ in $(seq 1 90); do
             STATUS=$(gh run view "$CREATION_RUN" --repo "$GITHUB_REPOSITORY" --json status,conclusion --jq '[.status,.conclusion] | @tsv')
