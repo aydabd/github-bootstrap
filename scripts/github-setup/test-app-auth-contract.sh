@@ -102,6 +102,14 @@ assert_contains "inputs.permission_profile == 'weekly-tooling' || inputs.permiss
 assert_contains "uses: ./.github/actions/resolve-gh-token" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "permission_profile: weekly-tooling" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains 'TOOLING_UPDATE_METADATA_FILE' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_contains 'validate-tooling-metadata.sh' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_contains 'TOOLING_UPDATE_EXPLICIT_BREAKING' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+no_update_line="$(grep -n 'No tooling updates detected; skipping PR creation.' "$repo_root/.github/workflows/weekly-tooling-updates.yml" | cut -d: -f1)"
+validator_line="$(grep -n 'validate-tooling-metadata.sh' "$repo_root/.github/workflows/weekly-tooling-updates.yml" | cut -d: -f1)"
+[ "$no_update_line" -lt "$validator_line" ] || {
+    echo "no-update path must precede strict metadata validation" >&2
+    exit 1
+}
 assert_contains 'automation: maintenance' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains 'automation: validating' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains 'automation: breaking' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
