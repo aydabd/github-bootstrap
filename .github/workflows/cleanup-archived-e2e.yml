@@ -1,0 +1,140 @@
+name: Cleanup Archived E2E Repositories
+
+on:
+  schedule:
+    - cron: "17 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Remove eligible archived E2E repositories
+    runs-on: ubuntu-24.04
+    environment: e2e-cleanup
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Resolve isolated E2E lifecycle token
+        id: e2e-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_APP_PRIVATE_KEY }}
+          app_owner: ${{ vars.BOOTSTRAP_E2E_APP_OWNER }}
+          target_owner: ${{ vars.BOOTSTRAP_E2E_APP_OWNER }}
+          permission_profile: e2e-lifecycle
+
+      - name: Delete eligible archived E2E repositories
+        env:
+          E2E_GH_TOKEN: ${{ steps.e2e-token.outputs.token }}
+          ALLOWED_OWNERS: ${{ vars.BOOTSTRAP_E2E_ALLOWED_OWNERS }}
+          APP_OWNER: ${{ vars.BOOTSTRAP_E2E_APP_OWNER }}
+          CENTRAL_REPOSITORY: ${{ vars.BOOTSTRAP_E2E_CENTRAL_REPOSITORY }}
+          BOOTSTRAP_REPOSITORY: ${{ github.repository }}
+          VALIDATOR: ${{ github.workspace }}/scripts/github-setup/validate-e2e-cleanup-candidate.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tmp_dir="$(mktemp -d)"
+          cleanup() { rm -rf "$tmp_dir"; }
+          trap cleanup EXIT
+
+          [[ "$APP_OWNER" =~ ^[A-Za-z0-9_.-]+$ ]] || {
+            echo "E2E App owner is missing or invalid" >&2
+            exit 1
+          }
+          [ -n "$ALLOWED_OWNERS" ] || {
+            echo "E2E cleanup allowlist is empty; refusing to continue" >&2
+            exit 1
+          }
+          owner_is_allowed=false
+          IFS=',' read -ra allowed_owner_values <<< "$ALLOWED_OWNERS"
+          for allowed_owner in "${allowed_owner_values[@]}"; do
+            allowed_owner="${allowed_owner//[[:space:]]/}"
+            if [ "$allowed_owner" = "$APP_OWNER" ]; then
+              owner_is_allowed=true
+            fi
+          done
+          [ "$owner_is_allowed" = true ] || {
+            echo "E2E App owner is not present in the cleanup allowlist" >&2
+            exit 1
+          }
+          [[ "$CENTRAL_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
+            echo "central workflow repository exclusion is missing or invalid" >&2
+            exit 1
+          }
+
+          exclusions="$BOOTSTRAP_REPOSITORY,$CENTRAL_REPOSITORY"
+          now_epoch="$(date -u '+%s')"
+          repositories_file="$tmp_dir/repositories.json"
+          if ! GH_TOKEN="$E2E_GH_TOKEN" gh api --paginate --slurp \
+            "/orgs/$APP_OWNER/repos?type=all&per_page=100" > "$repositories_file"; then
+            echo "failed to enumerate E2E repositories" >&2
+            exit 1
+          fi
+
+          scanned=0
+          eligible=0
+          deleted=0
+          already_gone=0
+          failures=0
+          deleted_names=""
+
+          while IFS= read -r repository; do
+            [ -n "$repository" ] || continue
+            scanned=$((scanned + 1))
+            owner="$(jq -r '.owner.login // empty' <<< "$repository")"
+            name="$(jq -r '.name // empty' <<< "$repository")"
+            full_name="$owner/$name"
+            candidate_file="$tmp_dir/candidate.json"
+            probe_file="$tmp_dir/probe-response"
+            if GH_TOKEN="$E2E_GH_TOKEN" gh api --include \
+              "/repos/$full_name" > "$probe_file" 2>&1; then
+              sed -n '/^{/,$p' "$probe_file" > "$candidate_file"
+            elif grep -Eq '^HTTP/[0-9.]+ 404' "$probe_file"; then
+              continue
+            else
+              echo "failed to re-fetch E2E repository $full_name before validation" >&2
+              exit 1
+            fi
+
+            if ! "$VALIDATOR" "$ALLOWED_OWNERS" "$candidate_file" "$exclusions" "$now_epoch"; then
+              continue
+            fi
+
+            eligible=$((eligible + 1))
+            response_file="$tmp_dir/delete-response"
+            if GH_TOKEN="$E2E_GH_TOKEN" gh api --include --method DELETE \
+              "/repos/$full_name" > "$response_file" 2>&1; then
+              deleted=$((deleted + 1))
+              deleted_names="$deleted_names $full_name"
+              continue
+            fi
+            if grep -Eq '^HTTP/[0-9.]+ 404' "$response_file"; then
+              already_gone=$((already_gone + 1))
+              continue
+            fi
+            echo "failed to delete validated E2E repository $full_name" >&2
+            failures=$((failures + 1))
+          done < <(jq -c '.[][]' "$repositories_file")
+
+          {
+            echo "## Archived E2E repository cleanup"
+            echo "- Scanned: $scanned"
+            echo "- Eligible: $eligible"
+            echo "- Deleted: $deleted"
+            echo "- Already absent: $already_gone"
+            echo "- Skipped: $((scanned - eligible))"
+            echo "- Failures: $failures"
+            [ -n "$deleted_names" ] && echo "- Deleted repositories:$deleted_names"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$failures" -ne 0 ]; then
+            exit 1
+          fi
