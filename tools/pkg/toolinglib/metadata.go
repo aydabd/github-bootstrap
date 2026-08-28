@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"slices"
+	"sort"
 	"strings"
 )
 
