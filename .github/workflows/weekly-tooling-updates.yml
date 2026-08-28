@@ -7,6 +7,12 @@ on:
   schedule:
     - cron: "0 4 * * 1"
   workflow_dispatch:
+    inputs:
+      explicit_breaking:
+        description: "Treat this maintenance update as explicitly breaking"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: weekly-tooling-updates
@@ -69,6 +75,7 @@ jobs:
       - name: Update repository and template tooling
         env:
           TOOLING_UPDATE_METADATA_FILE: ${{ runner.temp }}/tooling-update-metadata.json
+          TOOLING_UPDATE_EXPLICIT_BREAKING: ${{ inputs.explicit_breaking || false }}
         shell: bash
         run: |
           ENV_MANAGER=micromamba make tooling-update-repo
@@ -111,32 +118,19 @@ jobs:
           after all required checks, CodeRabbit review requirements, and approval rules are satisfied.
           EOF
 
+          if git diff --quiet --exit-code && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+            echo "No tooling updates detected; skipping PR creation."
+            exit 0
+          fi
+
           metadata_file="$TOOLING_UPDATE_METADATA_FILE"
           [ -s "$metadata_file" ] || {
             echo "tooling update metadata is missing" >&2
             exit 1
           }
-          jq -e '
-            .schema_version == 1 and (.updates | type == "array") and
-            all(.updates[];
-              (.package | type == "string" and length > 0) and
-              (.old_version | type == "string" and length > 0) and
-              (.new_version | type == "string" and length > 0) and
-              (.update_type | type == "string" and (IN("patch", "minor", "major", "breaking", "unknown"))) and
-              (.risk | type == "string" and (IN("low", "medium", "high", "unknown"))) and
-              (.files | type == "array" and all(.[]; type == "string" and length > 0))
-            )
-          ' "$metadata_file" >/dev/null || {
-            echo "tooling update metadata is invalid" >&2
-            exit 1
-          }
+          bash ./scripts/github-setup/validate-tooling-metadata.sh "$metadata_file"
           jq -r '.updates[] | "- `\(.package)`: \(.old_version) -> \(.new_version) (\(.update_type), \(.risk))"' "$metadata_file" >> /tmp/weekly-tooling-pr-body.md
           printf '\nMachine-readable metadata is generated in the workflow runner and is not committed.\n' >> /tmp/weekly-tooling-pr-body.md
-
-          if git diff --quiet --exit-code && [ -z "$(git ls-files --others --exclude-standard)" ]; then
-            echo "No tooling updates detected; skipping PR creation."
-            exit 0
-          fi
 
           git checkout -B "$branch"
           git add -A
