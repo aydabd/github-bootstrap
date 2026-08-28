@@ -47,11 +47,6 @@ on:
           - both
           - embedded
           - centralized
-      cleanup:
-        description: Delete generated repositories after each scenario.
-        required: false
-        default: true
-        type: boolean
 
 permissions:
   contents: read
@@ -117,6 +112,16 @@ jobs:
           permission_profile: repository-setup
           repositories: ${{ github.event.repository.name }}
 
+      - name: Resolve E2E lifecycle token
+        id: e2e-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: e2e-lifecycle
+
       - name: Select requested creation workflow
         id: scenario
         shell: bash
@@ -146,6 +151,7 @@ jobs:
         if: steps.scenario.outputs.enabled == 'true'
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
+          E2E_GH_TOKEN: ${{ steps.e2e-token.outputs.token }}
           OWNER: ${{ github.repository_owner }}
           TARGET_REF: ${{ inputs.head_sha || inputs.target_ref || 'main' }}
           REQUESTED_HEAD_SHA: ${{ inputs.head_sha }}
@@ -154,7 +160,6 @@ jobs:
           CENTRAL_REPOSITORY: ${{ inputs.central_repository }}
           CENTRAL_REF: ${{ inputs.central_ref }}
           CREATION_WORKFLOW: ${{ matrix.creation_workflow }}
-          CLEANUP: ${{ inputs.cleanup }}
         shell: bash
         run: |
           set -euo pipefail
@@ -172,18 +177,54 @@ jobs:
             CENTRAL_SOURCE="$CENTRAL_REPOSITORY@$CENTRAL_REF"
           fi
 
-          REPO_NAME="e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${PROVIDER}-${DELIVERY}-${CREATION_WORKFLOW%.yml}"
+          REPO_NAME="bootstrap-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${PROVIDER}-${DELIVERY}-${CREATION_WORKFLOW%.yml}"
 
           DISPATCH_REF="$TARGET_REF"
           TEMP_REF_CREATED=false
+          e2e_gh() { GH_TOKEN="$E2E_GH_TOKEN" gh "$@"; }
+          archive_repository() {
+            REPOSITORY_PROBE="$RUNNER_TEMP/repository-probe-$REPO_NAME.txt"
+            if ! e2e_gh api --include "/repos/$OWNER/$REPO_NAME" > "$REPOSITORY_PROBE" 2>&1; then
+              if grep -Eq '^HTTP/[0-9.]+ 404' "$REPOSITORY_PROBE"; then
+                return 0
+              fi
+              echo "failed to inspect E2E repository before archive" >&2
+              return 1
+            fi
+            TOPICS_FILE="$RUNNER_TEMP/topics-$REPO_NAME.json"
+            target_owner="${OWNER}"
+            target_repository="$REPO_NAME"
+            if [ "$target_owner/$target_repository" != "$OWNER/$REPO_NAME" ] || \
+              ! [[ "$target_repository" =~ ^bootstrap-e2e-[0-9]+-[0-9]+-(micromamba|mise|system)-(embedded|centralized)-(create-repository|terraform-create-repository)$ ]]; then
+              echo "refusing to archive repository outside the generated E2E name scope" >&2
+              return 1
+            fi
+            if ! e2e_gh api "/repos/$OWNER/$REPO_NAME/topics" > "$TOPICS_FILE"; then
+              echo "failed to read E2E repository topics" >&2
+              return 1
+            fi
+            if ! "$GITHUB_WORKSPACE/scripts/github-setup/validate-e2e-archive-target.sh" \
+              "$OWNER" "$OWNER/$REPO_NAME" "$TOPICS_FILE"; then
+              return 1
+            fi
+            if ! e2e_gh api --method PATCH "/repos/$OWNER/$REPO_NAME" -f archived=true > /dev/null; then
+              echo "failed to archive E2E repository" >&2
+              return 1
+            fi
+            echo "Archived $OWNER/$REPO_NAME"
+          }
           cleanup() {
+            cleanup_status=$?
             if [ "$TEMP_REF_CREATED" = true ]; then
-              gh api --method DELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$DISPATCH_REF" >/dev/null 2>&1 || true
+              if ! gh api --method DELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$DISPATCH_REF" > /dev/null 2>&1; then
+                echo "failed to remove temporary E2E dispatch ref" >&2
+                cleanup_status=1
+              fi
             fi
-            if [ "$CLEANUP" = true ] && gh repo view "$OWNER/$REPO_NAME" >/dev/null 2>&1; then
-              gh repo delete "$OWNER/$REPO_NAME" --yes >/dev/null
-              echo "Deleted $OWNER/$REPO_NAME"
+            if ! archive_repository; then
+              cleanup_status=1
             fi
+            return "$cleanup_status"
           }
           trap cleanup EXIT
 
@@ -201,7 +242,7 @@ jobs:
           gh workflow run "$CREATION_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref "$DISPATCH_REF" \
             --field repo_name="$REPO_NAME" \
             --field repo_description="Generated repository E2E scenario" \
-            --field visibility=private --field team_name="* @$OWNER" --field license_holder="$OWNER" \
+            --field visibility=public --field team_name="* @$OWNER" --field license_holder="$OWNER" \
             --field languages=language-agnostic-only --field env_manager="$PROVIDER" \
             --field release_tool=release-please --field enable_repo_settings=false --field enable_codeowners=true \
             --field workflows=quality --field delivery_mode="$DELIVERY" \
@@ -221,6 +262,12 @@ jobs:
             sleep 10
           done
           [ -n "$CREATION_RUN" ] || { echo "creation run not found" >&2; exit 1; }
+
+          if ! e2e_gh api --method PUT "/repos/$OWNER/$REPO_NAME/topics" \
+            -f 'names[]=bootstrap-e2e' > /dev/null; then
+            echo "failed to mark E2E repository with bootstrap-e2e topic" >&2
+            exit 1
+          fi
 
           CREATION_RUN_JSON="$RUNNER_TEMP/creation-run-$REPO_NAME.json"
           gh run view "$CREATION_RUN" --repo "$GITHUB_REPOSITORY" --json headSha,status,conclusion > "$CREATION_RUN_JSON"
