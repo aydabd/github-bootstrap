@@ -9,7 +9,7 @@ app_validator="$script_dir/validate-app-auth.sh"
 assert_contains() {
     local needle="$1"
     local file="$2"
-    grep -Fq "$needle" "$file" || {
+    grep -Fq -- "$needle" "$file" || {
         echo "expected '$needle' in $file" >&2
         exit 1
     }
@@ -18,7 +18,7 @@ assert_contains() {
 assert_not_contains() {
     local needle="$1"
     local file="$2"
-    if grep -Fq "$needle" "$file"; then
+    if grep -Fq -- "$needle" "$file"; then
         echo "unexpected '$needle' in $file" >&2
         exit 1
     fi
@@ -98,8 +98,18 @@ assert_contains "repositories: \${{ needs.create-test-repo.outputs.test_repo_nam
 assert_contains "contents: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "pull-requests: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "issues: read" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_contains "inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'repository-creation'" "$resolver"
 assert_contains "uses: ./.github/actions/resolve-gh-token" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "permission_profile: weekly-tooling" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_contains 'TOOLING_UPDATE_METADATA_FILE' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_contains 'automation: maintenance' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_contains 'automation: validating' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_contains 'automation: breaking' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_contains 'automation: blocked' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_contains '--add-label' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_contains '--remove-label "automation: breaking"' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_contains '--remove-label "automation: blocked"' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_not_contains "gh pr edit \"\$pr_number\" --label" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "GH_TOKEN: \${{ steps.resolve-token.outputs.token }}" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "APP_SLUG: \${{ steps.resolve-token.outputs.app_slug }}" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "APP_ID: \${{ steps.resolve-token.outputs.app_id }}" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
