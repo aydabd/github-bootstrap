@@ -59,10 +59,10 @@ runs:
       run: |
         set -euo pipefail
         case "$PERMISSION_PROFILE" in
-          repository-creation|repository-setup|repository-cleanup|weekly-tooling|workflow-approval) ;;
+          repository-creation|repository-setup|repository-cleanup|weekly-tooling|workflow-approval|e2e-lifecycle) ;;
           *) echo "::error::Unsupported GitHub App permission profile '$PERMISSION_PROFILE'." >&2; exit 1 ;;
         esac
-        if [ "$PERMISSION_PROFILE" != "repository-creation" ] && [ -z "$REPOSITORIES" ]; then
+        if [ "$PERMISSION_PROFILE" != "repository-creation" ] && [ "$PERMISSION_PROFILE" != "e2e-lifecycle" ] && [ -z "$REPOSITORIES" ]; then
           echo "::error::Repository scoping is required for the '$PERMISSION_PROFILE' permission profile." >&2
           exit 1
         fi
@@ -125,7 +125,7 @@ runs:
         private-key: ${{ inputs.app_private_key }}
         owner: ${{ inputs.app_owner }}
         repositories: ${{ inputs.repositories }}
-        permission-administration: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'repository-cleanup') && 'write' || '' }}
+        permission-administration: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'repository-cleanup' || inputs.permission_profile == 'e2e-lifecycle') && 'write' || '' }}
         permission-actions: ${{ inputs.permission_profile == 'workflow-approval' && 'write' || '' }}
         permission-contents: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'weekly-tooling') && 'write' || '' }}
         permission-issues: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup') && 'write' || '' }}
