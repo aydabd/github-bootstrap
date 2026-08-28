@@ -67,6 +67,7 @@ func CollectUpdateMetadata(root string, changed []string, explicitBreaking bool)
 	byKey := map[string]*UpdateMetadata{}
 	for _, absolutePath := range changed {
 		relativePath := absolutePath
+		var err error
 		if filepath.IsAbs(absolutePath) {
 			relativePath, err = filepath.Rel(root, absolutePath)
 			if err != nil {
