@@ -16,6 +16,7 @@ installation token does not inherit unused permissions from the App installation
 | `repository-setup`    | `administration: write`, `contents: write`, `issues: write`                                       | Configure an existing repository.                         |
 | `repository-cleanup`  | `administration: write`                                                                           | Delete a failed repository.                               |
 | `weekly-tooling`      | `contents: write`, `issues: write`, `pull-requests: write`                                        | Commit tooling updates, labels, and manage the weekly PR. |
+| `workflow-approval`   | `actions: write`, `pull-requests: read`                                                           | Approve eligible `action_required` workflow runs only.    |
 
 | App permission                | Level | Endpoint or operation                                                      | Why it is required                                                                                     |
 | ----------------------------- | ----- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -24,9 +25,11 @@ installation token does not inherit unused permissions from the App installation
 | `contents`                    | write | Git push and repository contents API                                       | Add generated bootstrap files.                                                                         |
 | `issues`                      | write | Labels API                                                                 | Apply default repository labels.                                                                       |
 | `pull-requests`               | write | Weekly tooling PR creation, updates, and auto-merge                        | Run the App-authenticated weekly tooling automation.                                                   |
+| `actions`                     | write | `POST /repos/{owner}/{repo}/actions/runs/{run_id}/approve`                 | Approve an eligible workflow run after all identity and freshness checks pass.                         |
 
-`metadata: read` is automatically available for repository access. Members, actions,
-security-events, and unrelated-owner permissions are not granted by this resolver. Pull-request
+`metadata: read` is automatically available for repository access. Members, security-events,
+and unrelated-owner permissions are not granted by this resolver. The `actions: write`
+permission is granted only by the `workflow-approval` profile. Pull-request
 write permission is granted only by the `weekly-tooling` profile. Issues write permission is
 limited to the weekly profile's idempotent pull-request label operations and the existing
 repository creation/setup profiles' repository label configuration.
@@ -45,6 +48,12 @@ Environment: `BOOTSTRAP_APP_CLIENT_ID` and
 `BOOTSTRAP_APP_PRIVATE_KEY` as a secret. The credential names are stable
 across deployment Environments; Environment scope and protection rules define
 which deployment may use them.
+
+The workflow approval workflow uses separate Reviewer App credentials in the
+same protected Environment: `BOOTSTRAP_REVIEWER_APP_CLIENT_ID` and
+`BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG` as variables, and
+`BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY` as a secret. The Reviewer App has no
+ruleset bypass authority.
 
 Creation installation tokens intentionally omit a repository list because the target repository
 does not exist yet. Existing-repository setup, cleanup, and weekly tooling callers pass the

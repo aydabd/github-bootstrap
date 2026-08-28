@@ -94,7 +94,7 @@ expected = {
         "default_permissions": {
             "actions": "write",
             "metadata": "read",
-            "pull_requests": "write",
+            "pull_requests": "read",
         },
     },
 }
@@ -126,5 +126,6 @@ for required_text in \
         exit 1
     }
 done
+grep -Fq "Repository Maintenance Reviewer  | \`actions: write\`, \`pull_requests: read\`, \`metadata: read\`" "$trust_boundary_doc"
 
 echo "GitHub App Manifest contract checks passed."

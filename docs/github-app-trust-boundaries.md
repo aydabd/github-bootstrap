@@ -31,7 +31,7 @@ default permissions are the complete requested contract:
 | Bootstrap E2E Admin              | `organization_administration: write`, `administration: write`, `metadata: read` |
 | Repository Bootstrap Provisioner | `administration: write`, `contents: write`, `issues: write`, `metadata: read`   |
 | Repository Maintenance Writer    | `contents: write`, `pull_requests: write`, `metadata: read`                     |
-| Repository Maintenance Reviewer  | `actions: write`, `pull_requests: write`, `metadata: read`                      |
+| Repository Maintenance Reviewer  | `actions: write`, `pull_requests: read`, `metadata: read`                       |
 
 Permissions are not shared between roles for convenience. GitHub's
 `administration: write` permission includes repository deletion capability;
