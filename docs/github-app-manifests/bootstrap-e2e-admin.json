@@ -1,0 +1,11 @@
+{
+  "name": "Bootstrap E2E Admin",
+  "url": "https://github.com",
+  "public": false,
+  "default_events": [],
+  "default_permissions": {
+    "administration": "write",
+    "metadata": "read",
+    "organization_administration": "write"
+  }
+}
