@@ -33,6 +33,7 @@ func main() {
 	verifyLayout := flag.Bool("verify-layout", false, "verify workspace layout before updates")
 	verifyOnly := flag.Bool("verify-only", false, "verify workspace layout and exit")
 	metadataFile := flag.String("metadata-file", os.Getenv("TOOLING_UPDATE_METADATA_FILE"), "write structured update metadata to this file")
+	explicitBreaking := flag.Bool("explicit-breaking", os.Getenv("TOOLING_UPDATE_EXPLICIT_BREAKING") == "true", "classify all emitted updates as explicitly breaking")
 	flag.Parse()
 
 	logger.Info("tooling updater started", "scope", *scope, "updaters", *updatersRaw, "dry_run", *dryRun, "verify_only", *verifyOnly)
@@ -67,7 +68,7 @@ func main() {
 		return
 	}
 	if *metadataFile != "" {
-		if err := toolinglib.WriteUpdateMetadata(root, changed, *metadataFile); err != nil {
+		if err := toolinglib.WriteUpdateMetadata(root, changed, *metadataFile, *explicitBreaking); err != nil {
 			fmt.Fprintf(os.Stderr, "tooling metadata failed: %v\n", err)
 			os.Exit(1)
 		}

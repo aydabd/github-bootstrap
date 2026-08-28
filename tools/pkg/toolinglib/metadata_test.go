@@ -12,8 +12,8 @@ func TestExtractPinsSupportsEnvironmentAndTOML(t *testing.T) {
 
 func TestCollectPinChangesDeduplicatesFiles(t *testing.T) {
 	byKey := map[string]*UpdateMetadata{}
-	collectPinChanges(byKey, "environment.yml", "  - go-shfmt=3.12.0\n", "  - go-shfmt=3.13.0\n")
-	collectPinChanges(byKey, "templates/go/environment.yml", "  - go-shfmt=3.12.0\n", "  - go-shfmt=3.13.0\n")
+	collectPinChanges(byKey, "environment.yml", "  - go-shfmt=3.12.0\n", "  - go-shfmt=3.13.0\n", false)
+	collectPinChanges(byKey, "templates/go/environment.yml", "  - go-shfmt=3.12.0\n", "  - go-shfmt=3.13.0\n", false)
 	if len(byKey) != 1 {
 		t.Fatalf("expected one deduplicated update, got %d", len(byKey))
 	}

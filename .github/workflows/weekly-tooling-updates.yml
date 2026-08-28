@@ -107,8 +107,8 @@ jobs:
           - refresh pre-commit hook revisions via `pre-commit autoupdate`
 
           ## Auto-merge
-          Auto-merge is enabled for this PR. GitHub will merge only after all required checks,
-          CodeRabbit review requirements, and approval rules are satisfied.
+          Auto-merge is requested only for fully classified updates. GitHub will merge only
+          after all required checks, CodeRabbit review requirements, and approval rules are satisfied.
           EOF
 
           metadata_file="$TOOLING_UPDATE_METADATA_FILE"
@@ -116,7 +116,17 @@ jobs:
             echo "tooling update metadata is missing" >&2
             exit 1
           }
-          jq -e '.schema_version == 1 and (.updates | type == "array")' "$metadata_file" >/dev/null || {
+          jq -e '
+            .schema_version == 1 and (.updates | type == "array") and
+            all(.updates[];
+              (.package | type == "string" and length > 0) and
+              (.old_version | type == "string" and length > 0) and
+              (.new_version | type == "string" and length > 0) and
+              (.update_type | type == "string" and (IN("patch", "minor", "major", "breaking", "unknown"))) and
+              (.risk | type == "string" and (IN("low", "medium", "high", "unknown"))) and
+              (.files | type == "array" and all(.[]; type == "string" and length > 0))
+            )
+          ' "$metadata_file" >/dev/null || {
             echo "tooling update metadata is invalid" >&2
             exit 1
           }
@@ -212,7 +222,7 @@ jobs:
           done
 
           create_label_args=(--label dependencies --label "automation: maintenance" --label "automation: validating")
-          edit_label_args=(--add-label dependencies --add-label "automation: maintenance" --add-label "automation: validating")
+          edit_label_args=(--add-label dependencies --add-label "automation: maintenance" --add-label "automation: validating" --remove-label "automation: breaking" --remove-label "automation: blocked")
           breaking_count="$(jq '[.updates[] | select(.risk == "high" or .update_type == "major" or .update_type == "breaking")] | length' "$metadata_file")"
           unknown_count="$(jq '[.updates[] | select(.risk == "unknown" or .update_type == "unknown")] | length' "$metadata_file")"
           if [ "$breaking_count" -gt 0 ]; then
