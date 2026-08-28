@@ -363,6 +363,16 @@ Automation is provided by `.github/workflows/weekly-tooling-updates.yml`:
 - enables PR auto-merge so GitHub merges only after required checks, required approvals,
   and repository merge requirements are satisfied
 
+Each tooling run emits runner-local JSON metadata with `schema_version: 1` and
+one record per changed package or tool. Records contain `package`,
+`old_version`, `new_version`, `update_type`, `risk`, and affected `files`.
+Semantic version changes are classified as `patch`/`low`, `minor`/`medium`, or
+`major`/`high`; opaque revisions are `unknown` and remain blocked for manual
+review. The workflow applies `automation: maintenance` and
+`automation: validating`, adds `automation: breaking` for high-risk changes,
+and adds `automation: blocked` for unknown risk. These labels are descriptive
+only and never bypass required checks, approvals, signatures, or rulesets.
+
 ### Conventional Commits
 
 All repositories enforce [conventional commits](https://www.conventionalcommits.org/)

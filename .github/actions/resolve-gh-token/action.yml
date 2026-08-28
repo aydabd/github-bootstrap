@@ -127,7 +127,7 @@ runs:
         repositories: ${{ inputs.repositories }}
         permission-administration: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'repository-cleanup') && 'write' || '' }}
         permission-contents: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'weekly-tooling') && 'write' || '' }}
-        permission-issues: ${{ inputs.permission_profile == 'weekly-tooling' && 'read' || ((inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup') && 'write' || '') }}
+          permission-issues: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup') && 'write' || '' }}
         permission-organization-administration: ${{ inputs.permission_profile == 'repository-creation' && 'write' || '' }}
         permission-pull-requests: ${{ inputs.permission_profile == 'weekly-tooling' && 'write' || '' }}
 

@@ -6,6 +6,26 @@
       "description": "Automated maintenance or generated changes"
     },
     {
+      "name": "automation: maintenance",
+      "color": "0366d6",
+      "description": "Automated maintenance update"
+    },
+    {
+      "name": "automation: breaking",
+      "color": "b60205",
+      "description": "Automated update with major or explicitly breaking risk"
+    },
+    {
+      "name": "automation: validating",
+      "color": "fbca04",
+      "description": "Automated update undergoing validation"
+    },
+    {
+      "name": "automation: blocked",
+      "color": "d73a4a",
+      "description": "Automated update blocked by a required policy or check"
+    },
+    {
       "name": "bug",
       "color": "d73a4a",
       "description": "Something is not working as expected"

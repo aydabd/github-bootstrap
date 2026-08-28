@@ -32,6 +32,7 @@ func main() {
 	dryRun := flag.Bool("dry-run", false, "calculate updates without writing files")
 	verifyLayout := flag.Bool("verify-layout", false, "verify workspace layout before updates")
 	verifyOnly := flag.Bool("verify-only", false, "verify workspace layout and exit")
+	metadataFile := flag.String("metadata-file", os.Getenv("TOOLING_UPDATE_METADATA_FILE"), "write structured update metadata to this file")
 	flag.Parse()
 
 	logger.Info("tooling updater started", "scope", *scope, "updaters", *updatersRaw, "dry_run", *dryRun, "verify_only", *verifyOnly)
@@ -64,6 +65,12 @@ func main() {
 		logger.Info("workspace layout verification passed")
 		fmt.Println("Workspace layout verification passed")
 		return
+	}
+	if *metadataFile != "" {
+		if err := toolinglib.WriteUpdateMetadata(root, changed, *metadataFile); err != nil {
+			fmt.Fprintf(os.Stderr, "tooling metadata failed: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	if *dryRun {

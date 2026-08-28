@@ -15,7 +15,7 @@ installation token does not inherit unused permissions from the App installation
 | `repository-creation` | `organization-administration: write`, `administration: write`, `contents: write`, `issues: write` | Create and configure a repository.                        |
 | `repository-setup`    | `administration: write`, `contents: write`, `issues: write`                                       | Configure an existing repository.                         |
 | `repository-cleanup`  | `administration: write`                                                                           | Delete a failed repository.                               |
-| `weekly-tooling`      | `contents: write`, `issues: read`, `pull-requests: write`                                         | Commit tooling updates, labels, and manage the weekly PR. |
+| `weekly-tooling`      | `contents: write`, `issues: write`, `pull-requests: write`                                         | Commit tooling updates, labels, and manage the weekly PR. |
 
 | App permission                | Level | Endpoint or operation                                                      | Why it is required                                                                                     |
 | ----------------------------- | ----- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -27,7 +27,9 @@ installation token does not inherit unused permissions from the App installation
 
 `metadata: read` is automatically available for repository access. Members, actions,
 security-events, and unrelated-owner permissions are not granted by this resolver. Pull-request
-write permission is granted only by the `weekly-tooling` profile.
+write permission is granted only by the `weekly-tooling` profile. Issues write permission is
+limited to the weekly profile's idempotent pull-request label operations and the existing
+repository creation/setup profiles' repository label configuration.
 
 The weekly maintenance workflow requires the non-secret
 `BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` variable. It creates the commit through

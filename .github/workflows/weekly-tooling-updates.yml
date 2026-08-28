@@ -67,6 +67,8 @@ jobs:
           [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured maintenance Writer" >&2; exit 1; }
 
       - name: Update repository and template tooling
+        env:
+          TOOLING_UPDATE_METADATA_FILE: ${{ runner.temp }}/tooling-update-metadata.json
         shell: bash
         run: |
           ENV_MANAGER=micromamba make tooling-update-repo
@@ -84,6 +86,7 @@ jobs:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
           APP_ID: ${{ steps.resolve-token.outputs.app_id }}
+          TOOLING_UPDATE_METADATA_FILE: ${{ runner.temp }}/tooling-update-metadata.json
         run: |
           set -euo pipefail
 
@@ -107,6 +110,18 @@ jobs:
           Auto-merge is enabled for this PR. GitHub will merge only after all required checks,
           CodeRabbit review requirements, and approval rules are satisfied.
           EOF
+
+          metadata_file="$TOOLING_UPDATE_METADATA_FILE"
+          [ -s "$metadata_file" ] || {
+            echo "tooling update metadata is missing" >&2
+            exit 1
+          }
+          jq -e '.schema_version == 1 and (.updates | type == "array")' "$metadata_file" >/dev/null || {
+            echo "tooling update metadata is invalid" >&2
+            exit 1
+          }
+          jq -r '.updates[] | "- `\(.package)`: \(.old_version) -> \(.new_version) (\(.update_type), \(.risk))"' "$metadata_file" >> /tmp/weekly-tooling-pr-body.md
+          printf '\nMachine-readable metadata is generated in the workflow runner and is not committed.\n' >> /tmp/weekly-tooling-pr-body.md
 
           if git diff --quiet --exit-code && [ -z "$(git ls-files --others --exclude-standard)" ]; then
             echo "No tooling updates detected; skipping PR creation."
@@ -187,17 +202,29 @@ jobs:
               -f sha="$commit_sha" >/dev/null
           fi
 
-          pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
           label_names="$(gh label list --limit 200 --json name --jq '.[].name')"
+          required_labels=("dependencies" "automation: maintenance" "automation: validating" "automation: breaking" "automation: blocked")
+          for label in "${required_labels[@]}"; do
+            printf '%s\n' "$label_names" | grep -Fxq -- "$label" || {
+              echo "required label is missing: $label" >&2
+              exit 1
+            }
+          done
 
-          create_label_args=(--label dependencies)
-          edit_label_args=(--add-label dependencies)
-          if printf '%s\n' "$label_names" | grep -Fxq automation; then
-            create_label_args+=(--label automation)
-            edit_label_args+=(--add-label automation)
-          else
-            echo "Label 'automation' not found; continuing with 'dependencies' only."
+          create_label_args=(--label dependencies --label "automation: maintenance" --label "automation: validating")
+          edit_label_args=(--add-label dependencies --add-label "automation: maintenance" --add-label "automation: validating")
+          breaking_count="$(jq '[.updates[] | select(.risk == "high" or .update_type == "major" or .update_type == "breaking")] | length' "$metadata_file")"
+          unknown_count="$(jq '[.updates[] | select(.risk == "unknown" or .update_type == "unknown")] | length' "$metadata_file")"
+          if [ "$breaking_count" -gt 0 ]; then
+            create_label_args+=(--label "automation: breaking")
+            edit_label_args+=(--add-label "automation: breaking")
           fi
+          if [ "$unknown_count" -gt 0 ]; then
+            create_label_args+=(--label "automation: blocked")
+            edit_label_args+=(--add-label "automation: blocked")
+          fi
+
+          pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
 
           if [ -z "$pr_number" ]; then
             pr_url="$(gh pr create --base main --head "$branch" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md "${create_label_args[@]}")"
@@ -206,4 +233,8 @@ jobs:
             gh pr edit "$pr_number" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md "${edit_label_args[@]}"
           fi
 
+          if [ "$unknown_count" -gt 0 ]; then
+            echo "Unknown update risk detected; leaving PR blocked without enabling auto-merge." >&2
+            exit 0
+          fi
           gh pr merge "$pr_number" --auto --squash
