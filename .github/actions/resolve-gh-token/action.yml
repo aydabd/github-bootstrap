@@ -59,7 +59,7 @@ runs:
       run: |
         set -euo pipefail
         case "$PERMISSION_PROFILE" in
-          repository-creation|repository-setup|repository-cleanup|weekly-tooling) ;;
+          repository-creation|repository-setup|repository-cleanup|weekly-tooling|workflow-approval) ;;
           *) echo "::error::Unsupported GitHub App permission profile '$PERMISSION_PROFILE'." >&2; exit 1 ;;
         esac
         if [ "$PERMISSION_PROFILE" != "repository-creation" ] && [ -z "$REPOSITORIES" ]; then
@@ -126,10 +126,11 @@ runs:
         owner: ${{ inputs.app_owner }}
         repositories: ${{ inputs.repositories }}
         permission-administration: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'repository-cleanup') && 'write' || '' }}
+        permission-actions: ${{ inputs.permission_profile == 'workflow-approval' && 'write' || '' }}
         permission-contents: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'weekly-tooling') && 'write' || '' }}
         permission-issues: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup') && 'write' || '' }}
         permission-organization-administration: ${{ inputs.permission_profile == 'repository-creation' && 'write' || '' }}
-        permission-pull-requests: ${{ inputs.permission_profile == 'weekly-tooling' && 'write' || '' }}
+        permission-pull-requests: ${{ inputs.permission_profile == 'weekly-tooling' && 'write' || inputs.permission_profile == 'workflow-approval' && 'read' || '' }}
 
     - name: Finalize token output
       id: finalize
