@@ -109,7 +109,7 @@ assert_contains 'automation: blocked' "$repo_root/.github/workflows/weekly-tooli
 assert_contains '--add-label' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains '--remove-label "automation: breaking"' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains '--remove-label "automation: blocked"' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
-assert_not_contains 'gh pr edit "$pr_number" --label' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_not_contains "gh pr edit \"\$pr_number\" --label" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "GH_TOKEN: \${{ steps.resolve-token.outputs.token }}" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "APP_SLUG: \${{ steps.resolve-token.outputs.app_slug }}" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "APP_ID: \${{ steps.resolve-token.outputs.app_id }}" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
