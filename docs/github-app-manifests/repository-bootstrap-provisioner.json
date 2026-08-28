@@ -1,0 +1,12 @@
+{
+  "name": "Repository Bootstrap Provisioner",
+  "url": "https://github.com",
+  "public": false,
+  "default_events": [],
+  "default_permissions": {
+    "administration": "write",
+    "contents": "write",
+    "issues": "write",
+    "metadata": "read"
+  }
+}

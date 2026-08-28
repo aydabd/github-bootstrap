@@ -1,0 +1,11 @@
+{
+  "name": "Repository Maintenance Reviewer",
+  "url": "https://github.com",
+  "public": false,
+  "default_events": [],
+  "default_permissions": {
+    "actions": "write",
+    "metadata": "read",
+    "pull_requests": "write"
+  }
+}
