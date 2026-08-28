@@ -16,6 +16,7 @@ jobs:
   update-tooling:
     name: Update non-Dependabot tooling
     runs-on: ubuntu-latest
+    environment: production-maintenance
     permissions:
       contents: write
       issues: read
@@ -42,6 +43,29 @@ jobs:
         shell: bash
         run: python -m pip install --upgrade pip pre-commit
 
+      - name: Resolve GitHub App token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: weekly-tooling
+          repositories: ${{ github.event.repository.name }}
+      - name: Verify resolved App identity
+        env:
+          APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          APP_ID: ${{ steps.resolve-token.outputs.app_id }}
+          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$APP_SLUG" ] || { echo "GitHub App slug was not resolved" >&2; exit 1; }
+          [[ "$APP_ID" =~ ^[0-9]+$ ]] || { echo "GitHub App ID was not resolved" >&2; exit 1; }
+          [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected maintenance Writer App slug is not configured" >&2; exit 1; }
+          [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured maintenance Writer" >&2; exit 1; }
+
       - name: Update repository and template tooling
         shell: bash
         run: |
@@ -57,13 +81,21 @@ jobs:
       - name: Create or update tooling update PR (gh CLI)
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          APP_ID: ${{ steps.resolve-token.outputs.app_id }}
         run: |
           set -euo pipefail
 
           branch="chore/weekly-tooling-updates"
           title="chore(deps): weekly tooling updates"
+          signoff_name="$GITHUB_ACTOR"
+          signoff_email="${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
           commit_msg="chore(deps): update non-dependabot tooling pins"
+          commit_msg="${commit_msg}
+
+          X-GitHub-Bootstrap-Automation: weekly-tooling-updates
+          Signed-off-by: ${signoff_name} <${signoff_email}>"
 
           cat > /tmp/weekly-tooling-pr-body.md <<'EOF'
           ## Summary
@@ -81,17 +113,79 @@ jobs:
             exit 0
           fi
 
-          automation_login="$GITHUB_ACTOR"
-          automation_id="$GITHUB_ACTOR_ID"
-
-          git config user.name "$automation_login"
-          git config user.email "${automation_id}+${automation_login}@users.noreply.github.com"
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-
           git checkout -B "$branch"
           git add -A
-          git commit --no-verify -s -m "$commit_msg"
-          git push --force-with-lease origin "$branch"
+          expected_branch_sha=""
+          if expected_branch_sha="$(gh api "/repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha' 2>/dev/null)"; then
+            branch_message="$(gh api "/repos/$GITHUB_REPOSITORY/git/commits/$expected_branch_sha" --jq '.commit.message')"
+            printf '%s\n' "$branch_message" | grep -Fqx 'X-GitHub-Bootstrap-Automation: weekly-tooling-updates' || {
+              echo "Weekly tooling branch is not owned by this automation; refusing to update it" >&2
+              exit 1
+            }
+            parent_sha="$expected_branch_sha"
+          else
+            parent_sha="$(git rev-parse HEAD)"
+          fi
+          parent_tree_sha="$(gh api "/repos/$GITHUB_REPOSITORY/git/commits/$parent_sha" --jq '.tree.sha')"
+
+          payload_dir="$(mktemp -d)"
+          tree_payload="$payload_dir/tree.json"
+          blob_payload="$payload_dir/blob.json"
+          trap 'rm -rf "$payload_dir"' EXIT
+          jq -n --arg base_tree "$parent_tree_sha" '{base_tree: $base_tree, tree: []}' >"$tree_payload"
+          while IFS= read -r path; do
+            mode="$(git ls-files -s -- "$path" | awk 'NR == 1 { print $1 }')"
+            if git diff --cached --diff-filter=D --name-only | grep -Fxq -- "$path"; then
+              mode="100644"
+              entry_type="blob"
+              object_sha=""
+              jq --arg path "$path" --arg mode "$mode" --arg type "$entry_type" \
+                '.tree += [{path: $path, mode: $mode, type: $type, sha: null}]' \
+                "$tree_payload" >"$tree_payload.tmp"
+            else
+              entry_type="blob"
+              object_sha=""
+              if [ "$mode" = "160000" ]; then
+                entry_type="commit"
+                object_sha="$(git ls-files -s -- "$path" | awk 'NR == 1 { print $2 }')"
+              elif [ "$mode" = "120000" ]; then
+                encoded_content="$(readlink "$path" | base64 | tr -d '\n')"
+                jq -n --arg content "$encoded_content" \
+                  '{content: $content, encoding: "base64"}' >"$blob_payload"
+                object_sha="$(gh api --method POST "/repos/$GITHUB_REPOSITORY/git/blobs" \
+                  --input "$blob_payload" --jq '.sha')"
+              else
+                encoded_content="$(base64 <"$path" | tr -d '\n')"
+                jq -n --arg content "$encoded_content" \
+                  '{content: $content, encoding: "base64"}' >"$blob_payload"
+                object_sha="$(gh api --method POST "/repos/$GITHUB_REPOSITORY/git/blobs" \
+                  --input "$blob_payload" --jq '.sha')"
+              fi
+              jq --arg path "$path" --arg mode "$mode" --arg type "$entry_type" --arg sha "$object_sha" \
+                '.tree += [{path: $path, mode: $mode, type: $type, sha: $sha}]' \
+                "$tree_payload" >"$tree_payload.tmp"
+            fi
+            mv "$tree_payload.tmp" "$tree_payload"
+          done < <(git diff --cached --name-only)
+
+          tree_sha="$(gh api --method POST "/repos/$GITHUB_REPOSITORY/git/trees" \
+            --input "$tree_payload" --jq '.sha')"
+          commit_sha="$(gh api --method POST "/repos/$GITHUB_REPOSITORY/git/commits" \
+            -f message="$commit_msg" \
+            -f tree="$tree_sha" \
+            -f "parents[]=$parent_sha" \
+            --jq '.sha')"
+          bash ./scripts/github-setup/verify-commit-verification.sh "$GITHUB_REPOSITORY" "$commit_sha"
+
+          if [ -n "$expected_branch_sha" ]; then
+            gh api --method PATCH "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch" \
+              -f sha="$commit_sha" \
+              -F force=false >/dev/null
+          else
+            gh api --method POST "/repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/heads/$branch" \
+              -f sha="$commit_sha" >/dev/null
+          fi
 
           pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
           label_names="$(gh label list --limit 200 --json name --jq '.[].name')"

@@ -53,6 +53,11 @@ owner and authenticated identity must match before any operation.
 
 Store each App's GitHub-generated private key as a protected
 `BOOTSTRAP_APP_PRIVATE_KEY` secret in the environment that owns that role.
+For the weekly Writer workflow, use the protected `production-maintenance`
+Environment and set `BOOTSTRAP_APP_CLIENT_ID` and
+`BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` as Environment variables alongside
+the `BOOTSTRAP_APP_PRIVATE_KEY` Environment secret. These names remain stable;
+the Environment identifies which deployment is authorized to use them.
 Do not commit keys, include them in workflow inputs, print them, or reuse an
 E2E key in production. The production Reviewer key is a distinct secret from
 the Writer key and the E2E key. Client IDs may be non-secret configuration, but

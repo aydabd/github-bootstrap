@@ -13,7 +13,7 @@ policy_actions=(
 
 weekly_workflow="$ROOT_DIR/.github/workflows/weekly-tooling-updates.yml"
 # shellcheck disable=SC2016
-if ! grep -qF 'git commit --no-verify -s -m "$commit_msg"' "$weekly_workflow"; then
+if ! grep -qF 'Signed-off-by: ${signoff_name} <${signoff_email}>' "$weekly_workflow"; then
     echo "MISSING_SIGNED_OFF_BY: weekly tooling workflow commit" >&2
     exit 1
 fi

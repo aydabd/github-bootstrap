@@ -67,6 +67,28 @@ the App user access token, verifies its `/user` login against the target owner, 
 
 **Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
 
+### Production maintenance App setup
+
+Create the separate Maintenance Writer App through GitHub's UI using the
+checked-in manifest:
+
+```bash
+scripts/github-setup/github-app-manifest.sh start repository-maintenance-writer
+```
+
+Open the printed URL, approve the App creation, install it only on the
+maintenance repositories, and retain the GitHub-generated private key in a
+protected local file. In the `production-maintenance` GitHub Environment, set
+`BOOTSTRAP_APP_CLIENT_ID` and
+`BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` as variables and
+`BOOTSTRAP_APP_PRIVATE_KEY` as a secret. The weekly workflow is explicitly
+bound to that Environment. Use separate Environments for other deployments;
+the credential names remain stable while Environment scope and protection
+rules control access.
+
+The Writer App must remain separate from the Provisioner, Reviewer, and E2E
+Admin Apps. Never commit or print its private key.
+
 ### Personal App Manifest E2E setup
 
 For a disposable personal-account E2E, create the App through GitHub's App Manifest flow. GitHub
@@ -74,7 +96,7 @@ generates the private key during conversion; do not generate one locally:
 
 ```bash
 credential_dir="$HOME/.local/state/github-bootstrap"
-scripts/github-setup/github-app-manifest.sh url
+scripts/github-setup/github-app-manifest.sh start repository-bootstrap-provisioner
 # Open the printed URL, approve the App, and copy the one-time conversion code.
 scripts/github-setup/github-app-manifest.sh convert CODE "$credential_dir"
 ```
