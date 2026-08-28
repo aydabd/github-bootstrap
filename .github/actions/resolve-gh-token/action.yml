@@ -34,6 +34,12 @@ outputs:
   auth_mode:
     description: Authentication mode used (app or app-user).
     value: ${{ steps.validate-auth-mode.outputs.mode }}
+  app_slug:
+    description: Authenticated GitHub App slug for bot commit identity.
+    value: ${{ steps.app-token.outputs.app-slug }}
+  app_id:
+    description: Authenticated GitHub App ID for bot commit identity.
+    value: ${{ steps.app-token.outputs.app-id }}
 
 runs:
   using: composite
@@ -121,7 +127,7 @@ runs:
         repositories: ${{ inputs.repositories }}
         permission-administration: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'repository-cleanup') && 'write' || '' }}
         permission-contents: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'weekly-tooling') && 'write' || '' }}
-        permission-issues: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup') && 'write' || '' }}
+        permission-issues: ${{ inputs.permission_profile == 'weekly-tooling' && 'read' || ((inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup') && 'write' || '') }}
         permission-organization-administration: ${{ inputs.permission_profile == 'repository-creation' && 'write' || '' }}
         permission-pull-requests: ${{ inputs.permission_profile == 'weekly-tooling' && 'write' || '' }}
 

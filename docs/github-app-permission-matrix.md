@@ -10,12 +10,12 @@ Personal repository creation uses an explicitly supplied GitHub App user access 
 identity is checked against the target owner. The resolver passes permissions explicitly so an
 installation token does not inherit unused permissions from the App installation.
 
-| Permission profile    | Explicit App permissions                                                                          | Used for                                         |
-| --------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `repository-creation` | `organization-administration: write`, `administration: write`, `contents: write`, `issues: write` | Create and configure a repository.               |
-| `repository-setup`    | `administration: write`, `contents: write`, `issues: write`                                       | Configure an existing repository.                |
-| `repository-cleanup`  | `administration: write`                                                                           | Delete a failed repository.                      |
-| `weekly-tooling`      | `contents: write`, `pull-requests: write`                                                         | Commit tooling updates and manage the weekly PR. |
+| Permission profile    | Explicit App permissions                                                                          | Used for                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `repository-creation` | `organization-administration: write`, `administration: write`, `contents: write`, `issues: write` | Create and configure a repository.                        |
+| `repository-setup`    | `administration: write`, `contents: write`, `issues: write`                                       | Configure an existing repository.                         |
+| `repository-cleanup`  | `administration: write`                                                                           | Delete a failed repository.                               |
+| `weekly-tooling`      | `contents: write`, `issues: read`, `pull-requests: write`                                         | Commit tooling updates, labels, and manage the weekly PR. |
 
 | App permission                | Level | Endpoint or operation                                                      | Why it is required                                                                                     |
 | ----------------------------- | ----- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -28,6 +28,21 @@ installation token does not inherit unused permissions from the App installation
 `metadata: read` is automatically available for repository access. Members, actions,
 security-events, and unrelated-owner permissions are not granted by this resolver. Pull-request
 write permission is granted only by the `weekly-tooling` profile.
+
+The weekly maintenance workflow requires the non-secret
+`BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` variable. It creates the commit through
+the Git database API using the authenticated Maintenance Writer App token and
+includes a Signed-off-by trailer in the commit message; it does not create a
+local commit, persist a token in Git configuration, or accept a custom signing
+key. The workflow rejects any resulting commit that GitHub does not report as
+`verified` with reason `valid`.
+
+Configure these values in the protected `production-maintenance` GitHub
+Environment: `BOOTSTRAP_APP_CLIENT_ID` and
+`BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` as variables, and
+`BOOTSTRAP_APP_PRIVATE_KEY` as a secret. The credential names are stable
+across deployment Environments; Environment scope and protection rules define
+which deployment may use them.
 
 Creation installation tokens intentionally omit a repository list because the target repository
 does not exist yet. Existing-repository setup, cleanup, and weekly tooling callers pass the

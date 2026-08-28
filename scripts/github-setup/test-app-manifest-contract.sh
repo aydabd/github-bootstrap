@@ -12,34 +12,44 @@ trust_boundary_doc="$manifest_dir/../github-app-trust-boundaries.md"
 }
 grep -Fq "source \"\$script_dir/gh-common.sh\"" "$helper"
 
-grep -Fq '"administration": "write"' "$helper"
-grep -Fq '"contents": "write"' "$helper"
-grep -Fq '"issues": "write"' "$helper"
-grep -Fq '"metadata": "read"' "$helper"
-if grep -Fq 'organization-administration' "$helper"; then
-    echo "personal manifest must not request organization administration" >&2
-    exit 1
-fi
 grep -Fq 'app-manifests' "$helper"
+grep -Fq 'start ROLE' "$helper"
+grep -Fq 'url ROLE' "$helper"
 grep -Fq 'umask 077' "$helper"
 grep -Fq 'chmod 600' "$helper"
 grep -Fq 'private key' "$helper"
 grep -Fq "jq -j '.client_id'" "$helper"
 grep -Fq "jq -j '.client_secret'" "$helper"
-manifest_url="$("$helper" url 'name" injection' $'https://example.test/callback\nsecond')"
+manifest_url="$("$helper" url repository-bootstrap-provisioner $'https://example.test/callback\nsecond')"
 MANIFEST_URL="$manifest_url" python3 - << 'PY'
 import json
 import os
 import urllib.parse
 
 manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MANIFEST_URL"]).query)["manifest"][0])
-assert manifest["name"] == 'name" injection'
+assert manifest["name"] == "Repository Bootstrap Provisioner"
 assert manifest["redirect_url"] == "https://example.test/callback\nsecond"
 assert manifest["default_permissions"] == {
     "administration": "write",
     "contents": "write",
     "issues": "write",
     "metadata": "read",
+}
+PY
+
+writer_manifest_url="$($helper start repository-maintenance-writer 'https://example.test/callback')"
+MANIFEST_URL="$writer_manifest_url" python3 - << 'PY'
+import json
+import os
+import urllib.parse
+
+manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MANIFEST_URL"]).query)["manifest"][0])
+assert manifest["name"] == "Repository Maintenance Writer"
+assert manifest["redirect_url"] == "https://example.test/callback"
+assert manifest["default_permissions"] == {
+    "contents": "write",
+    "metadata": "read",
+    "pull_requests": "write",
 }
 PY
 if grep -Eq 'echo.*(pem|client_secret|private_key)' "$helper"; then
