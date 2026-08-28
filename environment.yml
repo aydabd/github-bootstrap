@@ -5,18 +5,18 @@ channels:
   - nodefaults
 dependencies:
   # ── Python runtime (required by pre-commit) ─────────────────────────────────
-  - python=3.14.6
+  - python=3.14.7
 
   # ── Node.js runtime (required by npm tooling tasks) ───────────────────────
   - nodejs=26.6.0
 
   # ── Go runtime (required by tooling updater CLI) ─────────────────────────────
-  - go=1.26.6
+  - go=1.26.7
 
   # ── Pre-commit framework ────────────────────────────────────────────────────
   - pre-commit=4.6.2
   # ── Linting / formatting tools (used as language: system hooks) ─────────────
-  - prettier=3.9.3 # JSON / YAML / Markdown formatter
+  - prettier=3.9.6 # JSON / YAML / Markdown formatter
   - markdownlint-cli=0.49.1 # Markdown linter
   - yamllint=1.38.0 # YAML linter
   - taplo=0.10.0 # TOML formatter + validator
@@ -25,7 +25,7 @@ dependencies:
   - actionlint=1.7.12 # GitHub Actions workflow linter
   - zizmor=1.29.0 # GitHub Actions security linter
   - libxml2=2.15.3 # provides xmllint binary for XML validation
-  - terraform=1.15.6 # Terraform (includes terraform fmt)
+  - terraform=1.15.9 # Terraform (includes terraform fmt)
   - jq=1.8.2 # JSON processor
   - coreutils=9.11 # GNU coreutils for consistent cross-platform behaviour
 

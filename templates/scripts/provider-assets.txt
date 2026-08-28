@@ -1,8 +1,8 @@
 # provider os arch url sha256
-mise linux x64 https://github.com/jdx/mise/releases/download/v2026.8.6/mise-v2026.8.6-linux-x64 96f6f1f416d868b78addd22746eefc7f4bf7820c6a3afa392a9f653f708c1644
-mise linux arm64 https://github.com/jdx/mise/releases/download/v2026.8.6/mise-v2026.8.6-linux-arm64 f9bd051912beb8861bf248289bfb2d8c281ff00fcdf1e44d730b8ea7e859e9a4
-mise macos x64 https://github.com/jdx/mise/releases/download/v2026.8.6/mise-v2026.8.6-macos-x64 f11cf5b3a5992ecd63a33cb0839fd253119fe171a8a4036aa534fd3c798b2cdc
-mise macos arm64 https://github.com/jdx/mise/releases/download/v2026.8.6/mise-v2026.8.6-macos-arm64 163b4ff8c2d1ed29776970c6217f343f0944d55cf51f0d662de5b3bed260e170
+mise linux x64 https://github.com/jdx/mise/releases/download/v2026.8.14/mise-v2026.8.14-linux-x64 7cd12d6002d5b3c83a89cad79023712faf2a36f9e8b2ee2061dac5135b3de0ed
+mise linux arm64 https://github.com/jdx/mise/releases/download/v2026.8.14/mise-v2026.8.14-linux-arm64 bc2c447a7e498b0bed0a421cc2101b407fef09a3195670d35a4aa3f43cd868a1
+mise macos x64 https://github.com/jdx/mise/releases/download/v2026.8.14/mise-v2026.8.14-macos-x64 02fdcaac111c2eb056432172c1c5c469b335dfd95115140c3c5524a24a889c12
+mise macos arm64 https://github.com/jdx/mise/releases/download/v2026.8.14/mise-v2026.8.14-macos-arm64 ba93b3fe7e47964e4392d40c8b7bfa5740e8c2a0a575e3e86268e9764082ed3e
 micromamba linux x64 https://github.com/mamba-org/micromamba-releases/releases/download/2.9.0-0/micromamba-linux-64 366cd9cd8be14df1ab8ed50352a82111082a36686b2d389fdb79a92c3fafb3e3
 micromamba linux arm64 https://github.com/mamba-org/micromamba-releases/releases/download/2.9.0-0/micromamba-linux-aarch64 9f93b974adcb4d166996af969b6cd371287d1a3e52733704727884d9b74cb7a7
 micromamba macos x64 https://github.com/mamba-org/micromamba-releases/releases/download/2.9.0-0/micromamba-osx-64 1e71054bb3ac9a076e21f7ec48acfef536f9b3f1408f371a942784bf5ef83d8a

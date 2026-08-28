@@ -5,7 +5,7 @@ shellcheck = "0.11.0"
 actionlint = "1.7.12"
 shfmt = "3.13.1"
 go = "{{GO_VERSION}}"
-terraform = "1.15.6"
+terraform = "1.15.9"
 taplo = "0.10.0"
 
 [tasks.install-tools]
