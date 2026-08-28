@@ -15,7 +15,7 @@ installation token does not inherit unused permissions from the App installation
 | `repository-creation` | `organization-administration: write`, `administration: write`, `contents: write`, `issues: write` | Create and configure a repository.                        |
 | `repository-setup`    | `administration: write`, `contents: write`, `issues: write`                                       | Configure an existing repository.                         |
 | `repository-cleanup`  | `administration: write`                                                                           | Delete a failed repository.                               |
-| `weekly-tooling`      | `contents: write`, `issues: write`, `pull-requests: write`                                         | Commit tooling updates, labels, and manage the weekly PR. |
+| `weekly-tooling`      | `contents: write`, `issues: write`, `pull-requests: write`                                        | Commit tooling updates, labels, and manage the weekly PR. |
 
 | App permission                | Level | Endpoint or operation                                                      | Why it is required                                                                                     |
 | ----------------------------- | ----- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
