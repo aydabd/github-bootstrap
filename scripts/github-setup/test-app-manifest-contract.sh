@@ -48,6 +48,7 @@ assert manifest["name"] == "Repository Maintenance Writer"
 assert manifest["redirect_url"] == "https://example.test/callback"
 assert manifest["default_permissions"] == {
     "contents": "write",
+    "issues": "write",
     "metadata": "read",
     "pull_requests": "write",
 }
@@ -85,6 +86,7 @@ expected = {
         "name": "Repository Maintenance Writer",
         "default_permissions": {
             "contents": "write",
+            "issues": "write",
             "metadata": "read",
             "pull_requests": "write",
         },

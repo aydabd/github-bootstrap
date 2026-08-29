@@ -5,6 +5,7 @@
   "default_events": [],
   "default_permissions": {
     "contents": "write",
+    "issues": "write",
     "metadata": "read",
     "pull_requests": "write"
   }

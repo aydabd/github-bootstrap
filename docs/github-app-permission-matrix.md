@@ -17,6 +17,7 @@ installation token does not inherit unused permissions from the App installation
 | `repository-cleanup`  | `administration: write`                                                                           | Delete a failed repository.                                    |
 | `e2e-lifecycle`       | `administration: write`                                                                           | Archive generated E2E repositories in the isolated E2E owner.  |
 | `weekly-tooling`      | `contents: write`, `issues: write`, `pull-requests: write`                                        | Commit tooling updates, labels, and manage the weekly PR.      |
+| `maintenance-labeling`| `issues: write`, `pull-requests: read`                                                            | Classify trusted Dependabot and release-please PRs.            |
 | `workflow-approval`   | `actions: write`, `pull-requests: read`                                                           | Approve eligible `action_required` workflow runs only.         |
 | `maintenance-review`  | `pull-requests: write`                                                                            | Approve eligible maintenance PRs and enable squash auto-merge. |
 
