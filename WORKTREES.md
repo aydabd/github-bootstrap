@@ -48,6 +48,17 @@ Use `git worktree prune --dry-run` before pruning stale worktree metadata.
 Use the `gh-stack` extension for stacked pull requests. Install it with
 `gh extension install github/gh-stack`.
 
+Before any GitHub operation, verify the intended Muximate profile and account:
+
+    muximate profile
+    gh auth status
+    gh api user --jq .login
+
+The profile must be the one intended for this repository. Do not diagnose an
+account mismatch from a `gh stack` error alone: `gh stack` is public-preview
+software, and its GraphQL PR-creation path can fail for an otherwise valid
+personal account with an Enterprise Managed User authorization error.
+
 Use `gh stack init`, `add`, `submit`, `view`, `sync`, `rebase`, and `push` for
 local stack management. Use `gh stack link` and `gh stack checkout` for PRs
 that already exist on GitHub.
@@ -60,6 +71,21 @@ check or unresolved review unless the repository policy explicitly permits it.
 Stack metadata is public-preview functionality and can become stale after the
 trunk PR merges. Run `gh stack sync`, then `gh stack rebase` and `gh stack push`
 before treating a stack as ready.
+
+If `gh stack submit` pushes the branches but fails while creating the remote
+PR, keep the local branches and create the PRs with ordinary GitHub CLI
+commands. Use the repository pull-request template from
+`.github/pull_request_template.md`, preserve the stack order, and set each PR's
+base explicitly (the bottom PR targets `main`; each later PR targets the PR
+immediately below it). For example:
+
+    git push origin <branch-name>
+    gh pr create --base main --head <branch-name> --title "..." --body-file <completed-template>
+
+This fallback is supported for both personal and enterprise accounts. Do not
+retry `gh stack submit` repeatedly after a `createPullRequest` authorization
+failure; first verify the profile, then use the ordinary PR flow. Optionally
+run `gh stack link` after the PRs exist if remote stack metadata is needed.
 
 ## Cleanup after merge
 
