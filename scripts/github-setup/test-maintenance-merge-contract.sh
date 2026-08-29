@@ -30,7 +30,7 @@ tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
 cat > "$tmp_dir/pr.json" << 'EOF'
-{"number":42,"state":"open","draft":false,"head":{"sha":"current-sha","repo":{"full_name":"aydabd/github-bootstrap"}},"base":{"repo":{"full_name":"aydabd/github-bootstrap"}},"user":{"login":"maintenance-writer[bot]"}}
+{"number":42,"state":"open","draft":false,"head":{"sha":"current-sha","repo":{"full_name":"aydabd/github-bootstrap"}},"base":{"ref":"main","repo":{"full_name":"aydabd/github-bootstrap"}},"user":{"login":"maintenance-writer[bot]"}}
 EOF
 cat > "$tmp_dir/checks.json" << 'EOF'
 [{"name":"Quality","state":"SUCCESS"},{"name":"Maintenance safety","state":"SUCCESS"}]
@@ -45,10 +45,24 @@ EOF
 bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"
 
+sed 's/maintenance-writer\[bot\]/release-please[bot]/; s/"user":/"labels":[{"name":"autorelease: pending"}],"user":/' \
+    "$tmp_dir/pr.json" > "$tmp_dir/release-pr.json"
+sed 's/"automation: maintenance"/"automation: maintenance"}, {"name":"autorelease: pending"/' \
+    "$tmp_dir/labels.json" > "$tmp_dir/release-labels.json"
+bash "$validator" "$tmp_dir/release-pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
+    "$tmp_dir/release-labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"
+
 sed 's/current-sha/stale-sha/' "$tmp_dir/pr.json" > "$tmp_dir/stale-pr.json"
 if bash "$validator" "$tmp_dir/stale-pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"; then
     echo "stale PR head was accepted" >&2
+    exit 1
+fi
+
+sed 's/"ref":"main"/"ref":"develop"/' "$tmp_dir/pr.json" > "$tmp_dir/non-main-pr.json"
+if bash "$validator" "$tmp_dir/non-main-pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
+    "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"; then
+    echo "non-main PR base was accepted" >&2
     exit 1
 fi
 

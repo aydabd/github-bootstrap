@@ -1,0 +1,62 @@
+name: Classify Maintenance Pull Request
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  classify:
+    name: Classify trusted automation PR
+    if: github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-24.04
+    environment: production-maintenance
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+    steps:
+      - name: Check out validation helper
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          ref: main
+          sparse-checkout: |
+            scripts/github-setup/validate-maintenance-pr.sh
+            .github/actions/resolve-gh-token/action.yml
+            scripts/github-setup/gh-common.sh
+            scripts/github-setup/validate-app-auth.sh
+
+      - name: Resolve Writer App token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: maintenance-labeling
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Classify and label trusted automation PR
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          FULL_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr_file="$RUNNER_TEMP/pull-request.json"
+          gh api "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$pr_file"
+          classification="$(bash scripts/github-setup/validate-maintenance-pr.sh "$pr_file")"
+
+          gh pr edit "$PR_NUMBER" \
+            --add-label "automation: maintenance" \
+            --add-label "automation: validating"
+          if [ "$classification" = "dependabot" ]; then
+            gh pr edit "$PR_NUMBER" --add-label dependencies
+          fi

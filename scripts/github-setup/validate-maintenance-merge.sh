@@ -30,11 +30,11 @@ fi
 
 jq -e --arg repository "$full_repository" --arg expected_sha "$expected_sha" \
     --arg writer_app_slug "$writer_app_slug" --arg reviewer_app_slug "$reviewer_app_slug" '
-    .state == "open" and .draft == false and
+    .state == "open" and .draft == false and .base.ref == "main" and
     .base.repo.full_name == $repository and
     .head.repo.full_name == $repository and
     .head.sha == $expected_sha and
-    (.user.login == "dependabot[bot]" or .user.login == ($writer_app_slug + "[bot]")) and
+    (.user.login == "dependabot[bot]" or .user.login == ($writer_app_slug + "[bot]") or ((.user.login == "release-please[bot]" or .user.login == "github-actions[bot]") and any(.labels[]?; .name == "autorelease: pending"))) and
     .user.login != ($reviewer_app_slug + "[bot]")
 ' "$pr_file" > /dev/null || {
     echo "pull request is not eligible for maintenance merge" >&2

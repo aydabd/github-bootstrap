@@ -363,6 +363,14 @@ Automation is provided by `.github/workflows/weekly-tooling-updates.yml`:
 - enables PR auto-merge so GitHub merges only after required checks, required approvals,
   and repository merge requirements are satisfied
 
+Dependabot and release-please pull requests use the same maintenance lifecycle.
+`.github/workflows/classify-maintenance-pr.yml` recognizes only same-repository
+Dependabot PRs and release-please PRs carrying `autorelease: pending`, then
+adds `automation: maintenance` and `automation: validating`. The separate
+Reviewer App validates workflow approvals, Copilot review, E2E requirements,
+and required checks before approving and enabling squash auto-merge. Release
+labels and dependency labels are preserved; labels never bypass rulesets.
+
 Each tooling run emits runner-local JSON metadata with `schema_version: 1` and
 one record per changed package or tool. Records contain `package`,
 `old_version`, `new_version`, `update_type`, `risk`, and affected `files`.
