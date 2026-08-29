@@ -29,16 +29,16 @@ assert_not_contains() {
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
-cat > "$tmp_dir/pr.json" <<'EOF'
+cat > "$tmp_dir/pr.json" << 'EOF'
 {"number":42,"state":"open","draft":false,"head":{"sha":"current-sha","repo":{"full_name":"aydabd/github-bootstrap"}},"base":{"repo":{"full_name":"aydabd/github-bootstrap"}},"user":{"login":"maintenance-writer[bot]"}}
 EOF
-cat > "$tmp_dir/checks.json" <<'EOF'
+cat > "$tmp_dir/checks.json" << 'EOF'
 [{"name":"Quality","state":"SUCCESS"},{"name":"Maintenance safety","state":"SUCCESS"}]
 EOF
-cat > "$tmp_dir/reviews.json" <<'EOF'
+cat > "$tmp_dir/reviews.json" << 'EOF'
 [{"user":{"login":"maintenance-writer[bot]"},"state":"COMMENTED"}]
 EOF
-cat > "$tmp_dir/labels.json" <<'EOF'
+cat > "$tmp_dir/labels.json" << 'EOF'
 [{"name":"automation: maintenance"},{"name":"automation: validating"}]
 EOF
 
