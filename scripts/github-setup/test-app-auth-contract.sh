@@ -64,6 +64,10 @@ assert_contains "permission_profile: maintenance-labeling" "$repo_root/.github/w
 assert_contains "validate-maintenance-pr.sh" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 assert_contains 'automation: maintenance' "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 assert_contains 'automation: validating' "$repo_root/.github/workflows/classify-maintenance-pr.yml"
+template_classifier="$repo_root/templates/.github/workflows/classify-maintenance-pr.yml"
+assert_contains "actions/create-github-app-token" "$template_classifier"
+assert_contains ".github/scripts/validate-maintenance-pr.sh" "$template_classifier"
+[ -x "$repo_root/templates/.github/scripts/validate-maintenance-pr.sh" ]
 
 for workflow in create-repository.yml terraform-create-repository.yml; do
     workflow_path="$repo_root/.github/workflows/$workflow"

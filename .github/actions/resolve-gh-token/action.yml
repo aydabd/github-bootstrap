@@ -74,33 +74,40 @@ runs:
 
         case "$target_owner_type" in
           User)
-            if [ -z "$APP_USER_TOKEN" ]; then
-              echo "::error::Personal-account creation requires BOOTSTRAP_APP_USER_TOKEN; installation credentials cannot create a personal repository." >&2
-              exit 1
-            fi
-            case "$PERMISSION_PROFILE" in
-              repository-creation|repository-cleanup) ;;
-              *)
-                echo "::error::GitHub App user access tokens are supported only for repository creation and its explicitly scoped cleanup." >&2
+            if [ -n "$APP_USER_TOKEN" ]; then
+              case "$PERMISSION_PROFILE" in
+                repository-creation|repository-cleanup) ;;
+                *)
+                  echo "::error::GitHub App user access tokens are supported only for repository creation and its explicitly scoped cleanup." >&2
+                  exit 1
+                  ;;
+              esac
+              case "$APP_USER_TOKEN" in
+                ghu_*) ;;
+                *)
+                  echo "::error::Personal-account creation requires a GitHub App user access token (ghu_ prefix); PATs and other token types are rejected." >&2
+                  exit 1
+                  ;;
+              esac
+              authenticated_user="$(GH_TOKEN="$APP_USER_TOKEN" gh api /user --jq '.login')"
+              normalized_user="$(printf '%s' "$authenticated_user" | tr '[:upper:]' '[:lower:]')"
+              normalized_target="$(printf '%s' "$TARGET_OWNER" | tr '[:upper:]' '[:lower:]')"
+              if [ "$normalized_user" != "$normalized_target" ]; then
+                echo "::error::GitHub App user token belongs to '$authenticated_user', not target owner '$TARGET_OWNER'." >&2
                 exit 1
-                ;;
-            esac
-            case "$APP_USER_TOKEN" in
-              ghu_*) ;;
-              *)
-                echo "::error::Personal-account creation requires a GitHub App user access token (ghu_ prefix); PATs and other token types are rejected." >&2
-                exit 1
-                ;;
-            esac
-            authenticated_user="$(GH_TOKEN="$APP_USER_TOKEN" gh api /user --jq '.login')"
-            normalized_user="$(printf '%s' "$authenticated_user" | tr '[:upper:]' '[:lower:]')"
-            normalized_target="$(printf '%s' "$TARGET_OWNER" | tr '[:upper:]' '[:lower:]')"
-            if [ "$normalized_user" != "$normalized_target" ]; then
-              echo "::error::GitHub App user token belongs to '$authenticated_user', not target owner '$TARGET_OWNER'." >&2
-              exit 1
+              fi
+              AUTH_MODE=app-user bash ./scripts/github-setup/validate-app-auth.sh
+              echo "mode=app-user" >> "$GITHUB_OUTPUT"
+            else
+              case "$PERMISSION_PROFILE" in
+                repository-creation|repository-cleanup)
+                  echo "::error::Personal-account creation requires BOOTSTRAP_APP_USER_TOKEN; installation credentials are for existing-repository operations only." >&2
+                  exit 1
+                  ;;
+              esac
+              AUTH_MODE=app bash ./scripts/github-setup/validate-app-auth.sh
+              echo "mode=app" >> "$GITHUB_OUTPUT"
             fi
-            AUTH_MODE=app-user bash ./scripts/github-setup/validate-app-auth.sh
-            echo "mode=app-user" >> "$GITHUB_OUTPUT"
             ;;
           Organization)
             if [ -n "$APP_USER_TOKEN" ]; then

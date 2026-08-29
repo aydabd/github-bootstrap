@@ -30,7 +30,7 @@ fi
 
 jq -e --arg repository "$full_repository" --arg expected_sha "$expected_sha" \
     --arg writer_app_slug "$writer_app_slug" --arg reviewer_app_slug "$reviewer_app_slug" '
-    .state == "open" and .draft == false and
+    .state == "open" and .draft == false and .base.ref == "main" and
     .base.repo.full_name == $repository and
     .head.repo.full_name == $repository and
     .head.sha == $expected_sha and

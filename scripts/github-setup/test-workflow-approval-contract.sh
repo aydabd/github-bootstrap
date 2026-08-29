@@ -14,7 +14,7 @@ cat > "$run_file" << 'EOF'
 {"id":123,"name":"Quality","path":".github/workflows/quality.yml","event":"pull_request","status":"completed","conclusion":"action_required","head_sha":"abc123","repository":{"full_name":"acme/project"},"head_repository":{"full_name":"acme/project"},"pull_requests":[{"number":7}]}
 EOF
 cat > "$pr_file" << 'EOF'
-{"number":7,"state":"open","user":{"login":"dependabot[bot]"},"head":{"sha":"abc123","repo":{"full_name":"acme/project"}},"base":{"repo":{"full_name":"acme/project"}}}
+{"number":7,"state":"open","user":{"login":"dependabot[bot]"},"head":{"sha":"abc123","repo":{"full_name":"acme/project"}},"base":{"ref":"main","repo":{"full_name":"acme/project"}}}
 EOF
 printf '%s\n' README.md > "$files_file"
 
@@ -26,7 +26,7 @@ OWNER=acme REPOSITORY=project WRITER_APP_SLUG=maintenance-writer \
     "$validator" "$run_file" "$tmp_dir/writer-pr.json" "$files_file"
 
 cat > "$tmp_dir/release-pr.json" << 'EOF'
-{"number":7,"state":"open","user":{"login":"release-please[bot]"},"head":{"sha":"abc123","repo":{"full_name":"acme/project"}},"base":{"repo":{"full_name":"acme/project"}},"labels":[{"name":"autorelease: pending"}]}
+{"number":7,"state":"open","user":{"login":"release-please[bot]"},"head":{"sha":"abc123","repo":{"full_name":"acme/project"}},"base":{"ref":"main","repo":{"full_name":"acme/project"}},"labels":[{"name":"autorelease: pending"}]}
 EOF
 OWNER=acme REPOSITORY=project WRITER_APP_SLUG=maintenance-writer \
     "$validator" "$run_file" "$tmp_dir/release-pr.json" "$files_file"
@@ -37,7 +37,7 @@ if OWNER=acme REPOSITORY=project WRITER_APP_SLUG=maintenance-writer \
     exit 1
 fi
 
-for mutation in conclusion fork sha author workflow workflow-name event repository pr-number stale workflow-change; do
+for mutation in conclusion fork sha author workflow workflow-name event repository pr-number stale base workflow-change; do
     cp "$run_file" "$tmp_dir/mutated-run.json"
     cp "$pr_file" "$tmp_dir/mutated-pr.json"
     cp "$files_file" "$tmp_dir/mutated-files.txt"
@@ -52,6 +52,7 @@ for mutation in conclusion fork sha author workflow workflow-name event reposito
         repository) sed 's#acme/project#other/project#g' "$run_file" > "$tmp_dir/mutated-run.json" ;;
         pr-number) sed 's/"number":7/"number":8/g' "$run_file" > "$tmp_dir/mutated-run.json" ;;
         stale) sed 's/"state":"open"/"state":"closed"/' "$pr_file" > "$tmp_dir/mutated-pr.json" ;;
+        base) sed 's/"ref":"main"/"ref":"develop"/' "$pr_file" > "$tmp_dir/mutated-pr.json" ;;
         workflow-change) printf '%s\n' .github/workflows/quality.yml > "$tmp_dir/mutated-files.txt" ;;
     esac
     if env OWNER=acme REPOSITORY=project WRITER_APP_SLUG=maintenance-writer \

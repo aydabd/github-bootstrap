@@ -24,27 +24,22 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-          ref: main
-          sparse-checkout: |
-            scripts/github-setup/validate-maintenance-pr.sh
-            .github/actions/resolve-gh-token/action.yml
-            scripts/github-setup/gh-common.sh
-            scripts/github-setup/validate-app-auth.sh
+          sparse-checkout: .github/scripts/validate-maintenance-pr.sh
 
-      - name: Resolve Writer App token
-        id: resolve-token
-        uses: ./.github/actions/resolve-gh-token
+      - name: Create Maintenance Writer App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
-          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
-          app_owner: ${{ github.repository_owner }}
-          target_owner: ${{ github.repository_owner }}
-          permission_profile: maintenance-labeling
+          client-id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          permission-issues: write
+          permission-pull-requests: read
 
       - name: Classify and label trusted automation PR
         env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           FULL_REPOSITORY: ${{ github.repository }}
         shell: bash
@@ -52,7 +47,7 @@ jobs:
           set -euo pipefail
           pr_file="$RUNNER_TEMP/pull-request.json"
           gh api "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$pr_file"
-          classification="$(bash scripts/github-setup/validate-maintenance-pr.sh "$pr_file")"
+          classification="$(bash .github/scripts/validate-maintenance-pr.sh "$pr_file")"
 
           gh pr edit "$PR_NUMBER" \
             --add-label "automation: maintenance" \

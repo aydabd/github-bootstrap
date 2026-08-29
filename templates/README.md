@@ -97,6 +97,14 @@ The generated repository also includes an optional
 Dependabot or other automation-authored PR needs an explicit
 `@coderabbitai review` request.
 
+Dependabot and release-please PRs can use the generated
+`.github/workflows/classify-maintenance-pr.yml` workflow. It applies the
+maintenance lifecycle labels only to same-repository automation PRs, while
+preserving `autorelease: pending` and dependency labels. The separate Writer
+and Reviewer App credentials must be configured in the protected
+`production-maintenance` environment; labels never bypass required checks or
+repository rulesets.
+
 Useful commands:
 
 ```bash
