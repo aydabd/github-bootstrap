@@ -25,6 +25,18 @@ sed 's/dependabot\[bot\]/maintenance-writer[bot]/' "$pr_file" > "$tmp_dir/writer
 OWNER=acme REPOSITORY=project WRITER_APP_SLUG=maintenance-writer \
     "$validator" "$run_file" "$tmp_dir/writer-pr.json" "$files_file"
 
+cat > "$tmp_dir/release-pr.json" << 'EOF'
+{"number":7,"state":"open","user":{"login":"release-please[bot]"},"head":{"sha":"abc123","repo":{"full_name":"acme/project"}},"base":{"repo":{"full_name":"acme/project"}},"labels":[{"name":"autorelease: pending"}]}
+EOF
+OWNER=acme REPOSITORY=project WRITER_APP_SLUG=maintenance-writer \
+    "$validator" "$run_file" "$tmp_dir/release-pr.json" "$files_file"
+sed 's/autorelease: pending/dependencies/' "$tmp_dir/release-pr.json" > "$tmp_dir/release-without-label.json"
+if OWNER=acme REPOSITORY=project WRITER_APP_SLUG=maintenance-writer \
+    "$validator" "$run_file" "$tmp_dir/release-without-label.json" "$files_file"; then
+    echo "release-please PR without lifecycle label was accepted" >&2
+    exit 1
+fi
+
 for mutation in conclusion fork sha author workflow workflow-name event repository pr-number stale workflow-change; do
     cp "$run_file" "$tmp_dir/mutated-run.json"
     cp "$pr_file" "$tmp_dir/mutated-pr.json"

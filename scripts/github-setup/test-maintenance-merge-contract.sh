@@ -45,6 +45,13 @@ EOF
 bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"
 
+sed 's/maintenance-writer\[bot\]/release-please[bot]/; s/"user":/"labels":[{"name":"autorelease: pending"}],"user":/' \
+    "$tmp_dir/pr.json" > "$tmp_dir/release-pr.json"
+sed 's/"automation: maintenance"/"automation: maintenance"}, {"name":"autorelease: pending"/' \
+    "$tmp_dir/labels.json" > "$tmp_dir/release-labels.json"
+bash "$validator" "$tmp_dir/release-pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
+    "$tmp_dir/release-labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"
+
 sed 's/current-sha/stale-sha/' "$tmp_dir/pr.json" > "$tmp_dir/stale-pr.json"
 if bash "$validator" "$tmp_dir/stale-pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"; then

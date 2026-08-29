@@ -23,7 +23,7 @@ jq -e --arg full_repository "$full_repository" '.status == "completed" and .conc
     exit 1
 }
 
-jq -e --arg full_repository "$full_repository" --arg writer_app_slug "$writer_app_slug" --slurpfile run "$run_file" '.state == "open" and .base.repo.full_name == $full_repository and .head.repo.full_name == $full_repository and .head.sha == $run[0].head_sha and .number == $run[0].pull_requests[0].number and (.user.login == "dependabot[bot]" or .user.login == ($writer_app_slug + "[bot]"))' "$pr_file" > /dev/null || {
+jq -e --arg full_repository "$full_repository" --arg writer_app_slug "$writer_app_slug" --slurpfile run "$run_file" '.state == "open" and .base.repo.full_name == $full_repository and .head.repo.full_name == $full_repository and .head.sha == $run[0].head_sha and .number == $run[0].pull_requests[0].number and (.user.login == "dependabot[bot]" or .user.login == ($writer_app_slug + "[bot]") or ((.user.login == "release-please[bot]" or .user.login == "github-actions[bot]") and any(.labels[]?; .name == "autorelease: pending")))' "$pr_file" > /dev/null || {
     echo "pull request is not eligible for workflow approval" >&2
     exit 1
 }
