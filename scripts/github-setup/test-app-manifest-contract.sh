@@ -37,7 +37,7 @@ assert manifest["default_permissions"] == {
 }
 PY
 
-writer_manifest_url="$($helper start repository-maintenance-writer 'https://example.test/callback')"
+writer_manifest_url="$($helper url repository-maintenance-writer 'https://example.test/callback')"
 MANIFEST_URL="$writer_manifest_url" python3 - << 'PY'
 import json
 import os
@@ -53,6 +53,45 @@ assert manifest["default_permissions"] == {
     "pull_requests": "write",
 }
 PY
+tmp_dir="$(mktemp -d)"
+start_pid=""
+cleanup() {
+    if [ -n "$start_pid" ]; then
+        kill "$start_pid" 2> /dev/null || true
+        wait "$start_pid" 2> /dev/null || true
+    fi
+    rm -rf "$tmp_dir"
+}
+trap cleanup EXIT
+
+start_output="$tmp_dir/start-output"
+"$helper" start repository-maintenance-writer 'https://example.test/callback' > "$start_output" &
+start_pid=$!
+for _ in $(seq 1 50); do
+    if grep -Eq '^http://127\.0\.0\.1:[0-9]+/$' "$start_output" 2> /dev/null; then
+        break
+    fi
+    sleep 0.1
+done
+start_url="$(cat "$start_output" 2> /dev/null || true)"
+[[ "$start_url" =~ ^http://127\.0\.0\.1:[0-9]+/$ ]] || {
+    echo "start must print a local manifest form URL" >&2
+    exit 1
+}
+start_html="$(curl --fail --silent "$start_url")"
+START_HTML="$start_html" python3 - << 'PY'
+import os
+
+html = os.environ["START_HTML"]
+assert '<form method="post" action="https://github.com/settings/apps/new?state=' in html
+assert '<input type="text" name="manifest" id="manifest">' in html
+assert '<input type="submit" value="Continue to GitHub">' in html
+assert 'JSON.stringify({' in html
+assert 'Repository Maintenance Writer' in html
+assert 'https://example.test/callback' in html
+PY
+wait "$start_pid"
+start_pid=""
 if grep -Eq 'echo.*(pem|client_secret|private_key)' "$helper"; then
     echo "manifest helper must not print credentials" >&2
     exit 1

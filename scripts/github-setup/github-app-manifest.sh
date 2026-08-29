@@ -14,8 +14,8 @@ Usage:
     github-app-manifest.sh start ROLE [redirect-url]
     github-app-manifest.sh convert CODE OUTPUT_DIRECTORY
 
-The start command prints a GitHub UI App Manifest URL for ROLE, using the
-checked-in role manifest without printing credentials.
+The start command prints a temporary local URL for a POST form that submits
+the checked-in role manifest to GitHub without printing credentials.
 The convert command writes GitHub's returned App private key and metadata to
 0600 files in OUTPUT_DIRECTORY. It never prints credentials.
 EOF
@@ -41,7 +41,57 @@ main() {
                 echo "missing App manifest: $manifest_file" >&2
                 exit 1
             }
-            python3 - "$manifest_file" "$redirect_url" << 'PY'
+            if [ "$command_name" = "start" ]; then
+                python3 - "$manifest_file" "$redirect_url" << 'PY'
+import html
+import json
+import pathlib
+import secrets
+import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+manifest_path, redirect_url = sys.argv[1:]
+manifest = json.loads(pathlib.Path(manifest_path).read_text())
+manifest["redirect_url"] = redirect_url
+manifest_json = json.dumps(manifest, separators=(",", ":"))
+manifest_script = manifest_json.replace("<", "\\u003c")
+state = secrets.token_urlsafe(24)
+
+
+class ManifestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path != "/":
+            self.send_error(404)
+            return
+        body = f'''<!doctype html>
+<html><body>
+<form method="post" action="https://github.com/settings/apps/new?state={state}">
+<label for="manifest">GitHub App Manifest</label>
+<input type="text" name="manifest" id="manifest">
+<input type="submit" value="Continue to GitHub">
+</form>
+<script>
+const input = document.getElementById("manifest");
+input.value = JSON.stringify({manifest_script});
+</script></body></html>'''.encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+        threading.Thread(target=self.server.shutdown, daemon=True).start()
+
+    def log_message(self, format, *args):
+        pass
+
+
+server = HTTPServer(("127.0.0.1", 0), ManifestHandler)
+print(f"http://127.0.0.1:{server.server_port}/", flush=True)
+server.serve_forever()
+PY
+            else
+                python3 - "$manifest_file" "$redirect_url" << 'PY'
 import json
 import pathlib
 import sys
@@ -53,6 +103,7 @@ manifest["redirect_url"] = redirect_url
 encoded_manifest = urllib.parse.quote(json.dumps(manifest, separators=(",", ":")), safe="")
 print(f"https://github.com/settings/apps/new?manifest={encoded_manifest}")
 PY
+            fi
             ;;
         convert)
             require_command curl
