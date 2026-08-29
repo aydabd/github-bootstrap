@@ -6,6 +6,6 @@
   "default_permissions": {
     "actions": "write",
     "metadata": "read",
-    "pull_requests": "read"
+    "pull_requests": "write"
   }
 }

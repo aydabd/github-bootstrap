@@ -1,0 +1,114 @@
+name: Merge Maintenance Pull Request
+
+on:
+  workflow_run:
+    workflows:
+      - Maintenance safety
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  merge:
+    if: github.event.workflow_run.conclusion == 'success'
+    name: Approve and enable squash auto-merge
+    runs-on: ubuntu-24.04
+    environment: production-maintenance
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout validation helpers
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          ref: main
+          sparse-checkout: |
+            .github/actions/resolve-gh-token/action.yml
+            scripts/github-setup/gh-common.sh
+            scripts/github-setup/validate-app-auth.sh
+            scripts/github-setup/validate-maintenance-merge.sh
+
+      - name: Resolve Reviewer App token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_REVIEWER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: maintenance-review
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Verify resolved Reviewer App identity
+        env:
+          APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          APP_ID: ${{ steps.resolve-token.outputs.app_id }}
+          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$APP_SLUG" ] || { echo "Reviewer App slug was not resolved" >&2; exit 1; }
+          [[ "$APP_ID" =~ ^[0-9]+$ ]] || { echo "Reviewer App ID was not resolved" >&2; exit 1; }
+          [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected maintenance Reviewer App slug is not configured" >&2; exit 1; }
+          [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured maintenance Reviewer" >&2; exit 1; }
+
+      - name: Approve and enable squash auto-merge after fresh validation
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+          REVIEWER_APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$PR_NUMBER" ] || { echo "maintenance safety run has no pull request" >&2; exit 1; }
+          [ -n "$HEAD_SHA" ] || { echo "maintenance safety run has no head SHA" >&2; exit 1; }
+
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+
+          fetch_state() {
+            gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" > "$tmp_dir/pr.json"
+            gh pr checks "$PR_NUMBER" --required --json name,state > "$tmp_dir/checks.json" || true
+            gh api "/repos/$REPOSITORY/issues/$PR_NUMBER/labels?per_page=100" > "$tmp_dir/labels.json"
+            gh api --paginate --slurp "/repos/$REPOSITORY/pulls/$PR_NUMBER/reviews" > "$tmp_dir/review-pages.json"
+            jq '[.[][]]' "$tmp_dir/review-pages.json" > "$tmp_dir/reviews.json"
+          }
+
+          validate_state() {
+            local require_reviewer_approval="${1:-false}"
+            fetch_state
+            bash scripts/github-setup/validate-maintenance-merge.sh \
+              "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
+              "$tmp_dir/labels.json" "$REPOSITORY" "$HEAD_SHA" \
+              "$WRITER_APP_SLUG" "$REVIEWER_APP_SLUG" "$require_reviewer_approval"
+          }
+
+          validate_state
+          reviewer_login="${REVIEWER_APP_SLUG}[bot]"
+          if ! jq -e --arg reviewer_login "$reviewer_login" \
+              'any(.[]?; .user.login == $reviewer_login and .state == "APPROVED")' \
+              "$tmp_dir/reviews.json" > /dev/null; then
+            gh api --method POST "/repos/$REPOSITORY/pulls/$PR_NUMBER/reviews" \
+              -f event=APPROVE \
+              -f body="Maintenance gates passed for $HEAD_SHA; approved by the Reviewer App."
+          fi
+
+          validate_state true
+          node_id="$(jq -r '.node_id' "$tmp_dir/pr.json")"
+          [ -n "$node_id" ] && [ "$node_id" != "null" ] || {
+            echo "pull request node ID is missing" >&2
+            exit 1
+          }
+          # shellcheck disable=SC2016
+          gh api graphql \
+            -f query='mutation($pullRequestId:ID!,$mergeMethod:PullRequestMergeMethod!){enablePullRequestAutoMerge(input:{pullRequestId:$pullRequestId,mergeMethod:$mergeMethod}){pullRequest{autoMergeRequest{mergeMethod}}}}' \
+            -f pullRequestId="$node_id" \
+            -f mergeMethod=SQUASH

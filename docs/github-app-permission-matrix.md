@@ -10,14 +10,15 @@ Personal repository creation uses an explicitly supplied GitHub App user access 
 identity is checked against the target owner. The resolver passes permissions explicitly so an
 installation token does not inherit unused permissions from the App installation.
 
-| Permission profile    | Explicit App permissions                                                                          | Used for                                                      |
-| --------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `repository-creation` | `organization-administration: write`, `administration: write`, `contents: write`, `issues: write` | Create and configure a repository.                            |
-| `repository-setup`    | `administration: write`, `contents: write`, `issues: write`                                       | Configure an existing repository.                             |
-| `repository-cleanup`  | `administration: write`                                                                           | Delete a failed repository.                                   |
-| `e2e-lifecycle`       | `administration: write`                                                                           | Archive generated E2E repositories in the isolated E2E owner. |
-| `weekly-tooling`      | `contents: write`, `issues: write`, `pull-requests: write`                                        | Commit tooling updates, labels, and manage the weekly PR.     |
-| `workflow-approval`   | `actions: write`, `pull-requests: read`                                                           | Approve eligible `action_required` workflow runs only.        |
+| Permission profile    | Explicit App permissions                                                                          | Used for                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `repository-creation` | `organization-administration: write`, `administration: write`, `contents: write`, `issues: write` | Create and configure a repository.                             |
+| `repository-setup`    | `administration: write`, `contents: write`, `issues: write`                                       | Configure an existing repository.                              |
+| `repository-cleanup`  | `administration: write`                                                                           | Delete a failed repository.                                    |
+| `e2e-lifecycle`       | `administration: write`                                                                           | Archive generated E2E repositories in the isolated E2E owner.  |
+| `weekly-tooling`      | `contents: write`, `issues: write`, `pull-requests: write`                                        | Commit tooling updates, labels, and manage the weekly PR.      |
+| `workflow-approval`   | `actions: write`, `pull-requests: read`                                                           | Approve eligible `action_required` workflow runs only.         |
+| `maintenance-review`  | `pull-requests: write`                                                                            | Approve eligible maintenance PRs and enable squash auto-merge. |
 
 | App permission                | Level | Endpoint or operation                                                      | Why it is required                                                                                     |
 | ----------------------------- | ----- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -31,7 +32,7 @@ installation token does not inherit unused permissions from the App installation
 `metadata: read` is automatically available for repository access. Members, security-events,
 and unrelated-owner permissions are not granted by this resolver. The `actions: write`
 permission is granted only by the `workflow-approval` profile. Pull-request
-write permission is granted only by the `weekly-tooling` profile. Issues write permission is
+write permission is granted by the `weekly-tooling` and `maintenance-review` profiles. Issues write permission is
 limited to the weekly profile's idempotent pull-request label operations and the existing
 repository creation/setup profiles' repository label configuration.
 
