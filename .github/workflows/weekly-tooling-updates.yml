@@ -241,4 +241,4 @@ jobs:
             echo "Unknown update risk detected; leaving PR blocked without enabling auto-merge." >&2
             exit 0
           fi
-          gh pr merge "$pr_number" --auto --squash
+          echo "Maintenance safety will authorize the separate Reviewer App to approve and enable squash auto-merge."
