@@ -22,7 +22,7 @@ classification="$(jq -r --arg full_repository "$full_repository" '
 ' "$pr_file")"
 
 case "$classification" in
-    dependabot|release-please)
+    dependabot | release-please)
         printf '%s\n' "$classification"
         ;;
     *)

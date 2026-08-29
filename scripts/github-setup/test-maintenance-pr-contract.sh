@@ -6,10 +6,10 @@ validator="$script_dir/validate-maintenance-pr.sh"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
-cat > "$tmp_dir/dependabot.json" <<'EOF'
+cat > "$tmp_dir/dependabot.json" << 'EOF'
 {"state":"open","draft":false,"user":{"login":"dependabot[bot]"},"head":{"repo":{"full_name":"acme/project"}},"base":{"ref":"main","repo":{"full_name":"acme/project"}},"labels":[{"name":"dependencies"}]}
 EOF
-cat > "$tmp_dir/release-please.json" <<'EOF'
+cat > "$tmp_dir/release-please.json" << 'EOF'
 {"state":"open","draft":false,"user":{"login":"release-please[bot]"},"head":{"repo":{"full_name":"acme/project"}},"base":{"ref":"main","repo":{"full_name":"acme/project"}},"labels":[{"name":"autorelease: pending"}]}
 EOF
 

@@ -58,6 +58,10 @@ Environment and set `BOOTSTRAP_APP_CLIENT_ID` and
 `BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` as Environment variables alongside
 the `BOOTSTRAP_APP_PRIVATE_KEY` Environment secret. These names remain stable;
 the Environment identifies which deployment is authorized to use them.
+The same Writer App may use the narrower `maintenance-labeling` profile for
+the pull-request classifier; that profile grants only `issues: write` and
+`pull_requests: read` to apply lifecycle labels to trusted Dependabot and
+release-please PRs.
 Do not commit keys, include them in workflow inputs, print them, or reuse an
 E2E key in production. The production Reviewer key is a distinct secret from
 the Writer key and the E2E key. Client IDs may be non-secret configuration, but

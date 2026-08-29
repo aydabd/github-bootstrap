@@ -24,11 +24,13 @@
 ### Task 1: Add trusted automation PR classification
 
 **Files:**
+
 - Create: `scripts/github-setup/validate-maintenance-pr.sh`
 - Create: `scripts/github-setup/test-maintenance-pr-contract.sh`
 - Modify: `scripts/run-contract-tests.sh`
 
 **Interfaces:**
+
 - `validate-maintenance-pr.sh PR_JSON` exits zero only for an open, non-fork PR whose author is `dependabot[bot]`, or whose author is `release-please[bot]`/`github-actions[bot]` and whose labels include `autorelease: pending`.
 - On success it prints a tab-separated classification (`dependabot` or `release-please`) and exits non-zero with a stable diagnostic for invalid input.
 
@@ -43,6 +45,7 @@
 ### Task 2: Label Dependabot and release-please PRs through the Writer App
 
 **Files:**
+
 - Create: `.github/workflows/classify-maintenance-pr.yml`
 - Modify: `.github/actions/resolve-gh-token/action.yml`
 - Modify: `docs/github-app-manifests/repository-maintenance-writer.json`
@@ -51,6 +54,7 @@
 - Modify: `docs/github-app-permission-matrix.md`
 
 **Interfaces:**
+
 - The workflow triggers on `pull_request_target` events `opened`, `synchronize`, and `reopened`.
 - It resolves the Writer App with a `maintenance-labeling` profile requiring `issues: write` and `pull-requests: read`, validates the PR, then idempotently adds `automation: maintenance` and `automation: validating` while retaining existing labels.
 
@@ -64,6 +68,7 @@
 ### Task 3: Extend lifecycle gates and scenarios
 
 **Files:**
+
 - Modify: `scripts/github-setup/validate-workflow-approval.sh`
 - Modify: `scripts/github-setup/validate-maintenance-merge.sh`
 - Modify: `scripts/github-setup/test-workflow-approval-contract.sh`
@@ -81,6 +86,7 @@
 ### Task 4: Document and verify the lifecycle
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `docs/github-app-trust-boundaries.md`
 - Modify: `.github/pull_request_template.md` only if lifecycle validation wording requires it.
