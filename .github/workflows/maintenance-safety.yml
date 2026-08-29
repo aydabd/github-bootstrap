@@ -1,0 +1,94 @@
+name: Maintenance safety
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_run:
+    workflows:
+      - Quality
+      - Commit policy
+      - Test Quality Providers
+      - CodeQL Security Scan
+      - Test Generated Repository E2E
+    types: [completed]
+  repository_dispatch:
+    types: [maintenance-safety]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to validate.
+        required: true
+        type: string
+      head_sha:
+        description: Exact pull request head SHA to validate.
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  safety:
+    name: Maintenance safety
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout validation helpers
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          ref: main
+          sparse-checkout: |
+            scripts/github-setup/validate-copilot-review.sh
+            scripts/github-setup/validate-maintenance-safety.sh
+
+      - name: Validate maintenance safety gates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COPILOT_REVIEWER_LOGIN: ${{ vars.BOOTSTRAP_COPILOT_REVIEWER_LOGIN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.event.inputs.head_sha || github.event.client_payload.head_sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.event.inputs.pr_number || github.event.client_payload.pr_number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tmp_dir="$(mktemp -d)"
+          cleanup() { rm -rf "$tmp_dir"; }
+          trap cleanup EXIT
+
+          [ -n "$HEAD_SHA" ] || { echo "maintenance safety head SHA is missing" >&2; exit 1; }
+          [ -n "$PR_NUMBER" ] || { echo "maintenance safety pull request number is missing" >&2; exit 1; }
+          [ -n "$COPILOT_REVIEWER_LOGIN" ] || { echo "Copilot reviewer identity is not configured" >&2; exit 1; }
+
+          pr_file="$tmp_dir/pr.json"
+          runs_file="$tmp_dir/runs.json"
+          e2e_file="$tmp_dir/e2e.json"
+          labels_file="$tmp_dir/labels.json"
+          reviews_file="$tmp_dir/reviews.json"
+          threads_file="$tmp_dir/threads.json"
+
+          gh api "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$pr_file"
+          gh api "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100" \
+            --jq '[.workflow_runs[] | select(.name == "Quality" or .name == "Commit policy" or .name == "Test Quality Providers" or .name == "CodeQL Security Scan") | {name,status,conclusion,head_sha}]' > "$runs_file"
+          gh api --paginate "/repos/$GITHUB_REPOSITORY/actions/workflows/test-generated-repository-e2e.yml/runs?per_page=100" \
+            --jq '.workflow_runs[] | {status,conclusion,head_sha}' | jq -s '.' > "$e2e_file"
+          gh api "/repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels?per_page=100" > "$labels_file"
+          gh api --paginate --slurp "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" > "$tmp_dir/review-pages.json"
+          jq '[.[][]]' "$tmp_dir/review-pages.json" > "$reviews_file"
+
+          # shellcheck disable=SC2016
+          gh api graphql \
+            -f query='query($owner:String!,$repository:String!,$number:Int!){repository(owner:$owner,name:$repository){pullRequest(number:$number){reviewThreads(first:100){pageInfo{hasNextPage} nodes{isResolved comments(first:1){nodes{author{login}}}}}}}}' \
+            -F owner="${GITHUB_REPOSITORY%%/*}" -F repository="${GITHUB_REPOSITORY#*/}" -F number="$PR_NUMBER" \
+            > "$tmp_dir/thread-response.json"
+          jq -e '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage == false' "$tmp_dir/thread-response.json" > /dev/null || {
+            echo "maintenance safety review threads exceed validation page; refusing to pass" >&2
+            exit 1
+          }
+          jq '[.data.repository.pullRequest.reviewThreads.nodes[] | {isResolved, author_login: (.comments.nodes[0].author.login // "")}]' \
+            "$tmp_dir/thread-response.json" > "$threads_file"
+
+          "$GITHUB_WORKSPACE/scripts/github-setup/validate-maintenance-safety.sh" \
+            "$pr_file" "$runs_file" "$e2e_file" "$labels_file" "$reviews_file" "$threads_file" \
+            "$HEAD_SHA" "$COPILOT_REVIEWER_LOGIN"
