@@ -33,17 +33,13 @@ for required_text in \
     "expectedHeadOid" \
     "fileChanges" \
     "repositoryNameWithOwner" \
+    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/refs\"" \
+    "ref_payload=\"\$payload_dir/ref.json\"" \
+    "ref_response=\"\$payload_dir/ref-response.json\"" \
+    "'{ref: \$ref, sha: \$sha}'" \
     "gh api graphql --input \"\$create_commit_payload\"" \
     "commit_sha=\"\$(jq -er" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/pulls\"" \
-    "git_auth_header=\"\$(printf 'x-access-token:%s' \"\$GH_TOKEN\" | base64 | tr -d '\\r\\n')\"" \
-    "printf '::add-mask::%s\\n' \"\$git_auth_header\"" \
-    "git_host=\"\${GITHUB_SERVER_URL#https://}\"" \
-    "GIT_CONFIG_COUNT=1" \
-    "GIT_CONFIG_KEY_0=http.extraheader" \
-    "GIT_CONFIG_VALUE_0=\"AUTHORIZATION: basic \$git_auth_header\"" \
-    "push \"https://\${git_host}/\${GITHUB_REPOSITORY}.git\"" \
-    "\$parent_sha:refs/heads/\$branch" \
     "wait_for_branch()" \
     "weekly tooling branch did not become visible" \
     "visible_branch_sha=\"\$(wait_for_branch)\"" \
@@ -73,7 +69,8 @@ fi
 for forbidden_text in \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/blobs\"" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/trees\"" \
-    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/commits\""; do
+    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/commits\"" \
+    "git push"; do
     if grep -Fq -- "$forbidden_text" "$workflow"; then
         echo "weekly tooling workflow must use the atomic GraphQL commit path" >&2
         exit 1
