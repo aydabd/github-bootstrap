@@ -61,7 +61,6 @@ jobs:
             echo "Resolved App '$APP_SLUG' is not the configured Writer '$EXPECTED_APP_SLUG'" >&2
             exit 1
           }
-          gh api /installation --jq '{app_slug,repository_selection,permissions}'
 
       - name: Classify and label trusted automation PR
         env:

@@ -174,6 +174,27 @@ jobs:
               "$parent_sha:refs/heads/$branch"
           fi
 
+          wait_for_branch() {
+            local attempt branch_sha
+            attempt=1
+            while [ "$attempt" -le 15 ]; do
+              if branch_sha="$(gh api "/repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha' 2>/dev/null)"; then
+                printf '%s' "$branch_sha"
+                return 0
+              fi
+              sleep 2
+              attempt=$((attempt + 1))
+            done
+            echo "weekly tooling branch did not become visible after creation" >&2
+            return 1
+          }
+
+          visible_branch_sha="$(wait_for_branch)"
+          [ "$visible_branch_sha" = "$parent_sha" ] || {
+            echo "weekly tooling branch changed before the commit mutation" >&2
+            exit 1
+          }
+
           graphql_query='mutation($input: CreateCommitOnBranchInput!) {
             createCommitOnBranch(input: $input) {
               commit { oid }
@@ -193,7 +214,11 @@ jobs:
               message: {headline: $headline, body: $body},
               fileChanges: $file_changes[0]
             }}}' >"$create_commit_payload"
-          gh api graphql --input "$create_commit_payload" >"$create_commit_response"
+          if ! gh api graphql --input "$create_commit_payload" >"$create_commit_response"; then
+            jq -r '.errors[]?.message // "GraphQL commit mutation failed"' \
+              "$create_commit_response" >&2
+            exit 1
+          fi
           commit_sha="$(jq -er '.data.createCommitOnBranch.commit.oid // empty' "$create_commit_response")" || {
             jq -r '.errors[]?.message // "GraphQL commit mutation returned no commit"' \
               "$create_commit_response" >&2
