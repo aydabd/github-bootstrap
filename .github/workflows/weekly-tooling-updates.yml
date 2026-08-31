@@ -190,17 +190,20 @@ jobs:
             -f "parents[]=$parent_sha" \
             --jq '.sha')"
           bash ./scripts/github-setup/verify-commit-verification.sh "$GITHUB_REPOSITORY" "$commit_sha"
-          ref_payload="$payload_dir/ref.json"
-          jq -n --arg ref "refs/heads/$branch" --arg sha "$commit_sha" \
-            '{ref: $ref, sha: $sha}' >"$ref_payload"
 
           if [ -n "$expected_branch_sha" ]; then
             gh api --method PATCH "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch" \
               -f sha="$commit_sha" \
               -F force=false >/dev/null
           else
-            gh api --method POST "/repos/$GITHUB_REPOSITORY/git/refs" \
-              --input "$ref_payload" >/dev/null
+            GIT_AUTH_HEADER="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\r\n')"
+            printf '::add-mask::%s\n' "$GIT_AUTH_HEADER"
+            git_host="${GITHUB_SERVER_URL#https://}"
+            GIT_CONFIG_COUNT=1 \
+            GIT_CONFIG_KEY_0=http.extraheader \
+            GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $GIT_AUTH_HEADER" \
+              git push "https://${git_host}/${GITHUB_REPOSITORY}.git" \
+              "$commit_sha:refs/heads/$branch"
           fi
           branch_sha="$(gh api "/repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha')"
           [ "$branch_sha" = "$commit_sha" ] || {
