@@ -96,10 +96,8 @@ jobs:
           title="chore(deps): weekly tooling updates"
           signoff_name="$GITHUB_ACTOR"
           signoff_email="${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
-          commit_msg="chore(deps): update non-dependabot tooling pins"
-          commit_msg="${commit_msg}
-
-          X-GitHub-Bootstrap-Automation: weekly-tooling-updates
+          commit_headline="chore(deps): update non-dependabot tooling pins"
+          commit_body="X-GitHub-Bootstrap-Automation: weekly-tooling-updates
           Signed-off-by: ${signoff_name} <${signoff_email}>"
 
           cat > /tmp/weekly-tooling-pr-body.md <<'EOF'
@@ -140,71 +138,70 @@ jobs:
           else
             parent_sha="$(git rev-parse HEAD)"
           fi
-          parent_tree_sha="$(gh api "/repos/$GITHUB_REPOSITORY/git/commits/$parent_sha" --jq '.tree.sha')"
-
           payload_dir="$(mktemp -d)"
-          tree_payload="$payload_dir/tree.json"
-          blob_payload="$payload_dir/blob.json"
+          file_changes="$payload_dir/file-changes.json"
+          create_commit_payload="$payload_dir/create-commit.json"
+          create_commit_response="$payload_dir/create-commit-response.json"
           trap 'rm -rf "$payload_dir"' EXIT
-          jq -n --arg base_tree "$parent_tree_sha" '{base_tree: $base_tree, tree: []}' >"$tree_payload"
+          jq -n '{additions: [], deletions: []}' >"$file_changes"
           while IFS= read -r path; do
-            mode="$(git ls-files -s -- "$path" | awk 'NR == 1 { print $1 }')"
             if git diff --cached --diff-filter=D --name-only | grep -Fxq -- "$path"; then
-              mode="100644"
-              entry_type="blob"
-              object_sha=""
-              jq --arg path "$path" --arg mode "$mode" --arg type "$entry_type" \
-                '.tree += [{path: $path, mode: $mode, type: $type, sha: null}]' \
-                "$tree_payload" >"$tree_payload.tmp"
+              jq --arg path "$path" \
+                '.deletions += [{path: $path}]' \
+                "$file_changes" >"$file_changes.tmp"
             else
-              entry_type="blob"
-              object_sha=""
-              if [ "$mode" = "160000" ]; then
-                entry_type="commit"
-                object_sha="$(git ls-files -s -- "$path" | awk 'NR == 1 { print $2 }')"
-              elif [ "$mode" = "120000" ]; then
-                encoded_content="$(readlink "$path" | base64 | tr -d '\n')"
-                jq -n --arg content "$encoded_content" \
-                  '{content: $content, encoding: "base64"}' >"$blob_payload"
-                object_sha="$(gh api --method POST "/repos/$GITHUB_REPOSITORY/git/blobs" \
-                  --input "$blob_payload" --jq '.sha')"
-              else
-                encoded_content="$(base64 <"$path" | tr -d '\n')"
-                jq -n --arg content "$encoded_content" \
-                  '{content: $content, encoding: "base64"}' >"$blob_payload"
-                object_sha="$(gh api --method POST "/repos/$GITHUB_REPOSITORY/git/blobs" \
-                  --input "$blob_payload" --jq '.sha')"
-              fi
-              jq --arg path "$path" --arg mode "$mode" --arg type "$entry_type" --arg sha "$object_sha" \
-                '.tree += [{path: $path, mode: $mode, type: $type, sha: $sha}]' \
-                "$tree_payload" >"$tree_payload.tmp"
+              mode="$(git ls-files -s -- "$path" | awk 'NR == 1 { print $1 }')"
+              [ "$mode" = "100644" ] || {
+                echo "weekly tooling update contains unsupported file mode $mode: $path" >&2
+                exit 1
+              }
+              encoded_content="$(base64 <"$path" | tr -d '\n')"
+              jq --arg path "$path" --arg contents "$encoded_content" \
+                '.additions += [{path: $path, contents: $contents}]' \
+                "$file_changes" >"$file_changes.tmp"
             fi
-            mv "$tree_payload.tmp" "$tree_payload"
+            mv "$file_changes.tmp" "$file_changes"
           done < <(git diff --cached --name-only)
 
-          tree_sha="$(gh api --method POST "/repos/$GITHUB_REPOSITORY/git/trees" \
-            --input "$tree_payload" --jq '.sha')"
-          commit_sha="$(gh api --method POST "/repos/$GITHUB_REPOSITORY/git/commits" \
-            -f message="$commit_msg" \
-            -f tree="$tree_sha" \
-            -f "parents[]=$parent_sha" \
-            --jq '.sha')"
-          bash ./scripts/github-setup/verify-commit-verification.sh "$GITHUB_REPOSITORY" "$commit_sha"
-
-          if [ -n "$expected_branch_sha" ]; then
-            gh api --method PATCH "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch" \
-              -f sha="$commit_sha" \
-              -F force=false >/dev/null
-          else
+          if [ -z "$expected_branch_sha" ]; then
             ref_payload="$payload_dir/ref.json"
             jq -n --arg ref "refs/heads/$branch" --arg sha "$parent_sha" \
               '{ref: $ref, sha: $sha}' >"$ref_payload"
             gh api --method POST "/repos/$GITHUB_REPOSITORY/git/refs" \
               --input "$ref_payload" >/dev/null
-            gh api --method PATCH "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch" \
-              -f sha="$commit_sha" \
-              -F force=false >/dev/null
           fi
+
+          graphql_query='mutation($input: CreateCommitOnBranchInput!) {
+            createCommitOnBranch(input: $input) {
+              commit { oid }
+              ref { name }
+            }
+          }'
+          jq -n --arg query "$graphql_query" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg branch "$branch" \
+            --arg parent_sha "$parent_sha" \
+            --arg headline "$commit_headline" \
+            --arg body "$commit_body" \
+            --slurpfile file_changes "$file_changes" \
+            '{query: $query, variables: {input: {
+              branch: {repositoryNameWithOwner: $repository, branchName: $branch},
+              expectedHeadOid: $parent_sha,
+              message: {headline: $headline, body: $body},
+              fileChanges: $file_changes[0]
+            }}}' >"$create_commit_payload"
+          gh api graphql --input "$create_commit_payload" >"$create_commit_response"
+          commit_sha="$(jq -er '.data.createCommitOnBranch.commit.oid // empty' "$create_commit_response")" || {
+            jq -r '.errors[]?.message // "GraphQL commit mutation returned no commit"' \
+              "$create_commit_response" >&2
+            exit 1
+          }
+          [ "$(jq -r '.data.createCommitOnBranch.ref.name' "$create_commit_response")" = "$branch" ] || {
+            echo "GraphQL commit mutation updated an unexpected branch" >&2
+            exit 1
+          }
+          bash ./scripts/github-setup/verify-commit-verification.sh "$GITHUB_REPOSITORY" "$commit_sha"
+
           branch_sha="$(gh api "/repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha')"
           [ "$branch_sha" = "$commit_sha" ] || {
             echo "weekly tooling branch does not point to the created commit" >&2
