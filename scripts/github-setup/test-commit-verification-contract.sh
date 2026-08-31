@@ -15,8 +15,8 @@ for required_text in \
     "uses: ./.github/actions/resolve-gh-token" \
     "environment: production-maintenance" \
     "permission_profile: weekly-tooling" \
-    "BOOTSTRAP_APP_PRIVATE_KEY" \
-    "BOOTSTRAP_APP_CLIENT_ID" \
+    "BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY" \
+    "BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID" \
     "BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG" \
     "[ \"\$APP_SLUG\" = \"\$EXPECTED_APP_SLUG\" ]" \
     "APP_SLUG: \${{ steps.resolve-token.outputs.app_slug }}" \

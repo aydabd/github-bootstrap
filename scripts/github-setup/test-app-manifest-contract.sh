@@ -160,7 +160,7 @@ for required_text in \
     "No App is a ruleset bypass actor" \
     "\`administration: write\` permission includes repository deletion capability" \
     "must never delete arbitrary or" \
-    "BOOTSTRAP_APP_PRIVATE_KEY" \
+    "BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY" \
     "E2E"; do
     grep -Fq "$required_text" "$trust_boundary_doc" || {
         echo "expected '$required_text' in $trust_boundary_doc" >&2

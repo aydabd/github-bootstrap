@@ -4,9 +4,9 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 workflow="$repo_root/.github/workflows/test-personal-app-e2e.yml"
 
-grep -Fq 'BOOTSTRAP_APP_CLIENT_ID' "$workflow"
-grep -Fq 'BOOTSTRAP_APP_PRIVATE_KEY' "$workflow"
-grep -Fq 'BOOTSTRAP_APP_USER_TOKEN' "$workflow"
+grep -Fq 'BOOTSTRAP_PROVISIONER_APP_CLIENT_ID' "$workflow"
+grep -Fq 'BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY' "$workflow"
+grep -Fq 'BOOTSTRAP_PROVISIONER_APP_USER_TOKEN' "$workflow"
 grep -Fq 'create-repository.yml' "$workflow"
 grep -Fq 'visibility: public' "$workflow"
 grep -Fq 'visibility: private' "$workflow"

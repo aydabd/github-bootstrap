@@ -34,7 +34,7 @@ Assert the resolver exposes `app_user_token`, validates the authenticated user, 
 
 - [x] **Step 2: Add assertions for personal workflow wiring.**
 
-Assert both creation workflows expose an optional `BOOTSTRAP_APP_USER_TOKEN` reusable secret and pass it only to the resolver. Assert the old organization-only audit error is removed or updated.
+Assert both creation workflows expose an optional `BOOTSTRAP_PROVISIONER_APP_USER_TOKEN` reusable secret and pass it only to the resolver. Assert the old organization-only audit error is removed or updated.
 
 - [x] **Step 3: Run the contract tests and verify failure.**
 
@@ -79,7 +79,7 @@ Run the auth and profile contract tests; expected result is PASS.
 
 - [x] **Step 1: Add optional reusable workflow secret.**
 
-Add `BOOTSTRAP_APP_USER_TOKEN` as an optional `workflow_call` secret and pass it to the resolver. Do not add it to `workflow_dispatch` inputs.
+Add `BOOTSTRAP_PROVISIONER_APP_USER_TOKEN` as an optional `workflow_call` secret and pass it to the resolver. Do not add it to `workflow_dispatch` inputs.
 
 - [x] **Step 2: Make owner-type auditing match the selected mode.**
 

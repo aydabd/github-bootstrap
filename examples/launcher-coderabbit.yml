@@ -7,7 +7,7 @@
 # CodeRabbit reviews to run.
 #
 # Create these in THIS launcher repository, not in the target repo:
-# - Secret: BOOTSTRAP_APP_PRIVATE_KEY
+# - Secret: BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY
 # - Workflow input: client_id
 # - Required workflow input: allowed_repo_owners
 # The GitHub App must have access to the target repository selected by
@@ -70,4 +70,4 @@ jobs:
       app_owner: ${{ inputs.repo_owner }}
       allowed_repo_owners: ${{ inputs.allowed_repo_owners }}
     secrets:
-      BOOTSTRAP_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+      BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}

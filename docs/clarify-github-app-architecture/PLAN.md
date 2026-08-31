@@ -10,7 +10,7 @@ Your assumption is **partially correct** but there's a nuance. External consumer
 
 - Any org/user can create their own GitHub App with the right permissions
 - They install the App on their target org(s)
-- They store `BOOTSTRAP_APP_PRIVATE_KEY` and `BOOTSTRAP_APP_CLIENT_ID` in their own launcher repo
+- They store `BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY` and `BOOTSTRAP_PROVISIONER_APP_CLIENT_ID` in their own launcher repo
 - They call `aydabd/github-bootstrap/.github/workflows/create-repository.yml@main` via `workflow_call`
 - The bootstrap repo is entirely credential-agnostic — it just receives and uses whatever the caller passes
 

@@ -51,9 +51,9 @@ key. The workflow rejects any resulting commit that GitHub does not report as
 `verified` with reason `valid`.
 
 Configure these values in the protected `production-maintenance` GitHub
-Environment: `BOOTSTRAP_APP_CLIENT_ID` and
+Environment: `BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID` and
 `BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` as variables, and
-`BOOTSTRAP_APP_PRIVATE_KEY` as a secret. The credential names are stable
+`BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY` as a secret. The credential names are stable
 across deployment Environments; Environment scope and protection rules define
 which deployment may use them.
 

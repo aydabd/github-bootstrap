@@ -75,7 +75,7 @@ trap 'rm -f "$sanitized_private_key_file" "$sanitized_token_file"' EXIT
 tr -d '\r' < "$private_key_file" > "$sanitized_private_key_file"
 printf '%s' "$token" > "$sanitized_token_file"
 
-gh variable set BOOTSTRAP_APP_CLIENT_ID --repo "$repo" --body "$client_id"
-gh secret set BOOTSTRAP_APP_PRIVATE_KEY --repo "$repo" < "$sanitized_private_key_file"
-gh secret set BOOTSTRAP_APP_USER_TOKEN --repo "$repo" < "$sanitized_token_file"
+gh variable set BOOTSTRAP_PROVISIONER_APP_CLIENT_ID --repo "$repo" --body "$client_id"
+gh secret set BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY --repo "$repo" < "$sanitized_private_key_file"
+gh secret set BOOTSTRAP_PROVISIONER_APP_USER_TOKEN --repo "$repo" < "$sanitized_token_file"
 printf 'Installed App client ID configuration and two protected App credentials for %s\n' "$repo"

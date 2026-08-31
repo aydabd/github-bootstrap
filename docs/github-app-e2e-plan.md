@@ -9,7 +9,7 @@ The follow-up E2E change should cover both supported owner types:
    permission matrix. Exchange the one-time manifest code for the App credentials programmatically.
 2. For organization coverage, install it on a disposable test organization. For personal coverage,
    authorize it for a disposable test user and provide the resulting App user access token only as
-   a protected caller/environment secret (`BOOTSTRAP_APP_USER_TOKEN`, a `ghu_` GitHub App user token).
+   a protected caller/environment secret (`BOOTSTRAP_PROVISIONER_APP_USER_TOKEN`, a `ghu_` GitHub App user token).
 3. Keep private keys and user access tokens in an ephemeral runner or external secret manager, never
    in Git, a generated repository, or a test repository secret. Store only the Client ID as non-secret
    configuration.
