@@ -92,7 +92,10 @@ validate_label_file() {
 
 find_existing_label() {
     local name="$1"
-    gh_api_json "$(label_endpoint "$name")" 2> /dev/null || true
+    local existing_label
+    if existing_label="$(gh_api_json "$(label_endpoint "$name")" 2> /dev/null)"; then
+        printf '%s\n' "$existing_label"
+    fi
 }
 
 write_label_payload() {

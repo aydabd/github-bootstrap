@@ -24,6 +24,7 @@ contract_tests=(
     "$script_dir/github-setup/test-maintenance-merge-contract.sh"
     "$script_dir/github-setup/test-maintenance-pr-contract.sh"
     "$script_dir/github-setup/test-install-app-secrets-contract.sh"
+    "$script_dir/github-setup/test-label-creation-contract.sh"
     "$script_dir/github-setup/test-payloads.sh"
     "$script_dir/github-setup/test-personal-app-e2e-contract.sh"
     "$script_dir/github-setup/test-profile.sh"
