@@ -64,6 +64,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
+file_mode() {
+    if mode="$(stat -c '%a' "$1" 2> /dev/null)"; then
+        printf '%s\n' "$mode"
+    else
+        stat -f '%Lp' "$1"
+    fi
+}
+
 start_output="$tmp_dir/start-output"
 GITHUB_APP_MANIFEST_TEST_MODE=1 "$helper" start repository-maintenance-writer "$tmp_dir/credentials" > "$start_output" &
 start_pid=$!
@@ -104,7 +112,7 @@ curl --fail --silent "$callback_url" > /dev/null
 wait "$start_pid"
 start_pid=""
 test -s "$tmp_dir/credentials/app-manifest-code"
-test "$(stat -f '%Lp' "$tmp_dir/credentials/app-manifest-code")" = 600
+test "$(file_mode "$tmp_dir/credentials/app-manifest-code")" = 600
 if grep -Eq 'echo.*(pem|client_secret|private_key)' "$helper"; then
     echo "manifest helper must not print credentials" >&2
     exit 1
