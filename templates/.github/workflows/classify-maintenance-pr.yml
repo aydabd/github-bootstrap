@@ -53,9 +53,14 @@ jobs:
           gh api "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$pr_file"
           classification="$(bash .github/scripts/validate-maintenance-pr.sh "$pr_file")"
 
-          gh pr edit "$PR_NUMBER" \
-            --add-label "automation: maintenance" \
-            --add-label "automation: validating"
+          labels=("automation: maintenance" "automation: validating")
           if [ "$classification" = "dependabot" ]; then
-            gh pr edit "$PR_NUMBER" --add-label dependencies
+            labels+=(dependencies)
           fi
+
+          label_args=()
+          for label in "${labels[@]}"; do
+            label_args+=(-f "labels[]=$label")
+          done
+          gh api --method POST "/repos/$FULL_REPOSITORY/issues/$PR_NUMBER/labels" \
+            "${label_args[@]}" > /dev/null
