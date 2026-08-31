@@ -25,6 +25,7 @@ jobs:
       contents: write
       issues: read
       pull-requests: write
+      workflows: write
 
     steps:
       - name: Checkout code

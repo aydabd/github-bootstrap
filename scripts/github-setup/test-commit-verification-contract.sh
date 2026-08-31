@@ -15,6 +15,7 @@ for required_text in \
     "uses: ./.github/actions/resolve-gh-token" \
     "environment: production-maintenance" \
     "permission_profile: weekly-tooling" \
+    "workflows: write" \
     "BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY" \
     "BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID" \
     "BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG" \
