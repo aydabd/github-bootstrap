@@ -192,6 +192,9 @@ jobs:
             -f "parents[]=$parent_sha" \
             --jq '.sha')"
           bash ./scripts/github-setup/verify-commit-verification.sh "$GITHUB_REPOSITORY" "$commit_sha"
+          ref_payload="$payload_dir/ref.json"
+          jq -n --arg ref "refs/heads/$branch" --arg sha "$commit_sha" \
+            '{ref: $ref, sha: $sha}' >"$ref_payload"
 
           if [ -n "$expected_branch_sha" ]; then
             gh api --method PATCH "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch" \
@@ -199,9 +202,13 @@ jobs:
               -F force=false >/dev/null
           else
             gh api --method POST "/repos/$GITHUB_REPOSITORY/git/refs" \
-              -f ref="refs/heads/$branch" \
-              -f sha="$commit_sha" >/dev/null
+              --input "$ref_payload" >/dev/null
           fi
+          branch_sha="$(gh api "/repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha')"
+          [ "$branch_sha" = "$commit_sha" ] || {
+            echo "weekly tooling branch does not point to the created commit" >&2
+            exit 1
+          }
 
           label_names="$(gh label list --limit 200 --json name --jq '.[].name')"
           required_labels=("dependencies" "automation: maintenance" "automation: validating" "automation: breaking" "automation: blocked")
@@ -216,11 +223,9 @@ jobs:
           breaking_count="$(jq '[.updates[] | select(.risk == "high" or .update_type == "major" or .update_type == "breaking")] | length' "$metadata_file")"
           unknown_count="$(jq '[.updates[] | select(.risk == "unknown" or .update_type == "unknown")] | length' "$metadata_file")"
           if [ "$breaking_count" -gt 0 ]; then
-            create_label_args+=(--label "automation: breaking")
             edit_label_args+=(--add-label "automation: breaking")
           fi
           if [ "$unknown_count" -gt 0 ]; then
-            create_label_args+=(--label "automation: blocked")
             edit_label_args+=(--add-label "automation: blocked")
           fi
 
