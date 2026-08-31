@@ -121,7 +121,7 @@ assert_contains "repositories: \${{ inputs.repo_name }}" "$repo_root/.github/wor
 assert_contains "repositories: \${{ github.event.repository.name }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_contains "repositories: \${{ needs.create-test-repo.outputs.test_repo_name }}" "$repo_root/.github/workflows/test-repository-creation.yml"
 assert_contains "contents: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
-assert_contains "workflows: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
+assert_not_contains "      workflows: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "pull-requests: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "issues: read" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "inputs.permission_profile == 'weekly-tooling'" "$resolver"
