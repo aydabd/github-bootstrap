@@ -36,11 +36,14 @@ for required_text in \
     "gh api graphql --input \"\$create_commit_payload\"" \
     "commit_sha=\"\$(jq -er" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/pulls\"" \
-    "ref_payload=\"\$payload_dir/ref.json\"" \
-    "jq -n --arg ref \"refs/heads/\$branch\" --arg sha \"\$parent_sha\"" \
-    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/refs\"" \
-    "--input \"\$ref_payload\"" \
-    "--arg sha \"\$parent_sha\"" \
+    "git_auth_header=\"\$(printf 'x-access-token:%s' \"\$GH_TOKEN\" | base64 | tr -d '\\r\\n')\"" \
+    "printf '::add-mask::%s\\n' \"\$git_auth_header\"" \
+    "git_host=\"\${GITHUB_SERVER_URL#https://}\"" \
+    "GIT_CONFIG_COUNT=1" \
+    "GIT_CONFIG_KEY_0=http.extraheader" \
+    "GIT_CONFIG_VALUE_0=\"AUTHORIZATION: basic \$git_auth_header\"" \
+    "push \"https://\${git_host}/\${GITHUB_REPOSITORY}.git\"" \
+    "\$parent_sha:refs/heads/\$branch" \
     "branch_sha=\"\$(gh api" \
     "bash ./scripts/github-setup/verify-commit-verification.sh \"\$GITHUB_REPOSITORY\" \"\$commit_sha\"" \
     "expected_branch_sha=\"\$(gh api" \
