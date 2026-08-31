@@ -25,7 +25,6 @@ jobs:
       contents: write
       issues: read
       pull-requests: write
-      workflows: write
 
     steps:
       - name: Checkout code
@@ -88,7 +87,6 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-          BOOTSTRAP_TOKEN: ${{ github.token }}
           APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
           TOOLING_UPDATE_METADATA_FILE: ${{ runner.temp }}/tooling-update-metadata.json
         run: |
@@ -170,7 +168,7 @@ jobs:
             ref_response="$payload_dir/ref-response.json"
             jq -n --arg ref "refs/heads/$branch" --arg sha "$parent_sha" \
               '{ref: $ref, sha: $sha}' >"$ref_payload"
-            if ! GH_TOKEN="$BOOTSTRAP_TOKEN" gh api --method POST \
+            if ! gh api --method POST \
               "/repos/$GITHUB_REPOSITORY/git/refs" \
               --input "$ref_payload" >"$ref_response"; then
               jq -r '.message // "weekly tooling branch creation failed"' \
