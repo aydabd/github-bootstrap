@@ -20,7 +20,6 @@ for required_text in \
     "BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG" \
     "[ \"\$APP_SLUG\" = \"\$EXPECTED_APP_SLUG\" ]" \
     "APP_SLUG: \${{ steps.resolve-token.outputs.app_slug }}" \
-    "APP_ID: \${{ steps.resolve-token.outputs.app_id }}" \
     "signoff_name=\"\$GITHUB_ACTOR\"" \
     "Signed-off-by: \${signoff_name} <\${signoff_email}>" \
     "X-GitHub-Bootstrap-Automation: weekly-tooling-updates" \
@@ -63,10 +62,10 @@ grep -Fq 'app_slug:' "$resolver" || {
     echo "resolver must expose the authenticated App slug" >&2
     exit 1
 }
-grep -Fq 'app_id:' "$resolver" || {
-    echo "resolver must expose the authenticated App ID" >&2
+if grep -Fq 'app_id:' "$resolver"; then
+    echo "resolver must not expose the deprecated App ID output" >&2
     exit 1
-}
+fi
 
 for forbidden_text in \
     "GH_TOKEN: \${{ github.token }}" \

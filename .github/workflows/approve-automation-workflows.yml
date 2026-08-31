@@ -53,13 +53,11 @@ jobs:
       - name: Verify resolved Reviewer App identity
         env:
           APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
-          APP_ID: ${{ steps.resolve-token.outputs.app_id }}
           EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG }}
         shell: bash
         run: |
           set -euo pipefail
           [ -n "$APP_SLUG" ] || { echo "Reviewer App slug was not resolved" >&2; exit 1; }
-          [[ "$APP_ID" =~ ^[0-9]+$ ]] || { echo "Reviewer App ID was not resolved" >&2; exit 1; }
           [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected maintenance Reviewer App slug is not configured" >&2; exit 1; }
           [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured maintenance Reviewer" >&2; exit 1; }
 
