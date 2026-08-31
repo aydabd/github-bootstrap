@@ -24,32 +24,28 @@ for required_text in \
     "Signed-off-by: \${signoff_name} <\${signoff_email}>" \
     "X-GitHub-Bootstrap-Automation: weekly-tooling-updates" \
     "git diff --cached --name-only" \
-    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/blobs\"" \
-    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/trees\"" \
-    "entry_type=\"commit\"" \
-    "\$mode\" = \"160000\"" \
-    "\$mode\" = \"120000\"" \
-    "readlink \"\$path\"" \
-    "parent_tree_sha=\"\$(gh api" \
-    "jq -n --arg base_tree \"\$parent_tree_sha\"" \
-    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/commits\"" \
+    "file_changes=\"\$payload_dir/file-changes.json\"" \
+    "create_commit_payload=\"\$payload_dir/create-commit.json\"" \
+    "create_commit_response=\"\$payload_dir/create-commit-response.json\"" \
+    "mode=\"\$(git ls-files -s -- \"\$path\" | awk" \
+    "[ \"\$mode\" = \"100644\" ] ||" \
+    "createCommitOnBranch" \
+    "expectedHeadOid" \
+    "fileChanges" \
+    "repositoryNameWithOwner" \
+    "gh api graphql --input \"\$create_commit_payload\"" \
+    "commit_sha=\"\$(jq -er" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/pulls\"" \
     "ref_payload=\"\$payload_dir/ref.json\"" \
     "jq -n --arg ref \"refs/heads/\$branch\" --arg sha \"\$parent_sha\"" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/refs\"" \
     "--input \"\$ref_payload\"" \
     "--arg sha \"\$parent_sha\"" \
-    "gh api --method PATCH \"/repos/\$GITHUB_REPOSITORY/git/refs/heads/\$branch\"" \
     "branch_sha=\"\$(gh api" \
-    "-f \"parents[]=\$parent_sha\"" \
     "bash ./scripts/github-setup/verify-commit-verification.sh \"\$GITHUB_REPOSITORY\" \"\$commit_sha\"" \
     "expected_branch_sha=\"\$(gh api" \
-    "gh api --method PATCH \"/repos/\$GITHUB_REPOSITORY/git/refs/heads/\$branch\"" \
-    "-F force=false" \
-    "-F force=false" \
     "branch_message=\"\$(gh api" \
     "Weekly tooling branch is not owned by this automation" \
-    "mode=\"100644\"" \
     "printf '%s\\n' \"\$branch_message\" | grep -Fqx"; do
     grep -Fq -- "$required_text" "$workflow" || {
         echo "expected '$required_text' in $workflow" >&2
@@ -66,6 +62,16 @@ if grep -Fq 'create_label_args' "$workflow"; then
     echo "weekly tooling workflow must not retain unused create-label arguments" >&2
     exit 1
 fi
+
+for forbidden_text in \
+    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/blobs\"" \
+    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/trees\"" \
+    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/commits\""; do
+    if grep -Fq -- "$forbidden_text" "$workflow"; then
+        echo "weekly tooling workflow must use the atomic GraphQL commit path" >&2
+        exit 1
+    fi
+done
 
 if grep -Fq '  push:' "$workflow"; then
     echo "weekly tooling workflow must not run after every main push" >&2
