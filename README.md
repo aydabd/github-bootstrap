@@ -73,12 +73,17 @@ Create the separate Maintenance Writer App through GitHub's UI using the
 checked-in manifest:
 
 ```bash
-scripts/github-setup/github-app-manifest.sh start repository-maintenance-writer
+credential_dir="$HOME/.local/state/github-bootstrap/maintenance-writer"
+scripts/github-setup/github-app-manifest.sh start repository-maintenance-writer "$credential_dir"
+# After GitHub redirects to the local callback:
+scripts/github-setup/github-app-manifest.sh convert-file \
+  "$credential_dir/app-manifest-code" "$credential_dir"
 ```
 
-Open the printed URL, approve the App creation, install it only on the
-maintenance repositories, and retain the GitHub-generated private key in a
-protected local file. In the `production-maintenance` GitHub Environment, set
+Open the printed URL, click Continue to GitHub, approve the App creation, and
+install it only on the maintenance repositories. The callback validates the
+one-time state and stores the conversion code in a protected local file. In
+the `production-maintenance` GitHub Environment, set
 `BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID` and
 `BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` as variables and
 `BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY` as a secret. The weekly workflow is explicitly
@@ -96,9 +101,10 @@ generates the private key during conversion; do not generate one locally:
 
 ```bash
 credential_dir="$HOME/.local/state/github-bootstrap"
-scripts/github-setup/github-app-manifest.sh start repository-bootstrap-provisioner
-# Open the printed URL, approve the App, and copy the one-time conversion code.
-scripts/github-setup/github-app-manifest.sh convert CODE "$credential_dir"
+scripts/github-setup/github-app-manifest.sh start repository-bootstrap-provisioner "$credential_dir"
+# Open the printed URL, approve the App, and let the local callback capture the code.
+scripts/github-setup/github-app-manifest.sh convert-file \
+  "$credential_dir/app-manifest-code" "$credential_dir"
 ```
 
 The conversion command writes GitHub's private key, client ID, and client secret only under the
