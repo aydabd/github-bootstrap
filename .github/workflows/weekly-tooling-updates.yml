@@ -197,28 +197,13 @@ jobs:
               -F force=false >/dev/null
           else
             ref_payload="$payload_dir/ref.json"
-            ref_error="$payload_dir/ref-error"
-            jq -n --arg ref "refs/heads/$branch" --arg sha "$commit_sha" \
+            jq -n --arg ref "refs/heads/$branch" --arg sha "$parent_sha" \
               '{ref: $ref, sha: $sha}' >"$ref_payload"
-            ref_created=false
-            ref_attempt=1
-            while [ "$ref_attempt" -le 5 ]; do
-              if gh api --method POST "/repos/$GITHUB_REPOSITORY/git/refs" \
-                --input "$ref_payload" > /dev/null 2>"$ref_error"; then
-                ref_created=true
-                break
-              fi
-              if ! grep -Fq 'Reference does not exist' "$ref_error"; then
-                cat "$ref_error" >&2
-                exit 1
-              fi
-              sleep 2
-              ref_attempt=$((ref_attempt + 1))
-            done
-            if [ "$ref_created" != true ]; then
-              cat "$ref_error" >&2
-              exit 1
-            fi
+            gh api --method POST "/repos/$GITHUB_REPOSITORY/git/refs" \
+              --input "$ref_payload" >/dev/null
+            gh api --method PATCH "/repos/$GITHUB_REPOSITORY/git/refs/heads/$branch" \
+              -f sha="$commit_sha" \
+              -F force=false >/dev/null
           fi
           branch_sha="$(gh api "/repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha')"
           [ "$branch_sha" = "$commit_sha" ] || {

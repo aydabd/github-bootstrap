@@ -35,11 +35,11 @@ for required_text in \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/commits\"" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/pulls\"" \
     "ref_payload=\"\$payload_dir/ref.json\"" \
-    "jq -n --arg ref \"refs/heads/\$branch\" --arg sha \"\$commit_sha\"" \
-    "ref_attempt=1" \
-    "Reference does not exist" \
+    "jq -n --arg ref \"refs/heads/\$branch\" --arg sha \"\$parent_sha\"" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/refs\"" \
     "--input \"\$ref_payload\"" \
+    "--arg sha \"\$parent_sha\"" \
+    "gh api --method PATCH \"/repos/\$GITHUB_REPOSITORY/git/refs/heads/\$branch\"" \
     "branch_sha=\"\$(gh api" \
     "-f \"parents[]=\$parent_sha\"" \
     "bash ./scripts/github-setup/verify-commit-verification.sh \"\$GITHUB_REPOSITORY\" \"\$commit_sha\"" \
