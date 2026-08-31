@@ -34,6 +34,9 @@ for required_text in \
     "jq -n --arg base_tree \"\$parent_tree_sha\"" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/commits\"" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/pulls\"" \
+    "ref_payload=\"\$payload_dir/ref.json\"" \
+    "--input \"\$ref_payload\"" \
+    "branch_sha=\"\$(gh api" \
     "-f \"parents[]=\$parent_sha\"" \
     "bash ./scripts/github-setup/verify-commit-verification.sh \"\$GITHUB_REPOSITORY\" \"\$commit_sha\"" \
     "expected_branch_sha=\"\$(gh api" \
@@ -52,6 +55,11 @@ done
 
 if grep -Fq 'gh pr create' "$workflow"; then
     echo "weekly tooling PR creation must use the REST API" >&2
+    exit 1
+fi
+
+if grep -Fq 'create_label_args' "$workflow"; then
+    echo "weekly tooling workflow must not retain unused create-label arguments" >&2
     exit 1
 fi
 
