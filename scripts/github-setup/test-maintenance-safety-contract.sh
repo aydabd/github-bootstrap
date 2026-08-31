@@ -55,6 +55,7 @@ for mutation in missing pending stale failed unknown; do
 done
 
 grep -Fq 'Maintenance safety' "$workflow"
+grep -Fq "github.event_name != 'workflow_run'" "$workflow"
 grep -Fq 'pull_request_target:' "$workflow"
 grep -Fq 'ref: main' "$workflow"
 grep -Fq 'repository_dispatch:' "$workflow"

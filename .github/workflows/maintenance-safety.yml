@@ -32,6 +32,9 @@ permissions:
 jobs:
   safety:
     name: Maintenance safety
+    if: |
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.pull_requests[0].number
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout validation helpers
