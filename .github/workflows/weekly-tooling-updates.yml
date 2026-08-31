@@ -87,6 +87,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          BOOTSTRAP_TOKEN: ${{ github.token }}
           APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
           TOOLING_UPDATE_METADATA_FILE: ${{ runner.temp }}/tooling-update-metadata.json
         run: |
@@ -168,34 +169,19 @@ jobs:
             ref_response="$payload_dir/ref-response.json"
             jq -n --arg ref "refs/heads/$branch" --arg sha "$parent_sha" \
               '{ref: $ref, sha: $sha}' >"$ref_payload"
-            if ! gh api --method POST "/repos/$GITHUB_REPOSITORY/git/refs" \
+            if ! GH_TOKEN="$BOOTSTRAP_TOKEN" gh api --method POST \
+              "/repos/$GITHUB_REPOSITORY/git/refs" \
               --input "$ref_payload" >"$ref_response"; then
               jq -r '.message // "weekly tooling branch creation failed"' \
                 "$ref_response" >&2
               exit 1
             fi
+            jq -e --arg ref "refs/heads/$branch" --arg sha "$parent_sha" \
+              '(.ref == $ref) and (.object.sha == $sha)' "$ref_response" >/dev/null || {
+              echo "weekly tooling branch creation returned an unexpected ref" >&2
+              exit 1
+            }
           fi
-
-          wait_for_branch() {
-            local attempt branch_sha
-            attempt=1
-            while [ "$attempt" -le 15 ]; do
-              if branch_sha="$(gh api "/repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha' 2>/dev/null)"; then
-                printf '%s' "$branch_sha"
-                return 0
-              fi
-              sleep 2
-              attempt=$((attempt + 1))
-            done
-            echo "weekly tooling branch did not become visible after creation" >&2
-            return 1
-          }
-
-          visible_branch_sha="$(wait_for_branch)"
-          [ "$visible_branch_sha" = "$parent_sha" ] || {
-            echo "weekly tooling branch changed before the commit mutation" >&2
-            exit 1
-          }
 
           graphql_query='mutation($input: CreateCommitOnBranchInput!) {
             createCommitOnBranch(input: $input) {
@@ -231,12 +217,6 @@ jobs:
             exit 1
           }
           bash ./scripts/github-setup/verify-commit-verification.sh "$GITHUB_REPOSITORY" "$commit_sha"
-
-          branch_sha="$(gh api "/repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha')"
-          [ "$branch_sha" = "$commit_sha" ] || {
-            echo "weekly tooling branch does not point to the created commit" >&2
-            exit 1
-          }
 
           label_names="$(gh label list --limit 200 --json name --jq '.[].name')"
           required_labels=("dependencies" "automation: maintenance" "automation: validating" "automation: breaking" "automation: blocked")
