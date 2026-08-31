@@ -33,18 +33,16 @@ for required_text in \
     "expectedHeadOid" \
     "fileChanges" \
     "repositoryNameWithOwner" \
-    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/refs\"" \
     "ref_payload=\"\$payload_dir/ref.json\"" \
     "ref_response=\"\$payload_dir/ref-response.json\"" \
     "'{ref: \$ref, sha: \$sha}'" \
+    "BOOTSTRAP_TOKEN: \${{ github.token }}" \
+    "GH_TOKEN=\"\$BOOTSTRAP_TOKEN\" gh api --method POST" \
+    "/repos/\$GITHUB_REPOSITORY/git/refs" \
+    "weekly tooling branch creation returned an unexpected ref" \
     "gh api graphql --input \"\$create_commit_payload\"" \
     "commit_sha=\"\$(jq -er" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/pulls\"" \
-    "wait_for_branch()" \
-    "weekly tooling branch did not become visible" \
-    "visible_branch_sha=\"\$(wait_for_branch)\"" \
-    "[ \"\$visible_branch_sha\" = \"\$parent_sha\" ]" \
-    "branch_sha=\"\$(gh api" \
     "bash ./scripts/github-setup/verify-commit-verification.sh \"\$GITHUB_REPOSITORY\" \"\$commit_sha\"" \
     "expected_branch_sha=\"\$(gh api" \
     "branch_message=\"\$(gh api" \
