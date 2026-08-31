@@ -52,7 +52,10 @@ jobs:
           set -euo pipefail
           pr_file="$RUNNER_TEMP/pull-request.json"
           gh api "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$pr_file"
-          classification="$(bash scripts/github-setup/validate-maintenance-pr.sh "$pr_file")"
+          if ! classification="$(bash scripts/github-setup/validate-maintenance-pr.sh "$pr_file")"; then
+            echo "Pull request is not an eligible maintenance automation PR; skipping classification."
+            exit 0
+          fi
 
           gh pr edit "$PR_NUMBER" \
             --add-label "automation: maintenance" \

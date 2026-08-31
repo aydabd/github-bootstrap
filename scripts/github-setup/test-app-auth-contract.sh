@@ -64,6 +64,7 @@ assert_contains "permission_profile: maintenance-labeling" "$repo_root/.github/w
 assert_contains "validate-maintenance-pr.sh" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 assert_contains 'automation: maintenance' "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 assert_contains 'automation: validating' "$repo_root/.github/workflows/classify-maintenance-pr.yml"
+assert_contains "if ! classification=\"\$(bash scripts/github-setup/validate-maintenance-pr.sh \"\$pr_file\")\"; then" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 template_classifier="$repo_root/templates/.github/workflows/classify-maintenance-pr.yml"
 assert_contains "actions/create-github-app-token" "$template_classifier"
 assert_contains ".github/scripts/validate-maintenance-pr.sh" "$template_classifier"
