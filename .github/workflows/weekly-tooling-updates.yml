@@ -212,7 +212,6 @@ jobs:
             }
           done
 
-          create_label_args=(--label dependencies --label "automation: maintenance" --label "automation: validating")
           edit_label_args=(--add-label dependencies --add-label "automation: maintenance" --add-label "automation: validating" --remove-label "automation: breaking" --remove-label "automation: blocked")
           breaking_count="$(jq '[.updates[] | select(.risk == "high" or .update_type == "major" or .update_type == "breaking")] | length' "$metadata_file")"
           unknown_count="$(jq '[.updates[] | select(.risk == "unknown" or .update_type == "unknown")] | length' "$metadata_file")"
@@ -228,11 +227,14 @@ jobs:
           pr_number="$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')"
 
           if [ -z "$pr_number" ]; then
-            pr_url="$(gh pr create --base main --head "$branch" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md "${create_label_args[@]}")"
-            pr_number="$(gh pr view "$pr_url" --json number --jq '.number')"
-          else
-            gh pr edit "$pr_number" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md "${edit_label_args[@]}"
+            pr_number="$(gh api --method POST "/repos/$GITHUB_REPOSITORY/pulls" \
+              -f title="$title" \
+              -f head="$branch" \
+              -f base=main \
+              -f body="$(< /tmp/weekly-tooling-pr-body.md)" \
+              --jq '.number')"
           fi
+          gh pr edit "$pr_number" --title "$title" --body-file /tmp/weekly-tooling-pr-body.md "${edit_label_args[@]}"
 
           if [ "$unknown_count" -gt 0 ]; then
             echo "Unknown update risk detected; leaving PR blocked without enabling auto-merge." >&2

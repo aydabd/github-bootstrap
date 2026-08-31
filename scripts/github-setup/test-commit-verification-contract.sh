@@ -33,6 +33,7 @@ for required_text in \
     "parent_tree_sha=\"\$(gh api" \
     "jq -n --arg base_tree \"\$parent_tree_sha\"" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/commits\"" \
+    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/pulls\"" \
     "-f \"parents[]=\$parent_sha\"" \
     "bash ./scripts/github-setup/verify-commit-verification.sh \"\$GITHUB_REPOSITORY\" \"\$commit_sha\"" \
     "expected_branch_sha=\"\$(gh api" \
@@ -48,6 +49,11 @@ for required_text in \
         exit 1
     }
 done
+
+if grep -Fq 'gh pr create' "$workflow"; then
+    echo "weekly tooling PR creation must use the REST API" >&2
+    exit 1
+fi
 
 if grep -Fq 'BOOTSTRAP_APP_SIGNING_KEY' "$workflow" ||
     grep -Fq 'git commit ' "$workflow" ||
