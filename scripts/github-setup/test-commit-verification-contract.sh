@@ -44,6 +44,10 @@ for required_text in \
     "GIT_CONFIG_VALUE_0=\"AUTHORIZATION: basic \$git_auth_header\"" \
     "push \"https://\${git_host}/\${GITHUB_REPOSITORY}.git\"" \
     "\$parent_sha:refs/heads/\$branch" \
+    "wait_for_branch()" \
+    "weekly tooling branch did not become visible" \
+    "visible_branch_sha=\"\$(wait_for_branch)\"" \
+    "[ \"\$visible_branch_sha\" = \"\$parent_sha\" ]" \
     "branch_sha=\"\$(gh api" \
     "bash ./scripts/github-setup/verify-commit-verification.sh \"\$GITHUB_REPOSITORY\" \"\$commit_sha\"" \
     "expected_branch_sha=\"\$(gh api" \
