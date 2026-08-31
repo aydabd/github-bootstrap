@@ -51,6 +51,7 @@ assert manifest["default_permissions"] == {
     "issues": "write",
     "metadata": "read",
     "pull_requests": "write",
+    "workflows": "write",
 }
 PY
 tmp_dir="$(mktemp -d)"
@@ -149,6 +150,7 @@ expected = {
             "issues": "write",
             "metadata": "read",
             "pull_requests": "write",
+            "workflows": "write",
         },
     },
     "repository-maintenance-reviewer.json": {
@@ -170,7 +172,10 @@ for filename, contract in expected.items():
     assert payload["public"] is False
     assert "bypass_actors" not in payload
     assert "deletion" not in payload["default_permissions"]
-    assert "workflows" not in payload["default_permissions"]
+    if filename == "repository-maintenance-writer.json":
+        assert payload["default_permissions"]["workflows"] == "write"
+    else:
+        assert "workflows" not in payload["default_permissions"]
 PY
 
 for required_text in \
