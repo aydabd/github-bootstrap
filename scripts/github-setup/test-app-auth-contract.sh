@@ -67,10 +67,14 @@ assert_contains "permission_profile: maintenance-labeling" "$repo_root/.github/w
 assert_contains "validate-maintenance-pr.sh" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 assert_contains 'automation: maintenance' "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 assert_contains 'automation: validating' "$repo_root/.github/workflows/classify-maintenance-pr.yml"
+assert_contains "issues/\$PR_NUMBER/labels" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
+assert_not_contains "gh pr edit \"\$PR_NUMBER\"" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 assert_contains "if ! classification=\"\$(bash scripts/github-setup/validate-maintenance-pr.sh \"\$pr_file\")\"; then" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 template_classifier="$repo_root/templates/.github/workflows/classify-maintenance-pr.yml"
 assert_contains "actions/create-github-app-token" "$template_classifier"
 assert_contains ".github/scripts/validate-maintenance-pr.sh" "$template_classifier"
+assert_contains "issues/\$PR_NUMBER/labels" "$template_classifier"
+assert_not_contains "gh pr edit \"\$PR_NUMBER\"" "$template_classifier"
 [ -x "$repo_root/templates/.github/scripts/validate-maintenance-pr.sh" ]
 
 for workflow in create-repository.yml terraform-create-repository.yml; do
