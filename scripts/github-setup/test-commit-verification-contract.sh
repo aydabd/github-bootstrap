@@ -63,6 +63,17 @@ if grep -Fq 'create_label_args' "$workflow"; then
     exit 1
 fi
 
+if grep -Fq '  push:' "$workflow"; then
+    echo "weekly tooling workflow must not run after every main push" >&2
+    exit 1
+fi
+for required_trigger in '  schedule:' '  workflow_dispatch:'; do
+    grep -Fq "$required_trigger" "$workflow" || {
+        echo "weekly tooling workflow must retain $required_trigger trigger" >&2
+        exit 1
+    }
+done
+
 if grep -Fq 'BOOTSTRAP_APP_SIGNING_KEY' "$workflow" ||
     grep -Fq 'git commit ' "$workflow" ||
     grep -Fq 'git -c http.extraheader=' "$workflow" ||

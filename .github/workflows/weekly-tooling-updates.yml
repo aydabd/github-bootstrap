@@ -1,9 +1,7 @@
 name: Weekly Tooling Updates
 
 on:
-  # Reconcile the single tooling PR after every change to main, including merges.
-  push:
-    branches: [main]
+  # Create or reconcile the single tooling PR on the weekly cadence.
   schedule:
     - cron: "0 4 * * 1"
   workflow_dispatch:
