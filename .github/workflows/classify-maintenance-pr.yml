@@ -46,6 +46,28 @@ jobs:
           permission_profile: maintenance-labeling
           repositories: ${{ github.event.repository.name }}
 
+      - name: Verify Writer App installation
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$APP_SLUG" ] || {
+            echo "Writer App slug was not resolved" >&2
+            exit 1
+          }
+          [ -n "$EXPECTED_APP_SLUG" ] || {
+            echo "Expected Writer App slug is not configured" >&2
+            exit 1
+          }
+          [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || {
+            echo "Resolved App '$APP_SLUG' is not the configured Writer '$EXPECTED_APP_SLUG'" >&2
+            exit 1
+          }
+          gh api /installation --jq '{app_slug,repository_selection,permissions}'
+
       - name: Classify and label trusted automation PR
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
