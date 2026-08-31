@@ -101,7 +101,7 @@ runs:
             else
               case "$PERMISSION_PROFILE" in
                 repository-creation|repository-cleanup)
-                  echo "::error::Personal-account creation requires BOOTSTRAP_APP_USER_TOKEN; installation credentials are for existing-repository operations only." >&2
+                  echo "::error::Personal-account creation requires BOOTSTRAP_PROVISIONER_APP_USER_TOKEN; installation credentials are for existing-repository operations only." >&2
                   exit 1
                   ;;
               esac

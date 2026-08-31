@@ -52,8 +52,8 @@ Recommended: use a **tenant-installed GitHub App** (safer, short-lived installat
    personal account that will own a personal repository. The `app_owner` value must match the
    target owner.
 3. In the repository that runs bootstrap, set:
-   - `BOOTSTRAP_APP_PRIVATE_KEY` (protected Actions secret — required for organization installation-token mode)
-   - `BOOTSTRAP_APP_USER_TOKEN` (protected reusable-workflow secret — required for personal-account mode; must be the `ghu_` GitHub App user token)
+   - `BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY` (protected Actions secret — required for organization installation-token mode)
+   - `BOOTSTRAP_PROVISIONER_APP_USER_TOKEN` (protected reusable-workflow secret — required for personal-account mode; must be the `ghu_` GitHub App user token)
 4. When running the workflow, provide:
    - `client_id` (the GitHub App client ID, visible in the App's settings)
    - `app_owner` (target organization or personal-account owner)
@@ -73,15 +73,20 @@ Create the separate Maintenance Writer App through GitHub's UI using the
 checked-in manifest:
 
 ```bash
-scripts/github-setup/github-app-manifest.sh start repository-maintenance-writer
+credential_dir="$HOME/.local/state/github-bootstrap/maintenance-writer"
+scripts/github-setup/github-app-manifest.sh start repository-maintenance-writer "$credential_dir"
+# After GitHub redirects to the local callback:
+scripts/github-setup/github-app-manifest.sh convert-file \
+  "$credential_dir/app-manifest-code" "$credential_dir"
 ```
 
-Open the printed URL, approve the App creation, install it only on the
-maintenance repositories, and retain the GitHub-generated private key in a
-protected local file. In the `production-maintenance` GitHub Environment, set
-`BOOTSTRAP_APP_CLIENT_ID` and
+Open the printed URL, click Continue to GitHub, approve the App creation, and
+install it only on the maintenance repositories. The callback validates the
+one-time state and stores the conversion code in a protected local file. In
+the `production-maintenance` GitHub Environment, set
+`BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID` and
 `BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` as variables and
-`BOOTSTRAP_APP_PRIVATE_KEY` as a secret. The weekly workflow is explicitly
+`BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY` as a secret. The weekly workflow is explicitly
 bound to that Environment. Use separate Environments for other deployments;
 the credential names remain stable while Environment scope and protection
 rules control access.
@@ -96,9 +101,10 @@ generates the private key during conversion; do not generate one locally:
 
 ```bash
 credential_dir="$HOME/.local/state/github-bootstrap"
-scripts/github-setup/github-app-manifest.sh start repository-bootstrap-provisioner
-# Open the printed URL, approve the App, and copy the one-time conversion code.
-scripts/github-setup/github-app-manifest.sh convert CODE "$credential_dir"
+scripts/github-setup/github-app-manifest.sh start repository-bootstrap-provisioner "$credential_dir"
+# Open the printed URL, approve the App, and let the local callback capture the code.
+scripts/github-setup/github-app-manifest.sh convert-file \
+  "$credential_dir/app-manifest-code" "$credential_dir"
 ```
 
 The conversion command writes GitHub's private key, client ID, and client secret only under the
@@ -119,8 +125,8 @@ scripts/github-setup/install-app-secrets.sh OWNER/github-bootstrap \
   "$credential_dir/app-user-token"
 ```
 
-The installer sets `BOOTSTRAP_APP_CLIENT_ID` as a repository variable and installs only
-`BOOTSTRAP_APP_PRIVATE_KEY` and the verified `BOOTSTRAP_APP_USER_TOKEN` as repository secrets. It
+The installer sets `BOOTSTRAP_PROVISIONER_APP_CLIENT_ID` as a repository variable and installs only
+`BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY` and the verified `BOOTSTRAP_PROVISIONER_APP_USER_TOKEN` as repository secrets. It
 never accepts a PAT or passes credentials through workflow-dispatch inputs. Run
 `Test Personal GitHub App E2E` with the personal owner; it creates and cleans up only the two
 repositories named for that run. Organization installation-token E2E remains pending without a
@@ -130,9 +136,9 @@ After the disposable E2E, remove the repository configuration and revoke or rota
 credentials. This deletes the stored values without exposing them:
 
 ```bash
-gh secret delete BOOTSTRAP_APP_PRIVATE_KEY --repo OWNER/github-bootstrap --confirm
-gh secret delete BOOTSTRAP_APP_USER_TOKEN --repo OWNER/github-bootstrap --confirm
-gh variable delete BOOTSTRAP_APP_CLIENT_ID --repo OWNER/github-bootstrap --confirm
+gh secret delete BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY --repo OWNER/github-bootstrap --confirm
+gh secret delete BOOTSTRAP_PROVISIONER_APP_USER_TOKEN --repo OWNER/github-bootstrap --confirm
+gh variable delete BOOTSTRAP_PROVISIONER_APP_CLIENT_ID --repo OWNER/github-bootstrap --confirm
 ```
 
 Also revoke the App user authorization and delete or rotate the App private key in GitHub if the
@@ -174,14 +180,14 @@ jobs:
       node_version: "24"
       java_version: "25"
       visibility: private
-      client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
+    client_id: ${{ vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID }}
       app_owner: ${{ inputs.repo_owner }}
       allowed_repo_owners: ${{ vars.ALLOWED_REPO_OWNERS }}
       require_cleanup_approval: true
     secrets:
-      BOOTSTRAP_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+      BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
       # For personal-account creation, use this App user access token instead.
-      BOOTSTRAP_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}
+      BOOTSTRAP_PROVISIONER_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_TOKEN }}
 ```
 
 This example calls the standard Actions bootstrap workflow (`create-repository.yml`).

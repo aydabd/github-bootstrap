@@ -49,7 +49,7 @@
 - Modify: `.github/workflows/test-repository-creation.yml`
 - Modify: `README.md`
 
-- [ ] Deliver only `BOOTSTRAP_APP_PRIVATE_KEY` and `BOOTSTRAP_APP_USER_TOKEN` from explicit protected files using `gh secret set`.
+- [ ] Deliver only `BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY` and `BOOTSTRAP_PROVISIONER_APP_USER_TOKEN` from explicit protected files using `gh secret set`.
 - [ ] Refuse missing files, non-`ghu_` user tokens, and PAT-like values before any workflow dispatch.
 - [ ] Add a guarded personal E2E workflow that runs only the personal scenarios and records no credential values.
 - [ ] Document manual App authorization and organization limitation.

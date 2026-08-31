@@ -51,12 +51,16 @@ must use the supported App user-token flow for personal targets; an
 installation token does not become a personal-user credential. The configured
 owner and authenticated identity must match before any operation.
 
-Store each App's GitHub-generated private key as a protected
-`BOOTSTRAP_APP_PRIVATE_KEY` secret in the environment that owns that role.
+Store each App's GitHub-generated private key as a protected role-specific
+secret in the environment that owns that role. Use
+`BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY` for the Provisioner,
+`BOOTSTRAP_E2E_APP_PRIVATE_KEY` for the E2E Admin,
+`BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY` for the Writer, and
+`BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY` for the Reviewer.
 For the weekly Writer workflow, use the protected `production-maintenance`
-Environment and set `BOOTSTRAP_APP_CLIENT_ID` and
+Environment and set `BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID` and
 `BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` as Environment variables alongside
-the `BOOTSTRAP_APP_PRIVATE_KEY` Environment secret. These names remain stable;
+the `BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY` Environment secret. These names remain stable;
 the Environment identifies which deployment is authorized to use them.
 The same Writer App may use the narrower `maintenance-labeling` profile for
 the pull-request classifier; that profile grants only `issues: write` and

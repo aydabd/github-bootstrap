@@ -64,8 +64,16 @@ cleanup() {
 }
 trap cleanup EXIT
 
+file_mode() {
+    if mode="$(stat -c '%a' "$1" 2> /dev/null)"; then
+        printf '%s\n' "$mode"
+    else
+        stat -f '%Lp' "$1"
+    fi
+}
+
 start_output="$tmp_dir/start-output"
-"$helper" start repository-maintenance-writer 'https://example.test/callback' > "$start_output" &
+GITHUB_APP_MANIFEST_TEST_MODE=1 "$helper" start repository-maintenance-writer "$tmp_dir/credentials" > "$start_output" &
 start_pid=$!
 for _ in $(seq 1 50); do
     if grep -Eq '^http://127\.0\.0\.1:[0-9]+/$' "$start_output" 2> /dev/null; then
@@ -73,7 +81,7 @@ for _ in $(seq 1 50); do
     fi
     sleep 0.1
 done
-start_url="$(cat "$start_output" 2> /dev/null || true)"
+start_url="$(head -n 1 "$start_output" 2> /dev/null || true)"
 [[ "$start_url" =~ ^http://127\.0\.0\.1:[0-9]+/$ ]] || {
     echo "start must print a local manifest form URL" >&2
     exit 1
@@ -88,10 +96,23 @@ assert '<input type="text" name="manifest" id="manifest">' in html
 assert '<input type="submit" value="Continue to GitHub">' in html
 assert 'JSON.stringify({' in html
 assert 'Repository Maintenance Writer' in html
-assert 'https://example.test/callback' in html
 PY
+state="$(
+    START_HTML="$start_html" python3 - << 'PY'
+import os
+import re
+
+match = re.search(r'action="[^"]+state=([A-Za-z0-9_-]+)"', os.environ["START_HTML"])
+assert match
+print(match.group(1))
+PY
+)"
+callback_url="${start_url}callback?code=test-conversion-code&state=${state}"
+curl --fail --silent "$callback_url" > /dev/null
 wait "$start_pid"
 start_pid=""
+test -s "$tmp_dir/credentials/app-manifest-code"
+test "$(file_mode "$tmp_dir/credentials/app-manifest-code")" = 600
 if grep -Eq 'echo.*(pem|client_secret|private_key)' "$helper"; then
     echo "manifest helper must not print credentials" >&2
     exit 1
@@ -160,7 +181,7 @@ for required_text in \
     "No App is a ruleset bypass actor" \
     "\`administration: write\` permission includes repository deletion capability" \
     "must never delete arbitrary or" \
-    "BOOTSTRAP_APP_PRIVATE_KEY" \
+    "BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY" \
     "E2E"; do
     grep -Fq "$required_text" "$trust_boundary_doc" || {
         echo "expected '$required_text' in $trust_boundary_doc" >&2

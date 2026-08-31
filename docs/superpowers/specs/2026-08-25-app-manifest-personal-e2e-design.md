@@ -14,7 +14,7 @@ Provide a safe, repeatable bootstrap path for creating or configuring a GitHub A
 
 ## Design
 
-Add a local shell helper that creates a GitHub App Manifest authorization URL and a second command that exchanges the one-time conversion code with GitHub. The conversion response is stored only under a caller-selected 0700 directory, with the returned private key, client ID, and client secret written to separate 0600 files. This allows the caller to put the GitHub-generated private key into `BOOTSTRAP_APP_PRIVATE_KEY` without logging it.
+Add a local shell helper that creates a GitHub App Manifest authorization URL and a second command that exchanges the one-time conversion code with GitHub. The conversion response is stored only under a caller-selected 0700 directory, with the returned private key, client ID, and client secret written to separate 0600 files. This allows the caller to put the GitHub-generated private key into `BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY` without logging it.
 
 Add a separate authorization helper that accepts the App client ID as an argument and the client secret through a protected file path, starts the GitHub App user OAuth flow, exchanges the callback code, verifies `/user` is the intended personal owner, and emits token metadata without the token value. Secret delivery remains an explicit `gh secret set` operation from protected files.
 

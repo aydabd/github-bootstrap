@@ -35,8 +35,8 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
-          app_private_key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
           app_owner: ${{ github.repository_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: maintenance-labeling

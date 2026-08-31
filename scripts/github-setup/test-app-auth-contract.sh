@@ -73,8 +73,8 @@ assert_contains ".github/scripts/validate-maintenance-pr.sh" "$template_classifi
 for workflow in create-repository.yml terraform-create-repository.yml; do
     workflow_path="$repo_root/.github/workflows/$workflow"
     assert_contains "client_id: \${{ inputs.client_id }}" "$workflow_path"
-    assert_contains "app_private_key: \${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}" "$workflow_path"
-    assert_contains "app_user_token: \${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}" "$workflow_path"
+    assert_contains "app_private_key: \${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}" "$workflow_path"
+    assert_contains "app_user_token: \${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_TOKEN }}" "$workflow_path"
     assert_contains "target_owner:" "$workflow_path"
     assert_contains "Reject internal visibility for personal accounts" "$workflow_path"
     assert_contains "inputs.visibility == 'internal'" "$workflow_path"
@@ -101,7 +101,7 @@ assert_contains "set -euo pipefail" "$repo_root/.github/workflows/create-reposit
 assert_not_contains "echo \"repo_created=false\" >> \"\$GITHUB_OUTPUT\"" "$repo_root/.github/workflows/create-repository.yml"
 
 for workflow in create-repository.yml terraform-create-repository.yml; do
-    assert_contains "BOOTSTRAP_APP_USER_TOKEN:" "$repo_root/.github/workflows/$workflow"
+    assert_contains "BOOTSTRAP_PROVISIONER_APP_USER_TOKEN:" "$repo_root/.github/workflows/$workflow"
     assert_contains "required: false" "$repo_root/.github/workflows/$workflow"
 done
 

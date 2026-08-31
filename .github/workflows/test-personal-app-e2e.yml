@@ -43,13 +43,13 @@ jobs:
       visibility: public
       cleanup_on_failure: true
       env_manager: system
-      client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
+      client_id: ${{ vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID }}
       app_owner: ${{ inputs.personal_owner }}
       allowed_repo_owners: ${{ inputs.personal_owner }}
       require_cleanup_approval: false
     secrets:
-      BOOTSTRAP_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
-      BOOTSTRAP_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}
+      BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
+      BOOTSTRAP_PROVISIONER_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_TOKEN }}
 
   create-private:
     name: Create private personal repository
@@ -61,13 +61,13 @@ jobs:
       visibility: private
       cleanup_on_failure: true
       env_manager: system
-      client_id: ${{ vars.BOOTSTRAP_APP_CLIENT_ID }}
+      client_id: ${{ vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID }}
       app_owner: ${{ inputs.personal_owner }}
       allowed_repo_owners: ${{ inputs.personal_owner }}
       require_cleanup_approval: false
     secrets:
-      BOOTSTRAP_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
-      BOOTSTRAP_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}
+      BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
+      BOOTSTRAP_PROVISIONER_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_TOKEN }}
 
   cleanup:
     name: Delete only personal E2E repositories
@@ -79,7 +79,7 @@ jobs:
     steps:
       - name: Delete exact test repositories
         env:
-          GH_TOKEN: ${{ secrets.BOOTSTRAP_APP_USER_TOKEN }}
+          GH_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_TOKEN }}
           PERSONAL_OWNER: ${{ inputs.personal_owner }}
           PUBLIC_REPO: bootstrap-app-e2e-${{ github.run_id }}-public
           PRIVATE_REPO: bootstrap-app-e2e-${{ github.run_id }}-private
