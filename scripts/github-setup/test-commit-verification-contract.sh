@@ -34,14 +34,12 @@ for required_text in \
     "jq -n --arg base_tree \"\$parent_tree_sha\"" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/commits\"" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/pulls\"" \
-    "GIT_AUTH_HEADER=\"\$(printf 'x-access-token:%s' \"\$GH_TOKEN\" | base64 | tr -d '\\r\\n')\"" \
-    "printf '::add-mask::%s\\n' \"\$GIT_AUTH_HEADER\"" \
-    "git_host=\"\${GITHUB_SERVER_URL#https://}\"" \
-    "GIT_CONFIG_COUNT=1" \
-    "GIT_CONFIG_KEY_0=http.extraheader" \
-    "GIT_CONFIG_VALUE_0=\"AUTHORIZATION: basic \$GIT_AUTH_HEADER\"" \
-    "push \"https://\${git_host}/\${GITHUB_REPOSITORY}.git\"" \
-    "\$commit_sha:refs/heads/\$branch" \
+    "ref_payload=\"\$payload_dir/ref.json\"" \
+    "jq -n --arg ref \"refs/heads/\$branch\" --arg sha \"\$commit_sha\"" \
+    "ref_attempt=1" \
+    "Reference does not exist" \
+    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/refs\"" \
+    "--input \"\$ref_payload\"" \
     "branch_sha=\"\$(gh api" \
     "-f \"parents[]=\$parent_sha\"" \
     "bash ./scripts/github-setup/verify-commit-verification.sh \"\$GITHUB_REPOSITORY\" \"\$commit_sha\"" \
