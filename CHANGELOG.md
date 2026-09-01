@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.0](https://github.com/aydabd/github-bootstrap/compare/v2.0.0...v2.1.0) (2026-09-01)
+
+
+### Features
+
+* run release-please as the Writer App and flag major releases ([#174](https://github.com/aydabd/github-bootstrap/issues/174)) ([a942c9a](https://github.com/aydabd/github-bootstrap/commit/a942c9aef14be2adc8708d84b78652f28d769719))
+
+
+### Bug Fixes
+
+* classify Writer-App release PRs and wait for checks before merge ([#177](https://github.com/aydabd/github-bootstrap/issues/177)) ([18d670d](https://github.com/aydabd/github-bootstrap/commit/18d670d6ea2c869b8b32649667caa753aac0c2b3))
+* exempt trusted automation bots from the sign-off check ([#176](https://github.com/aydabd/github-bootstrap/issues/176)) ([8897a47](https://github.com/aydabd/github-bootstrap/commit/8897a477c020644c00311483235ae35300523908))
+
 ## [2.0.0](https://github.com/aydabd/github-bootstrap/compare/v1.15.0...v2.0.0) (2026-09-01)
 
 
