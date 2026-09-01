@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -183,17 +184,78 @@ func fetchSHA256(rawURL string) (string, error) {
 	return "", fmt.Errorf("failed to fetch binary for checksum after retries: %s: %w", rawURL, lastErr)
 }
 
+// stableVersionPattern matches plain numeric dotted releases such as "3.14.7".
+// It deliberately rejects pre-releases like "3.15.0rc1", "3.15.0a7" or
+// "3.15.0b4": conda-forge only serves those under separate labels, so pinning
+// one breaks `micromamba create` against the default channel.
+var stableVersionPattern = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)*$`)
+
 func latestCondaVersion(pkg string) (string, error) {
 	encoded := url.PathEscape(pkg)
 	data, err := httpGetJSON("https://api.anaconda.org/package/conda-forge/" + encoded)
 	if err != nil {
 		return "", err
 	}
+	if rawVersions, ok := data["versions"].([]any); ok {
+		candidates := make([]string, 0, len(rawVersions))
+		for _, item := range rawVersions {
+			if version, ok := item.(string); ok {
+				candidates = append(candidates, version)
+			}
+		}
+		if stable := latestStableVersion(candidates); stable != "" {
+			return stable, nil
+		}
+	}
 	version, ok := data["latest_version"].(string)
+	version = strings.TrimSpace(version)
 	if !ok || version == "" {
 		return "", fmt.Errorf("unable to resolve conda-forge latest version for %s", pkg)
 	}
+	if !stableVersionPattern.MatchString(version) {
+		return "", fmt.Errorf("conda-forge has no stable release for %s (latest is %q)", pkg, version)
+	}
 	return version, nil
+}
+
+// latestStableVersion returns the greatest plain-numeric release from versions,
+// ignoring any pre-release identifiers. It returns "" when versions holds no
+// stable release.
+func latestStableVersion(versions []string) string {
+	best := ""
+	for _, candidate := range versions {
+		candidate = strings.TrimSpace(candidate)
+		if !stableVersionPattern.MatchString(candidate) {
+			continue
+		}
+		if best == "" || compareNumericVersions(candidate, best) > 0 {
+			best = candidate
+		}
+	}
+	return best
+}
+
+// compareNumericVersions compares two dotted numeric versions component by
+// component, treating missing trailing components as zero. It returns a
+// negative, zero, or positive value when a sorts before, equal to, or after b.
+func compareNumericVersions(a, b string) int {
+	aParts := strings.Split(a, ".")
+	bParts := strings.Split(b, ".")
+	limit := max(len(aParts), len(bParts))
+	for index := range limit {
+		aNumber := 0
+		if index < len(aParts) {
+			aNumber = parseVersionPart(aParts[index])
+		}
+		bNumber := 0
+		if index < len(bParts) {
+			bNumber = parseVersionPart(bParts[index])
+		}
+		if aNumber != bNumber {
+			return aNumber - bNumber
+		}
+	}
+	return 0
 }
 
 func latestPyPIVersion(pkg string) (string, error) {
