@@ -55,7 +55,7 @@ runs:
       run: |
         set -euo pipefail
         case "$PERMISSION_PROFILE" in
-          repository-creation|repository-setup|repository-cleanup|weekly-tooling|maintenance-labeling|workflow-approval|maintenance-review|release-please|e2e-lifecycle) ;;
+          repository-creation|repository-setup|repository-cleanup|weekly-tooling|maintenance-labeling|workflow-approval|maintenance-review|maintenance-merge|release-please|e2e-lifecycle) ;;
           *) echo "::error::Unsupported GitHub App permission profile '$PERMISSION_PROFILE'." >&2; exit 1 ;;
         esac
         if [ "$PERMISSION_PROFILE" != "repository-creation" ] && [ "$PERMISSION_PROFILE" != "e2e-lifecycle" ] && [ -z "$REPOSITORIES" ]; then
@@ -130,10 +130,10 @@ runs:
         repositories: ${{ inputs.repositories }}
         permission-administration: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'repository-cleanup' || inputs.permission_profile == 'e2e-lifecycle') && 'write' || '' }}
         permission-actions: ${{ inputs.permission_profile == 'workflow-approval' && 'write' || '' }}
-        permission-contents: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'release-please') && 'write' || '' }}
+        permission-contents: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'release-please' || inputs.permission_profile == 'maintenance-merge') && 'write' || '' }}
         permission-issues: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-labeling' || inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup') && 'write' || '' }}
         permission-organization-administration: ${{ inputs.permission_profile == 'repository-creation' && 'write' || '' }}
-        permission-pull-requests: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-review' || inputs.permission_profile == 'maintenance-labeling' || inputs.permission_profile == 'release-please') && 'write' || inputs.permission_profile == 'workflow-approval' && 'read' || '' }}
+        permission-pull-requests: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-review' || inputs.permission_profile == 'maintenance-labeling' || inputs.permission_profile == 'release-please' || inputs.permission_profile == 'maintenance-merge') && 'write' || inputs.permission_profile == 'workflow-approval' && 'read' || '' }}
         permission-workflows: ${{ inputs.permission_profile == 'weekly-tooling' && 'write' || '' }}
 
     - name: Finalize token output

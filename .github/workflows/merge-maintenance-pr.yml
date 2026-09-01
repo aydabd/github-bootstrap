@@ -13,7 +13,9 @@ permissions:
 
 jobs:
   merge:
-    if: github.event.workflow_run.conclusion == 'success'
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch != 'main'
     name: Approve and enable squash auto-merge
     runs-on: ubuntu-24.04
     environment: production-maintenance
@@ -59,9 +61,23 @@ jobs:
           [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected maintenance Reviewer App slug is not configured" >&2; exit 1; }
           [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured maintenance Reviewer" >&2; exit 1; }
 
+      # enablePullRequestAutoMerge needs contents:write, which the Reviewer App
+      # does not carry; the Writer App does. The Reviewer still owns the approval.
+      - name: Resolve Writer App merge token
+        id: resolve-merge-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: maintenance-merge
+          repositories: ${{ github.event.repository.name }}
+
       - name: Approve and enable squash auto-merge after fresh validation
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          MERGE_TOKEN: ${{ steps.resolve-merge-token.outputs.token }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           SAFETY_SHA: ${{ github.event.workflow_run.head_sha }}
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
@@ -72,13 +88,8 @@ jobs:
           set -euo pipefail
           [ -n "$HEAD_BRANCH" ] || { echo "maintenance safety run has no head branch" >&2; exit 1; }
 
-          # The workflow_run event does not reliably carry the pull request for
-          # pull_request_target-triggered workflows, so resolve the PR from the
-          # branch the Maintenance safety run validated. The REST head filter
-          # takes "<owner>:<branch>", which matches only a same-owner branch, so
-          # a fork sharing the branch name cannot match. (gh pr list --head does
-          # not honour the "<owner>:" prefix and would match nothing.) Pass the
-          # filters via -f so gh api URL-encodes the branch name.
+          # workflow_run does not carry the PR for pull_request_target triggers;
+          # the REST head filter takes "<owner>:<branch>" (same-owner only).
           PR_NUMBER="$(gh api --method GET "repos/$REPOSITORY/pulls" \
             -f head="${REPOSITORY%%/*}:$HEAD_BRANCH" -f base=main -f state=open \
             --jq '.[0].number // empty')"
@@ -113,11 +124,8 @@ jobs:
               "$WRITER_APP_SLUG" "$REVIEWER_APP_SLUG" "$require_reviewer_approval"
           }
 
-          # Maintenance safety completes almost immediately on PR open, well
-          # before the required checks finish, so this run is often triggered
-          # while `quality` is still pending. Wait for the required checks to
-          # settle before deciding; a later trigger handles anything still
-          # unresolved after the window.
+          # This job is often triggered while the required checks are still
+          # running; wait for them, and defer to a later trigger if they hang.
           wait_for_required_checks() {
             local attempt pending
             for attempt in $(seq 1 45); do
@@ -155,7 +163,7 @@ jobs:
             exit 1
           }
           # shellcheck disable=SC2016
-          gh api graphql \
+          GH_TOKEN="$MERGE_TOKEN" gh api graphql \
             -f query='mutation($pullRequestId:ID!,$mergeMethod:PullRequestMergeMethod!){enablePullRequestAutoMerge(input:{pullRequestId:$pullRequestId,mergeMethod:$mergeMethod}){pullRequest{autoMergeRequest{mergeMethod}}}}' \
             -f pullRequestId="$node_id" \
             -f mergeMethod=SQUASH
