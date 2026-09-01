@@ -17,6 +17,7 @@ type Config struct {
 	DryRun       bool
 	VerifyLayout bool
 	VerifyOnly   bool
+	CooldownDays int
 }
 
 type updaterEntry struct {
@@ -112,7 +113,7 @@ func Run(cfg Config) ([]string, error) {
 
 	var versions *toolinglib.Versions
 	if needsVersions {
-		resolved, err := toolinglib.CollectVersions(selected)
+		resolved, err := toolinglib.CollectVersions(selected, cfg.CooldownDays)
 		if err != nil {
 			return nil, err
 		}

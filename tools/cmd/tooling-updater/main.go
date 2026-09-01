@@ -5,11 +5,28 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 
 	"github-bootstrap/tools/internal/toolingupdater/runner"
 	"github-bootstrap/tools/pkg/toolinglib"
 )
+
+const defaultCooldownDays = 14
+
+// envIntDefault reads a non-negative integer from name, falling back to
+// fallback when the variable is unset, empty, or malformed.
+func envIntDefault(name string, fallback int) int {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return fallback
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value < 0 {
+		return fallback
+	}
+	return value
+}
 
 func parseLogLevel() slog.Level {
 	switch strings.ToLower(strings.TrimSpace(os.Getenv(toolinglib.EnvLogLevel))) {
@@ -34,9 +51,10 @@ func main() {
 	verifyOnly := flag.Bool("verify-only", false, "verify workspace layout and exit")
 	metadataFile := flag.String("metadata-file", os.Getenv("TOOLING_UPDATE_METADATA_FILE"), "write structured update metadata to this file")
 	explicitBreaking := flag.Bool("explicit-breaking", os.Getenv("TOOLING_UPDATE_EXPLICIT_BREAKING") == "true", "classify all emitted updates as explicitly breaking")
+	cooldownDays := flag.Int("cooldown-days", envIntDefault("TOOLING_UPDATE_COOLDOWN_DAYS", defaultCooldownDays), "skip upstream releases published within this many days (0 disables)")
 	flag.Parse()
 
-	logger.Info("tooling updater started", "scope", *scope, "updaters", *updatersRaw, "dry_run", *dryRun, "verify_only", *verifyOnly)
+	logger.Info("tooling updater started", "scope", *scope, "updaters", *updatersRaw, "dry_run", *dryRun, "verify_only", *verifyOnly, "cooldown_days", *cooldownDays)
 
 	if *scope != "repo" && *scope != "templates" && *scope != "all" {
 		fmt.Fprintln(os.Stderr, "invalid scope, expected repo|templates|all")
@@ -56,6 +74,7 @@ func main() {
 		DryRun:       *dryRun,
 		VerifyLayout: *verifyLayout,
 		VerifyOnly:   *verifyOnly,
+		CooldownDays: *cooldownDays,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "tooling update failed: %v\n", err)
