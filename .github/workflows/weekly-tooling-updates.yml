@@ -185,16 +185,14 @@ jobs:
             mv "$file_changes.tmp" "$file_changes"
           done < <(git diff --cached --name-only)
 
-          # Resolve the repository node id, the current main tip, and any
-          # existing automation branch through one GraphQL read. Creating and
-          # updating the ref on the same GraphQL endpoint that runs
-          # createCommitOnBranch avoids the REST-to-GraphQL propagation gap
-          # that made the mutation fail with "Branch not found".
+          # Resolve the repository node id and any existing automation branch
+          # through GraphQL. Creating and updating the ref on the same GraphQL
+          # endpoint that runs createCommitOnBranch avoids the REST-to-GraphQL
+          # propagation gap that made the mutation fail with "Branch not found".
           gh api graphql \
             -f query='query($owner: String!, $name: String!, $branchRef: String!) {
               repository(owner: $owner, name: $name) {
                 id
-                mainRef: ref(qualifiedName: "refs/heads/main") { target { oid } }
                 branchRef: ref(qualifiedName: $branchRef) {
                   id
                   target {
@@ -210,17 +208,43 @@ jobs:
             >"$repo_state"
 
           repository_id="$(jq -r '.data.repository.id // empty' "$repo_state")"
-          base_oid="$(jq -r '.data.repository.mainRef.target.oid // empty' "$repo_state")"
           branch_ref_id="$(jq -r '.data.repository.branchRef.id // empty' "$repo_state")"
           branch_commit_message="$(jq -r '.data.repository.branchRef.target.message // empty' "$repo_state")"
           [ -n "$repository_id" ] || {
             echo "weekly tooling workflow could not resolve the repository node id" >&2
             exit 1
           }
+
+          # Resolve the tip of main now, immediately before the branch is reset
+          # and the commit is created, so createRef / updateRef /
+          # createCommitOnBranch all pin the same current commit rather than a
+          # value that aged while the updater ran.
+          base_oid="$(gh api graphql \
+            -f query='query($owner: String!, $name: String!) {
+              repository(owner: $owner, name: $name) {
+                ref(qualifiedName: "refs/heads/main") { target { oid } }
+              }
+            }' \
+            -f owner="$owner" \
+            -f name="$name" \
+            --jq '.data.repository.ref.target.oid')"
           [ -n "$base_oid" ] || {
             echo "weekly tooling workflow could not resolve the refs/heads/main tip" >&2
             exit 1
           }
+
+          # Idempotency guard. The updater ran against the checked-out tree and
+          # the commit below replaces whole files, so on the scheduled/main path
+          # the checkout must still be the tip of main. If something merged
+          # mid-run, abort and let the next run reconcile from a fresh checkout
+          # rather than silently reverting that change.
+          if [ "$GITHUB_REF_NAME" = "main" ]; then
+            checkout_sha="$(git rev-parse HEAD)"
+            [ "$checkout_sha" = "$base_oid" ] || {
+              echo "main advanced during the run (updater base $checkout_sha, current tip $base_oid); aborting for a clean reconcile on the next run" >&2
+              exit 1
+            }
+          fi
 
           if [ -z "$branch_ref_id" ]; then
             gh api graphql \
