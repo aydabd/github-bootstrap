@@ -24,6 +24,13 @@ cat > "$tmp_dir/no-request.json" << 'EOF'
 EOF
 "$validator" "$tmp_dir/no-request.json" "$tmp_dir/reviews.json" "$tmp_dir/threads.json" ""
 
+# Copilot does not review bot-authored PRs; the gate must skip them rather than
+# block forever on a review that will never arrive.
+cat > "$tmp_dir/bot-pr.json" << 'EOF'
+{"number":9,"head":{"sha":"current-sha"},"user":{"login":"repository-maintenance-writer[bot]"},"requested_reviewers":[{"login":"copilot-pull-request-reviewer[bot]"}]}
+EOF
+"$validator" "$tmp_dir/bot-pr.json" "$tmp_dir/empty-reviews.json" "$tmp_dir/threads.json" "copilot-pull-request-reviewer[bot]"
+
 if "$validator" "$tmp_dir/no-request.json" "$tmp_dir/empty-reviews.json" "$tmp_dir/threads.json" "copilot-pull-request-reviewer[bot]"; then
     echo "configured Copilot review gate was bypassed" >&2
     exit 1
