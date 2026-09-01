@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.3](https://github.com/aydabd/github-bootstrap/compare/v2.1.2...v2.1.3) (2026-09-01)
+
+
+### Bug Fixes
+
+* unblock Dependabot Actions PRs (commit body rule + template sync) ([#187](https://github.com/aydabd/github-bootstrap/issues/187)) ([0cf8477](https://github.com/aydabd/github-bootstrap/commit/0cf847769385fb5db6cb388d2cdf1f57ccb0ae34)), closes [#97](https://github.com/aydabd/github-bootstrap/issues/97)
+
 ## [2.1.2](https://github.com/aydabd/github-bootstrap/compare/v2.1.1...v2.1.2) (2026-09-01)
 
 
