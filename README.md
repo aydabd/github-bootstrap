@@ -260,6 +260,11 @@ Organization repository creation uses a short-lived GitHub App installation toke
 creation uses a verified GitHub App user access token. See the
 [permission-to-endpoint matrix](docs/github-app-permission-matrix.md) for the exact scope rationale.
 
+For installing the reusable maintenance Apps in another owner and for operating the
+automated verified-maintenance-PR pipeline (credentials, trust boundaries, and a
+troubleshooting checklist), see
+[`docs/maintenance-operations.md`](docs/maintenance-operations.md).
+
 CodeRabbit setup has one extra prerequisite: install the
 [CodeRabbit GitHub App](https://github.com/apps/coderabbitai) on the target
 repository. This toolkit can add the config file, labels, and optional ruleset,
