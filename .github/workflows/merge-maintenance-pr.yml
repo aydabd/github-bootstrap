@@ -148,8 +148,8 @@ jobs:
             exit 0
           fi
           reviewer_login="${REVIEWER_APP_SLUG}[bot]"
-          if ! jq -e --arg reviewer_login "$reviewer_login" \
-              'any(.[]?; .user.login == $reviewer_login and .state == "APPROVED")' \
+          if ! jq -e --arg reviewer_login "$reviewer_login" --arg head_sha "$HEAD_SHA" \
+              'any(.[]?; .user.login == $reviewer_login and .state == "APPROVED" and .commit_id == $head_sha)' \
               "$tmp_dir/reviews.json" > /dev/null; then
             gh api --method POST "/repos/$REPOSITORY/pulls/$PR_NUMBER/reviews" \
               -f event=APPROVE \
@@ -162,8 +162,17 @@ jobs:
             echo "pull request node ID is missing" >&2
             exit 1
           }
-          # shellcheck disable=SC2016
-          GH_TOKEN="$MERGE_TOKEN" gh api graphql \
-            -f query='mutation($pullRequestId:ID!,$mergeMethod:PullRequestMergeMethod!){enablePullRequestAutoMerge(input:{pullRequestId:$pullRequestId,mergeMethod:$mergeMethod}){pullRequest{autoMergeRequest{mergeMethod}}}}' \
-            -f pullRequestId="$node_id" \
-            -f mergeMethod=SQUASH
+
+          # enablePullRequestAutoMerge rejects a PR that is already mergeable;
+          # merge it outright in that case.
+          if [ "$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.mergeable_state')" = "clean" ]; then
+            GH_TOKEN="$MERGE_TOKEN" gh api --method PUT \
+              "/repos/$REPOSITORY/pulls/$PR_NUMBER/merge" \
+              -f sha="$HEAD_SHA" -f merge_method=squash > /dev/null
+          else
+            # shellcheck disable=SC2016
+            GH_TOKEN="$MERGE_TOKEN" gh api graphql \
+              -f query='mutation($pullRequestId:ID!,$mergeMethod:PullRequestMergeMethod!){enablePullRequestAutoMerge(input:{pullRequestId:$pullRequestId,mergeMethod:$mergeMethod}){pullRequest{autoMergeRequest{mergeMethod}}}}' \
+              -f pullRequestId="$node_id" \
+              -f mergeMethod=SQUASH
+          fi

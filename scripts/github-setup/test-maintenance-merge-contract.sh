@@ -86,6 +86,21 @@ if bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews
     exit 1
 fi
 
+cat > "$tmp_dir/stale-approval.json" << 'EOF'
+[{"user":{"login":"maintenance-reviewer[bot]"},"state":"APPROVED","commit_id":"old-sha"}]
+EOF
+if bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/stale-approval.json" \
+    "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer" true; then
+    echo "stale Reviewer App approval was accepted" >&2
+    exit 1
+fi
+
+cat > "$tmp_dir/head-approval.json" << 'EOF'
+[{"user":{"login":"maintenance-reviewer[bot]"},"state":"APPROVED","commit_id":"current-sha"}]
+EOF
+bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/head-approval.json" \
+    "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer" true
+
 assert_contains "workflow_run:" "$workflow"
 assert_contains "workflows:" "$workflow"
 assert_contains "Maintenance safety" "$workflow"
