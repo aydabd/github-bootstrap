@@ -16,6 +16,9 @@ payload for auditability.
 | **Repository Maintenance Writer**    | Creates verified maintenance commits and opens or updates maintenance pull requests in explicitly selected repositories.                                                                                        | Production Writer App private key, held in the production maintenance environment.                                         | E2E administration, workflow approval, review, auto-merge, and ruleset bypass.                                                    |
 | **Repository Maintenance Reviewer**  | Approves eligible workflow runs, completes the automation review/merge orchestration, and enables auto-merge after all policy gates pass. Install only on explicitly selected maintenance repositories.         | Production Reviewer App private key, held in the production maintenance environment and kept separate from the Writer key. | E2E administration, commit creation, arbitrary repository administration, and ruleset bypass.                                     |
 
+The operator runbook for installing these Apps in another owner and running the
+maintenance pipeline is [`maintenance-operations.md`](maintenance-operations.md).
+
 The E2E Admin is never used by production maintenance workflows. The Writer
 and Reviewer are separate Apps even when they are installed on the same target
 repository. No App is a ruleset bypass actor: rulesets remain authoritative
