@@ -74,11 +74,14 @@ jobs:
 
           # The workflow_run event does not reliably carry the pull request for
           # pull_request_target-triggered workflows, so resolve the PR from the
-          # branch the Maintenance safety run validated. Qualify the head ref
-          # with the base repository owner so a fork sharing the branch name
-          # cannot match.
-          PR_NUMBER="$(gh pr list --repo "$REPOSITORY" --head "${REPOSITORY%%/*}:$HEAD_BRANCH" --base main \
-            --state open --json number --jq '.[0].number // empty')"
+          # branch the Maintenance safety run validated. The REST head filter
+          # takes "<owner>:<branch>", which matches only a same-owner branch, so
+          # a fork sharing the branch name cannot match. (gh pr list --head does
+          # not honour the "<owner>:" prefix and would match nothing.) Pass the
+          # filters via -f so gh api URL-encodes the branch name.
+          PR_NUMBER="$(gh api --method GET "repos/$REPOSITORY/pulls" \
+            -f head="${REPOSITORY%%/*}:$HEAD_BRANCH" -f base=main -f state=open \
+            --jq '.[0].number // empty')"
           [ -n "$PR_NUMBER" ] || {
             echo "no open pull request for branch $HEAD_BRANCH; nothing to merge"
             exit 0
