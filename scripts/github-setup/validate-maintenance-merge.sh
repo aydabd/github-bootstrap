@@ -64,10 +64,10 @@ jq -e 'all(.[]?; .state != "CHANGES_REQUESTED")' "$reviews_file" > /dev/null || 
 }
 
 if [ "$require_reviewer_approval" = "true" ]; then
-    jq -e --arg reviewer_login "${reviewer_app_slug}[bot]" \
-        'any(.[]?; .user.login == $reviewer_login and .state == "APPROVED")' \
+    jq -e --arg reviewer_login "${reviewer_app_slug}[bot]" --arg expected_sha "$expected_sha" \
+        'any(.[]?; .user.login == $reviewer_login and .state == "APPROVED" and .commit_id == $expected_sha)' \
         "$reviews_file" > /dev/null || {
-        echo "Reviewer App approval is missing" >&2
+        echo "Reviewer App approval is missing for the current head" >&2
         exit 1
     }
 fi
