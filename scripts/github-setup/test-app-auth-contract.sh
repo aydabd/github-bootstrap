@@ -60,8 +60,12 @@ assert_contains "Unsupported GitHub App permission profile '\$PERMISSION_PROFILE
 assert_contains "required except for repository-creation" "$resolver"
 assert_not_contains "gh_pat_secret" "$resolver"
 assert_not_contains "gh_token" "$resolver"
-assert_contains "github.event.workflow_run.conclusion == 'success' &&" "$merge_workflow"
-assert_contains "github.event.workflow_run.pull_requests[0].number" "$merge_workflow"
+assert_contains "github.event.workflow_run.conclusion == 'success'" "$merge_workflow"
+# github.event.workflow_run.pull_requests is empty for pull_request_target-driven
+# workflows; the merge job resolves the PR from the validated head branch.
+assert_not_contains "workflow_run.pull_requests" "$merge_workflow"
+assert_contains "gh pr list --repo \"\$REPOSITORY\" --head \"\${REPOSITORY%%/*}:\$HEAD_BRANCH\"" "$merge_workflow"
+assert_contains "github.event.workflow_run.head_branch" "$merge_workflow"
 assert_contains "pull_request_target:" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 assert_contains "permission_profile: maintenance-labeling" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 assert_contains "Verify Writer App installation" "$repo_root/.github/workflows/classify-maintenance-pr.yml"

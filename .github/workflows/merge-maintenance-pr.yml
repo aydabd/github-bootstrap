@@ -13,9 +13,7 @@ permissions:
 
 jobs:
   merge:
-    if: |
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.pull_requests[0].number
+    if: github.event.workflow_run.conclusion == 'success'
     name: Approve and enable squash auto-merge
     runs-on: ubuntu-24.04
     environment: production-maintenance
@@ -64,16 +62,33 @@ jobs:
       - name: Approve and enable squash auto-merge after fresh validation
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
-          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SAFETY_SHA: ${{ github.event.workflow_run.head_sha }}
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
           REVIEWER_APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
           REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
-          [ -n "$PR_NUMBER" ] || { echo "maintenance safety run has no pull request" >&2; exit 1; }
-          [ -n "$HEAD_SHA" ] || { echo "maintenance safety run has no head SHA" >&2; exit 1; }
+          [ -n "$HEAD_BRANCH" ] || { echo "maintenance safety run has no head branch" >&2; exit 1; }
+
+          # The workflow_run event does not reliably carry the pull request for
+          # pull_request_target-triggered workflows, so resolve the PR from the
+          # branch the Maintenance safety run validated. Qualify the head ref
+          # with the base repository owner so a fork sharing the branch name
+          # cannot match.
+          PR_NUMBER="$(gh pr list --repo "$REPOSITORY" --head "${REPOSITORY%%/*}:$HEAD_BRANCH" --base main \
+            --state open --json number --jq '.[0].number // empty')"
+          [ -n "$PR_NUMBER" ] || {
+            echo "no open pull request for branch $HEAD_BRANCH; nothing to merge"
+            exit 0
+          }
+          HEAD_SHA="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json headRefOid --jq '.headRefOid')"
+          [ -n "$HEAD_SHA" ] || { echo "could not resolve the pull request head SHA" >&2; exit 1; }
+          [ "$SAFETY_SHA" = "$HEAD_SHA" ] || {
+            echo "Maintenance safety validated $SAFETY_SHA but the PR head is now $HEAD_SHA; deferring to the next run"
+            exit 0
+          }
 
           tmp_dir="$(mktemp -d)"
           trap 'rm -rf "$tmp_dir"' EXIT
