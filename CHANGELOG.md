@@ -1,5 +1,70 @@
 # Changelog
 
+## [2.0.0](https://github.com/aydabd/github-bootstrap/compare/v1.15.0...v2.0.0) (2026-09-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* Generated repositories no longer receive lint.yml or the lint status check. They receive the quality workflow and quality status check instead; existing repositories are not migrated automatically.
+
+### Features
+
+* add a 14-day release cooldown to the tooling updater ([#167](https://github.com/aydabd/github-bootstrap/issues/167)) ([f019069](https://github.com/aydabd/github-bootstrap/commit/f0190696ac59ac9c1f71a905d31e9c5ca85d3c43))
+* add maintenance safety check ([#135](https://github.com/aydabd/github-bootstrap/issues/135)) ([9bf8d16](https://github.com/aydabd/github-bootstrap/commit/9bf8d168ba6888139aaf4061f6efe0675afff769))
+* add personal GitHub App E2E bootstrap ([a95f0a7](https://github.com/aydabd/github-bootstrap/commit/a95f0a79b0a778e41334cf680e6cfb9681b38da3))
+* approve eligible automation workflows ([#130](https://github.com/aydabd/github-bootstrap/issues/130)) ([d5569ba](https://github.com/aydabd/github-bootstrap/commit/d5569bacf345d4c86c47ee7374a8b69eb2cfdc72))
+* archive generated E2E repositories ([#132](https://github.com/aydabd/github-bootstrap/issues/132)) ([1b8d77d](https://github.com/aydabd/github-bootstrap/commit/1b8d77d8262b422d18e40377c3098551c7936b69))
+* **auth:** require scoped GitHub App tokens ([#98](https://github.com/aydabd/github-bootstrap/issues/98)) ([828f5c2](https://github.com/aydabd/github-bootstrap/commit/828f5c2666288a0df6e75c92ae92cc6c5b7d865a))
+* classify tooling update risk ([#127](https://github.com/aydabd/github-bootstrap/issues/127)) ([0e6d84d](https://github.com/aydabd/github-bootstrap/commit/0e6d84d0ac2ef10643e45717e0938dc10e8dfab0))
+* clean up archived E2E repositories ([#133](https://github.com/aydabd/github-bootstrap/issues/133)) ([fb5d274](https://github.com/aydabd/github-bootstrap/commit/fb5d274a567fe2bcf5f4c06568a9cc272aca39fb))
+* enable Reviewer App maintenance auto-merge ([#136](https://github.com/aydabd/github-bootstrap/issues/136)) ([5fec5c3](https://github.com/aydabd/github-bootstrap/commit/5fec5c3bd9c514ea7db4bc675deaee8d04092442))
+* gate automation on Copilot review ([#134](https://github.com/aydabd/github-bootstrap/issues/134)) ([960aff5](https://github.com/aydabd/github-bootstrap/commit/960aff5be319cfcaa5979197c4514a3f6fbdd554))
+* migrate automation maintenance lifecycle ([#138](https://github.com/aydabd/github-bootstrap/issues/138)) ([e0b41e5](https://github.com/aydabd/github-bootstrap/commit/e0b41e5019007348c75ff3d5aeea2e32fe201a7c))
+* split bootstrap quality into profiled reusable capabilities ([#85](https://github.com/aydabd/github-bootstrap/issues/85)) ([58f86e2](https://github.com/aydabd/github-bootstrap/commit/58f86e2b186f258203b61530730241993ff2b033))
+* validate generated E2E head SHA ([#131](https://github.com/aydabd/github-bootstrap/issues/131)) ([e825a7c](https://github.com/aydabd/github-bootstrap/commit/e825a7ca7da1e8d7a082e2701e238a670cb57700))
+* verify maintenance bot commits ([#126](https://github.com/aydabd/github-bootstrap/issues/126)) ([2f82d1f](https://github.com/aydabd/github-bootstrap/commit/2f82d1f6773d74aba85de44288f41c13e337749a))
+
+
+### Bug Fixes
+
+* align template maintenance app credentials ([#143](https://github.com/aydabd/github-bootstrap/issues/143)) ([37108c2](https://github.com/aydabd/github-bootstrap/commit/37108c22ea8fac6d28ed3452e5bb66223bba2c00))
+* allow weekly workflow refs ([3781b40](https://github.com/aydabd/github-bootstrap/commit/3781b40dae9b3c61fd5ac82eec952b29d39db23c))
+* authenticate Git operations with App user tokens ([#100](https://github.com/aydabd/github-bootstrap/issues/100)) ([bb7633c](https://github.com/aydabd/github-bootstrap/commit/bb7633cf0220925dda2167b1af6f2e46d08217f8))
+* avoid /user API in weekly tooling workflow ([#108](https://github.com/aydabd/github-bootstrap/issues/108)) ([9b182be](https://github.com/aydabd/github-bootstrap/commit/9b182be7d565d6553a605aa77879acb8d4f32df8))
+* bootstrap tooling branch with App Git transport ([#155](https://github.com/aydabd/github-bootstrap/issues/155)) ([06269a8](https://github.com/aydabd/github-bootstrap/commit/06269a8c0988b3b4f73039bd6f6891a6994d31fa))
+* bootstrap weekly tooling refs from main ([#153](https://github.com/aydabd/github-bootstrap/issues/153)) ([83fe257](https://github.com/aydabd/github-bootstrap/commit/83fe2572df9110e42a8d973e928df8e1ecd4ccc6))
+* bootstrap weekly tooling with workflow token ([#160](https://github.com/aydabd/github-bootstrap/issues/160)) ([3768a31](https://github.com/aydabd/github-bootstrap/commit/3768a3170fce5093190024abc4b4d164dd039271))
+* create missing repository labels ([#145](https://github.com/aydabd/github-bootstrap/issues/145)) ([78a3cb8](https://github.com/aydabd/github-bootstrap/commit/78a3cb820e9cc0c783a01c2ffcb8074b1dda4c35))
+* create tooling commits atomically ([#154](https://github.com/aydabd/github-bootstrap/issues/154)) ([001d75c](https://github.com/aydabd/github-bootstrap/commit/001d75c8652e01bf7d1c94a65acad3d40a5510e5))
+* create weekly branch with writer app token ([#151](https://github.com/aydabd/github-bootstrap/issues/151)) ([b699304](https://github.com/aydabd/github-bootstrap/commit/b6993044eb232f71051c286054a8ae1257e6c001))
+* create weekly tooling branch refs through API ([#152](https://github.com/aydabd/github-bootstrap/issues/152)) ([7f07299](https://github.com/aydabd/github-bootstrap/commit/7f07299430930017a08ba4474170ec9859930f7e))
+* create weekly tooling branch through GraphQL ([#163](https://github.com/aydabd/github-bootstrap/issues/163)) ([a2808ce](https://github.com/aydabd/github-bootstrap/commit/a2808ce2cbf1f093147397a906fdb1a2df94a140))
+* create weekly tooling pull requests through REST ([#148](https://github.com/aydabd/github-bootstrap/issues/148)) ([a051e25](https://github.com/aydabd/github-bootstrap/commit/a051e25e0c5f5c0f00d51d586500c9cab6fa775f))
+* create weekly tooling refs through API ([7f07299](https://github.com/aydabd/github-bootstrap/commit/7f07299430930017a08ba4474170ec9859930f7e))
+* create weekly tooling refs through the API ([#159](https://github.com/aydabd/github-bootstrap/issues/159)) ([18286b5](https://github.com/aydabd/github-bootstrap/commit/18286b54e521fe1a599ed40116350dc464cdf996))
+* diagnose maintenance writer installation ([#157](https://github.com/aydabd/github-bootstrap/issues/157)) ([f00050f](https://github.com/aydabd/github-bootstrap/commit/f00050fe08631b00a4b34f5443570cce7314c623))
+* grant maintenance-labeling token pull-request write ([#173](https://github.com/aydabd/github-bootstrap/issues/173)) ([7b1d44b](https://github.com/aydabd/github-bootstrap/commit/7b1d44bf29e6286c10e689de4d9c34f7523e33b9))
+* grant weekly tooling workflow permission ([#161](https://github.com/aydabd/github-bootstrap/issues/161)) ([3781b40](https://github.com/aydabd/github-bootstrap/commit/3781b40dae9b3c61fd5ac82eec952b29d39db23c))
+* guard weekly tooling run against mid-run main changes ([#166](https://github.com/aydabd/github-bootstrap/issues/166)) ([5a00787](https://github.com/aydabd/github-bootstrap/commit/5a007873441ba57327f07c2418fe5e2c1186557e))
+* harden tooling metadata gates ([#129](https://github.com/aydabd/github-bootstrap/issues/129)) ([20e7823](https://github.com/aydabd/github-bootstrap/commit/20e78232f80c8210ac9a3c8ca21702e37d7a529f))
+* initialize validation checkouts on main ([#142](https://github.com/aydabd/github-bootstrap/issues/142)) ([10bd637](https://github.com/aydabd/github-bootstrap/commit/10bd6375f61bf2087fcd79863906c9e474fd04f6))
+* isolate GitHub App credentials by role ([#141](https://github.com/aydabd/github-bootstrap/issues/141)) ([d514583](https://github.com/aydabd/github-bootstrap/commit/d51458395d90e1e47d0bd6342efc95ae2e76bf3e))
+* label maintenance pull requests through REST ([#147](https://github.com/aydabd/github-bootstrap/issues/147)) ([a2d7736](https://github.com/aydabd/github-bootstrap/commit/a2d7736d09f23404b75b4e21014d17d667394086))
+* preserve GitHub token for weekly tooling auth ([#106](https://github.com/aydabd/github-bootstrap/issues/106)) ([808f0e9](https://github.com/aydabd/github-bootstrap/commit/808f0e93022a0bfa12d443b864002e0c0d4aacf9))
+* remove deprecated GitHub App ID output ([#144](https://github.com/aydabd/github-bootstrap/issues/144)) ([05310bf](https://github.com/aydabd/github-bootstrap/commit/05310bf672ef72e092f640bd7974daacf3b42f20))
+* run weekly tooling on schedule only ([#150](https://github.com/aydabd/github-bootstrap/issues/150)) ([29a11a7](https://github.com/aydabd/github-bootstrap/commit/29a11a7f8a58f4996a8af4e37f7764e09f1ea4da))
+* satisfy shellcheck validation checks ([#101](https://github.com/aydabd/github-bootstrap/issues/101)) ([32bdcd3](https://github.com/aydabd/github-bootstrap/commit/32bdcd3e06460840ced353741200fc36d49bdca9))
+* sign off weekly tooling update commits ([#111](https://github.com/aydabd/github-bootstrap/issues/111)) ([7d10a41](https://github.com/aydabd/github-bootstrap/commit/7d10a41531fd7d077e7dc781e7e5b244b26e0897))
+* skip conda pre-release versions in tooling updater ([#165](https://github.com/aydabd/github-bootstrap/issues/165)) ([4dddb07](https://github.com/aydabd/github-bootstrap/commit/4dddb077ae0afd844c986a38ff2fbb204ea72e18))
+* skip maintenance merge runs without pull requests ([#146](https://github.com/aydabd/github-bootstrap/issues/146)) ([290a398](https://github.com/aydabd/github-bootstrap/commit/290a39859bdf47ec4e3d9a5b2e095f26e1829882))
+* skip maintenance safety without pull request ([#139](https://github.com/aydabd/github-bootstrap/issues/139)) ([c134865](https://github.com/aydabd/github-bootstrap/commit/c134865c173c927bd7e7979fe3f22cc1c66f98ef))
+* submit GitHub App manifests with POST ([#140](https://github.com/aydabd/github-bootstrap/issues/140)) ([a099472](https://github.com/aydabd/github-bootstrap/commit/a09947205516885b50a91e8845c8ae110fbcce10))
+* use app token for weekly refs ([698667b](https://github.com/aydabd/github-bootstrap/commit/698667bf258d05d814b4ad1aa23644ad514ed598))
+* use App token for weekly refs ([#162](https://github.com/aydabd/github-bootstrap/issues/162)) ([698667b](https://github.com/aydabd/github-bootstrap/commit/698667bf258d05d814b4ad1aa23644ad514ed598))
+* use github token for weekly tooling ([#107](https://github.com/aydabd/github-bootstrap/issues/107)) ([9096409](https://github.com/aydabd/github-bootstrap/commit/90964095fe4952b1d80d7b76397a9ad953b6c13e))
+* verify weekly tooling branch creation ([#149](https://github.com/aydabd/github-bootstrap/issues/149)) ([15412a9](https://github.com/aydabd/github-bootstrap/commit/15412a9f241a5c820b70becc9981ef3aaa2a51ae))
+* wait for weekly tooling branch visibility ([#158](https://github.com/aydabd/github-bootstrap/issues/158)) ([e02acb6](https://github.com/aydabd/github-bootstrap/commit/e02acb639e78e42af6a4a8431df1765abd9318a8))
+
 ## [1.15.0](https://github.com/aydabd/github-bootstrap/compare/v1.14.1...v1.15.0) (2026-08-17)
 
 
