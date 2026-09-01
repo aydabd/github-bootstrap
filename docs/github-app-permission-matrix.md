@@ -19,7 +19,8 @@ installation token does not inherit unused permissions from the App installation
 | `weekly-tooling`       | `contents: write`, `issues: write`, `pull-requests: write`, `workflows: write`                    | Commit tooling updates, action pins, labels, and manage the weekly PR. |
 | `maintenance-labeling` | `issues: write`, `pull-requests: write`                                                           | Classify trusted Dependabot and release-please PRs.                    |
 | `workflow-approval`    | `actions: write`, `pull-requests: read`                                                           | Approve eligible `action_required` workflow runs only.                 |
-| `maintenance-review`   | `pull-requests: write`                                                                            | Approve eligible maintenance PRs and enable squash auto-merge.         |
+| `maintenance-review`   | `pull-requests: write`                                                                            | Approve eligible maintenance PRs (Reviewer App).                       |
+| `maintenance-merge`    | `contents: write`, `pull-requests: write`                                                         | Enable squash auto-merge on an approved maintenance PR (Writer App).   |
 
 | App permission                | Level | Endpoint or operation                                                      | Why it is required                                                                                     |
 | ----------------------------- | ----- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -34,10 +35,12 @@ installation token does not inherit unused permissions from the App installation
 `metadata: read` is automatically available for repository access. Members, security-events,
 and unrelated-owner permissions are not granted by this resolver. The `actions: write`
 permission is granted only by the `workflow-approval` profile. Pull-request
-write permission is granted by the `weekly-tooling`, `maintenance-review`, and
-`maintenance-labeling` profiles; the labeling profile needs it because adding a
-label to a pull request is gated by `pull-requests` (not `issues`) for a GitHub
-App. Issues write permission is limited to the weekly and `maintenance-labeling`
+write permission is granted by the `weekly-tooling`, `maintenance-review`,
+`maintenance-labeling`, `maintenance-merge`, and `release-please` profiles; the
+labeling profile needs it because adding a label to a pull request is gated by
+`pull-requests` (not `issues`) for a GitHub App. `maintenance-merge` also carries
+`contents: write` because `enablePullRequestAutoMerge` requires it, and is
+resolved with the Writer App so the Reviewer App keeps only approval rights. Issues write permission is limited to the weekly and `maintenance-labeling`
 profiles' idempotent label operations and the existing repository creation/setup
 profiles' repository label configuration.
 
