@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/aydabd/github-bootstrap/compare/v2.1.1...v2.1.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* auto-dispatch generated-repo E2E for breaking maintenance PRs ([#184](https://github.com/aydabd/github-bootstrap/issues/184)) ([94fc600](https://github.com/aydabd/github-bootstrap/commit/94fc6007ad27d63722ae41c7aa5f7b088cfa5754)), closes [#117](https://github.com/aydabd/github-bootstrap/issues/117)
+
 ## [2.1.1](https://github.com/aydabd/github-bootstrap/compare/v2.1.0...v2.1.1) (2026-09-01)
 
 
