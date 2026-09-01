@@ -37,8 +37,12 @@ for required_text in \
     "updateRef(input:" \
     "force: true" \
     "ref(qualifiedName: \"refs/heads/main\")" \
-    "base_oid=\"\$(jq -r '.data.repository.mainRef.target.oid" \
+    "base_oid=\"\$(gh api graphql" \
     "branch_ref_id=\"\$(jq -r '.data.repository.branchRef.id" \
+    "if [ \"\$GITHUB_REF_NAME\" = \"main\" ]; then" \
+    "checkout_sha=\"\$(git rev-parse HEAD)\"" \
+    "[ \"\$checkout_sha\" = \"\$base_oid\" ] ||" \
+    "main advanced during the run" \
     "gh api graphql --input \"\$create_commit_payload\"" \
     "commit_sha=\"\$(jq -er" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/pulls\"" \
