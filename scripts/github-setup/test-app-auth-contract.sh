@@ -65,6 +65,18 @@ assert_contains "github.event.workflow_run.pull_requests[0].number" "$merge_work
 assert_contains "pull_request_target:" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 assert_contains "permission_profile: maintenance-labeling" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
 assert_contains "Verify Writer App installation" "$repo_root/.github/workflows/classify-maintenance-pr.yml"
+assert_contains 'automation: breaking' "$repo_root/.github/workflows/classify-maintenance-pr.yml"
+
+# release-please must run under the Writer App identity, otherwise its release
+# PRs are opened with GITHUB_TOKEN and never trigger the maintenance automation.
+release_workflow="$repo_root/.github/workflows/release-please.yml"
+assert_contains "release-please" "$resolver"
+assert_contains "permission_profile == 'release-please'" "$resolver"
+assert_contains "permission_profile: release-please" "$release_workflow"
+assert_contains "uses: ./.github/actions/resolve-gh-token" "$release_workflow"
+assert_contains "token: \${{ steps.resolve-token.outputs.token }}" "$release_workflow"
+assert_contains "environment: production-maintenance" "$release_workflow"
+assert_not_contains "\${{ secrets.GITHUB_TOKEN }}" "$release_workflow"
 assert_contains "Verify Maintenance Writer installation access" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "/installation/repositories" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "gh api --paginate --slurp /installation/repositories" "$repo_root/.github/workflows/weekly-tooling-updates.yml"

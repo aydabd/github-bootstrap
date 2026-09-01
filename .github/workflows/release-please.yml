@@ -2,6 +2,12 @@
 # Breaking changes use a `feat!` commit and `BREAKING CHANGE:` footer.
 # Uses Google's release-please to create release PRs based on conventional commits
 # See: https://github.com/googleapis/release-please
+#
+# release-please runs with a Maintenance Writer App installation token, not the
+# default GITHUB_TOKEN. GitHub does not trigger workflows from GITHUB_TOKEN
+# events, so a release PR opened with it never fires the classify / maintenance
+# safety / reviewer chain and cannot auto-merge. The App identity restores those
+# triggers.
 name: Release Please
 
 on:
@@ -10,17 +16,57 @@ on:
       - main
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+  pull-requests: read
 
 jobs:
   release-please:
     name: Release Please
     runs-on: ubuntu-latest
-
+    environment: production-maintenance
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
+      - name: Check out token resolver
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        env:
+          GIT_CONFIG_COUNT: 1
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
+        with:
+          persist-credentials: false
+          ref: main
+          sparse-checkout: |
+            .github/actions/resolve-gh-token/action.yml
+            scripts/github-setup/gh-common.sh
+            scripts/github-setup/validate-app-auth.sh
+
+      - name: Resolve Writer App token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: release-please
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Verify resolved App identity
+        env:
+          APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$APP_SLUG" ] || { echo "Writer App slug was not resolved" >&2; exit 1; }
+          [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected Writer App slug is not configured" >&2; exit 1; }
+          [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured Writer" >&2; exit 1; }
+
       - name: Run Release Please
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
+          token: ${{ steps.resolve-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

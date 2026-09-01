@@ -34,6 +34,7 @@ jobs:
             .github/actions/resolve-gh-token/action.yml
             scripts/github-setup/gh-common.sh
             scripts/github-setup/validate-app-auth.sh
+            .release-please-manifest.json
 
       - name: Resolve Writer App token
         id: resolve-token
@@ -85,6 +86,22 @@ jobs:
           labels=("automation: maintenance" "automation: validating")
           if [ "$classification" = "dependabot" ]; then
             labels+=(dependencies)
+          fi
+
+          # A major release-please bump must clear generated-repository E2E before
+          # it can merge; validate-maintenance-safety.sh enforces that whenever the
+          # "automation: breaking" label is present.
+          if [ "$classification" = "release-please" ]; then
+            pr_title="$(jq -r '.title' "$pr_file")"
+            new_major="$(printf '%s\n' "$pr_title" | sed -n 's/.*release \([0-9][0-9]*\)\.[0-9][0-9]*\.[0-9][0-9]*.*/\1/p')"
+            # The root package is keyed "." in release-please-config.json; read it
+            # explicitly rather than relying on manifest entry order.
+            current_version="$(jq -r '."." // "0.0.0"' .release-please-manifest.json)"
+            current_major="${current_version%%.*}"
+            if [ -n "$new_major" ] && [ "$new_major" -gt "${current_major:-0}" ]; then
+              labels+=("automation: breaking")
+              echo "Release $pr_title raises the major version from $current_version; marking as breaking."
+            fi
           fi
 
           label_args=()
