@@ -75,6 +75,17 @@ grep -Fq "actions/runs?head_sha=\$HEAD_SHA" "$workflow"
 grep -Fq 'all(. == "completed")' "$workflow"
 grep -Fq 'test-generated-repository-e2e.yml' "$workflow"
 grep -Fq 'BOOTSTRAP_COPILOT_REVIEWER_LOGIN' "$workflow"
+# A dispatched Test Generated Repository E2E run carries no pull_requests[0];
+# completing that gate must still re-evaluate safety via the PR head branch,
+# but only for non-main heads so routine/manual E2E runs do not spawn a failing
+# safety run, and a run with no open PR skips rather than fails.
+grep -Fq "github.event.workflow_run.name == 'Test Generated Repository E2E'" "$workflow"
+grep -Fq "github.event.workflow_run.head_branch != 'main'" "$workflow"
+grep -Fq 'no open maintenance PR for this run; nothing to validate.' "$workflow"
+# shellcheck disable=SC2016  # literal workflow substrings, not shell to expand
+grep -Fq 'HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}' "$workflow"
+# shellcheck disable=SC2016
+grep -Fq 'head="${GITHUB_REPOSITORY%%/*}:$HEAD_BRANCH"' "$workflow"
 grep -Fq 'required_status_checks' "$ruleset"
 grep -Fq 'Maintenance safety' "$ruleset"
 grep -Fq 'bypass_actors' "$ruleset"

@@ -1,0 +1,112 @@
+name: Dispatch Maintenance E2E
+
+# Major/breaking maintenance PRs carry the "automation: breaking" label, and
+# validate-maintenance-safety.sh then requires a passing generated-repository
+# E2E run for the exact PR head SHA before the PR can merge. That E2E workflow
+# is workflow_dispatch-only, so this workflow supplies the missing trigger:
+# whenever a maintenance PR is labelled breaking (or its head moves while the
+# label is present) it dispatches Test Generated Repository E2E against the PR
+# head branch with the credentialed E2E inputs, keeping the path hands-off.
+
+on:
+  pull_request_target:
+    types: [labeled, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+# Serialize dispatch attempts per PR so a labeled+synchronize race cannot both
+# pass the "already dispatched?" check and start duplicate E2E runs.
+concurrency:
+  group: dispatch-maintenance-e2e-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Dispatch generated-repository E2E for breaking maintenance PRs
+    if: >-
+      github.event.pull_request.state == 'open' &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'automation: maintenance') &&
+      contains(github.event.pull_request.labels.*.name, 'automation: breaking')
+    runs-on: ubuntu-24.04
+    environment: production-maintenance
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout validation helpers
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        env:
+          GIT_CONFIG_COUNT: 1
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
+        with:
+          persist-credentials: false
+          ref: main
+          sparse-checkout: |
+            .github/actions/resolve-gh-token/action.yml
+            scripts/github-setup/gh-common.sh
+            scripts/github-setup/validate-app-auth.sh
+
+      - name: Resolve Reviewer App token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_REVIEWER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: workflow-approval
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Verify resolved Reviewer App identity
+        env:
+          APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$APP_SLUG" ] || { echo "Reviewer App slug was not resolved" >&2; exit 1; }
+          [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected maintenance Reviewer App slug is not configured" >&2; exit 1; }
+          [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured maintenance Reviewer" >&2; exit 1; }
+
+      - name: Dispatch generated-repository E2E against the PR head
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PROVISIONER_APP_CLIENT_ID: ${{ vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID }}
+          E2E_APP_OWNER: ${{ github.repository_owner }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$PROVISIONER_APP_CLIENT_ID" ] || { echo "Provisioner App client ID is not configured" >&2; exit 1; }
+
+          pr_file="$RUNNER_TEMP/pull-request.json"
+          gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" > "$pr_file"
+          head_ref="$(jq -r '.head.ref // empty' "$pr_file")"
+          head_sha="$(jq -r '.head.sha // empty' "$pr_file")"
+          [ -n "$head_ref" ] || { echo "could not resolve the pull request head branch" >&2; exit 1; }
+          [[ "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "could not resolve a 40-character head SHA" >&2; exit 1; }
+
+          # A re-label or a repeated synchronize must not stack duplicate E2E
+          # runs; skip when a run for this exact head SHA already exists.
+          existing="$(gh api \
+            "/repos/$REPOSITORY/actions/workflows/test-generated-repository-e2e.yml/runs?head_sha=$head_sha&per_page=1" \
+            --jq '.total_count')"
+          if [ "${existing:-0}" -gt 0 ]; then
+            echo "Generated-repository E2E already dispatched for $head_sha; nothing to do."
+            exit 0
+          fi
+
+          # Dispatch against the PR head branch so the resulting run's own
+          # head_sha is the PR head; maintenance safety correlates the E2E run to
+          # the PR by that SHA. head_sha pins the internal creation dispatch.
+          gh workflow run test-generated-repository-e2e.yml --repo "$REPOSITORY" --ref "$head_ref" \
+            -f head_sha="$head_sha" \
+            -f client_id="$PROVISIONER_APP_CLIENT_ID" \
+            -f app_owner="$E2E_APP_OWNER"
+          echo "Dispatched Test Generated Repository E2E for PR #$PR_NUMBER at $head_sha ($head_ref)."

@@ -34,7 +34,9 @@ jobs:
     name: Maintenance safety
     if: |
       github.event_name != 'workflow_run' ||
-      github.event.workflow_run.pull_requests[0].number
+      github.event.workflow_run.pull_requests[0].number ||
+      (github.event.workflow_run.name == 'Test Generated Repository E2E' &&
+      github.event.workflow_run.head_branch != 'main')
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout validation helpers
@@ -56,6 +58,7 @@ jobs:
           COPILOT_REVIEWER_LOGIN: ${{ vars.BOOTSTRAP_COPILOT_REVIEWER_LOGIN }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.event.inputs.head_sha || github.event.client_payload.head_sha }}
           PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.event.inputs.pr_number || github.event.client_payload.pr_number }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         shell: bash
         run: |
           set -euo pipefail
@@ -65,6 +68,23 @@ jobs:
           trap cleanup EXIT
 
           [ -n "$HEAD_SHA" ] || { echo "maintenance safety head SHA is missing" >&2; exit 1; }
+
+          # A dispatched Test Generated Repository E2E run carries no
+          # pull_requests[0]; recover the PR from its head branch so completing
+          # the E2E gate re-evaluates safety without a manual nudge.
+          if [ -z "$PR_NUMBER" ] && [ -n "$HEAD_BRANCH" ] && [ "$HEAD_BRANCH" != "main" ]; then
+            PR_NUMBER="$(gh api --method GET "repos/$GITHUB_REPOSITORY/pulls" \
+              -f head="${GITHUB_REPOSITORY%%/*}:$HEAD_BRANCH" -f base=main -f state=open \
+              --jq '.[0].number // empty')"
+          fi
+
+          # A routine or manual E2E run with no open maintenance PR is not a
+          # gate failure; there is simply nothing to validate.
+          if [ -z "$PR_NUMBER" ] && [ "${GITHUB_EVENT_NAME:-}" = "workflow_run" ]; then
+            echo "no open maintenance PR for this run; nothing to validate."
+            exit 0
+          fi
+
           [ -n "$PR_NUMBER" ] || { echo "maintenance safety pull request number is missing" >&2; exit 1; }
           [ -n "$COPILOT_REVIEWER_LOGIN" ] || { echo "Copilot reviewer identity is not configured" >&2; exit 1; }
 
