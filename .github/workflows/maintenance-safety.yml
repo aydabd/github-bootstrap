@@ -68,6 +68,16 @@ jobs:
           [ -n "$PR_NUMBER" ] || { echo "maintenance safety pull request number is missing" >&2; exit 1; }
           [ -n "$COPILOT_REVIEWER_LOGIN" ] || { echo "Copilot reviewer identity is not configured" >&2; exit 1; }
 
+          # pull_request_target fires before the required checks finish. Wait for
+          # the latest run of each to complete so this single run validates the
+          # final state rather than failing early.
+          required_wait_jq='["Quality","Commit policy","Test Quality Providers","CodeQL Security Scan"] as $need | [.workflow_runs[]] as $runs | [$need[] | . as $name | ($runs | map(select(.name == $name)) | sort_by(.created_at) | last | .status) // "missing"] | all(. == "completed")'
+          for _ in $(seq 1 45); do
+            settled="$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100" --jq "$required_wait_jq" 2>/dev/null || echo false)"
+            [ "$settled" = "true" ] && break
+            sleep 20
+          done
+
           pr_file="$tmp_dir/pr.json"
           runs_file="$tmp_dir/runs.json"
           e2e_file="$tmp_dir/e2e.json"

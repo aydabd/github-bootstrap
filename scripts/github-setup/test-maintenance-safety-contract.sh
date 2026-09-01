@@ -69,6 +69,10 @@ if grep -Fq '^  pull_request:' "$workflow"; then
 fi
 grep -Fq 'validate-maintenance-safety.sh' "$workflow"
 grep -Fq 'workflow_runs' "$workflow"
+# pull_request_target fires before the required checks finish; the job must wait
+# for them to settle rather than fail on the early run.
+grep -Fq "actions/runs?head_sha=\$HEAD_SHA" "$workflow"
+grep -Fq 'all(. == "completed")' "$workflow"
 grep -Fq 'test-generated-repository-e2e.yml' "$workflow"
 grep -Fq 'BOOTSTRAP_COPILOT_REVIEWER_LOGIN' "$workflow"
 grep -Fq 'required_status_checks' "$ruleset"
