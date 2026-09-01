@@ -73,6 +73,7 @@ jobs:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           FULL_REPOSITORY: ${{ github.repository }}
+          WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
         shell: bash
         run: |
           set -euo pipefail

@@ -95,7 +95,32 @@ jobs:
               "$WRITER_APP_SLUG" "$REVIEWER_APP_SLUG" "$require_reviewer_approval"
           }
 
-          validate_state
+          # Maintenance safety completes almost immediately on PR open, well
+          # before the required checks finish, so this run is often triggered
+          # while `quality` is still pending. Wait for the required checks to
+          # settle before deciding; a later trigger handles anything still
+          # unresolved after the window.
+          wait_for_required_checks() {
+            local attempt pending
+            for attempt in $(seq 1 45); do
+              gh pr checks "$PR_NUMBER" --required --json state \
+                > "$tmp_dir/checks.json" 2>/dev/null || true
+              pending="$(jq -r '[.[] | select(.state == "PENDING" or .state == "QUEUED" or .state == "IN_PROGRESS")] | length' \
+                "$tmp_dir/checks.json" 2>/dev/null || echo 1)"
+              [ "${pending:-1}" = "0" ] && return 0
+              sleep 20
+            done
+            return 1
+          }
+
+          wait_for_required_checks || {
+            echo "required checks did not settle within the wait window; deferring to the next trigger" >&2
+            exit 0
+          }
+          if ! validate_state; then
+            echo "maintenance merge preconditions are not met; not enabling auto-merge" >&2
+            exit 0
+          fi
           reviewer_login="${REVIEWER_APP_SLUG}[bot]"
           if ! jq -e --arg reviewer_login "$reviewer_login" \
               'any(.[]?; .user.login == $reviewer_login and .state == "APPROVED")' \
