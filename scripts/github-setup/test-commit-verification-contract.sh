@@ -30,27 +30,41 @@ for required_text in \
     "mode=\"\$(git ls-files -s -- \"\$path\" | awk" \
     "[ \"\$mode\" = \"100644\" ] ||" \
     "createCommitOnBranch" \
-    "expectedHeadOid" \
+    "expectedHeadOid: \$base_oid" \
     "fileChanges" \
     "repositoryNameWithOwner" \
-    "ref_payload=\"\$payload_dir/ref.json\"" \
-    "ref_response=\"\$payload_dir/ref-response.json\"" \
-    "'{ref: \$ref, sha: \$sha}'" \
-    "gh api --method POST" \
-    "/repos/\$GITHUB_REPOSITORY/git/refs" \
-    "weekly tooling branch creation returned an unexpected ref" \
+    "createRef(input:" \
+    "updateRef(input:" \
+    "force: true" \
+    "ref(qualifiedName: \"refs/heads/main\")" \
+    "base_oid=\"\$(jq -r '.data.repository.mainRef.target.oid" \
+    "branch_ref_id=\"\$(jq -r '.data.repository.branchRef.id" \
     "gh api graphql --input \"\$create_commit_payload\"" \
     "commit_sha=\"\$(jq -er" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/pulls\"" \
     "bash ./scripts/github-setup/verify-commit-verification.sh \"\$GITHUB_REPOSITORY\" \"\$commit_sha\"" \
-    "expected_branch_sha=\"\$(gh api" \
-    "branch_message=\"\$(gh api" \
     "Weekly tooling branch is not owned by this automation" \
-    "printf '%s\\n' \"\$branch_message\" | grep -Fqx"; do
+    "printf '%s\\n' \"\$branch_commit_message\" | grep -Fqx"; do
     grep -Fq -- "$required_text" "$workflow" || {
         echo "expected '$required_text' in $workflow" >&2
         exit 1
     }
+done
+
+# The GraphQL commit mutation cannot see a ref that was just created through
+# git or the REST Git database (it fails with "Branch not found"). The branch
+# must be created and reset through GraphQL so the same backend is consistent.
+for forbidden_text in \
+    "gh auth setup-git" \
+    "git push origin" \
+    "git checkout -B" \
+    "git/ref/heads/\$branch" \
+    "expected_branch_sha=" \
+    "parent_sha="; do
+    if grep -Fq -- "$forbidden_text" "$workflow"; then
+        echo "weekly tooling branch creation must go through GraphQL, not '$forbidden_text'" >&2
+        exit 1
+    fi
 done
 
 if grep -Fq 'BOOTSTRAP_TOKEN' "$workflow"; then
@@ -71,8 +85,7 @@ fi
 for forbidden_text in \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/blobs\"" \
     "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/trees\"" \
-    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/commits\"" \
-    "git push"; do
+    "gh api --method POST \"/repos/\$GITHUB_REPOSITORY/git/commits\""; do
     if grep -Fq -- "$forbidden_text" "$workflow"; then
         echo "weekly tooling workflow must use the atomic GraphQL commit path" >&2
         exit 1
@@ -92,14 +105,13 @@ done
 
 if grep -Fq 'BOOTSTRAP_APP_SIGNING_KEY' "$workflow" ||
     grep -Fq 'git commit ' "$workflow" ||
-    grep -Fq 'git write-tree' "$workflow" ||
-    grep -Fq 'force=true' "$workflow"; then
+    grep -Fq 'git write-tree' "$workflow"; then
     echo "verified App commits must use the Git database API, not local git signing" >&2
     exit 1
 fi
 
 if grep -Fq 'git -c http.extraheader=' "$workflow"; then
-    echo "Git push must pass authentication through Git config environment variables" >&2
+    echo "weekly tooling workflow must not embed Git auth headers on the command line" >&2
     exit 1
 fi
 

@@ -68,6 +68,36 @@ jobs:
           [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected maintenance Writer App slug is not configured" >&2; exit 1; }
           [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured maintenance Writer" >&2; exit 1; }
 
+      - name: Verify Maintenance Writer installation access
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          TARGET_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          installation_repositories="$(mktemp)"
+          trap 'rm -f "$installation_repositories"' EXIT
+          gh api --paginate --slurp /installation/repositories >"$installation_repositories"
+          target_access="$(jq -c --arg target "$TARGET_REPOSITORY" \
+            '[.[] | .repositories[] | select(.full_name == $target) | {full_name}] | .[0] // empty' \
+            "$installation_repositories")"
+          [ -n "$target_access" ] || {
+            echo "Maintenance Writer installation cannot see $TARGET_REPOSITORY" >&2
+            exit 1
+          }
+          printf '%s\n' "$target_access" >"$installation_repositories"
+          echo "Maintenance Writer repository access: $(jq -c . "$installation_repositories")"
+          main_sha="$(gh api "/repos/$TARGET_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          [ -n "$main_sha" ] || {
+            echo "Maintenance Writer installation cannot read the main ref" >&2
+            exit 1
+          }
+          gh api "/repos/$TARGET_REPOSITORY/git/commits/$main_sha" --jq '.sha' | grep -Fxq "$main_sha" || {
+            echo "Maintenance Writer installation cannot read the main commit object" >&2
+            exit 1
+          }
+          echo "Maintenance Writer installation can read $TARGET_REPOSITORY at main ($main_sha)."
+
       - name: Update repository and template tooling
         env:
           TOOLING_UPDATE_METADATA_FILE: ${{ runner.temp }}/tooling-update-metadata.json
@@ -99,6 +129,8 @@ jobs:
           commit_headline="chore(deps): update non-dependabot tooling pins"
           commit_body="X-GitHub-Bootstrap-Automation: weekly-tooling-updates
           Signed-off-by: ${signoff_name} <${signoff_email}>"
+          owner="${GITHUB_REPOSITORY%%/*}"
+          name="${GITHUB_REPOSITORY#*/}"
 
           cat > /tmp/weekly-tooling-pr-body.md <<'EOF'
           ## Summary
@@ -125,24 +157,14 @@ jobs:
           jq -r '.updates[] | "- `\(.package)`: \(.old_version) -> \(.new_version) (\(.update_type), \(.risk))"' "$metadata_file" >> /tmp/weekly-tooling-pr-body.md
           printf '\nMachine-readable metadata is generated in the workflow runner and is not committed.\n' >> /tmp/weekly-tooling-pr-body.md
 
-          git checkout -B "$branch"
-          git add -A
-          expected_branch_sha=""
-          if expected_branch_sha="$(gh api "/repos/$GITHUB_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha' 2>/dev/null)"; then
-            branch_message="$(gh api "/repos/$GITHUB_REPOSITORY/git/commits/$expected_branch_sha" --jq '.commit.message')"
-            printf '%s\n' "$branch_message" | grep -Fqx 'X-GitHub-Bootstrap-Automation: weekly-tooling-updates' || {
-              echo "Weekly tooling branch is not owned by this automation; refusing to update it" >&2
-              exit 1
-            }
-            parent_sha="$expected_branch_sha"
-          else
-            parent_sha="$(git rev-parse HEAD)"
-          fi
           payload_dir="$(mktemp -d)"
           file_changes="$payload_dir/file-changes.json"
+          repo_state="$payload_dir/repo-state.json"
           create_commit_payload="$payload_dir/create-commit.json"
           create_commit_response="$payload_dir/create-commit-response.json"
           trap 'rm -rf "$payload_dir"' EXIT
+
+          git add -A
           jq -n '{additions: [], deletions: []}' >"$file_changes"
           while IFS= read -r path; do
             if git diff --cached --diff-filter=D --name-only | grep -Fxq -- "$path"; then
@@ -163,23 +185,64 @@ jobs:
             mv "$file_changes.tmp" "$file_changes"
           done < <(git diff --cached --name-only)
 
-          if [ -z "$expected_branch_sha" ]; then
-            ref_payload="$payload_dir/ref.json"
-            ref_response="$payload_dir/ref-response.json"
-            jq -n --arg ref "refs/heads/$branch" --arg sha "$parent_sha" \
-              '{ref: $ref, sha: $sha}' >"$ref_payload"
-            if ! gh api --method POST \
-              "/repos/$GITHUB_REPOSITORY/git/refs" \
-              --input "$ref_payload" >"$ref_response"; then
-              jq -r '.message // "weekly tooling branch creation failed"' \
-                "$ref_response" >&2
-              exit 1
-            fi
-            jq -e --arg ref "refs/heads/$branch" --arg sha "$parent_sha" \
-              '(.ref == $ref) and (.object.sha == $sha)' "$ref_response" >/dev/null || {
-              echo "weekly tooling branch creation returned an unexpected ref" >&2
+          # Resolve the repository node id, the current main tip, and any
+          # existing automation branch through one GraphQL read. Creating and
+          # updating the ref on the same GraphQL endpoint that runs
+          # createCommitOnBranch avoids the REST-to-GraphQL propagation gap
+          # that made the mutation fail with "Branch not found".
+          gh api graphql \
+            -f query='query($owner: String!, $name: String!, $branchRef: String!) {
+              repository(owner: $owner, name: $name) {
+                id
+                mainRef: ref(qualifiedName: "refs/heads/main") { target { oid } }
+                branchRef: ref(qualifiedName: $branchRef) {
+                  id
+                  target {
+                    oid
+                    ... on Commit { message }
+                  }
+                }
+              }
+            }' \
+            -f owner="$owner" \
+            -f name="$name" \
+            -f branchRef="refs/heads/$branch" \
+            >"$repo_state"
+
+          repository_id="$(jq -r '.data.repository.id // empty' "$repo_state")"
+          base_oid="$(jq -r '.data.repository.mainRef.target.oid // empty' "$repo_state")"
+          branch_ref_id="$(jq -r '.data.repository.branchRef.id // empty' "$repo_state")"
+          branch_commit_message="$(jq -r '.data.repository.branchRef.target.message // empty' "$repo_state")"
+          [ -n "$repository_id" ] || {
+            echo "weekly tooling workflow could not resolve the repository node id" >&2
+            exit 1
+          }
+          [ -n "$base_oid" ] || {
+            echo "weekly tooling workflow could not resolve the refs/heads/main tip" >&2
+            exit 1
+          }
+
+          if [ -z "$branch_ref_id" ]; then
+            gh api graphql \
+              -f query='mutation($repositoryId: ID!, $name: String!, $oid: GitObjectID!) {
+                createRef(input: {repositoryId: $repositoryId, name: $name, oid: $oid}) { ref { id } }
+              }' \
+              -f repositoryId="$repository_id" \
+              -f name="refs/heads/$branch" \
+              -f oid="$base_oid" \
+              >"$payload_dir/create-ref.json"
+          else
+            printf '%s\n' "$branch_commit_message" | grep -Fqx 'X-GitHub-Bootstrap-Automation: weekly-tooling-updates' || {
+              echo "Weekly tooling branch is not owned by this automation; refusing to update it" >&2
               exit 1
             }
+            gh api graphql \
+              -f query='mutation($refId: ID!, $oid: GitObjectID!) {
+                updateRef(input: {refId: $refId, oid: $oid, force: true}) { ref { id } }
+              }' \
+              -f refId="$branch_ref_id" \
+              -f oid="$base_oid" \
+              >"$payload_dir/update-ref.json"
           fi
 
           graphql_query='mutation($input: CreateCommitOnBranchInput!) {
@@ -191,13 +254,13 @@ jobs:
           jq -n --arg query "$graphql_query" \
             --arg repository "$GITHUB_REPOSITORY" \
             --arg branch "$branch" \
-            --arg parent_sha "$parent_sha" \
+            --arg base_oid "$base_oid" \
             --arg headline "$commit_headline" \
             --arg body "$commit_body" \
             --slurpfile file_changes "$file_changes" \
             '{query: $query, variables: {input: {
               branch: {repositoryNameWithOwner: $repository, branchName: $branch},
-              expectedHeadOid: $parent_sha,
+              expectedHeadOid: $base_oid,
               message: {headline: $headline, body: $body},
               fileChanges: $file_changes[0]
             }}}' >"$create_commit_payload"
