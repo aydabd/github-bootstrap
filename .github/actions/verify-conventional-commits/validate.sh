@@ -2,16 +2,30 @@
 set -euo pipefail
 
 commits_file="$(mktemp)"
+messages_file="$(mktemp)"
+export messages_file
 trap 'rm -f "$commits_file" "$messages_file"' EXIT
+
 gh api --paginate --slurp \
     "/repos/$REPOSITORY/pulls/$PR_NUMBER/commits?per_page=100" \
     > "$commits_file"
 jq -e 'flatten | length > 0' "$commits_file" > /dev/null
 
-messages_file="$(mktemp)"
-export messages_file
-trap 'rm -f "$messages_file"' EXIT
-jq -jr 'flatten[] | .commit.message, "\u0000"' "$commits_file" > "$messages_file"
+# Trusted automation bots author machine-generated commits (for example
+# Dependabot's grouped update bodies) whose long reference lines trip the stock
+# Conventional Commits body rules even though their headlines are compliant. The
+# signed-off-by check exempts the same identities.
+jq -jr '
+    ["github-actions[bot]", "repository-maintenance-writer[bot]", "dependabot[bot]"] as $trusted_bots
+    | flatten[]
+    | (.author.login? // "") as $login
+    | select($trusted_bots | index($login) | not)
+    | .commit.message,"\u0000"' "$commits_file" > "$messages_file"
+
+if [ ! -s "$messages_file" ]; then
+    echo "All pull-request commits are authored by a trusted automation bot; commitlint not applicable."
+    exit 0
+fi
 
 if [ -n "$CONFIG_PATH" ]; then
     # shellcheck disable=SC2016
