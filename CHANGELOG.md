@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.1](https://github.com/aydabd/github-bootstrap/compare/v2.1.0...v2.1.1) (2026-09-01)
+
+
+### Bug Fixes
+
+* enable maintenance auto-merge with a contents:write Writer token ([ef76327](https://github.com/aydabd/github-bootstrap/commit/ef76327f0d4a413c526ec4e4765f8ff14de9d9b9))
+* let the Reviewer App enable auto-merge on maintenance PRs ([#182](https://github.com/aydabd/github-bootstrap/issues/182)) ([ef76327](https://github.com/aydabd/github-bootstrap/commit/ef76327f0d4a413c526ec4e4765f8ff14de9d9b9))
+* make the maintenance auto-merge chain resolve the PR reliably ([#178](https://github.com/aydabd/github-bootstrap/issues/178)) ([8074985](https://github.com/aydabd/github-bootstrap/commit/80749859ff1ddec1c963852880314891d97fc4cb))
+* re-approve the current head and merge already-clean maintenance PRs ([#183](https://github.com/aydabd/github-bootstrap/issues/183)) ([82a3462](https://github.com/aydabd/github-bootstrap/commit/82a3462bfd5ac4372bc3892ba3ad46139f50efe5))
+* resolve the maintenance PR via the REST head filter ([#181](https://github.com/aydabd/github-bootstrap/issues/181)) ([54a3c3b](https://github.com/aydabd/github-bootstrap/commit/54a3c3b262d07afb597d7443ca9e84fa252270fd))
+* skip the Copilot review gate for bot-authored maintenance PRs ([#180](https://github.com/aydabd/github-bootstrap/issues/180)) ([7c74b29](https://github.com/aydabd/github-bootstrap/commit/7c74b2958260e60304c9d2d9a9ffb785738dcb63))
+
 ## [2.1.0](https://github.com/aydabd/github-bootstrap/compare/v2.0.0...v2.1.0) (2026-09-01)
 
 
