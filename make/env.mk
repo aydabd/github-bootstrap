@@ -45,7 +45,7 @@ setup-env: ## Setup selected environment (ENV_MANAGER=micromamba|mise|system)
 			;; \
 		system) \
 			missing=0; \
-			for tool in pre-commit ec shellcheck shfmt xmllint taplo yamllint markdownlint prettier terraform go; do \
+			for tool in uv python3 shellcheck shfmt xmllint taplo markdownlint prettier terraform go; do \
 				if ! command -v $$tool >/dev/null 2>&1; then \
 					echo "Missing required tool: $$tool"; \
 					missing=1; \
@@ -62,6 +62,12 @@ setup-env: ## Setup selected environment (ENV_MANAGER=micromamba|mise|system)
 			exit 1; \
 			;; \
 	esac
+	@# uv is the single source of truth for Python tooling (pre-commit + lint hooks).
+	@# mise runs "uv sync" via its install-tools task; sync explicitly for the others.
+	@if [ "$(ENV_MANAGER)" != "mise" ]; then \
+		$(CMD_ECHO) "+ $(RUN) uv sync --locked"; \
+		$(RUN) uv sync --locked; \
+	fi
 
 install: setup-env ## Setup env manager and install pre-commit hooks
 	@$(CMD_ECHO) "+ $(MAKE) --no-print-directory _install-hooks"
@@ -74,10 +80,10 @@ install-hooks: setup-env ## (Re-)install pre-commit hooks into .git/hooks
 
 # Internal: install hooks and inject conda PATH so git commit finds all tools.
 _install-hooks:
-	@$(CMD_ECHO) "+ $(RUN) pre-commit install"
-	@$(RUN) pre-commit install
-	@$(CMD_ECHO) "+ $(RUN) pre-commit install --hook-type commit-msg"
-	@$(RUN) pre-commit install --hook-type commit-msg
+	@$(CMD_ECHO) "+ $(RUN) uv run pre-commit install"
+	@$(RUN) uv run pre-commit install
+	@$(CMD_ECHO) "+ $(RUN) uv run pre-commit install --hook-type commit-msg"
+	@$(RUN) uv run pre-commit install --hook-type commit-msg
 ifeq ($(ENV_MANAGER),micromamba)
 	@ENV_BIN="$$( $(MICROMAMBA) info -n $(MAMBA_ENV) 2>/dev/null | awk '/env location/{print $$NF}')/bin"; \
 	for hook in pre-commit commit-msg; do \
@@ -85,7 +91,7 @@ ifeq ($(ENV_MANAGER),micromamba)
 		if [ -f "$$hook_file" ] && ! grep -q 'conda-env-path' "$$hook_file"; then \
 			{ head -1 "$$hook_file"; \
 			echo "# conda-env-path"; \
-			echo "export PATH=\"$$ENV_BIN:\$$PATH\""; \
+			echo "export PATH=\"$(CURDIR)/.venv/bin:$$ENV_BIN:\$$PATH\""; \
 			tail -n +2 "$$hook_file"; \
 			} > "$$hook_file.tmp" && mv "$$hook_file.tmp" "$$hook_file" && chmod +x "$$hook_file"; \
 		fi; \
@@ -98,6 +104,7 @@ ifeq ($(ENV_MANAGER),mise)
 			{ head -1 "$$hook_file"; \
 			echo "# mise-env-path"; \
 			echo 'ROOT_DIR="$$(git rev-parse --show-toplevel 2>/dev/null || pwd)"; if [ -x "$$ROOT_DIR/.provider/bin/mise" ]; then eval "$$(cd "$$ROOT_DIR" && .provider/bin/mise activate bash --shims)"; fi'; \
+			echo 'if [ -d "$$ROOT_DIR/.venv/bin" ]; then PATH="$$ROOT_DIR/.venv/bin:$$PATH"; export PATH; fi'; \
 			tail -n +2 "$$hook_file"; \
 			} > "$$hook_file.tmp" && mv "$$hook_file.tmp" "$$hook_file" && chmod +x "$$hook_file"; \
 		fi; \

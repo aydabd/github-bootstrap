@@ -67,8 +67,8 @@ jobs:
             case "$capability" in
               lint-markdown) provider_run markdownlint --config .github/linters/.markdownlint.json --ignore CHANGELOG.md --ignore node_modules --ignore .git . ;;
               lint-json) provider_run bash -c 'find . -path "./.git" -prune -o -path "./node_modules" -prune -o -type f -name "*.json" -exec jq empty {} +' ;;
-              lint-yaml) provider_run yamllint --config-file .github/linters/.yaml-lint.yml . ;;
-              lint-actions) provider_run actionlint -ignore 'SC[0-9]+'; provider_run zizmor --pedantic .github ;;
+              lint-yaml) provider_run uv run yamllint --config-file .github/linters/.yaml-lint.yml . ;;
+              lint-actions) provider_run actionlint -ignore 'SC[0-9]+'; provider_run uv run zizmor --pedantic .github ;;
               lint-shell)
                 mapfile -d '' shell_files < <(
                   find . -path './.git' -prune -o -path './node_modules' -prune -o \
@@ -88,8 +88,8 @@ jobs:
                   provider_run terraform -chdir="$terraform_dir" validate
                 fi
                 ;;
-              lint-format) LINT_MODE=check provider_run pre-commit run --all-files --color=always ;;
-              lint-tests) if [ -f go.mod ]; then provider_run go test ./...; fi; if [ -f package.json ]; then provider_run npm test --if-present; fi; if [ -f pyproject.toml ] || [ -f pytest.ini ]; then provider_run python3 -m pytest; fi ;;
+              lint-format) LINT_MODE=check provider_run uv run pre-commit run --all-files --color=always ;;
+              lint-tests) if [ -f go.mod ]; then provider_run go test ./...; fi; if [ -f package.json ]; then provider_run npm test --if-present; fi; if [ -f pyproject.toml ] || [ -f pytest.ini ]; then provider_run uv run python3 -m pytest; fi ;;
               *) echo "Unknown quality capability: $capability" >&2; exit 1 ;;
             esac
           done

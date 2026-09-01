@@ -72,13 +72,15 @@ func buildTestWorkspace(t *testing.T) (root string, versions toolinglib.Versions
 	mustWriteFile(t, repoPre, "repos:\n  - repo: https://example.invalid\n")
 	mustWriteFile(t, tplPre, "repos:\n  - repo: https://example.invalid\n")
 
-	// Fake pre-commit: idempotent — only adds marker when absent.
+	// Fake uv: the updater invokes pre-commit as "uv run --no-sync pre-commit
+	// autoupdate --freeze --config <path>". Idempotent — only adds the marker
+	// when absent, and requires both "run" and "--freeze".
 	binDir := filepath.Join(root, "bin")
-	preCommitPath := filepath.Join(binDir, "pre-commit")
-	fakePreCommit := "#!/bin/sh\nset -eu\nconfig=\"\"\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"--config\" ]; then\n    shift\n    config=\"$1\"\n  fi\n  shift\ndone\nif ! grep -q '# updated-by-fake-pre-commit' \"$config\"; then\n  echo '# updated-by-fake-pre-commit' >> \"$config\"\nfi\n"
-	mustWriteFile(t, preCommitPath, fakePreCommit)
-	if err := os.Chmod(preCommitPath, 0o755); err != nil {
-		t.Fatalf("failed to chmod fake pre-commit: %v", err)
+	uvPath := filepath.Join(binDir, "uv")
+	fakeUv := "#!/bin/sh\nset -eu\nif [ \"$1\" != \"run\" ]; then\n  echo 'pre-commit must be invoked via uv run' >&2\n  exit 1\nfi\nconfig=\"\"\nfreeze=0\nwhile [ $# -gt 0 ]; do\n  if [ \"$1\" = \"--config\" ]; then\n    shift\n    config=\"$1\"\n  elif [ \"$1\" = \"--freeze\" ]; then\n    freeze=1\n  fi\n  shift\ndone\nif [ \"$freeze\" -ne 1 ]; then\n  echo 'autoupdate must be invoked with --freeze' >&2\n  exit 1\nfi\nif ! grep -q '# updated-by-fake-pre-commit' \"$config\"; then\n  echo '# updated-by-fake-pre-commit' >> \"$config\"\nfi\n"
+	mustWriteFile(t, uvPath, fakeUv)
+	if err := os.Chmod(uvPath, 0o755); err != nil {
+		t.Fatalf("failed to chmod fake uv: %v", err)
 	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 

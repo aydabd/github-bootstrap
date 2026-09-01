@@ -22,7 +22,7 @@ help: ## Show available make targets
 
 setup-env: ## Validate required tools are available on PATH
 	@missing=0; \
-	for tool in pre-commit ec shellcheck shfmt xmllint taplo yamllint markdownlint prettier go golangci-lint; do \
+	for tool in uv python3 shellcheck shfmt xmllint taplo markdownlint prettier go golangci-lint; do \
 		if ! command -v $$tool >/dev/null 2>&1; then \
 			echo "Missing required tool: $$tool"; \
 			missing=1; \
@@ -33,6 +33,7 @@ setup-env: ## Validate required tools are available on PATH
 		exit 1; \
 	fi
 	@mkdir -p $(BUILD_DIR)
+	@uv sync --locked
 
 install: setup-env ## Install pre-commit hooks
 	@$(MAKE) --no-print-directory _install-hooks
@@ -41,13 +42,24 @@ install-hooks: setup-env ## (Re-)install pre-commit hooks
 	@$(MAKE) --no-print-directory _install-hooks
 
 _install-hooks:
-	@pre-commit install
-	@pre-commit install --hook-type commit-msg
+	@uv run pre-commit install
+	@uv run pre-commit install --hook-type commit-msg
+	@for hook in pre-commit commit-msg; do \
+		hook_file=".git/hooks/$$hook"; \
+		if [ -f "$$hook_file" ] && ! grep -q 'uv-venv-path' "$$hook_file"; then \
+			ROOT_DIR="$$(git rev-parse --show-toplevel 2>/dev/null || pwd)"; \
+			{ head -1 "$$hook_file"; \
+			echo "# uv-venv-path"; \
+			echo "export PATH=\"$$ROOT_DIR/.venv/bin:\$$PATH\""; \
+			tail -n +2 "$$hook_file"; \
+			} > "$$hook_file.tmp" && mv "$$hook_file.tmp" "$$hook_file" && chmod +x "$$hook_file"; \
+		fi; \
+	done
 
 quality: setup-env ## Run all quality checks via pre-commit
 	@echo "Running all checks via pre-commit (LINT_MODE=$(LINT_MODE))..."
-	@pre-commit install --install-hooks >/dev/null 2>&1 || true
-	@LINT_MODE=$(LINT_MODE) pre-commit run --all-files --color=always
+	@uv run pre-commit install --install-hooks >/dev/null 2>&1 || true
+	@LINT_MODE=$(LINT_MODE) uv run pre-commit run --all-files --color=always
 
 test: setup-env ## Run all Go tests
 	go test ./...

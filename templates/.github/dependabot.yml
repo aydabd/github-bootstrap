@@ -91,12 +91,12 @@ updates:
       prefix: "chore(deps)"
       include: "scope"
 
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
     groups:
-      pip:
+      uv:
         patterns:
           - "*"
     open-pull-requests-limit: 5

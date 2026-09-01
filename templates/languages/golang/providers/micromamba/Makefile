@@ -93,6 +93,7 @@ setup-env: ## Setup isolated environment with micromamba (skip with USE_MAMBA=0)
 		echo "Micromamba environment '$(MAMBA_ENV)' is ready."; \
 		mkdir -p $(BUILD_DIR) && touch $(ENV_STAMP); \
 	fi
+	@if [ "$(USE_MAMBA)" != "0" ]; then $(MAMBA_RUN) uv sync --locked; fi
 
 install: setup-env ## Create the micromamba env and install pre-commit hooks
 	@$(MAKE) --no-print-directory _install-hooks
@@ -103,8 +104,8 @@ install-hooks: setup-env ## (Re-)install pre-commit hooks into .git/hooks
 
 # Internal: install hooks and inject conda PATH so git commit finds all tools.
 _install-hooks:
-	@$(MAMBA_RUN) pre-commit install
-	@$(MAMBA_RUN) pre-commit install --hook-type commit-msg
+	@$(MAMBA_RUN) uv run pre-commit install
+	@$(MAMBA_RUN) uv run pre-commit install --hook-type commit-msg
 ifeq ($(USE_MAMBA),1)
 	@# Prepend conda bin to PATH in generated hooks so language:system hooks
 	@# (ec, golangci-lint, etc.) are found when git runs outside the env.
@@ -114,7 +115,7 @@ ifeq ($(USE_MAMBA),1)
 		if [ -f "$$hook_file" ] && ! grep -q 'conda-env-path' "$$hook_file"; then \
 			{ head -1 "$$hook_file"; \
 			echo "# conda-env-path"; \
-			echo "export PATH=\"$$ENV_BIN:\$$PATH\""; \
+			echo "export PATH=\"$(CURDIR)/.venv/bin:$$ENV_BIN:\$$PATH\""; \
 			tail -n +2 "$$hook_file"; \
 			} > "$$hook_file.tmp" && mv "$$hook_file.tmp" "$$hook_file" && chmod +x "$$hook_file"; \
 		fi; \
@@ -129,8 +130,8 @@ endif
 # LINT_MODE=check → check-only, fail on violations (CI)
 quality: setup-env ## Run all quality checks via pre-commit (LINT_MODE=fix|check)
 	@echo "Running all checks via pre-commit (LINT_MODE=$(LINT_MODE))..."
-	@$(MAMBA_RUN) pre-commit install --install-hooks >/dev/null 2>&1 || true
-	@LINT_MODE=$(LINT_MODE) $(MAMBA_RUN) pre-commit run --all-files --color=always
+	@$(MAMBA_RUN) uv run pre-commit install --install-hooks >/dev/null 2>&1 || true
+	@LINT_MODE=$(LINT_MODE) $(MAMBA_RUN) uv run pre-commit run --all-files --color=always
 
 # =============================================================================
 # Testing

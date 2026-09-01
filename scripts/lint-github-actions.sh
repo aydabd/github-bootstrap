@@ -16,4 +16,4 @@ fi
 if [ "${#workflow_files[@]}" -gt 0 ]; then
     actionlint -ignore 'SC[0-9]+' "${workflow_files[@]}"
 fi
-zizmor --pedantic .github
+uv run --no-sync zizmor --pedantic .github

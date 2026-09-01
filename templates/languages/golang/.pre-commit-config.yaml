@@ -21,7 +21,7 @@ exclude: |-
 repos:
   # ── Standard file hygiene ──────────────────────────────────────────────────
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
     hooks:
       - id: trailing-whitespace
         args: [--markdown-linebreak-ext=md]
@@ -171,7 +171,7 @@ repos:
 
   # ── Commit message: conventional commits ──────────────────────────────────
   - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v4.4.0
+    rev: 91ab4bf57e58b32adf1a122681f6ebe164d081c8 # frozen: v4.4.0
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
