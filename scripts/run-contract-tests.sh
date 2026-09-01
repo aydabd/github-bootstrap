@@ -21,6 +21,7 @@ contract_tests=(
     "$script_dir/github-setup/test-workflow-approval-contract.sh"
     "$script_dir/github-setup/test-copilot-review-contract.sh"
     "$script_dir/github-setup/test-maintenance-safety-contract.sh"
+    "$script_dir/github-setup/test-dispatch-maintenance-e2e-contract.sh"
     "$script_dir/github-setup/test-maintenance-merge-contract.sh"
     "$script_dir/github-setup/test-maintenance-pr-contract.sh"
     "$script_dir/github-setup/test-install-app-secrets-contract.sh"
