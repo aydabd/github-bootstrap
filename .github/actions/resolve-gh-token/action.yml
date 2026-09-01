@@ -133,7 +133,7 @@ runs:
         permission-contents: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'weekly-tooling') && 'write' || '' }}
         permission-issues: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-labeling' || inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup') && 'write' || '' }}
         permission-organization-administration: ${{ inputs.permission_profile == 'repository-creation' && 'write' || '' }}
-        permission-pull-requests: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-review') && 'write' || (inputs.permission_profile == 'workflow-approval' || inputs.permission_profile == 'maintenance-labeling') && 'read' || '' }}
+        permission-pull-requests: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-review' || inputs.permission_profile == 'maintenance-labeling') && 'write' || inputs.permission_profile == 'workflow-approval' && 'read' || '' }}
         permission-workflows: ${{ inputs.permission_profile == 'weekly-tooling' && 'write' || '' }}
 
     - name: Finalize token output
