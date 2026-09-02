@@ -15,7 +15,7 @@ shared_assets=(
 
 mode="${1:-sync}"
 case "$mode" in
-    sync|--check) ;;
+    sync | --check) ;;
     *)
         echo "Usage: $0 [--check]" >&2
         exit 2

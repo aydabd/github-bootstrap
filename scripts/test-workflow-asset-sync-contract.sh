@@ -14,12 +14,19 @@ grep -Fq 'sync-workflow-assets.sh --check' "$repo_root/.pre-commit-config.yaml" 
     exit 1
 }
 
-if grep -Fq '"/templates"' "$repo_root/.github/dependabot.yml"; then
+sync_hook_line="$(grep -n '^      - id: sync-workflow-assets$' "$repo_root/.pre-commit-config.yaml" | cut -d: -f1)"
+parity_hook_line="$(grep -n '^      - id: github-workflow-assets$' "$repo_root/.pre-commit-config.yaml" | cut -d: -f1)"
+if [ "$sync_hook_line" -ge "$parity_hook_line" ]; then
+    echo "sync hook must run before the workflow asset parity check" >&2
+    exit 1
+fi
+
+if grep -Fq '/templates' "$repo_root/.github/dependabot.yml"; then
     echo "root Dependabot Actions config must not scan /templates" >&2
     exit 1
 fi
 
-if grep -Fq '"/templates"' "$repo_root/templates/.github/dependabot.yml"; then
+if grep -Fq '/templates' "$repo_root/templates/.github/dependabot.yml"; then
     echo "template Dependabot Actions config must not scan /templates" >&2
     exit 1
 fi
