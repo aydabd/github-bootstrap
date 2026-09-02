@@ -316,12 +316,18 @@ func UpdateMiseText(text string, envVersions map[string]string, pythonVersions m
 	return out, nil
 }
 
-// RunPreCommitAutoupdate runs "pre-commit autoupdate" on each config via a temp
-// copy, preventing partial writes to the originals on failure. When write is
-// false (dry-run) the originals are not modified; the returned list still
-// contains every config that would have changed.
+// RunPreCommitAutoupdate runs "pre-commit autoupdate --freeze" on each config
+// via a temp copy, preventing partial writes to the originals on failure. The
+// --freeze flag pins every external hook repo to the immutable commit SHA the
+// resolved tag points at, keeping the tag as a trailing "# frozen:" comment.
+// When write is false (dry-run) the originals are not modified; the returned
+// list still contains every config that would have changed.
+//
+// pre-commit is a uv-managed tool, so it is invoked through "uv run" rather
+// than assumed to be on PATH. "uv run" also syncs the locked environment on
+// demand, so the updater works in a fresh workspace.
 func RunPreCommitAutoupdate(configs []string, write bool) ([]string, error) {
-	if err := EnsureCommandAvailable("pre-commit"); err != nil {
+	if err := EnsureCommandAvailable("uv"); err != nil {
 		return nil, err
 	}
 	changed := make([]string, 0)
@@ -347,7 +353,7 @@ func RunPreCommitAutoupdate(configs []string, write bool) ([]string, error) {
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		cmd := exec.CommandContext(ctx, "pre-commit", "autoupdate", "--config", tmpPath)
+		cmd := exec.CommandContext(ctx, "uv", "run", "pre-commit", "autoupdate", "--freeze", "--config", tmpPath)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		runErr := cmd.Run()
@@ -363,6 +369,11 @@ func RunPreCommitAutoupdate(configs []string, write bool) ([]string, error) {
 		if err != nil {
 			return changed, err
 		}
+
+		// "pre-commit autoupdate --freeze" writes "<sha>  # frozen: <tag>" with
+		// two spaces; prettier collapses YAML comment gaps to one. Normalize so
+		// the two formatters agree and the pin stays stable across runs.
+		updated = bytes.ReplaceAll(updated, []byte("  # frozen:"), []byte(" # frozen:"))
 
 		if bytes.Equal(original, updated) {
 			continue

@@ -51,11 +51,11 @@ runs:
               -type f -name '*.json' -exec jq empty {} +"
             ;;
           lint-yaml)
-            provider_run yamllint --config-file .github/linters/.yaml-lint.yml .
+            provider_run uv run yamllint --config-file .github/linters/.yaml-lint.yml .
             ;;
           lint-actions)
             provider_run actionlint -ignore 'SC[0-9]+'
-            provider_run zizmor --pedantic .github
+            provider_run uv run zizmor --pedantic .github
             ;;
           lint-shell)
             mapfile -d '' shell_files < <(
@@ -81,12 +81,12 @@ runs:
             fi
             ;;
           lint-format)
-            LINT_MODE=check provider_run pre-commit run --all-files --color=always
+            LINT_MODE=check provider_run uv run pre-commit run --all-files --color=always
             ;;
           lint-tests)
             if [ -f go.mod ]; then provider_run go test ./...; fi
             if [ -f package.json ]; then provider_run npm test --if-present; fi
-            if [ -f pyproject.toml ] || [ -f pytest.ini ]; then provider_run python3 -m pytest; fi
+            if [ -f pyproject.toml ] || [ -f pytest.ini ]; then provider_run uv run python3 -m pytest; fi
             ;;
           *)
             echo "Unknown quality capability: $CAPABILITY" >&2

@@ -65,10 +65,18 @@ runs:
           exit 1
         fi
 
+        if [ ! -f "$TEMPLATE_DIR/pyproject.toml" ] || [ ! -f "$TEMPLATE_DIR/uv.lock" ]; then
+          echo "::error::Missing uv project files: $TEMPLATE_DIR/{pyproject.toml,uv.lock}"
+          exit 1
+        fi
+
         cp "$PROVIDER_DIR/Makefile" "$REPO_DIR/Makefile"
         rm -f "$REPO_DIR/environment.yml" "$REPO_DIR/mise.toml"
         [ -f "$PROVIDER_DIR/environment.yml" ] && cp "$PROVIDER_DIR/environment.yml" "$REPO_DIR/environment.yml"
         [ -f "$PROVIDER_DIR/mise.toml" ] && cp "$PROVIDER_DIR/mise.toml" "$REPO_DIR/mise.toml"
+        # uv is the single source of truth for Python tooling across every provider.
+        cp "$TEMPLATE_DIR/pyproject.toml" "$REPO_DIR/pyproject.toml"
+        cp "$TEMPLATE_DIR/uv.lock" "$REPO_DIR/uv.lock"
         cp "$GITHUB_WORKSPACE/templates/.github/bootstrap-provider.yml" "$REPO_DIR/.github/bootstrap-provider.yml"
         mkdir -p "$REPO_DIR/scripts"
         cp "$PROVIDER_SCRIPT_TEMPLATE" "$REPO_DIR/scripts/provider-run.sh"
@@ -99,3 +107,4 @@ runs:
           sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/scripts/provider-run.sh"
         fi
         sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/Makefile"
+        sed -i "s/{{REPOSITORY_NAME}}/$REPO_NAME/g" "$REPO_DIR/pyproject.toml"

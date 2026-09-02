@@ -48,7 +48,13 @@ done
 for manifest in "$repo_root/environment.yml" \
     "$repo_root/templates/languages/agnostic/providers/micromamba/environment.yml"; do
     assert_contains "- actionlint=1.7.12" "$manifest"
-    assert_contains "- zizmor=1.29.0" "$manifest"
+done
+
+# zizmor is a uv-managed Python tool, pinned in the uv lockfile rather than the
+# conda environment.
+for project in "$repo_root/pyproject.toml" \
+    "$repo_root/templates/languages/agnostic/pyproject.toml"; do
+    assert_contains "zizmor==1.29.0" "$project"
 done
 
 echo "Action lint contract checks passed."

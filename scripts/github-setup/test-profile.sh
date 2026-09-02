@@ -124,10 +124,10 @@ if grep -q 'xargs' "$repo_root/templates/centralized-actions-workflows/.github/a
     echo "centralized capability validation must not trim with xargs" >&2
     exit 1
 fi
-grep -q 'LINT_MODE=check provider_run pre-commit' "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
-grep -q 'LINT_MODE=check provider_run pre-commit' "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
-grep -qF "(cd \"\$WORKING_DIRECTORY\" && provider_run python3 -m pytest)" "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
-grep -qF "(cd \"\$WORKING_DIRECTORY\" && LINT_MODE=check provider_run pre-commit run --all-files --color=always)" \
+grep -q 'LINT_MODE=check provider_run uv run pre-commit' "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
+grep -q 'LINT_MODE=check provider_run uv run pre-commit' "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
+grep -qF "(cd \"\$WORKING_DIRECTORY\" && provider_run uv run python3 -m pytest)" "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
+grep -qF "(cd \"\$WORKING_DIRECTORY\" && LINT_MODE=check provider_run uv run pre-commit run --all-files --color=always)" \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -qF "WORKING_DIRECTORY=\"\$PWD/\$WORKING_DIRECTORY\"" "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
 grep -q 'No Terraform files found; skipping lint-terraform' "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
@@ -153,8 +153,9 @@ for json_quality_file in \
         exit 1
     fi
 done
-grep -q 'zizmor.*1.29.0' "$repo_root/environment.yml"
-grep -q 'zizmor.*1.29.0' "$repo_root/mise.toml"
+grep -q 'zizmor==1.29.0' "$repo_root/pyproject.toml"
+grep -q '\- uv=' "$repo_root/environment.yml"
+grep -q 'uv = "' "$repo_root/mise.toml"
 grep -q 'actionlint=1.7.12' "$repo_root/environment.yml"
 grep -q 'actionlint = "1.7.12"' "$repo_root/mise.toml"
 for setup_action in \
@@ -165,10 +166,8 @@ for setup_action in \
     grep -q 'cache: false' "$setup_action"
     grep -q "mkdir -p \"\\\$HOME/.local/bin\"" "$setup_action"
     grep -q 'setup-terraform' "$setup_action"
-    grep -q 'zizmor.*1.29.0' "$setup_action"
-    grep -q 'actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae' "$setup_action"
-    grep -q 'path: ~/.cache/pip' "$setup_action"
-    grep -q 'pip-zizmor-1.29.0' "$setup_action"
+    grep -q 'astral-sh/setup-uv@' "$setup_action"
+    grep -q 'uv sync --locked' "$setup_action"
 done
 for rendered_quality_file in \
     "$repo_root/templates/.github/workflows/quality.yml" \
@@ -199,11 +198,14 @@ awk '/lint-shell\)/ { in_block=1 } in_block && /node_modules/ { found=1 } in_blo
     "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
 for provider_file in "$repo_root"/templates/languages/*/providers/micromamba/environment.yml; do
     grep -q 'actionlint=1.7.12' "$provider_file"
-    grep -q 'zizmor.*1.29.0' "$provider_file"
+    grep -q '\- uv=' "$provider_file"
 done
 for provider_file in "$repo_root"/templates/languages/*/providers/mise/mise.toml; do
     grep -q 'actionlint = "1.7.12"' "$provider_file"
-    grep -q 'zizmor.*1.29.0' "$provider_file"
+    grep -q 'uv = "' "$provider_file"
+done
+for lang_dir in "$repo_root"/templates/languages/*/; do
+    grep -q 'zizmor==1.29.0' "$lang_dir/pyproject.toml"
 done
 for provider_file in "$repo_root"/templates/languages/*/providers/micromamba/environment.yml; do
     grep -q 'terraform' "$provider_file"

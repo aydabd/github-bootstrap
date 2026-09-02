@@ -31,8 +31,28 @@ All language/runtime normalization logic must live in `bootstrapinputs`. Do not 
 
 - `templates/languages/<language>/pre-commit-snippets/`
 - `templates/languages/<language>/providers/<provider>/`
+- `templates/languages/<language>/pyproject.toml` + `uv.lock`
 
 Provider files are selected by `configure-provider-tooling-files` and rendered by workflow orchestration.
+
+### Python tooling (uv)
+
+`uv` is the single source of truth for every Python package used for linting
+(`pre-commit`, `yamllint`, `editorconfig-checker`, `zizmor`, and — for the
+Python language — `ruff`, `mypy`, `pytest*`). Micromamba and mise manage only
+runtimes and non-Python binaries.
+
+- The tool set is declared in `pyproject.toml` (`[dependency-groups] dev`) and
+  pinned in the committed `uv.lock`, at the repo root and in each
+  `templates/languages/<language>/`.
+- Every provider's `setup-env` runs `uv sync --locked` to build an isolated
+  `.venv`; `make`/CI invoke pre-commit as `uv run pre-commit …`.
+- To bump a Python tool: edit `pyproject.toml` (or run
+  `uv lock --upgrade-package <name>`), run `uv lock`, and commit the updated
+  `uv.lock`. The weekly tooling updater refreshes it under the cooldown.
+- `scripts/test-uv-python-tooling-contract.sh` fails the build if any
+  `environment.yml` / `mise.toml` / setup-lint action reintroduces pip, or if a
+  `pyproject.toml` lacks a sibling `uv.lock`.
 
 ### Composite actions
 
@@ -50,6 +70,8 @@ Keep each action single-purpose and declarative.
 1. Add language assets:
    - create `templates/languages/<language>/pre-commit-snippets/`
    - create `templates/languages/<language>/providers/{micromamba,mise,system}/`
+   - create `templates/languages/<language>/pyproject.toml`, then run `uv lock`
+     in that directory to commit the matching `uv.lock`
 2. Update normalization allow-list and alias mapping in `tools/pkg/bootstrapinputs`.
 3. Update release-type mapping in `tools/pkg/bootstrapinputs` if needed.
 4. Update CodeQL language mapping if applicable.

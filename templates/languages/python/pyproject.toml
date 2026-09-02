@@ -1,0 +1,36 @@
+# =============================================================================
+# {{REPOSITORY_NAME}} — Python tooling manifest
+# =============================================================================
+# uv is the single source of truth for every Python package used by this
+# repository (pre-commit and the lint hooks it drives). Runtimes and non-Python
+# binaries stay with micromamba / mise. Regenerate the lockfile with:
+#
+#     uv lock
+#
+# and sync an isolated environment with:
+#
+#     uv sync --locked
+# =============================================================================
+[project]
+name = "generated-repo-tooling"
+version = "0"
+description = "Locked Python tooling (pre-commit and lint hooks)"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "pre-commit==4.6.2",
+  "yamllint==1.38.0",
+  "editorconfig-checker==3.11.1",
+  "zizmor==1.29.0",
+  "ruff",
+  "mypy",
+  "types-PyYAML",
+  "pytest",
+  "pytest-cov",
+  "pytest-mock",
+]
+
+[tool.uv]
+package = false

@@ -54,10 +54,10 @@ runs:
                   -path './.git' -prune -o -path './node_modules' -prune -o \\
                   -type f -name '*.json' -exec jq empty {} +"
                 ;;
-              lint-yaml) provider_run yamllint --config-file "$WORKING_DIRECTORY/.github/linters/.yaml-lint.yml" "$WORKING_DIRECTORY" ;;
+              lint-yaml) provider_run uv run yamllint --config-file "$WORKING_DIRECTORY/.github/linters/.yaml-lint.yml" "$WORKING_DIRECTORY" ;;
               lint-actions)
                 (cd "$WORKING_DIRECTORY" && provider_run actionlint)
-                provider_run zizmor --pedantic "$WORKING_DIRECTORY/.github/workflows"
+                provider_run uv run zizmor --pedantic "$WORKING_DIRECTORY/.github/workflows"
                 ;;
               lint-shell)
                 mapfile -d "" files < <(
@@ -80,7 +80,7 @@ runs:
                 fi
                 ;;
               lint-format)
-                (cd "$WORKING_DIRECTORY" && LINT_MODE=check provider_run pre-commit run --all-files --color=always)
+                (cd "$WORKING_DIRECTORY" && LINT_MODE=check provider_run uv run pre-commit run --all-files --color=always)
                 ;;
               lint-tests)
                 if [ -f "$WORKING_DIRECTORY/go.mod" ]; then
@@ -90,7 +90,7 @@ runs:
                   (cd "$WORKING_DIRECTORY" && provider_run npm test --if-present)
                 fi
                 if [ -f "$WORKING_DIRECTORY/pyproject.toml" ] || [ -f "$WORKING_DIRECTORY/pytest.ini" ]; then
-                  (cd "$WORKING_DIRECTORY" && provider_run python3 -m pytest)
+                  (cd "$WORKING_DIRECTORY" && provider_run uv run python3 -m pytest)
                 fi
                 ;;
               *) echo "Unknown quality capability: $CAPABILITY" >&2; exit 1 ;;

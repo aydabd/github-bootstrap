@@ -13,11 +13,10 @@ runs:
       with:
         terraform_version: "1.15.6"
         terraform_wrapper: false
-    - name: Cache Python packages
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+    - name: Set up uv
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-${{ runner.arch }}-pip-zizmor-1.29.0
+        enable-cache: true
     - name: Install system tools
       shell: bash
       run: |
@@ -25,8 +24,6 @@ runs:
         sudo apt-get install -y shellcheck shfmt libxml2-utils jq
         mkdir -p "$HOME/.local/bin"
         GOBIN="$HOME/.local/bin" go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-        python3 -m pip install --user \
-          pre-commit==4.6.2 yamllint==1.38.0 editorconfig-checker==3.11.1 \
-          zizmor==1.29.0
+        uv sync --locked
         npm install -g prettier@3.9.6 markdownlint-cli@0.49.1 @taplo/cli@0.7.0
-        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        printf '%s\n' "$PWD/.venv/bin" "$HOME/.local/bin" >> "$GITHUB_PATH"

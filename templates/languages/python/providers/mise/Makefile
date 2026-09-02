@@ -47,14 +47,15 @@ install-hooks: setup-env ## (Re-)install pre-commit hooks
 	@$(MAKE) --no-print-directory _install-hooks
 
 _install-hooks:
-	@$(RUN) pre-commit install
-	@$(RUN) pre-commit install --hook-type commit-msg
+	@$(RUN) uv run pre-commit install
+	@$(RUN) uv run pre-commit install --hook-type commit-msg
 	@for hook in pre-commit commit-msg; do \
 		hook_file=".git/hooks/$$hook"; \
 		if [ -f "$$hook_file" ] && ! grep -q 'mise-env-path' "$$hook_file"; then \
 			{ head -1 "$$hook_file"; \
 			echo "# mise-env-path"; \
 			echo 'ROOT_DIR="$$(git rev-parse --show-toplevel 2>/dev/null || pwd)"; if [ -x "$$ROOT_DIR/.provider/bin/mise" ]; then eval "$$(cd "$$ROOT_DIR" && .provider/bin/mise activate bash --shims)"; fi'; \
+			echo 'if [ -d "$$ROOT_DIR/.venv/bin" ]; then PATH="$$ROOT_DIR/.venv/bin:$$PATH"; export PATH; fi'; \
 			tail -n +2 "$$hook_file"; \
 			} > "$$hook_file.tmp" && mv "$$hook_file.tmp" "$$hook_file" && chmod +x "$$hook_file"; \
 		fi; \
@@ -62,14 +63,14 @@ _install-hooks:
 
 quality: setup-env ## Run all quality checks via pre-commit
 	@echo "Running all checks via pre-commit (LINT_MODE=$(LINT_MODE))..."
-	@$(RUN) pre-commit install --install-hooks >/dev/null 2>&1 || true
-	@LINT_MODE=$(LINT_MODE) $(RUN) pre-commit run --all-files --color=always
+	@$(RUN) uv run pre-commit install --install-hooks >/dev/null 2>&1 || true
+	@LINT_MODE=$(LINT_MODE) $(RUN) uv run pre-commit run --all-files --color=always
 
 test: setup-env ## Run the test suite
-	$(RUN) pytest tests/ -v
+	$(RUN) uv run pytest tests/ -v
 
 coverage: setup-env ## Run tests with coverage report
-	$(RUN) pytest tests/ \
+	$(RUN) uv run pytest tests/ \
 		--cov=src \
 		--cov-report=term-missing
 
