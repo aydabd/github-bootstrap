@@ -9,6 +9,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 contract_tests=(
     "$script_dir/test-action-lint-contract.sh"
     "$script_dir/test-quality-contract.sh"
+    "$script_dir/test-workflow-asset-sync-contract.sh"
     "$script_dir/test-precommit-sha-pins-contract.sh"
     "$script_dir/test-uv-python-tooling-contract.sh"
     "$script_dir/check-commit-policy-fixtures.sh"

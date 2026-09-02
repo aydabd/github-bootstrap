@@ -7,13 +7,7 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions" # See documentation for possible values
-    # Update the live workflows and their templates/ mirrors together. The
-    # verify-* action files and commit-policy.yml must stay byte-identical
-    # between root and templates/ (scripts/check-github-workflow-assets.sh);
-    # bumping only "/" desynced them and failed every Actions update PR.
-    directories:
-      - "/"
-      - "/templates"
+    directory: "/"
     schedule:
       interval: "weekly"
     cooldown:

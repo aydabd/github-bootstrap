@@ -150,6 +150,22 @@ repos:
         pass_filenames: false
         files: '(^|/)(\.github/(skills|agents|ISSUE_TEMPLATE)|\.github/pull_request_template\.md|templates/)'
 
+      - id: sync-workflow-assets
+        name: sync shared workflow assets
+        entry: bash
+        args:
+          - -c
+          - |
+            if [ "${LINT_MODE:-fix}" = "check" ]; then
+              ./scripts/sync-workflow-assets.sh --check
+            else
+              ./scripts/sync-workflow-assets.sh
+            fi
+          - sync-workflow-assets
+        language: system
+        pass_filenames: false
+        files: '(^\.github/|^templates/\.github/)'
+
       - id: lint-actions
         name: actionlint and zizmor
         entry: ./scripts/lint-github-actions.sh
