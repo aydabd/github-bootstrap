@@ -12,8 +12,11 @@ lock_file=$2
 platform=$3
 
 case "$platform" in
-    linux-64|osx-64|osx-arm64) ;;
-    *) echo "unsupported conda platform: $platform" >&2; exit 2 ;;
+    linux-64 | osx-64 | osx-arm64) ;;
+    *)
+        echo "unsupported conda platform: $platform" >&2
+        exit 2
+        ;;
 esac
 
 grep -Eq '^name: *[^"{][^[:space:]]*|^name: *"?[A-Za-z0-9_.-]+"?$' "$environment_file" || {
@@ -44,7 +47,7 @@ if [ "$lock_rc" -ne 0 ]; then
         exit "$lock_rc"
     }
     mamba_bin="$(command -v micromamba || command -v mamba)"
-    "$mamba_bin" create --dry-run --json -n conda-lock-validation -f "$lock_file" >/dev/null
+    "$mamba_bin" create --dry-run --json -n conda-lock-validation -f "$lock_file" > /dev/null
     grep -Fq "platform: $platform" "$lock_file" || {
         echo "conda-lock output is missing platform $platform" >&2
         exit 1

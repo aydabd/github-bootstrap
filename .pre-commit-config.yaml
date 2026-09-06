@@ -98,6 +98,7 @@ repos:
         entry: yamllint
         args: [--config-file, .github/linters/.yaml-lint.yml]
         language: system
+        exclude: '(^|/)conda-lock\.yml$'
         types: [yaml]
 
       # ── Markdown: linting (markdownlint-cli) ──────────────────────────────
@@ -133,6 +134,7 @@ repos:
             fi
           - prettier
         language: system
+        exclude: '(^|/)conda-lock\.yml$'
         types_or: [json, yaml, markdown]
 
       # ── Skill parity: .claude/skills symlinks → .github/skills ─────────────

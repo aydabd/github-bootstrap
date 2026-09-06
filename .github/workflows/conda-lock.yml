@@ -89,11 +89,16 @@ jobs:
           set -euo pipefail
           mkdir -p merged
           for name in environment python golang typescript java; do
+            if [ "$name" = environment ]; then
+              lock_name=environment.yml
+            else
+              lock_name="${name}-environment.yml"
+            fi
             python3 scripts/merge-conda-locks.py \
               "merged/${name}-conda-lock.yml" \
-              native-locks/conda-lock-linux-64/${name}-environment.yml \
-              native-locks/conda-lock-osx-64/${name}-environment.yml \
-              native-locks/conda-lock-osx-arm64/${name}-environment.yml
+              "native-locks/conda-lock-linux-64/$lock_name" \
+              "native-locks/conda-lock-osx-64/$lock_name" \
+              "native-locks/conda-lock-osx-arm64/$lock_name"
           done
           for lock in merged/*.yml; do
             grep -Fq -- '- linux-64' "$lock"
