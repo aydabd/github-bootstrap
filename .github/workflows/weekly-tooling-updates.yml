@@ -102,24 +102,22 @@ jobs:
         env:
           TOOLING_UPDATE_METADATA_FILE: ${{ runner.temp }}/tooling-update-metadata.json
           TOOLING_UPDATE_EXPLICIT_BREAKING: ${{ inputs.explicit_breaking || false }}
+          TOOLING_UPDATE_COOLDOWN_DAYS: 14
         shell: bash
         run: |
           ENV_MANAGER=micromamba make tooling-update-repo
           ENV_MANAGER=micromamba make tooling-update-templates
 
-      - name: Regenerate conda lockfiles
+      - name: Regenerate all tooling lockfiles atomically
         shell: bash
-        run: scripts/regenerate-conda-locks.sh
-
-      - name: Regenerate mise lockfiles
-        shell: bash
-        run: scripts/regenerate-mise-locks.sh
+        run: scripts/regenerate-tooling-locks.sh
 
       - name: Normalize generated files
         shell: bash
         run: |
           ENV_MANAGER=micromamba make quality || true
           LINT_MODE=check ENV_MANAGER=micromamba make quality
+          scripts/validate-tooling-lock-drift.sh
 
       - name: Create or update tooling update PR (gh CLI)
         shell: bash
@@ -150,6 +148,10 @@ jobs:
           Auto-merge is requested only for fully classified updates. GitHub will merge only
           after all required checks, CodeRabbit review requirements, and approval rules are satisfied.
           EOF
+
+          lockfile_updates="$(git diff --name-only -- '*.lock' '*lock.json' '*lock.yml' | jq -Rsc 'split("\n") | map(select(length > 0) | {package: "lockfile", old_version: "unchanged", new_version: "refreshed", update_type: "lockfile", risk: "low", files: [.]})')"
+          jq --argjson lockfile_updates "$lockfile_updates" '.updates += $lockfile_updates' "$TOOLING_UPDATE_METADATA_FILE" > "$TOOLING_UPDATE_METADATA_FILE.tmp"
+          mv "$TOOLING_UPDATE_METADATA_FILE.tmp" "$TOOLING_UPDATE_METADATA_FILE"
 
           if git diff --quiet --exit-code && [ -z "$(git ls-files --others --exclude-standard)" ]; then
             echo "No tooling updates detected; skipping PR creation."

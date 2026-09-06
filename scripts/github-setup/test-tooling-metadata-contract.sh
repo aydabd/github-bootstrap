@@ -29,6 +29,10 @@ for payload in \
     fi
 done
 
+lockfile="$tmp_dir/lockfile.json"
+printf '%s\n' '{"schema_version":1,"updates":[{"package":"lockfile","old_version":"unchanged","new_version":"refreshed","update_type":"lockfile","risk":"low","files":["uv.lock"]}]}' > "$lockfile"
+"$validator" "$lockfile"
+
 for payload in '' 'not-json' '{"schema_version":2,"updates":[]}' '{"schema_version":1}'; do
     candidate="$tmp_dir/candidate.json"
     printf '%s\n' "$payload" > "$candidate"
