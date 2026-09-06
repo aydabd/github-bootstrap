@@ -2,7 +2,7 @@
 name: Configure Provider Tooling Files
 description: >-
   Copy language/provider-specific tooling files (Makefile, environment.yml, conda-lock.yml,
-  mise.toml, and scripts) into the generated repository and
+  mise.toml, mise.lock, package manifests, and scripts) into the generated repository and
   substitute repository placeholders.
 
 inputs:
@@ -71,10 +71,14 @@ runs:
         fi
 
         cp "$PROVIDER_DIR/Makefile" "$REPO_DIR/Makefile"
-        rm -f "$REPO_DIR/environment.yml" "$REPO_DIR/conda-lock.yml" "$REPO_DIR/mise.toml"
+        rm -f "$REPO_DIR/environment.yml" "$REPO_DIR/conda-lock.yml" "$REPO_DIR/mise.toml" \
+          "$REPO_DIR/mise.lock" "$REPO_DIR/package.json" "$REPO_DIR/package-lock.json"
         [ -f "$PROVIDER_DIR/environment.yml" ] && cp "$PROVIDER_DIR/environment.yml" "$REPO_DIR/environment.yml"
         [ -f "$PROVIDER_DIR/conda-lock.yml" ] && cp "$PROVIDER_DIR/conda-lock.yml" "$REPO_DIR/conda-lock.yml"
         [ -f "$PROVIDER_DIR/mise.toml" ] && cp "$PROVIDER_DIR/mise.toml" "$REPO_DIR/mise.toml"
+        [ -f "$PROVIDER_DIR/mise.lock" ] && cp "$PROVIDER_DIR/mise.lock" "$REPO_DIR/mise.lock"
+        [ -f "$PROVIDER_DIR/package.json" ] && cp "$PROVIDER_DIR/package.json" "$REPO_DIR/package.json"
+        [ -f "$PROVIDER_DIR/package-lock.json" ] && cp "$PROVIDER_DIR/package-lock.json" "$REPO_DIR/package-lock.json"
         # uv is the single source of truth for Python tooling across every provider.
         cp "$TEMPLATE_DIR/pyproject.toml" "$REPO_DIR/pyproject.toml"
         cp "$TEMPLATE_DIR/uv.lock" "$REPO_DIR/uv.lock"
@@ -83,6 +87,7 @@ runs:
         cp "$PROVIDER_SCRIPT_TEMPLATE" "$REPO_DIR/scripts/provider-run.sh"
         cp "$GITHUB_WORKSPACE/templates/scripts/bootstrap-provider-binary.sh" "$REPO_DIR/scripts/bootstrap-provider-binary.sh"
         cp "$GITHUB_WORKSPACE/templates/scripts/provider-assets.txt" "$REPO_DIR/scripts/provider-assets.txt"
+        cp "$GITHUB_WORKSPACE/scripts/regenerate-mise-lock.sh" "$REPO_DIR/scripts/regenerate-mise-lock.sh"
         chmod +x "$REPO_DIR/scripts/provider-run.sh"
         chmod +x "$REPO_DIR/scripts/bootstrap-provider-binary.sh"
 
@@ -114,6 +119,11 @@ runs:
           sed -i "s/{{NODE_VERSION}}/$NODE_VERSION/g" "$REPO_DIR/mise.toml"
           sed -i "s/{{GO_VERSION}}/$GO_VERSION/g" "$REPO_DIR/mise.toml"
           sed -i "s/{{JAVA_VERSION}}/$JAVA_VERSION/g" "$REPO_DIR/mise.toml"
+          mise_bin="$REPO_DIR/.provider/bin/mise"
+          if [ ! -x "$mise_bin" ]; then
+            bash "$REPO_DIR/scripts/bootstrap-provider-binary.sh" mise "$mise_bin"
+          fi
+          bash "$REPO_DIR/scripts/regenerate-mise-lock.sh" "$REPO_DIR" "$mise_bin"
         fi
         if [ -f "$REPO_DIR/.github/bootstrap-provider.yml" ]; then
           sed -i "s/{{ENV_MANAGER}}/$ENV_MANAGER/g" "$REPO_DIR/.github/bootstrap-provider.yml"

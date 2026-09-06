@@ -9,6 +9,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 contract_tests=(
     "$script_dir/test-conda-lock-contract.sh"
     "$script_dir/test-conda-lock-workflow-contract.sh"
+    "$script_dir/test-mise-lock-contract.sh"
     "$script_dir/test-action-lint-contract.sh"
     "$script_dir/test-quality-contract.sh"
     "$script_dir/test-workflow-asset-sync-contract.sh"

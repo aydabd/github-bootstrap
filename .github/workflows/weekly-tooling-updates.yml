@@ -111,6 +111,10 @@ jobs:
         shell: bash
         run: scripts/regenerate-conda-locks.sh
 
+      - name: Regenerate mise lockfiles
+        shell: bash
+        run: scripts/regenerate-mise-locks.sh
+
       - name: Normalize generated files
         shell: bash
         run: |
