@@ -107,6 +107,10 @@ jobs:
           ENV_MANAGER=micromamba make tooling-update-repo
           ENV_MANAGER=micromamba make tooling-update-templates
 
+      - name: Regenerate conda lockfiles
+        shell: bash
+        run: scripts/regenerate-conda-locks.sh
+
       - name: Normalize generated files
         shell: bash
         run: |

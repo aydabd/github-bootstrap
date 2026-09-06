@@ -64,6 +64,18 @@ func VerifyWorkspaceLayout(root string) error {
 	if len(templateFiles.EnvFiles) == 0 {
 		return fmt.Errorf("workspace layout verification failed: no template micromamba environment.yml files found")
 	}
+	if len(templateFiles.CondaLockFiles) != len(templateFiles.EnvFiles) {
+		return fmt.Errorf("workspace layout verification failed: micromamba environment.yml and conda-lock.yml files are not paired")
+	}
+	lockByDir := make(map[string]bool, len(templateFiles.CondaLockFiles))
+	for _, lockFile := range templateFiles.CondaLockFiles {
+		lockByDir[filepath.Dir(lockFile)] = true
+	}
+	for _, envFile := range templateFiles.EnvFiles {
+		if !lockByDir[filepath.Dir(envFile)] {
+			return fmt.Errorf("workspace layout verification failed: missing conda-lock.yml beside %s", envFile)
+		}
+	}
 	if len(templateFiles.MiseFiles) == 0 {
 		return fmt.Errorf("workspace layout verification failed: no template mise.toml files found")
 	}
