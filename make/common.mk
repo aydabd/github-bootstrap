@@ -24,7 +24,7 @@ INTERNAL_TARGETS := _install-hooks
 .PHONY: $(PUBLIC_TARGETS) $(INTERNAL_TARGETS)
 
 MAMBA_ENV  := github-bootstrap
-MAMBA_SPEC := $(CURDIR)/environment.yml
+MAMBA_SPEC := $(CURDIR)/conda-lock.yml
 MICROMAMBA ?= $(CURDIR)/.provider/bin/micromamba
 MISE ?= $(CURDIR)/.provider/bin/mise
 

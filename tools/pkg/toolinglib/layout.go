@@ -14,6 +14,10 @@ func DiscoverTemplateFiles(root string) (TemplateFiles, error) {
 	if err != nil {
 		return TemplateFiles{}, err
 	}
+	condaLockFiles, err := filepath.Glob(filepath.Join(templatesRoot, "languages", "*", "providers", "micromamba", "conda-lock.yml"))
+	if err != nil {
+		return TemplateFiles{}, err
+	}
 	miseFiles, err := filepath.Glob(filepath.Join(templatesRoot, "languages", "*", "providers", "mise", "mise.toml"))
 	if err != nil {
 		return TemplateFiles{}, err
@@ -23,9 +27,10 @@ func DiscoverTemplateFiles(root string) (TemplateFiles, error) {
 		return TemplateFiles{}, err
 	}
 	sort.Strings(envFiles)
+	sort.Strings(condaLockFiles)
 	sort.Strings(miseFiles)
 	sort.Strings(preCommitFiles)
-	return TemplateFiles{EnvFiles: envFiles, MiseFiles: miseFiles, PreCommitFiles: preCommitFiles}, nil
+	return TemplateFiles{EnvFiles: envFiles, CondaLockFiles: condaLockFiles, MiseFiles: miseFiles, PreCommitFiles: preCommitFiles}, nil
 }
 
 func VerifyWorkspaceLayout(root string) error {

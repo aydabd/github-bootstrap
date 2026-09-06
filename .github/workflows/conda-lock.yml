@@ -1,0 +1,102 @@
+name: Verify Conda Lockfiles
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  solve:
+    name: Solve ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-64
+            runner: ubuntu-24.04
+          - platform: osx-64
+            runner: macos-26-intel
+          - platform: osx-arm64
+            runner: macos-26
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+      - name: Generate native lockfiles
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/locks"
+          while IFS= read -r environment_file; do
+            relative="${environment_file#./}"
+            if [ "$relative" = "environment.yml" ]; then
+              concrete="$RUNNER_TEMP/environment.yml"
+              cp "$environment_file" "$concrete"
+              output="locks/environment.yml"
+            else
+              language="$(printf '%s' "$relative" | cut -d/ -f3)"
+              concrete="$RUNNER_TEMP/${language}-environment.yml"
+              cp "$environment_file" "$concrete"
+              sed -i.bak \
+                -e 's/{{REPOSITORY_NAME}}/conda-lock-verification/g' \
+                -e 's/{{PYTHON_VERSION}}/3.13/g' \
+                -e 's/{{NODE_VERSION}}/24/g' \
+                -e 's/{{GO_VERSION}}/1.26/g' \
+                -e 's/{{JAVA_VERSION}}/25/g' "$concrete"
+              output="locks/${language}-environment.yml"
+            fi
+            mkdir -p "$(dirname "$output")"
+            scripts/generate-conda-lock.sh "$concrete" "$output" "$PLATFORM"
+          done < <(find . -path '*/providers/micromamba/environment.yml' -type f | sort)
+      - name: Upload native lockfiles
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: conda-lock-${{ matrix.platform }}
+          path: locks
+          if-no-files-found: error
+
+  verify:
+    name: Verify merged lockfiles
+    needs: solve
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download native lockfiles
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: conda-lock-*
+          path: native-locks
+          merge-multiple: false
+      - name: Merge and validate lockfiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p merged
+          for name in environment python golang typescript java; do
+            python3 scripts/merge-conda-locks.py \
+              "merged/${name}-conda-lock.yml" \
+              native-locks/conda-lock-linux-64/${name}-environment.yml \
+              native-locks/conda-lock-osx-64/${name}-environment.yml \
+              native-locks/conda-lock-osx-arm64/${name}-environment.yml
+          done
+          for lock in merged/*.yml; do
+            grep -Fq -- '- linux-64' "$lock"
+            grep -Fq -- '- osx-64' "$lock"
+            grep -Fq -- '- osx-arm64' "$lock"
+          done
