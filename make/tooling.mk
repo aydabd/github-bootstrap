@@ -21,6 +21,7 @@ tooling-update-micromamba: tooling-updater-build ## Update micromamba-managed to
 
 tooling-update-mise: tooling-updater-build ## Update mise-managed tooling (mise.toml files + provider binary pins)
 	@$(RUN) $(TOOLING_UPDATER_BIN) --scope all --updaters mise $(TOOLING_METADATA_ARGS)
+	@MISE_BIN="$(MISE)" scripts/regenerate-mise-locks.sh
 
 tooling-update-system: tooling-updater-build ## Run system updater (reserved no-op updater for explicit extension point)
 	@$(RUN) $(TOOLING_UPDATER_BIN) --scope all --updaters system $(TOOLING_METADATA_ARGS)

@@ -12,7 +12,4 @@ taplo = "0.10.0"
 MISE_NODE_COREPACK = "1"
 
 [tasks.install-tools]
-run = [
-  "uv sync --locked",
-  "npm install -g prettier@3.9.6 markdownlint-cli@0.49.1",
-]
+run = ["uv sync --locked", "npm ci --ignore-scripts --no-audit --no-fund"]

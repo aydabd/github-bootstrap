@@ -355,6 +355,10 @@ pre-commit hook revisions, use:
 - `make tooling-verify` — verify layout assumptions and run updater unit tests before merging changes
 - `make tooling-update-micromamba` / `make tooling-update-mise` / `make tooling-update-system` / `make tooling-update-precommit` — run explicit modular updaters
 
+`make tooling-update-mise` also regenerates the committed root and template
+`mise.lock` files. The mise provider keeps npm tooling in the matching
+`package.json` and `package-lock.json` and installs it with `npm ci`.
+
 Tooling commands automatically build the updater binary from latest source before execution,
 so users and AI agents always run the current implementation.
 

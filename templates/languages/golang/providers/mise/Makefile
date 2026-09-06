@@ -14,7 +14,7 @@ MAKEFLAGS += --no-builtin-rules
 LINT_MODE ?= fix
 BUILD_DIR := build
 MISE ?= $(CURDIR)/.provider/bin/mise
-RUN := $(MISE) exec --
+RUN := PATH="$(CURDIR)/node_modules/.bin:$$PATH" $(MISE) exec --
 
 help: ## Show available make targets
 	@echo "{{REPOSITORY_NAME}} — Available Commands (mise):"
@@ -31,7 +31,7 @@ setup-env: ## Setup isolated environment with mise
 		echo "Failed to bootstrap mise binary at $(MISE)."; \
 		exit 1; \
 	fi
-	@PATH="$(dir $(MISE)):$$PATH" $(MISE) install
+	@PATH="$(dir $(MISE)):$$PATH" $(MISE) install --locked
 	@PATH="$(dir $(MISE)):$$PATH" $(MISE) tasks run install-tools
 	@if ! command -v xmllint >/dev/null 2>&1; then \
 		echo "Missing required tool: xmllint"; \
@@ -56,6 +56,7 @@ _install-hooks:
 			echo "# mise-env-path"; \
 			echo 'ROOT_DIR="$$(git rev-parse --show-toplevel 2>/dev/null || pwd)"; if [ -x "$$ROOT_DIR/.provider/bin/mise" ]; then eval "$$(cd "$$ROOT_DIR" && .provider/bin/mise activate bash --shims)"; fi'; \
 			echo 'if [ -d "$$ROOT_DIR/.venv/bin" ]; then PATH="$$ROOT_DIR/.venv/bin:$$PATH"; export PATH; fi'; \
+			echo 'if [ -d "$$ROOT_DIR/node_modules/.bin" ]; then PATH="$$ROOT_DIR/node_modules/.bin:$$PATH"; export PATH; fi'; \
 			tail -n +2 "$$hook_file"; \
 			} > "$$hook_file.tmp" && mv "$$hook_file.tmp" "$$hook_file" && chmod +x "$$hook_file"; \
 		fi; \
