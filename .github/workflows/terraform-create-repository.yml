@@ -693,6 +693,11 @@ jobs:
           root_language: ${{ steps.validate-inputs.outputs.root_language }}
           languages: ${{ steps.validate-inputs.outputs.normalized_languages }}
 
+      - name: Set up uv for conda lock rendering
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
       - name: Configure provider tooling files
         uses: ./.github/actions/configure-provider-tooling-files
         with:

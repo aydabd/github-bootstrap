@@ -15,6 +15,7 @@ type Versions struct {
 
 type TemplateFiles struct {
 	EnvFiles       []string
+	CondaLockFiles []string
 	MiseFiles      []string
 	PreCommitFiles []string
 }

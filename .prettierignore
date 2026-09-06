@@ -1,4 +1,5 @@
 .git/
 node_modules/
 CHANGELOG.md
+**/conda-lock.yml
 templates/.github/workflows/codeql.yml

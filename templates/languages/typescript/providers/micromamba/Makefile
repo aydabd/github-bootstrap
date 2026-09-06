@@ -30,7 +30,7 @@ MAKEFLAGS += --no-builtin-rules
 # Configuration
 # =============================================================================
 MAMBA_ENV  := {{REPOSITORY_NAME}}
-MAMBA_SPEC := $(CURDIR)/environment.yml
+MAMBA_SPEC := $(CURDIR)/conda-lock.yml
 MICROMAMBA := $(CURDIR)/.provider/bin/micromamba
 
 # LINT_MODE: fix (default, local dev) or check (CI, no auto-fix)

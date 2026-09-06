@@ -7,6 +7,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # test-local-setup-scripts.sh is deliberately excluded: it is a live E2E test
 # that requires an explicitly supplied repository and cleanup authorization.
 contract_tests=(
+    "$script_dir/test-conda-lock-contract.sh"
+    "$script_dir/test-conda-lock-workflow-contract.sh"
     "$script_dir/test-action-lint-contract.sh"
     "$script_dir/test-quality-contract.sh"
     "$script_dir/test-workflow-asset-sync-contract.sh"
