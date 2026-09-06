@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/aydabd/github-bootstrap/compare/v2.1.3...v2.2.0) (2026-09-06)
+
+
+### Features
+
+* lock mise and npm tooling ([#194](https://github.com/aydabd/github-bootstrap/issues/194)) ([b9bf7f5](https://github.com/aydabd/github-bootstrap/commit/b9bf7f571cae5f8d307a1ab5def7176e5a246261))
+
 ## [2.1.3](https://github.com/aydabd/github-bootstrap/compare/v2.1.2...v2.1.3) (2026-09-01)
 
 
