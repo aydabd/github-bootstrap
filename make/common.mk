@@ -45,7 +45,7 @@ endif
 ifeq ($(ENV_MANAGER),micromamba)
 RUN := $(MICROMAMBA) run -n $(MAMBA_ENV)
 else ifeq ($(ENV_MANAGER),mise)
-RUN := $(MISE) exec --
+RUN := PATH="$(CURDIR)/node_modules/.bin:$$PATH" $(MISE) exec --
 else
 RUN :=
 endif

@@ -12,9 +12,14 @@ fi
 
 bash "$repo_root/scripts/regenerate-mise-lock.sh" "$repo_root" "$mise_bin"
 
+cleanup_temp_dir() {
+    rm -rf "$temp_dir"
+}
+
 while IFS= read -r mise_file; do
     template_dir="$(dirname "$mise_file")"
     temp_dir="$(mktemp -d)"
+    trap cleanup_temp_dir EXIT
     sed -e 's/{{PYTHON_VERSION}}/3.13/g' \
         -e 's/{{NODE_VERSION}}/24/g' \
         -e 's/{{GO_VERSION}}/1.26/g' \
@@ -22,5 +27,6 @@ while IFS= read -r mise_file; do
         "$mise_file" > "$temp_dir/mise.toml"
     bash "$repo_root/scripts/regenerate-mise-lock.sh" "$temp_dir" "$mise_bin"
     cp "$temp_dir/mise.lock" "$template_dir/mise.lock"
-    rm -rf "$temp_dir"
+    cleanup_temp_dir
+    trap - EXIT
 done < <(find "$repo_root/templates/languages" -path '*/providers/mise/mise.toml' -type f | sort)

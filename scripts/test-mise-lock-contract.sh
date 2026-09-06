@@ -53,6 +53,14 @@ done < <(find "$repo_root/templates/languages" -path '*/providers/mise/mise.toml
 
 grep -Fq 'install --locked' "$repo_root/make/env.mk" ||
     fail "root environment setup does not install mise with --locked"
+grep -Fq 'node_modules/.bin' "$repo_root/make/common.mk" ||
+    fail "root mise execution path does not include local npm binaries"
+grep -Fq 'node_modules/.bin' "$repo_root/templates/providers/mise/provider-run.sh" ||
+    fail "generated mise provider runner does not include local npm binaries"
+while IFS= read -r make_file; do
+    grep -Fq 'node_modules/.bin' "$make_file" ||
+        fail "$make_file does not include local npm binaries in mise execution"
+done < <(find "$repo_root/templates/languages" -path '*/providers/mise/Makefile' -type f | sort)
 
 configure_action="$repo_root/.github/actions/configure-provider-tooling-files/action.yml"
 for file in mise.toml mise.lock package.json package-lock.json; do

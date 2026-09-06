@@ -13,4 +13,4 @@ if [[ ! -x "$MISE_BIN" ]]; then
     bash "$ROOT_DIR/scripts/bootstrap-provider-binary.sh" mise "$MISE_BIN"
 fi
 
-"$MISE_BIN" exec -- "$@"
+PATH="$ROOT_DIR/node_modules/.bin:$PATH" "$MISE_BIN" exec -- "$@"
