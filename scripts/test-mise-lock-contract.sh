@@ -69,7 +69,7 @@ for file in mise.toml mise.lock package.json package-lock.json; do
 done
 
 weekly_workflow="$repo_root/.github/workflows/weekly-tooling-updates.yml"
-grep -Fq 'scripts/regenerate-mise-locks.sh' "$weekly_workflow" ||
+grep -Fq 'scripts/regenerate-tooling-locks.sh' "$weekly_workflow" ||
     fail "weekly tooling workflow does not regenerate mise locks"
 
 if [ "$status" -ne 0 ]; then

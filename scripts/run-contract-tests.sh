@@ -15,6 +15,7 @@ contract_tests=(
     "$script_dir/test-workflow-asset-sync-contract.sh"
     "$script_dir/test-precommit-sha-pins-contract.sh"
     "$script_dir/test-uv-python-tooling-contract.sh"
+    "$script_dir/test-weekly-tooling-lock-refresh-contract.sh"
     "$script_dir/check-commit-policy-fixtures.sh"
     "$script_dir/github-setup/test-app-auth-contract.sh"
     "$script_dir/github-setup/test-app-manifest-contract.sh"
