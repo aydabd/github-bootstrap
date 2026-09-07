@@ -88,16 +88,6 @@ jobs:
           [ -n "$PR_NUMBER" ] || { echo "maintenance safety pull request number is missing" >&2; exit 1; }
           [ -n "$COPILOT_REVIEWER_LOGIN" ] || { echo "Copilot reviewer identity is not configured" >&2; exit 1; }
 
-          # pull_request_target fires before the required checks finish. Wait for
-          # the latest run of each to complete so this single run validates the
-          # final state rather than failing early.
-          required_wait_jq='["Quality","Commit policy","Test Quality Providers","CodeQL Security Scan"] as $need | [.workflow_runs[]] as $runs | [$need[] | . as $name | ($runs | map(select(.name == $name)) | sort_by(.created_at) | last | .status) // "missing"] | all(. == "completed")'
-          for _ in $(seq 1 45); do
-            settled="$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100" --jq "$required_wait_jq" 2>/dev/null || echo false)"
-            [ "$settled" = "true" ] && break
-            sleep 20
-          done
-
           pr_file="$tmp_dir/pr.json"
           runs_file="$tmp_dir/runs.json"
           e2e_file="$tmp_dir/e2e.json"
@@ -105,12 +95,31 @@ jobs:
           reviews_file="$tmp_dir/reviews.json"
           threads_file="$tmp_dir/threads.json"
 
+          # Required workflow completions retrigger this workflow. Check once
+          # for the same SHA and defer while any core gate is still running.
+          required_status_jq='["Quality","Commit policy","Test Quality Providers","CodeQL Security Scan"] as $need | [.workflow_runs[]] as $runs | [$need[] | . as $name | ($runs | map(select(.name == $name)) | sort_by(.created_at) | last | .status) // "missing"] | all(. == "completed")'
+          settled="$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100" --jq "$required_status_jq" 2>/dev/null || echo false)"
+          if [ "$settled" != "true" ]; then
+            echo "required checks are still running; deferring to the next completion event"
+            exit 0
+          fi
+
+          gh api "/repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels?per_page=100" > "$labels_file"
+          if jq -e 'any(.[]?; .name == "automation: breaking")' "$labels_file" > /dev/null; then
+            e2e_settled="$(gh api --paginate "/repos/$GITHUB_REPOSITORY/actions/workflows/test-generated-repository-e2e.yml/runs?per_page=100" \
+              --jq '.workflow_runs[] | {head_sha,status}' 2>/dev/null | \
+              jq -s --arg head_sha "$HEAD_SHA" 'any(.[]; .head_sha == $head_sha and .status == "completed")' || echo false)"
+            if [ "$e2e_settled" != "true" ]; then
+              echo "breaking-risk E2E is still running; deferring to the next completion event"
+              exit 0
+            fi
+          fi
+
           gh api "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$pr_file"
           gh api "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100" \
             --jq '[.workflow_runs[] | select(.name == "Quality" or .name == "Commit policy" or .name == "Test Quality Providers" or .name == "CodeQL Security Scan") | {name,status,conclusion,head_sha}]' > "$runs_file"
           gh api --paginate "/repos/$GITHUB_REPOSITORY/actions/workflows/test-generated-repository-e2e.yml/runs?per_page=100" \
             --jq '.workflow_runs[] | {status,conclusion,head_sha}' | jq -s '.' > "$e2e_file"
-          gh api "/repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels?per_page=100" > "$labels_file"
           gh api --paginate --slurp "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" > "$tmp_dir/review-pages.json"
           jq '[.[][]]' "$tmp_dir/review-pages.json" > "$reviews_file"
 
