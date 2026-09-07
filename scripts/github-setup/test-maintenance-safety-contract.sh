@@ -73,6 +73,7 @@ grep -Fq 'workflow_runs' "$workflow"
 # while gates are pending rather than spend runner time polling.
 grep -Fq "actions/runs?head_sha=\$HEAD_SHA" "$workflow"
 grep -Fq 'all(. == "completed")' "$workflow"
+grep -Fq 'Verify Conda Lockfiles' "$workflow"
 # shellcheck disable=SC2016  # literal workflow substrings, not shell to expand
 if grep -Fq 'for _ in $(seq 1 45)' "$workflow" || grep -Fq 'sleep 20' "$workflow"; then
     echo "maintenance safety must not poll required checks for 15 minutes" >&2
