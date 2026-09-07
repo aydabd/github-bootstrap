@@ -69,10 +69,15 @@ if grep -Fq '^  pull_request:' "$workflow"; then
 fi
 grep -Fq 'validate-maintenance-safety.sh' "$workflow"
 grep -Fq 'workflow_runs' "$workflow"
-# pull_request_target fires before the required checks finish; the job must wait
-# for them to settle rather than fail on the early run.
+# Each required workflow completion retriggers safety; the job must defer
+# while gates are pending rather than spend runner time polling.
 grep -Fq "actions/runs?head_sha=\$HEAD_SHA" "$workflow"
 grep -Fq 'all(. == "completed")' "$workflow"
+# shellcheck disable=SC2016  # literal workflow substrings, not shell to expand
+if grep -Fq 'for _ in $(seq 1 45)' "$workflow" || grep -Fq 'sleep 20' "$workflow"; then
+    echo "maintenance safety must not poll required checks for 15 minutes" >&2
+    exit 1
+fi
 grep -Fq 'test-generated-repository-e2e.yml' "$workflow"
 grep -Fq 'BOOTSTRAP_COPILOT_REVIEWER_LOGIN' "$workflow"
 # A dispatched Test Generated Repository E2E run carries no pull_requests[0];

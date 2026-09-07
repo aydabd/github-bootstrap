@@ -124,25 +124,8 @@ jobs:
               "$WRITER_APP_SLUG" "$REVIEWER_APP_SLUG" "$require_reviewer_approval"
           }
 
-          # This job is often triggered while the required checks are still
-          # running; wait for them, and defer to a later trigger if they hang.
-          wait_for_required_checks() {
-            local attempt pending
-            for attempt in $(seq 1 45); do
-              gh pr checks "$PR_NUMBER" --required --json state \
-                > "$tmp_dir/checks.json" 2>/dev/null || true
-              pending="$(jq -r '[.[] | select(.state == "PENDING" or .state == "QUEUED" or .state == "IN_PROGRESS")] | length' \
-                "$tmp_dir/checks.json" 2>/dev/null || echo 1)"
-              [ "${pending:-1}" = "0" ] && return 0
-              sleep 20
-            done
-            return 1
-          }
-
-          wait_for_required_checks || {
-            echo "required checks did not settle within the wait window; deferring to the next trigger" >&2
-            exit 0
-          }
+          # Maintenance safety is emitted after every required workflow
+          # completion, so this job validates the checks once and moves on.
           if ! validate_state; then
             echo "maintenance merge preconditions are not met; not enabling auto-merge" >&2
             exit 0
@@ -163,16 +146,61 @@ jobs:
             exit 1
           }
 
-          # enablePullRequestAutoMerge rejects a PR that is already mergeable;
-          # merge it outright in that case.
-          if [ "$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.mergeable_state')" = "clean" ]; then
-            GH_TOKEN="$MERGE_TOKEN" gh api --method PUT \
-              "/repos/$REPOSITORY/pulls/$PR_NUMBER/merge" \
-              -f sha="$HEAD_SHA" -f merge_method=squash > /dev/null
-          else
-            # shellcheck disable=SC2016
-            GH_TOKEN="$MERGE_TOKEN" gh api graphql \
-              -f query='mutation($pullRequestId:ID!,$mergeMethod:PullRequestMergeMethod!){enablePullRequestAutoMerge(input:{pullRequestId:$pullRequestId,mergeMethod:$mergeMethod}){pullRequest{autoMergeRequest{mergeMethod}}}}' \
-              -f pullRequestId="$node_id" \
-              -f mergeMethod=SQUASH
-          fi
+          wait_until_mergeable() {
+            local timeout_seconds="$1" deadline mergeable_state
+            deadline=$((SECONDS + timeout_seconds))
+            while [ "$SECONDS" -lt "$deadline" ]; do
+              mergeable_state="$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.mergeable_state // "unknown"')"
+              case "$mergeable_state" in
+                unstable|unknown)
+                  sleep 5
+                  ;;
+                *)
+                  printf '%s\n' "$mergeable_state"
+                  return 0
+                  ;;
+              esac
+            done
+            return 1
+          }
+
+          merge_with_retry() {
+            local merge_timeout_seconds=60 merge_deadline mergeable_state remaining_seconds response
+            merge_deadline=$((SECONDS + merge_timeout_seconds))
+            while [ "$SECONDS" -lt "$merge_deadline" ]; do
+              remaining_seconds=$((merge_deadline - SECONDS))
+              if ! mergeable_state="$(wait_until_mergeable "$remaining_seconds")"; then
+                echo "mergeability_timeout: state did not stabilize within ${merge_timeout_seconds}s" >&2
+                echo "mergeability remained unstable; deferring to the next trigger" >&2
+                return 0
+              fi
+              if [ "$mergeable_state" = "clean" ]; then
+                GH_TOKEN="$MERGE_TOKEN" gh api --method PUT \
+                  "/repos/$REPOSITORY/pulls/$PR_NUMBER/merge" \
+                  -f sha="$HEAD_SHA" -f merge_method=squash > /dev/null
+                return 0
+              fi
+
+              # shellcheck disable=SC2016
+              if response="$(GH_TOKEN="$MERGE_TOKEN" gh api graphql \
+                -f query='mutation($pullRequestId:ID!,$mergeMethod:PullRequestMergeMethod!){enablePullRequestAutoMerge(input:{pullRequestId:$pullRequestId,mergeMethod:$mergeMethod}){pullRequest{autoMergeRequest{mergeMethod}}}}' \
+                -f pullRequestId="$node_id" \
+                -f mergeMethod=SQUASH 2>&1)"; then
+                return 0
+              fi
+              if grep -Fq 'unstable status' <<< "$response"; then
+                echo "GitHub rejected auto-merge while mergeability was unstable; waiting for a stable state"
+                if [ "$remaining_seconds" -gt 5 ]; then
+                  sleep 5
+                fi
+                continue
+              fi
+              printf '%s\n' "$response" >&2
+              return 1
+            done
+            echo "mergeability_timeout: auto-merge did not stabilize within ${merge_timeout_seconds}s" >&2
+            echo "mergeability remained unstable; deferring to the next trigger" >&2
+            return 0
+          }
+
+          merge_with_retry
