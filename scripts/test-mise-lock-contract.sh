@@ -23,10 +23,15 @@ check_provider() {
         [ -f "$required" ] || fail "missing mise lock input: $required"
     done
     if [ -f "$mise_file" ]; then
-        grep -Eq 'npm ci --ignore-scripts --no-audit --no-fund' "$mise_file" ||
+        grep -Eq 'npm ci --ignore-scripts --no-fund' "$mise_file" ||
             fail "$mise_file does not run locked npm ci"
+        grep -Eq 'npm audit --audit-level=high' "$mise_file" ||
+            fail "$mise_file does not run the npm security audit"
         if grep -Eq 'npm install -g' "$mise_file"; then
             fail "$mise_file still uses global npm installation"
+        fi
+        if grep -Eq -- '--no-audit' "$mise_file"; then
+            fail "$mise_file bypasses the npm security audit"
         fi
     fi
     make_file="$provider_dir/Makefile"
@@ -50,6 +55,31 @@ check_provider "$repo_root"
 while IFS= read -r mise_file; do
     check_provider "$(dirname "$mise_file")"
 done < <(find "$repo_root/templates/languages" -path '*/providers/mise/mise.toml' -type f | sort)
+
+for setup_action in \
+    "$repo_root/.github/actions/setup-lint-system/action.yml" \
+    "$repo_root/templates/.github/actions/setup-lint-system/action.yml" \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/setup-lint-system/action.yml"; do
+    grep -Eq 'npm ci --ignore-scripts --no-fund' "$setup_action" ||
+        fail "$setup_action does not install npm tooling from a lockfile"
+    grep -Eq 'npm audit --audit-level=high' "$setup_action" ||
+        fail "$setup_action does not run the npm security audit"
+    if grep -Eq 'npm install -g|--no-audit' "$setup_action"; then
+        fail "$setup_action bypasses locked npm installation or audit"
+    fi
+done
+
+for package_file in \
+    "$repo_root/package.json" \
+    "$repo_root/templates/languages"/*/providers/mise/package.json \
+    "$repo_root/templates/languages"/*/providers/system/package.json; do
+    grep -Eq '"@taplo/cli": "[0-9]+\.[0-9]+\.[0-9]+"' "$package_file" ||
+        fail "$package_file does not pin @taplo/cli exactly"
+    npm_lock="${package_file%/package.json}/package-lock.json"
+    [ -f "$npm_lock" ] || fail "missing npm lockfile for $package_file"
+    grep -Fq '"@taplo/cli"' "$npm_lock" || fail "$npm_lock does not lock @taplo/cli"
+    grep -Fq '"integrity":' "$npm_lock" || fail "$npm_lock has no integrity data"
+done
 
 grep -Fq 'install --locked' "$repo_root/make/env.mk" ||
     fail "root environment setup does not install mise with --locked"

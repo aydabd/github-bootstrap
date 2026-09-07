@@ -26,5 +26,6 @@ runs:
         mkdir -p "$HOME/.local/bin"
         GOBIN="$HOME/.local/bin" go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
         uv sync --locked
-        npm install -g prettier@3.9.6 markdownlint-cli@0.49.1 @taplo/cli@0.7.0
-        printf '%s\n' "$PWD/.venv/bin" "$HOME/.local/bin" >> "$GITHUB_PATH"
+        npm ci --ignore-scripts --no-fund
+        npm audit --audit-level=high
+        printf '%s\n' "$PWD/.venv/bin" "$PWD/node_modules/.bin" "$HOME/.local/bin" >> "$GITHUB_PATH"

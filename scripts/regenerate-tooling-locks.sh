@@ -40,7 +40,7 @@ bash "$repo_root/scripts/regenerate-conda-locks.sh"
 bash "$repo_root/scripts/regenerate-mise-locks.sh"
 
 while IFS= read -r package_file; do
-    npm install --package-lock-only --ignore-scripts --no-audit --no-fund --prefix "$(dirname "$package_file")"
+    npm install --package-lock-only --ignore-scripts --no-fund --prefix "$(dirname "$package_file")"
 done < <(find "$repo_root" -name package.json -not -path "$repo_root/.provider/*" -print | sort)
 
 while IFS= read -r project_file; do
