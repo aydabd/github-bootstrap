@@ -12,4 +12,8 @@ taplo = "0.10.0"
 MISE_NODE_COREPACK = "1"
 
 [tasks.install-tools]
-run = ["uv sync --locked", "npm ci --ignore-scripts --no-audit --no-fund"]
+run = [
+  "uv sync --locked",
+  "npm ci --ignore-scripts --no-fund",
+  "npm audit --audit-level=high",
+]

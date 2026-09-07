@@ -12,7 +12,8 @@ taplo = "0.10.0"
 [tasks.install-tools]
 run = [
   "uv sync --locked",
-  "npm ci --ignore-scripts --no-audit --no-fund",
+  "npm ci --ignore-scripts --no-fund",
+  "npm audit --audit-level=high",
   "go install github.com/daixiang0/gci@v0.14.0",
   "go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8",
 ]

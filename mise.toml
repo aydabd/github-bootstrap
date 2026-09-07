@@ -10,4 +10,8 @@ actionlint = "1.7.12"
 taplo = "0.10.0"
 
 [tasks.install-tools]
-run = ["uv sync --locked", "npm ci --ignore-scripts --no-audit --no-fund"]
+run = [
+  "uv sync --locked",
+  "npm ci --ignore-scripts --no-fund",
+  "npm audit --audit-level=high",
+]
