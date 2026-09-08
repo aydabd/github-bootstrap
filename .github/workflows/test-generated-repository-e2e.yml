@@ -245,6 +245,7 @@ jobs:
           gh workflow run "$CREATION_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref "$DISPATCH_REF" \
             --field client_id="$PROVISIONER_CLIENT_ID" \
             --field app_owner="$APP_OWNER" \
+            --field allowed_repo_owners="$OWNER" \
             --field repo_name="$REPO_NAME" \
             --field repo_description="Generated repository E2E scenario" \
             --field visibility=public --field team_name="* @$OWNER" --field license_holder="$OWNER" \
