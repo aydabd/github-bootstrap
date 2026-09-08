@@ -30,6 +30,7 @@ manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MA
 assert manifest["name"] == "Repository Bootstrap Provisioner"
 assert manifest["redirect_url"] == "https://example.test/callback\nsecond"
 assert manifest["default_permissions"] == {
+    "actions": "write",
     "administration": "write",
     "contents": "write",
     "issues": "write",
@@ -137,6 +138,7 @@ expected = {
     "repository-bootstrap-provisioner.json": {
         "name": "Repository Bootstrap Provisioner",
         "default_permissions": {
+            "actions": "write",
             "administration": "write",
             "contents": "write",
             "issues": "write",

@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   dispatch:
-    name: Dispatch generated-repository E2E for breaking maintenance PRs
+    name: Generated-repository E2E for breaking maintenance PRs
     if: >-
       github.event.pull_request.state == 'open' &&
       github.event.pull_request.base.ref == 'main' &&
@@ -92,37 +92,63 @@ jobs:
           [ -n "$head_ref" ] || { echo "could not resolve the pull request head branch" >&2; exit 1; }
           [[ "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "could not resolve a 40-character head SHA" >&2; exit 1; }
 
-          # A re-label or a repeated synchronize must not stack duplicate E2E
-          # runs; skip when a run for this exact head SHA already exists.
+          wait_for_workflow_run() {
+            local workflow="$1"
+            local expected_sha="$2"
+            local label="$3"
+            local run_id=""
+            local status=""
+            local conclusion=""
+
+            for _ in $(seq 1 180); do
+              run_id="$(gh api \
+                "/repos/$REPOSITORY/actions/workflows/$workflow/runs?event=workflow_dispatch&per_page=100" \
+                --jq --arg expected_sha "$expected_sha" \
+                '[.workflow_runs[] | select(.head_sha == $expected_sha)] | sort_by(.created_at) | last.id // empty')"
+              if [ -n "$run_id" ]; then
+                status="$(gh run view "$run_id" --repo "$REPOSITORY" --json status --jq '.status')"
+                if [ "$status" = completed ]; then
+                  conclusion="$(gh run view "$run_id" --repo "$REPOSITORY" --json conclusion --jq '.conclusion')"
+                  if [ "$conclusion" = success ]; then
+                    echo "$label passed: https://github.com/$REPOSITORY/actions/runs/$run_id"
+                    return 0
+                  fi
+                  echo "$label failed with conclusion '$conclusion': https://github.com/$REPOSITORY/actions/runs/$run_id" >&2
+                  return 1
+                fi
+              fi
+              sleep 10
+            done
+
+            echo "$label did not complete within 30 minutes" >&2
+            return 1
+          }
+
+          # A re-label or repeated synchronize must not stack duplicate runs.
+          # Reuse an existing run for this exact head SHA and surface its final
+          # result through this pull_request_target check.
           existing="$(gh api \
             "/repos/$REPOSITORY/actions/workflows/test-generated-repository-e2e.yml/runs?head_sha=$head_sha&per_page=1" \
             --jq '.total_count')"
-          if [ "${existing:-0}" -gt 0 ]; then
-            echo "Generated-repository E2E already dispatched for $head_sha; nothing to do."
-            exit 0
+          if [ "${existing:-0}" -eq 0 ]; then
+            gh workflow run test-generated-repository-e2e.yml --repo "$REPOSITORY" --ref "$head_ref" \
+              -f head_sha="$head_sha" \
+              -f client_id="$PROVISIONER_APP_CLIENT_ID" \
+              -f app_owner="$E2E_APP_OWNER" \
+              -f delivery=embedded
           fi
-
-          # Dispatch against the PR head branch so the resulting run's own
-          # head_sha is the PR head; maintenance safety correlates the E2E run to
-          # the PR by that SHA. head_sha pins the internal creation dispatch.
-          gh workflow run test-generated-repository-e2e.yml --repo "$REPOSITORY" --ref "$head_ref" \
-            -f head_sha="$head_sha" \
-            -f client_id="$PROVISIONER_APP_CLIENT_ID" \
-            -f app_owner="$E2E_APP_OWNER" \
-            -f delivery=embedded
 
           isolated_existing="$(gh api \
             "/repos/$REPOSITORY/actions/workflows/test-repository-creation.yml/runs?head_sha=$head_sha&per_page=1" \
             --jq '.total_count')"
-          if [ "${isolated_existing:-0}" -gt 0 ]; then
-            echo "Centralized monorepo E2E already dispatched for $head_sha; nothing to do."
-            exit 0
+          if [ "${isolated_existing:-0}" -eq 0 ]; then
+            gh workflow run test-repository-creation.yml --repo "$REPOSITORY" --ref "$head_ref" \
+              -f preset=centralized-monorepo \
+              -f languages=all \
+              -f cleanup_after_test=true \
+              -f client_id="$PROVISIONER_APP_CLIENT_ID" \
+              -f app_owner="$E2E_APP_OWNER"
           fi
 
-          gh workflow run test-repository-creation.yml --repo "$REPOSITORY" --ref "$head_ref" \
-            -f preset=centralized-monorepo \
-            -f languages=all \
-            -f cleanup_after_test=true \
-            -f client_id="$PROVISIONER_APP_CLIENT_ID" \
-            -f app_owner="$E2E_APP_OWNER"
-          echo "Dispatched embedded and isolated centralized E2E runs for PR #$PR_NUMBER at $head_sha ($head_ref)."
+          wait_for_workflow_run test-generated-repository-e2e.yml "$head_sha" "Generated repository E2E"
+          wait_for_workflow_run test-repository-creation.yml "$head_sha" "Centralized monorepo E2E"

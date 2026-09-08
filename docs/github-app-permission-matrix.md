@@ -10,17 +10,18 @@ Personal repository creation uses an explicitly supplied GitHub App user access 
 identity is checked against the target owner. The resolver passes permissions explicitly so an
 installation token does not inherit unused permissions from the App installation.
 
-| Permission profile     | Explicit App permissions                                                                          | Used for                                                               |
-| ---------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `repository-creation`  | `organization-administration: write`, `administration: write`, `contents: write`, `issues: write` | Create and configure a repository.                                     |
-| `repository-setup`     | `administration: write`, `contents: write`, `issues: write`                                       | Configure an existing repository.                                      |
-| `repository-cleanup`   | `administration: write`                                                                           | Delete a failed repository.                                            |
-| `e2e-lifecycle`        | `administration: write`                                                                           | Archive generated E2E repositories in the isolated E2E owner.          |
-| `weekly-tooling`       | `contents: write`, `issues: write`, `pull-requests: write`, `workflows: write`                    | Commit tooling updates, action pins, labels, and manage the weekly PR. |
-| `maintenance-labeling` | `issues: write`, `pull-requests: write`                                                           | Classify trusted Dependabot and release-please PRs.                    |
-| `workflow-approval`    | `actions: write`, `pull-requests: read`                                                           | Approve eligible `action_required` workflow runs only.                 |
-| `maintenance-review`   | `pull-requests: write`                                                                            | Approve eligible maintenance PRs (Reviewer App).                       |
-| `maintenance-merge`    | `contents: write`, `pull-requests: write`                                                         | Enable squash auto-merge on an approved maintenance PR (Writer App).   |
+| Permission profile     | Explicit App permissions                                                                          | Used for                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `repository-creation`  | `organization-administration: write`, `administration: write`, `contents: write`, `issues: write` | Create and configure a repository.                                              |
+| `repository-setup`     | `administration: write`, `contents: write`, `issues: write`                                       | Configure an existing repository.                                               |
+| `e2e-dispatch`         | `administration: write`, `actions: write`, `contents: write`, `issues: write`                     | Dispatch and observe repository-creation workflows for generated E2E scenarios. |
+| `repository-cleanup`   | `administration: write`                                                                           | Delete a failed repository.                                                     |
+| `e2e-lifecycle`        | `administration: write`                                                                           | Archive generated E2E repositories in the isolated E2E owner.                   |
+| `weekly-tooling`       | `contents: write`, `issues: write`, `pull-requests: write`, `workflows: write`                    | Commit tooling updates, action pins, labels, and manage the weekly PR.          |
+| `maintenance-labeling` | `issues: write`, `pull-requests: write`                                                           | Classify trusted Dependabot and release-please PRs.                             |
+| `workflow-approval`    | `actions: write`, `pull-requests: read`                                                           | Approve eligible `action_required` workflow runs only.                          |
+| `maintenance-review`   | `pull-requests: write`                                                                            | Approve eligible maintenance PRs (Reviewer App).                                |
+| `maintenance-merge`    | `contents: write`, `pull-requests: write`                                                         | Enable squash auto-merge on an approved maintenance PR (Writer App).            |
 
 | App permission                | Level | Endpoint or operation                                                      | Why it is required                                                                                     |
 | ----------------------------- | ----- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -34,7 +35,8 @@ installation token does not inherit unused permissions from the App installation
 
 `metadata: read` is automatically available for repository access. Members, security-events,
 and unrelated-owner permissions are not granted by this resolver. The `actions: write`
-permission is granted only by the `workflow-approval` profile. Pull-request
+permission is granted only by the dedicated `e2e-dispatch` and `workflow-approval`
+profiles. Pull-request
 write permission is granted by the `weekly-tooling`, `maintenance-review`,
 `maintenance-labeling`, `maintenance-merge`, and `release-please` profiles; the
 labeling profile needs it because adding a label to a pull request is gated by
@@ -43,6 +45,11 @@ labeling profile needs it because adding a label to a pull request is gated by
 resolved with the Writer App so the Reviewer App keeps only approval rights. Issues write permission is limited to the weekly and `maintenance-labeling`
 profiles' idempotent label operations and the existing repository creation/setup
 profiles' repository label configuration.
+
+The `e2e-dispatch` profile is restricted to the provisioner App's generated-repository
+E2E path. It adds `actions: write` only because the E2E workflow must dispatch the
+repository-creation workflows; ordinary `repository-setup` callers do not receive
+workflow-dispatch authority.
 
 The `e2e-lifecycle` profile intentionally omits a repository list because the generated
 repository does not exist when its token is resolved. Use it only with the Bootstrap E2E Admin
