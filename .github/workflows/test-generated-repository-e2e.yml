@@ -153,6 +153,8 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           E2E_GH_TOKEN: ${{ steps.e2e-token.outputs.token }}
+          PROVISIONER_CLIENT_ID: ${{ inputs.client_id }}
+          APP_OWNER: ${{ inputs.app_owner }}
           OWNER: ${{ github.repository_owner }}
           TARGET_REF: ${{ inputs.head_sha || inputs.target_ref || 'main' }}
           REQUESTED_HEAD_SHA: ${{ inputs.head_sha }}
@@ -241,6 +243,8 @@ jobs:
           fi
 
           gh workflow run "$CREATION_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref "$DISPATCH_REF" \
+            --field client_id="$PROVISIONER_CLIENT_ID" \
+            --field app_owner="$APP_OWNER" \
             --field repo_name="$REPO_NAME" \
             --field repo_description="Generated repository E2E scenario" \
             --field visibility=public --field team_name="* @$OWNER" --field license_holder="$OWNER" \

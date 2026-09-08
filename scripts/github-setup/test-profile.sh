@@ -107,6 +107,8 @@ for runtime_input in python_version node_version go_version java_version; do
         "$repo_root/.github/workflows/test-repository-creation.yml"
 done
 grep -q "REQUESTED_DELIVERY: \${{ inputs.delivery }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+grep -q -- '--field client_id="$PROVISIONER_CLIENT_ID"' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+grep -q -- '--field app_owner="$APP_OWNER"' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 grep -q -- '--json status,conclusion,url' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 if grep -q '^  actions: write$' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"; then
     echo "E2E workflow must not grant actions: write to the default token" >&2
