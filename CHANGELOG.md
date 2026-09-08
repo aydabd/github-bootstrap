@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.2.1](https://github.com/aydabd/github-bootstrap/compare/v2.2.0...v2.2.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* correlate maintenance merges by pull request SHA ([#203](https://github.com/aydabd/github-bootstrap/issues/203)) ([bbf9cfe](https://github.com/aydabd/github-bootstrap/commit/bbf9cfe0af646a533e95ac73f7c0affc53098ff0))
+* defer unstable maintenance merges ([#200](https://github.com/aydabd/github-bootstrap/issues/200)) ([77c19aa](https://github.com/aydabd/github-bootstrap/commit/77c19aaed31bd073481cccd7c109a3709bca81b7))
+* retrigger maintenance safety after conda checks ([#202](https://github.com/aydabd/github-bootstrap/issues/202)) ([4a255b1](https://github.com/aydabd/github-bootstrap/commit/4a255b13aa105c4fa3f9ab1bfb95d125f543c768))
+
 ## [2.2.0](https://github.com/aydabd/github-bootstrap/compare/v2.1.3...v2.2.0) (2026-09-06)
 
 
