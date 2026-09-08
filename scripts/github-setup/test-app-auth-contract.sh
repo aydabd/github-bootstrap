@@ -143,6 +143,8 @@ assert_contains "repositories: \${{ steps.target.outputs.repository }}" "$repo_r
 assert_contains "bash ./scripts/github-setup/validate-app-auth.sh" "$resolver"
 assert_contains "repositories: \${{ inputs.repo_name }}" "$repo_root/.github/workflows/setup-existing-repository.yml"
 assert_contains "repositories: \${{ github.event.repository.name }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+assert_contains "environment: e2e-cleanup" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+assert_contains "app_user_token: \${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_TOKEN }}" "$repo_root/.github/workflows/test-repository-creation.yml"
 assert_contains "repositories: \${{ needs.create-test-repo.outputs.cleanup_repositories }}" "$repo_root/.github/workflows/test-repository-creation.yml"
 assert_contains "contents: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_not_contains "      workflows: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"

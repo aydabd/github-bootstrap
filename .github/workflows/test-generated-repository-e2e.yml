@@ -55,6 +55,7 @@ jobs:
   generated-repository:
     name: ${{ matrix.creation_workflow }} / ${{ matrix.delivery }} / ${{ matrix.provider }} @ ${{ inputs.head_sha || inputs.target_ref || 'main' }}
     runs-on: ubuntu-24.04
+    environment: e2e-cleanup
     strategy:
       fail-fast: false
       matrix:
