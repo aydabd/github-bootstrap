@@ -62,9 +62,9 @@ assert_contains "required except for repository-creation" "$resolver"
 assert_not_contains "gh_pat_secret" "$resolver"
 assert_not_contains "gh_token" "$resolver"
 assert_contains "github.event.workflow_run.conclusion == 'success'" "$merge_workflow"
-# github.event.workflow_run.pull_requests is empty for pull_request_target-driven
-# workflows; the merge job resolves the PR from the validated head branch.
-assert_not_contains "workflow_run.pull_requests" "$merge_workflow"
+# Conda pull_request runs carry the exact PR number; pull_request_target-driven
+# safety runs still use the validated head branch fallback.
+assert_contains "github.event.workflow_run.pull_requests[0].number" "$merge_workflow"
 assert_contains "-f head=\"\${REPOSITORY%%/*}:\$HEAD_BRANCH\" -f base=main -f state=open" "$merge_workflow"
 assert_contains "github.event.workflow_run.head_branch" "$merge_workflow"
 assert_contains "github.event.workflow_run.head_branch != 'main'" "$merge_workflow"
