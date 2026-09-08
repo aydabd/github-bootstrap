@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows:
       - Maintenance safety
+      - Verify Conda Lockfiles
     types: [completed]
 
 permissions:
@@ -78,29 +79,37 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           MERGE_TOKEN: ${{ steps.resolve-merge-token.outputs.token }}
+          TRIGGER_WORKFLOW: ${{ github.event.workflow_run.name }}
+          TRIGGER_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-          SAFETY_SHA: ${{ github.event.workflow_run.head_sha }}
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
           REVIEWER_APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
           REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
-          [ -n "$HEAD_BRANCH" ] || { echo "maintenance safety run has no head branch" >&2; exit 1; }
+          [ -n "$HEAD_BRANCH" ] || { echo "maintenance trigger has no head branch" >&2; exit 1; }
+          [ -n "$TRIGGER_HEAD_SHA" ] || { echo "maintenance trigger has no head SHA" >&2; exit 1; }
 
-          # workflow_run does not carry the PR for pull_request_target triggers;
-          # the REST head filter takes "<owner>:<branch>" (same-owner only).
-          PR_NUMBER="$(gh api --method GET "repos/$REPOSITORY/pulls" \
-            -f head="${REPOSITORY%%/*}:$HEAD_BRANCH" -f base=main -f state=open \
-            --jq '.[0].number // empty')"
+          # Conda pull_request runs carry the exact PR number. Safety runs
+          # created from pull_request_target do not, so resolve their one open
+          # same-owner PR by exact branch and verify its SHA below.
+          if [ -n "$TRIGGER_PR_NUMBER" ]; then
+            PR_NUMBER="$TRIGGER_PR_NUMBER"
+          else
+            PR_NUMBER="$(gh api --method GET "repos/$REPOSITORY/pulls" \
+              -f head="${REPOSITORY%%/*}:$HEAD_BRANCH" -f base=main -f state=open \
+              --jq 'if length == 1 then .[0].number else empty end')"
+          fi
           [ -n "$PR_NUMBER" ] || {
-            echo "no open pull request for branch $HEAD_BRANCH; nothing to merge"
+            echo "no unique open pull request for maintenance trigger; deferring"
             exit 0
           }
           HEAD_SHA="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json headRefOid --jq '.headRefOid')"
           [ -n "$HEAD_SHA" ] || { echo "could not resolve the pull request head SHA" >&2; exit 1; }
-          [ "$SAFETY_SHA" = "$HEAD_SHA" ] || {
-            echo "Maintenance safety validated $SAFETY_SHA but the PR head is now $HEAD_SHA; deferring to the next run"
+          [ "$TRIGGER_HEAD_SHA" = "$HEAD_SHA" ] || {
+            echo "Maintenance trigger validated $TRIGGER_HEAD_SHA but the PR head is now $HEAD_SHA; deferring to the next run"
             exit 0
           }
 
@@ -124,8 +133,36 @@ jobs:
               "$WRITER_APP_SLUG" "$REVIEWER_APP_SLUG" "$require_reviewer_approval"
           }
 
-          # Maintenance safety is emitted after every required workflow
-          # completion, so this job validates the checks once and moves on.
+          wait_until_safety_check() {
+            local timeout_seconds=60 deadline maintenance_safety_state
+            deadline=$((SECONDS + timeout_seconds))
+            while [ "$SECONDS" -lt "$deadline" ]; do
+              if ! maintenance_safety_state="$(gh pr checks "$PR_NUMBER" --json name,state \
+                --jq '[.[] | select(.name == "Maintenance safety") | .state] | last // "MISSING"' 2>/dev/null)"; then
+                maintenance_safety_state=MISSING
+              fi
+              case "$maintenance_safety_state" in
+                SUCCESS)
+                  return 0
+                  ;;
+                FAILURE|ERROR|CANCELLED|SKIPPED)
+                  return 1
+                  ;;
+                *)
+                  sleep 5
+                  ;;
+              esac
+            done
+            return 1
+          }
+
+          # A direct Conda completion can race the safety run it triggers. Wait
+          # for the same PR's safety check, not for an unrelated workflow run.
+          if [ "$TRIGGER_WORKFLOW" = "Verify Conda Lockfiles" ] &&
+            ! wait_until_safety_check; then
+            echo "Maintenance safety is not successful for this PR; deferring" >&2
+            exit 0
+          fi
           if ! validate_state; then
             echo "maintenance merge preconditions are not met; not enabling auto-merge" >&2
             exit 0
@@ -136,6 +173,7 @@ jobs:
               "$tmp_dir/reviews.json" > /dev/null; then
             gh api --method POST "/repos/$REPOSITORY/pulls/$PR_NUMBER/reviews" \
               -f event=APPROVE \
+              -f commit_id="$HEAD_SHA" \
               -f body="Maintenance gates passed for $HEAD_SHA; approved by the Reviewer App."
           fi
 
@@ -165,9 +203,17 @@ jobs:
           }
 
           merge_with_retry() {
-            local merge_timeout_seconds=60 merge_deadline mergeable_state remaining_seconds response
+            local merge_timeout_seconds=60 merge_deadline mergeable_state remaining_seconds response current_head_sha
             merge_deadline=$((SECONDS + merge_timeout_seconds))
             while [ "$SECONDS" -lt "$merge_deadline" ]; do
+              if ! current_head_sha="$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.head.sha')"; then
+                echo "could not re-read pull request head; deferring" >&2
+                return 0
+              fi
+              if [ "$current_head_sha" != "$HEAD_SHA" ]; then
+                echo "pull request head changed during merge preparation; deferring" >&2
+                return 0
+              fi
               remaining_seconds=$((merge_deadline - SECONDS))
               if ! mergeable_state="$(wait_until_mergeable "$remaining_seconds")"; then
                 echo "mergeability_timeout: state did not stabilize within ${merge_timeout_seconds}s" >&2
