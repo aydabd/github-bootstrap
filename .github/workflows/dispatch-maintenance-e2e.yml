@@ -108,5 +108,21 @@ jobs:
           gh workflow run test-generated-repository-e2e.yml --repo "$REPOSITORY" --ref "$head_ref" \
             -f head_sha="$head_sha" \
             -f client_id="$PROVISIONER_APP_CLIENT_ID" \
+            -f app_owner="$E2E_APP_OWNER" \
+            -f delivery=embedded
+
+          isolated_existing="$(gh api \
+            "/repos/$REPOSITORY/actions/workflows/test-repository-creation.yml/runs?head_sha=$head_sha&per_page=1" \
+            --jq '.total_count')"
+          if [ "${isolated_existing:-0}" -gt 0 ]; then
+            echo "Centralized monorepo E2E already dispatched for $head_sha; nothing to do."
+            exit 0
+          fi
+
+          gh workflow run test-repository-creation.yml --repo "$REPOSITORY" --ref "$head_ref" \
+            -f preset=centralized-monorepo \
+            -f languages=all \
+            -f cleanup_after_test=true \
+            -f client_id="$PROVISIONER_APP_CLIENT_ID" \
             -f app_owner="$E2E_APP_OWNER"
-          echo "Dispatched Test Generated Repository E2E for PR #$PR_NUMBER at $head_sha ($head_ref)."
+          echo "Dispatched embedded and isolated centralized E2E runs for PR #$PR_NUMBER at $head_sha ($head_ref)."

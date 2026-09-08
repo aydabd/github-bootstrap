@@ -54,6 +54,13 @@ assert_contains '--ref "$head_ref"'
 assert_contains '-f head_sha="$head_sha"'
 assert_contains '-f client_id="$PROVISIONER_APP_CLIENT_ID"'
 assert_contains '-f app_owner="$E2E_APP_OWNER"'
+assert_contains '-f delivery=embedded'
+assert_contains 'gh workflow run test-repository-creation.yml'
+assert_contains '-f preset=centralized-monorepo'
+assert_contains '-f languages=all'
+assert_contains '-f cleanup_after_test=true'
+assert_contains 'isolated_existing'
+assert_contains 'Centralized monorepo E2E already dispatched'
 assert_contains "vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID"
 assert_contains '[[ "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]]'
 
