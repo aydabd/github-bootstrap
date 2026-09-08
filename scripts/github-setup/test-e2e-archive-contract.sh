@@ -11,6 +11,7 @@ cat > "$tmp_dir/valid-topics.json" << 'EOF'
 {"names":["bootstrap-e2e"]}
 EOF
 "$validator" "aydabd" "aydabd/bootstrap-e2e-123-1-system-embedded-create-repository" "$tmp_dir/valid-topics.json"
+"$validator" "aydabd" "aydabd/bootstrap-e2e-123-1-system-centralized-central-workflows" "$tmp_dir/valid-topics.json"
 
 if "$validator" "aydabd" "aydabd/e2e-123-1-system-embedded-create-repository" "$tmp_dir/valid-topics.json"; then
     echo "non-E2E repository target was accepted" >&2

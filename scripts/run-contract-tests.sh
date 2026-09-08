@@ -35,6 +35,7 @@ contract_tests=(
     "$script_dir/github-setup/test-label-creation-contract.sh"
     "$script_dir/github-setup/test-payloads.sh"
     "$script_dir/github-setup/test-personal-app-e2e-contract.sh"
+    "$script_dir/github-setup/test-centralized-monorepo-e2e-contract.sh"
     "$script_dir/github-setup/test-profile.sh"
 )
 

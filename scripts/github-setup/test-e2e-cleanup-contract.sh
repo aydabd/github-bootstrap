@@ -17,6 +17,9 @@ cat > "$tmp_dir/eligible.json" << 'EOF'
 EOF
 "$validator" "e2e-owner" "$tmp_dir/eligible.json" "e2e-owner/github-bootstrap,e2e-owner/central-workflows" "$now_epoch"
 
+sed 's/create-repository/central-workflows/' "$tmp_dir/eligible.json" > "$tmp_dir/central-workflows.json"
+"$validator" "e2e-owner" "$tmp_dir/central-workflows.json" "e2e-owner/github-bootstrap" "$now_epoch"
+
 for fixture in wrong-owner wrong-name unarchived unmarked recent excluded; do
     excluded_names="e2e-owner/github-bootstrap,e2e-owner/central-workflows"
     case "$fixture" in

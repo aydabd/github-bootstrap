@@ -21,6 +21,7 @@ on:
           - terraform-no-repo-settings
           - api-all-languages
           - terraform-all-languages
+          - centralized-monorepo
       languages:
         description: "Languages to test (comma-separated or 'all' or 'language-agnostic-only')"
         required: false
@@ -136,6 +137,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       test_repo_name: ${{ steps.generate-name.outputs.repo_name }}
+      central_repo_name: ${{ steps.generate-name.outputs.central_repo_name }}
+      cleanup_repositories: ${{ steps.generate-name.outputs.cleanup_repositories }}
+      central_repository: ${{ steps.seed-central.outputs.repository }}
+      central_ref: ${{ steps.seed-central.outputs.ref }}
       repo_created: ${{ steps.verify-repo.outputs.created }}
     permissions:
       contents: write
@@ -156,9 +161,19 @@ jobs:
 
       - name: Generate unique test repository name
         id: generate-name
+        env:
+          PRESET: ${{ github.event.inputs.preset }}
         run: |
           TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
-          REPO_NAME="test-${{ github.event.inputs.test_repo_name }}-${TIMESTAMP}"
+          if [ "$PRESET" = "centralized-monorepo" ]; then
+            REPO_NAME="bootstrap-e2e-${TIMESTAMP}-system-centralized-create-repository"
+            CENTRAL_REPO_NAME="bootstrap-e2e-${TIMESTAMP}-system-centralized-central-workflows"
+            echo "central_repo_name=${CENTRAL_REPO_NAME}" >> "$GITHUB_OUTPUT"
+            echo "cleanup_repositories=${REPO_NAME},${CENTRAL_REPO_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            REPO_NAME="test-${{ github.event.inputs.test_repo_name }}-${TIMESTAMP}"
+            echo "cleanup_repositories=${REPO_NAME}" >> "$GITHUB_OUTPUT"
+          fi
           echo "repo_name=${REPO_NAME}" >> "$GITHUB_OUTPUT"
           echo "Generated test repository name: ${REPO_NAME}"
 
@@ -190,6 +205,7 @@ jobs:
           ENABLE_REPO_SETTINGS_INPUT: ${{ github.event.inputs.enable_repo_settings }}
           ENABLE_CODEOWNERS_INPUT: ${{ github.event.inputs.enable_codeowners }}
           WORKFLOWS_INPUT: ${{ github.event.inputs.workflows }}
+          CENTRAL_REPO_NAME: ${{ steps.generate-name.outputs.central_repo_name }}
         run: |
           ENV_MANAGER="$ENV_MANAGER_INPUT"
           LANGUAGES="$LANGUAGES_INPUT"
@@ -241,6 +257,15 @@ jobs:
             "terraform-all-languages")
               TARGET_WORKFLOW="terraform-create-repository.yml"
               LANGUAGES="all"
+              ;;
+            "centralized-monorepo")
+              TARGET_WORKFLOW="create-repository.yml"
+              LANGUAGES="all"
+              ENV_MANAGER="system"
+              VISIBILITY="public"
+              ENABLE_REPO_SETTINGS="true"
+              ENABLE_CODEOWNERS="true"
+              WORKFLOWS="all"
               ;;
             *)
               echo "::error::Invalid preset '$PRESET'"
@@ -332,6 +357,26 @@ jobs:
           echo "enable_repo_settings=$ENABLE_REPO_SETTINGS" >> "$GITHUB_OUTPUT"
           echo "enable_codeowners=$ENABLE_CODEOWNERS" >> "$GITHUB_OUTPUT"
           echo "workflows=$WORKFLOWS" >> "$GITHUB_OUTPUT"
+          if [ "$PRESET" = "centralized-monorepo" ]; then
+            echo "delivery_mode=centralized" >> "$GITHUB_OUTPUT"
+            echo "central_repository=${{ github.repository_owner }}/$CENTRAL_REPO_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "delivery_mode=embedded" >> "$GITHUB_OUTPUT"
+            echo "central_repository=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Seed temporary central workflow repository
+        id: seed-central
+        if: steps.validate-inputs.outputs.preset == 'centralized-monorepo'
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          CENTRAL_REPO_NAME: ${{ steps.generate-name.outputs.central_repo_name }}
+        run: |
+          scripts/github-setup/seed-centralized-e2e-repository.sh \
+            --owner "$OWNER" \
+            --repository "$CENTRAL_REPO_NAME" \
+            --seed-root templates/centralized-actions-workflows
 
       - name: Trigger repository creation workflow
         id: trigger-workflow
@@ -352,6 +397,9 @@ jobs:
           ENABLE_REPO_SETTINGS: ${{ steps.validate-inputs.outputs.enable_repo_settings }}
           ENABLE_CODEOWNERS: ${{ steps.validate-inputs.outputs.enable_codeowners }}
           WORKFLOWS: ${{ steps.validate-inputs.outputs.workflows }}
+          DELIVERY_MODE: ${{ steps.validate-inputs.outputs.delivery_mode }}
+          CENTRAL_REPOSITORY: ${{ steps.validate-inputs.outputs.central_repository }}
+          CENTRAL_REF: ${{ steps.seed-central.outputs.ref }}
         run: |
           TRIGGERED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
@@ -372,6 +420,8 @@ jobs:
             --field enable_repo_settings="$ENABLE_REPO_SETTINGS" \
             --field enable_codeowners="$ENABLE_CODEOWNERS" \
             --field workflows="$WORKFLOWS" \
+            --field delivery_mode="$DELIVERY_MODE" \
+            --field central_repository="${CENTRAL_REPOSITORY}@${CENTRAL_REF}" \
             --field cleanup_on_failure="true"
           DISPATCH_ACTOR=$(gh api /user --jq '.login')
           if [ -z "$DISPATCH_ACTOR" ]; then
@@ -680,6 +730,61 @@ jobs:
               ;;
           esac
 
+      - name: Validate centralized monorepo delivery
+        if: steps.validate-inputs.outputs.preset == 'centralized-monorepo'
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ steps.generate-name.outputs.repo_name }}
+          CENTRAL_REPOSITORY: ${{ steps.seed-central.outputs.repository }}
+          CENTRAL_REF: ${{ steps.seed-central.outputs.ref }}
+        run: |
+          set -euo pipefail
+          central_owner="${CENTRAL_REPOSITORY%%/*}"
+          central_name="${CENTRAL_REPOSITORY##*/}"
+
+          for seed_file in \
+            README.md \
+            .github/workflows/quality.yml \
+            .github/actions/setup-lint-mise/action.yml \
+            .github/actions/setup-lint-system/action.yml; do
+            gh api "/repos/${central_owner}/${central_name}/contents/${seed_file}" >/dev/null
+          done
+
+          for workflow in quality.yml; do
+            seed_content="$(gh api "/repos/${central_owner}/${central_name}/contents/.github/workflows/${workflow}" --jq .content | base64 -d)"
+            grep -q '^  workflow_call:' <<< "$seed_content"
+            if grep -Eq '^  (push|pull_request|workflow_dispatch):' <<< "$seed_content"; then
+              echo "central seed workflow has an event trigger: ${workflow}" >&2
+              exit 1
+            fi
+          done
+
+          caller_content="$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/workflows/quality.yml" --jq .content | base64 -d)"
+          grep -Fq "${CENTRAL_REPOSITORY}/.github/workflows/quality.yml@${CENTRAL_REF}" <<< "$caller_content"
+          if gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/actions/quality" >/dev/null 2>&1; then
+            echo "consumer contains embedded quality actions" >&2
+            exit 1
+          fi
+          if gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/workflows/quality-capability.yml" >/dev/null 2>&1; then
+            echo "consumer contains embedded quality capability workflow" >&2
+            exit 1
+          fi
+
+          profile_content="$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/config/bootstrap-profile.json" --jq .content | base64 -d)"
+          jq -e --arg repository "$CENTRAL_REPOSITORY" --arg ref "$CENTRAL_REF" \
+            '.delivery_modes.centralized.repository == $repository and .delivery_modes.centralized.ref == $ref' \
+            <<< "$profile_content" >/dev/null
+
+          for language in golang python typescript java; do
+            gh api "/repos/${OWNER}/${REPO_NAME}/contents/.pre-commit/languages/${language}.yaml" >/dev/null
+          done
+          jq -e '.profiles.baseline.capabilities | length >= 8' <<< "$profile_content" >/dev/null
+
+          permissions="$(gh api "/repos/${OWNER}/${REPO_NAME}/actions/permissions")"
+          jq -e '.enabled == true' <<< "$permissions" >/dev/null
+          echo "Centralized monorepo delivery, immutable ref, profile, and capability checks passed."
+
       - name: Validate agent kit structure
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
@@ -786,6 +891,27 @@ jobs:
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
           OWNER="${{ github.repository_owner }}"
 
+          if [ "${{ steps.validate-inputs.outputs.preset }}" = "centralized-monorepo" ]; then
+            echo "Centralized quality workflow was triggered by the consumer push; polling for completion."
+            head_sha="$(gh api "/repos/${OWNER}/${REPO_NAME}/git/ref/heads/main" --jq '.object.sha')"
+            for attempt in {1..60}; do
+              run_json="$(gh api "/repos/${OWNER}/${REPO_NAME}/actions/workflows/quality.yml/runs?event=push&per_page=20" | jq -c --arg head_sha "$head_sha" '[.workflow_runs[] | select(.head_sha == $head_sha)] | first // {}')"
+              if [ "$run_json" != "{}" ]; then
+                run_status="$(jq -r '.status' <<< "$run_json")"
+                run_conclusion="$(jq -r '.conclusion // ""' <<< "$run_json")"
+                run_url="$(jq -r '.html_url' <<< "$run_json")"
+                if [ "$run_status" = "completed" ]; then
+                  [ "$run_conclusion" = "success" ] || { echo "quality workflow failed: $run_url" >&2; exit 1; }
+                  echo "✅ Consumer quality workflow passed: $run_url"
+                  break
+                fi
+              fi
+              [ "$attempt" -lt 60 ] || { echo "quality workflow did not complete" >&2; exit 1; }
+              sleep 10
+            done
+            exit 0
+          fi
+
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \
@@ -800,6 +926,9 @@ jobs:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           PRESET: ${{ steps.validate-inputs.outputs.preset }}
           TARGET_WORKFLOW: ${{ steps.validate-inputs.outputs.target_workflow }}
+          CLEANUP_AFTER_TEST: ${{ github.event.inputs.cleanup_after_test }}
+          CENTRAL_REPOSITORY: ${{ steps.seed-central.outputs.repository }}
+          CENTRAL_REF: ${{ steps.seed-central.outputs.ref }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
           OWNER="${{ github.repository_owner }}"
@@ -818,13 +947,27 @@ jobs:
           | API parity (settings + rulesets) | ✅ Passed |
           | Pre-commit config | ✅ Passed |
           | Quality workflow | Dispatched — [check result](${REPO_URL}/actions) |
+          EOF
 
+          if [ "${PRESET}" = "centralized-monorepo" ]; then
+            cat >> "$GITHUB_STEP_SUMMARY" << EOF
+
+          | Central workflow repository | [${CENTRAL_REPOSITORY}](https://github.com/${CENTRAL_REPOSITORY}) |
+          | Central immutable ref | \`${CENTRAL_REF}\` |
+          | Cleanup mode | \`${CLEANUP_AFTER_TEST}\` |
+          EOF
+          fi
+
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
           ### Next steps
 
           1. Verify the quality workflow passes in the test repo
           2. Open a PR to test the PR-triggered quality path
           3. Delete when done: \`gh repo delete ${OWNER}/${REPO_NAME} --yes\`
           EOF
+          if [ "${PRESET}" = "centralized-monorepo" ]; then
+            echo "   Central seed: \`gh repo delete ${CENTRAL_REPOSITORY} --yes\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   cleanup-test-repo:
     name: Cleanup Test Repository
@@ -852,24 +995,25 @@ jobs:
           app_owner: ${{ inputs.app_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: repository-cleanup
-          repositories: ${{ needs.create-test-repo.outputs.test_repo_name }}
+          repositories: ${{ needs.create-test-repo.outputs.cleanup_repositories }}
 
       - name: Delete test repository
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
         run: |
-          REPO_NAME="${{ needs.create-test-repo.outputs.test_repo_name }}"
           OWNER="${{ github.repository_owner }}"
 
-          echo "Cleaning up test repository: ${OWNER}/${REPO_NAME}"
-
-          if gh repo view "${OWNER}/${REPO_NAME}" &>/dev/null; then
-            gh api \
-              --method DELETE \
-              -H "Accept: application/vnd.github+json" \
-              /repos/${OWNER}/${REPO_NAME}
-
-            echo "✅ Repository deleted successfully" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "ℹ️ Repository does not exist or was already deleted" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          IFS=',' read -r -a repositories <<< "${{ needs.create-test-repo.outputs.cleanup_repositories }}"
+          for repository in "${repositories[@]}"; do
+            [ -n "$repository" ] || continue
+            echo "Cleaning up test repository: ${OWNER}/${repository}"
+            if gh repo view "${OWNER}/${repository}" &>/dev/null; then
+              gh api \
+                --method DELETE \
+                -H "Accept: application/vnd.github+json" \
+                "/repos/${OWNER}/${repository}"
+              echo "✅ ${OWNER}/${repository} deleted successfully" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "ℹ️ ${OWNER}/${repository} does not exist or was already deleted" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done

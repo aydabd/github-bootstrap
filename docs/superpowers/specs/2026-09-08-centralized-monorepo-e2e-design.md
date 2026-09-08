@@ -30,7 +30,7 @@ does not migrate existing repositories or change normal embedded delivery.
 5. A final cleanup job deletes both repositories only when requested or when
    the scenario fails. With `cleanup_after_test=false` after success, both
    repositories remain available and the summary prints deterministic `gh repo
-   delete OWNER/REPO --yes` commands.
+delete OWNER/REPO --yes` commands.
 
 The existing allowlisted E2E cleanup token and repository-name validation remain
 the only deletion path. Cleanup is idempotent: missing repositories are treated

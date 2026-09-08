@@ -42,6 +42,15 @@ test-api-all-languages: ## Trigger test workflow with preset=api-all-languages
 test-terraform-all-languages: ## Trigger test workflow with preset=terraform-all-languages
 	@$(MAKE) --no-print-directory test TEST_PRESET=terraform-all-languages
 
+test-centralized-monorepo: ## Trigger isolated centralized monorepo E2E (preserves repositories)
+	@echo "Running centralized monorepo E2E workflow..."
+	@$(CMD_ECHO) "+ gh workflow run test-repository-creation.yml --field preset=centralized-monorepo --field languages=all --field cleanup_after_test=false"
+	@gh workflow run test-repository-creation.yml \
+		--field preset="centralized-monorepo" \
+		--field languages="all" \
+		--field cleanup_after_test="false"
+	@echo "Test triggered. Check: gh run list --workflow=test-repository-creation.yml"
+
 test-local-setup-scripts: ## Trigger live E2E workflow for local GitHub setup scripts
 	@echo "Running local setup script E2E workflow..."
 	@$(CMD_ECHO) "+ gh workflow run test-local-setup-scripts.yml --ref $(TEST_LOCAL_SETUP_REF) --field test_repo_name=$(TEST_LOCAL_SETUP_REPO_NAME) --field visibility=$(TEST_LOCAL_SETUP_VISIBILITY) --field ruleset_profile=$(TEST_LOCAL_SETUP_RULESET_PROFILE) --field cleanup_after_test=true"

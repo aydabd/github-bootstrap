@@ -20,7 +20,7 @@ jq -e \
     .name as $name |
     ($allowed_owners | split(",") | map(gsub("^\\s+|\\s+$"; "") | ascii_downcase)) as $owners |
     ($excluded_names | split(",") | map(gsub("^\\s+|\\s+$"; "") | ascii_downcase)) as $excluded |
-    ($name | test("^bootstrap-e2e-[0-9]+-[0-9]+-(micromamba|mise|system)-(embedded|centralized)-(create-repository|terraform-create-repository)$")) and
+    ($name | test("^bootstrap-e2e-[0-9]+-[0-9]+-(micromamba|mise|system)-(embedded|centralized)-(create-repository|terraform-create-repository|central-workflows)$")) and
     ($owners | index($owner) != null) and
     ($excluded | index("\($owner)/\($name)" | ascii_downcase) == null) and
     (.visibility == "public") and
