@@ -933,6 +933,10 @@ jobs:
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
           OWNER="${{ github.repository_owner }}"
           REPO_URL="https://github.com/${OWNER}/${REPO_NAME}"
+          QUALITY_STATUS="Dispatched"
+          if [ "${PRESET}" = "centralized-monorepo" ]; then
+            QUALITY_STATUS="Triggered by consumer push"
+          fi
 
           cat >> "$GITHUB_STEP_SUMMARY" << EOF
           ## Test Repository Created
@@ -946,7 +950,7 @@ jobs:
           | Agent kit (agents + skills) | ✅ Passed |
           | API parity (settings + rulesets) | ✅ Passed |
           | Pre-commit config | ✅ Passed |
-          | Quality workflow | Dispatched — [check result](${REPO_URL}/actions) |
+          | Quality workflow | ${QUALITY_STATUS} — [check result](${REPO_URL}/actions) |
           EOF
 
           if [ "${PRESET}" = "centralized-monorepo" ]; then
