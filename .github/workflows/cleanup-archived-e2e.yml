@@ -70,11 +70,21 @@ jobs:
             exit 1
           }
 
+          owner_type="$(GH_TOKEN="$E2E_GH_TOKEN" gh api "/users/$APP_OWNER" --jq '.type')"
+          case "$owner_type" in
+            Organization) repos_endpoint="/orgs/$APP_OWNER/repos" ;;
+            User) repos_endpoint="/users/$APP_OWNER/repos" ;;
+            *)
+              echo "E2E App owner is not a GitHub User or Organization" >&2
+              exit 1
+              ;;
+          esac
+
           exclusions="$BOOTSTRAP_REPOSITORY,$CENTRAL_REPOSITORY"
           now_epoch="$(date -u '+%s')"
           repositories_file="$tmp_dir/repositories.json"
           if ! GH_TOKEN="$E2E_GH_TOKEN" gh api --paginate --slurp \
-            "/orgs/$APP_OWNER/repos?type=all&per_page=100" > "$repositories_file"; then
+            "$repos_endpoint?type=all&per_page=100" > "$repositories_file"; then
             echo "failed to enumerate E2E repositories" >&2
             exit 1
           fi
