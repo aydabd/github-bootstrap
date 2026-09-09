@@ -83,9 +83,9 @@ runs:
                 exit 1
               fi
               case "$PERMISSION_PROFILE" in
-                repository-creation|repository-cleanup) ;;
+                repository-creation|repository-cleanup|e2e-dispatch) ;;
                 *)
-                  echo "::error::GitHub App user access tokens are supported only for repository creation and its explicitly scoped cleanup." >&2
+                  echo "::error::GitHub App user access tokens are supported only for repository creation, E2E dispatch, and explicitly scoped cleanup." >&2
                   exit 1
                   ;;
               esac
