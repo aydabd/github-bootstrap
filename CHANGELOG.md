@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/aydabd/github-bootstrap/compare/v2.2.1...v2.3.0) (2026-09-09)
+
+
+### Features
+
+* validate centralized monorepo delivery E2E ([#204](https://github.com/aydabd/github-bootstrap/issues/204)) ([7d10cde](https://github.com/aydabd/github-bootstrap/commit/7d10cdef242982ca1b9fe33427c0dd012c6c368f))
+
 ## [2.2.1](https://github.com/aydabd/github-bootstrap/compare/v2.2.0...v2.2.1) (2026-09-08)
 
 
