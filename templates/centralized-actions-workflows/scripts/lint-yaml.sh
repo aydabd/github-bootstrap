@@ -5,8 +5,14 @@ repo_root="$(cd "${1:-.}" && pwd)"
 config_file="${2:-$repo_root/.github/linters/.yaml-lint.yml}"
 ignore_file="${3:-$repo_root/.github/linters/.yaml-lint-ignore}"
 
-[ -f "$config_file" ] || { echo "YAML lint configuration not found: $config_file" >&2; exit 1; }
-[ -f "$ignore_file" ] || { echo "YAML lint ignore configuration not found: $ignore_file" >&2; exit 1; }
+[ -f "$config_file" ] || {
+    echo "YAML lint configuration not found: $config_file" >&2
+    exit 1
+}
+[ -f "$ignore_file" ] || {
+    echo "YAML lint ignore configuration not found: $ignore_file" >&2
+    exit 1
+}
 
 declare -a ignored_paths=()
 while IFS= read -r ignored_path; do
@@ -21,7 +27,10 @@ while IFS= read -r -d '' yaml_file; do
     excluded=false
     for ignored_path in "${ignored_paths[@]}"; do
         case "$relative_path" in
-            "$ignored_path"|"$ignored_path"/*) excluded=true; break ;;
+            "$ignored_path" | "$ignored_path"/*)
+                excluded=true
+                break
+                ;;
         esac
     done
     [ "$excluded" = false ] && yaml_files+=("$yaml_file")

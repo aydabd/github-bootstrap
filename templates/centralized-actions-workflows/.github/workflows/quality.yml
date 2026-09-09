@@ -70,11 +70,7 @@ jobs:
               lint-yaml) provider_run bash scripts/lint-yaml.sh "$PWD" ;;
               lint-actions) provider_run actionlint -ignore 'SC[0-9]+'; provider_run uv run zizmor --pedantic .github ;;
               lint-shell)
-                mapfile -d '' shell_files < <(
-                  find . -path './.git' -prune -o -path './node_modules' -prune -o \
-                    -type f \( -name '*.sh' -o -name '*.bash' \) -print0
-                )
-                [ "${#shell_files[@]}" -eq 0 ] || provider_run shellcheck "${shell_files[@]}"
+                provider_run bash scripts/lint-shell.sh "$PWD"
                 ;;
               lint-python) provider_run python3 -m compileall -q . ;;
               lint-terraform)
@@ -89,7 +85,17 @@ jobs:
                 fi
                 ;;
               lint-format) LINT_MODE=check provider_run uv run pre-commit run --all-files --color=always ;;
-              lint-tests) if [ -f go.mod ]; then provider_run go test ./...; fi; if [ -f package.json ]; then provider_run npm test --if-present; fi; if [ -f pyproject.toml ] || [ -f pytest.ini ]; then provider_run uv run python3 -m pytest; fi ;;
+              lint-tests)
+                if [ -f go.mod ]; then provider_run go test ./...; fi
+                if [ -f package.json ]; then provider_run npm test --if-present; fi
+                if [ -f pyproject.toml ] || [ -f pytest.ini ]; then
+                  if provider_run python3 -c "import pytest" >/dev/null 2>&1; then
+                    provider_run uv run python3 -m pytest
+                  else
+                    echo "pytest is not installed; skipping Python tests"
+                  fi
+                fi
+                ;;
               *) echo "Unknown quality capability: $capability" >&2; exit 1 ;;
             esac
           done

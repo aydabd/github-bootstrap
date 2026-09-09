@@ -56,6 +56,7 @@ jobs:
         uses: ./.github/actions/quality/run-quality
         with:
           capabilities: >-
-            ${{ github.event_name == 'workflow_call' && inputs.capabilities || '{{QUALITY_CAPABILITIES}}' }}
+            ${{ github.event_name == 'workflow_call' && inputs.capabilities
+            || '{{QUALITY_CAPABILITIES}}' }}
           environment-manager: >-
             ${{ github.event_name == 'workflow_call' && inputs['environment-manager'] || '{{ENV_MANAGER}}' }}

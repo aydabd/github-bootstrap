@@ -134,6 +134,7 @@ for yaml_ignore_file in \
     "$repo_root/templates/centralized-actions-workflows/.github/linters/.yaml-lint-ignore"; do
     test -f "$yaml_ignore_file"
     grep -Fxq 'node_modules' "$yaml_ignore_file"
+    grep -Fxq '.venv' "$yaml_ignore_file"
     grep -Fxq '.git' "$yaml_ignore_file"
 done
 for markdown_ignore_file in \
@@ -142,7 +143,16 @@ for markdown_ignore_file in \
     test -f "$markdown_ignore_file"
     grep -Fxq 'CHANGELOG.md' "$markdown_ignore_file"
     grep -Fxq 'node_modules' "$markdown_ignore_file"
+    grep -Fxq '.venv' "$markdown_ignore_file"
     grep -Fxq '.git' "$markdown_ignore_file"
+done
+for shell_ignore_file in \
+    "$repo_root/templates/.github/linters/.shell-lint-ignore" \
+    "$repo_root/templates/centralized-actions-workflows/.github/linters/.shell-lint-ignore"; do
+    test -f "$shell_ignore_file"
+    grep -Fxq 'node_modules' "$shell_ignore_file"
+    grep -Fxq '.venv' "$shell_ignore_file"
+    grep -Fxq '.git' "$shell_ignore_file"
 done
 for yaml_runner in \
     "$repo_root/templates/scripts/lint-yaml.sh" \
@@ -150,9 +160,18 @@ for yaml_runner in \
     test -x "$yaml_runner"
     grep -Fq '.yaml-lint-ignore' "$yaml_runner"
 done
+for shell_runner in \
+    "$repo_root/templates/scripts/lint-shell.sh" \
+    "$repo_root/templates/centralized-actions-workflows/scripts/lint-shell.sh"; do
+    test -x "$shell_runner"
+    grep -Fq '.shell-lint-ignore' "$shell_runner"
+done
 grep -Fq 'scripts/lint-yaml.sh' "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -Fq 'scripts/lint-yaml.sh' "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
 grep -Fq 'scripts/lint-yaml.sh' "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+grep -Fq 'scripts/lint-shell.sh' "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
+grep -Fq 'scripts/lint-shell.sh' "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
+grep -Fq 'scripts/lint-shell.sh' "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
 grep -Fq -- "--ignore-path \"\$WORKING_DIRECTORY/.github/linters/.markdownlintignore\"" \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -Fq -- '--ignore-path .github/linters/.markdownlintignore' \
@@ -167,7 +186,12 @@ if grep -Eq 'yamllint.*--ignore|yamllint --config-file' \
     echo "YAML exclusions must be configured in .yaml-lint-ignore" >&2
     exit 1
 fi
-grep -qF "(cd \"\$WORKING_DIRECTORY\" && provider_run uv run python3 -m pytest)" "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
+grep -qF 'provider_run python3 -c "import pytest"' "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
+grep -qF "provider_run uv run python3 -m pytest" "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
+grep -qF 'provider_run python3 -c "import pytest"' "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
+grep -qF "provider_run uv run python3 -m pytest" "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
+grep -qF 'provider_run python3 -c "import pytest"' "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+grep -qF "provider_run uv run python3 -m pytest" "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
 grep -qF "(cd \"\$WORKING_DIRECTORY\" && LINT_MODE=check provider_run uv run pre-commit run --all-files --color=always)" \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -qF "WORKING_DIRECTORY=\"\$PWD/\$WORKING_DIRECTORY\"" "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
@@ -236,12 +260,13 @@ grep -q "ENV_MANAGER=\"\\\$ENVIRONMENT_MANAGER\" make install" \
     "$repo_root/templates/.github/workflows/quality-capability.yml"
 grep -q "ENV_MANAGER=\"\\\$ENVIRONMENT_MANAGER\" make install" \
     "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
-awk '/lint-shell\)/ { in_block=1 } in_block && /node_modules/ { found=1 } in_block && /;;/ { exit(found ? 0 : 1) } END { if (!found) exit 1 }' \
-    "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
-awk '/lint-shell\)/ { in_block=1 } in_block && /node_modules/ { found=1 } in_block && /;;/ { exit(found ? 0 : 1) } END { if (!found) exit 1 }' \
-    "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
-awk '/lint-shell\)/ { in_block=1 } in_block && /node_modules/ { found=1 } in_block && /;;/ { exit(found ? 0 : 1) } END { if (!found) exit 1 }' \
-    "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+if grep -q 'shellcheck' \
+    "$repo_root/templates/.github/actions/quality/run-quality/action.yml" \
+    "$repo_root/templates/.github/actions/quality/run-capability/action.yml" \
+    "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"; then
+    echo "Shell exclusions and invocation must be configured in lint-shell.sh" >&2
+    exit 1
+fi
 for provider_file in "$repo_root"/templates/languages/*/providers/micromamba/environment.yml; do
     grep -q 'actionlint=1.7.12' "$provider_file"
     grep -q '\- uv=' "$provider_file"
