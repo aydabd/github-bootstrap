@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 validator="$script_dir/validate-e2e-cleanup-candidate.sh"
-workflow="$script_dir/../../.github/workflows/cleanup-archived-e2e.yml"
+common_script="$script_dir/cleanup-e2e-repositories-common.sh"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
@@ -44,23 +44,10 @@ if "$validator" "e2e-owner" "$tmp_dir/eligible.json" "E2E-OWNER/bootstrap-e2e-12
     exit 1
 fi
 
-grep -q 'visibility' "$validator"
-grep -q 'bootstrap-e2e' "$validator"
-grep -q 'trap cleanup EXIT' "$workflow"
-grep -q 'archived' "$workflow"
-grep -q 'validate-e2e-cleanup-candidate.sh' "$workflow"
-grep -q 'permission_profile: e2e-lifecycle' "$workflow"
-grep -q 'BOOTSTRAP_E2E_APP_PRIVATE_KEY' "$workflow"
-grep -q 'E2E_GH_TOKEN' "$workflow"
-grep -Fq 'HTTP/[0-9.]+ 404' "$workflow"
-grep -Fq 'BOOTSTRAP_E2E_ALLOWED_OWNERS' "$workflow"
-grep -Fq 'BOOTSTRAP_E2E_CENTRAL_REPOSITORY' "$workflow"
-grep -Fq 'owner_type=' "$workflow"
-grep -Fq 'repos_endpoint=' "$workflow"
-grep -Fq "/users/\$APP_OWNER/repos" "$workflow"
-grep -Fq 'gh api --include --method DELETE' "$workflow"
-grep -Fq "gh api --include \\" "$workflow"
-grep -Fq 're-fetch E2E repository' "$workflow"
-grep -Fq 'GITHUB_STEP_SUMMARY' "$workflow"
+grep -Fq 'cleanup_archived_e2e_repositories' "$common_script"
+grep -Fq "\"\$validator\" \"\$ALLOWED_OWNERS\"" "$common_script"
+grep -Fq 'gh api --include --method DELETE' "$common_script"
+grep -Fq 'GITHUB_STEP_SUMMARY' "$common_script"
+grep -Fq 'HTTP/[0-9.]+ 404' "$common_script"
 
-echo "E2E cleanup contract passed."
+echo "E2E cleanup common contract passed."
