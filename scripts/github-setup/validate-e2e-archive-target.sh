@@ -16,7 +16,7 @@ if [ "$target_owner" = "$repository_full" ] || [ "$target_repository" = "$reposi
     echo "E2E archive target owner is not allowed" >&2
     exit 1
 fi
-if ! [[ "$target_repository" =~ ^bootstrap-e2e-[0-9]+-[0-9]+-(micromamba|mise|system)-(embedded|centralized)-(create-repository|terraform-create-repository)$ ]]; then
+if ! [[ "$target_repository" =~ ^bootstrap-e2e-[0-9]+-[0-9]+-(micromamba|mise|system)-(embedded|centralized)-(create-repository|terraform-create-repository|central-workflows)$ ]]; then
     echo "E2E archive target name is not allowed" >&2
     exit 1
 fi

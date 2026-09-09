@@ -43,28 +43,22 @@ runs:
 
         case "$CAPABILITY" in
           lint-markdown)
-            provider_run markdownlint --config .github/linters/.markdownlint.json --ignore CHANGELOG.md --ignore node_modules --ignore .git .
+            provider_run markdownlint --config .github/linters/.markdownlint.json --ignore-path .github/linters/.markdownlintignore .
             ;;
           lint-json)
             provider_run bash -c "cd \"$WORKING_DIRECTORY\" && find . \\
               -path './.git' -prune -o -path './node_modules' -prune -o \\
-              -type f -name '*.json' -exec jq empty {} +"
+              -type f -name \"*.json\" -exec jq empty {} +"
             ;;
           lint-yaml)
-            provider_run uv run yamllint --config-file .github/linters/.yaml-lint.yml .
+            provider_run bash "$WORKING_DIRECTORY/scripts/lint-yaml.sh" "$WORKING_DIRECTORY"
             ;;
           lint-actions)
             provider_run actionlint -ignore 'SC[0-9]+'
             provider_run uv run zizmor --pedantic .github
             ;;
           lint-shell)
-            mapfile -d '' shell_files < <(
-              find . -path './.git' -prune -o -path './node_modules' -prune -o \
-                -type f \( -name '*.sh' -o -name '*.bash' \) -print0
-            )
-            if [ "${#shell_files[@]}" -gt 0 ]; then
-              provider_run shellcheck "${shell_files[@]}"
-            fi
+            provider_run bash "$WORKING_DIRECTORY/scripts/lint-shell.sh" "$WORKING_DIRECTORY"
             ;;
           lint-python)
             provider_run python3 -m compileall -q .
@@ -86,7 +80,13 @@ runs:
           lint-tests)
             if [ -f go.mod ]; then provider_run go test ./...; fi
             if [ -f package.json ]; then provider_run npm test --if-present; fi
-            if [ -f pyproject.toml ] || [ -f pytest.ini ]; then provider_run uv run python3 -m pytest; fi
+            if [ -f pyproject.toml ] || [ -f pytest.ini ]; then
+              if provider_run python3 -c "import pytest" >/dev/null 2>&1; then
+                provider_run uv run python3 -m pytest
+              else
+                echo "pytest is not installed; skipping Python tests"
+              fi
+            fi
             ;;
           *)
             echo "Unknown quality capability: $CAPABILITY" >&2

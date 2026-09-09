@@ -30,10 +30,13 @@ manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MA
 assert manifest["name"] == "Repository Bootstrap Provisioner"
 assert manifest["redirect_url"] == "https://example.test/callback\nsecond"
 assert manifest["default_permissions"] == {
+    "actions": "write",
     "administration": "write",
     "contents": "write",
     "issues": "write",
     "metadata": "read",
+    "secrets": "write",
+    "workflows": "write",
 }
 PY
 
@@ -137,10 +140,13 @@ expected = {
     "repository-bootstrap-provisioner.json": {
         "name": "Repository Bootstrap Provisioner",
         "default_permissions": {
+            "actions": "write",
             "administration": "write",
             "contents": "write",
             "issues": "write",
             "metadata": "read",
+            "secrets": "write",
+            "workflows": "write",
         },
     },
     "repository-maintenance-writer.json": {
@@ -172,7 +178,7 @@ for filename, contract in expected.items():
     assert payload["public"] is False
     assert "bypass_actors" not in payload
     assert "deletion" not in payload["default_permissions"]
-    if filename == "repository-maintenance-writer.json":
+    if filename in {"repository-bootstrap-provisioner.json", "repository-maintenance-writer.json"}:
         assert payload["default_permissions"]["workflows"] == "write"
     else:
         assert "workflows" not in payload["default_permissions"]

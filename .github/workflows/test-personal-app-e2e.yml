@@ -28,9 +28,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq "Internal visibility is supported only for organization repositories" .github/workflows/create-repository.yml
-          grep -Fq "requires a GitHub App user access token (ghu_ prefix)" .github/actions/resolve-gh-token/action.yml
+          grep -Fq "requires a GitHub App refresh token (ghr_ prefix)" .github/actions/resolve-gh-token/action.yml
           grep -Fq "does not match target repository owner" scripts/github-setup/validate-app-auth.sh
-          grep -Fq "User access tokens cannot be used for organization targets" .github/actions/resolve-gh-token/action.yml
+          grep -Fq "Organization)" .github/actions/resolve-gh-token/action.yml
           [[ "$PERSONAL_OWNER" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$ ]]
 
   create-public:
@@ -49,7 +49,8 @@ jobs:
       require_cleanup_approval: false
     secrets:
       BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-      BOOTSTRAP_PROVISIONER_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_TOKEN }}
+      BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
+      BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
 
   create-private:
     name: Create private personal repository
@@ -67,7 +68,8 @@ jobs:
       require_cleanup_approval: false
     secrets:
       BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-      BOOTSTRAP_PROVISIONER_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_TOKEN }}
+      BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
+      BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
 
   cleanup:
     name: Delete only personal E2E repositories
@@ -77,9 +79,27 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve personal cleanup token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
+          app_client_secret: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
+          app_user_refresh_token: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          app_owner: ${{ inputs.personal_owner }}
+          target_owner: ${{ inputs.personal_owner }}
+          permission_profile: repository-cleanup
+          repositories: ${{ github.event.repository.name }}
+
       - name: Delete exact test repositories
         env:
-          GH_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_TOKEN }}
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           PERSONAL_OWNER: ${{ inputs.personal_owner }}
           PUBLIC_REPO: bootstrap-app-e2e-${{ github.run_id }}-public
           PRIVATE_REPO: bootstrap-app-e2e-${{ github.run_id }}-private

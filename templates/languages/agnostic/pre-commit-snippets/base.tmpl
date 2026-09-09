@@ -109,9 +109,9 @@ repos:
           - -c
           - |
             if [ "$LINT_MODE" = "check" ]; then
-              markdownlint --config .github/linters/.markdownlint.json --ignore CHANGELOG.md "$@"
+              markdownlint --config .github/linters/.markdownlint.json --ignore-path .github/linters/.markdownlintignore "$@"
             else
-              markdownlint --fix --config .github/linters/.markdownlint.json --ignore CHANGELOG.md "$@" || true
+              markdownlint --fix --config .github/linters/.markdownlint.json --ignore-path .github/linters/.markdownlintignore "$@" || true
             fi
           - markdownlint
         language: system

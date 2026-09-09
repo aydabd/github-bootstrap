@@ -24,7 +24,9 @@ contract_tests=(
     "$script_dir/github-setup/test-tooling-metadata-contract.sh"
     "$script_dir/github-setup/test-generated-e2e-head-contract.sh"
     "$script_dir/github-setup/test-e2e-archive-contract.sh"
-    "$script_dir/github-setup/test-e2e-cleanup-contract.sh"
+    "$script_dir/github-setup/test-e2e-cleanup-common-contract.sh"
+    "$script_dir/github-setup/test-e2e-cleanup-user-contract.sh"
+    "$script_dir/github-setup/test-e2e-cleanup-organization-contract.sh"
     "$script_dir/github-setup/test-workflow-approval-contract.sh"
     "$script_dir/github-setup/test-copilot-review-contract.sh"
     "$script_dir/github-setup/test-maintenance-safety-contract.sh"
@@ -35,6 +37,7 @@ contract_tests=(
     "$script_dir/github-setup/test-label-creation-contract.sh"
     "$script_dir/github-setup/test-payloads.sh"
     "$script_dir/github-setup/test-personal-app-e2e-contract.sh"
+    "$script_dir/github-setup/test-centralized-monorepo-e2e-contract.sh"
     "$script_dir/github-setup/test-profile.sh"
 )
 

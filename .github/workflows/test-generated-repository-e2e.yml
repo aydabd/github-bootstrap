@@ -55,6 +55,7 @@ jobs:
   generated-repository:
     name: ${{ matrix.creation_workflow }} / ${{ matrix.delivery }} / ${{ matrix.provider }} @ ${{ inputs.head_sha || inputs.target_ref || 'main' }}
     runs-on: ubuntu-24.04
+    environment: e2e-testing
     strategy:
       fail-fast: false
       matrix:
@@ -109,7 +110,7 @@ jobs:
           app_private_key: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
           app_owner: ${{ inputs.app_owner }}
           target_owner: ${{ github.repository_owner }}
-          permission_profile: repository-setup
+          permission_profile: e2e-dispatch
           repositories: ${{ github.event.repository.name }}
 
       - name: Resolve E2E lifecycle token
@@ -152,6 +153,8 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           E2E_GH_TOKEN: ${{ steps.e2e-token.outputs.token }}
+          PROVISIONER_CLIENT_ID: ${{ inputs.client_id }}
+          APP_OWNER: ${{ inputs.app_owner }}
           OWNER: ${{ github.repository_owner }}
           TARGET_REF: ${{ inputs.head_sha || inputs.target_ref || 'main' }}
           REQUESTED_HEAD_SHA: ${{ inputs.head_sha }}
@@ -240,6 +243,9 @@ jobs:
           fi
 
           gh workflow run "$CREATION_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref "$DISPATCH_REF" \
+            --field client_id="$PROVISIONER_CLIENT_ID" \
+            --field app_owner="$APP_OWNER" \
+            --field allowed_repo_owners="$OWNER" \
             --field repo_name="$REPO_NAME" \
             --field repo_description="Generated repository E2E scenario" \
             --field visibility=public --field team_name="* @$OWNER" --field license_holder="$OWNER" \
@@ -247,7 +253,7 @@ jobs:
             --field release_tool=release-please --field enable_repo_settings=false --field enable_codeowners=true \
             --field workflows=quality --field delivery_mode="$DELIVERY" \
             --field central_repository="$CENTRAL_SOURCE" \
-            --field cleanup_on_failure=true
+            --field cleanup_on_failure=false
 
           echo "requested_head_sha=$TARGET_REF" >> "$GITHUB_STEP_SUMMARY"
 

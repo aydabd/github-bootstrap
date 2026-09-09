@@ -53,14 +53,16 @@ Recommended: use a **tenant-installed GitHub App** (safer, short-lived installat
    target owner.
 3. In the repository that runs bootstrap, set:
    - `BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY` (protected Actions secret — required for organization installation-token mode)
-   - `BOOTSTRAP_PROVISIONER_APP_USER_TOKEN` (protected reusable-workflow secret — required for personal-account mode; must be the `ghu_` GitHub App user token)
+   - `BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET` (protected Actions secret — required to refresh personal user tokens)
+   - `BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN` (protected Actions secret — the `ghr_` token; it is rotated automatically)
 4. When running the workflow, provide:
    - `client_id` (the GitHub App client ID, visible in the App's settings)
    - `app_owner` (target organization or personal-account owner)
 
-Organization creation mints a short-lived installation token for that owner. Personal creation uses
-the App user access token, verifies its `/user` login against the target owner, and then calls
-`/user/repos`. No PAT fallback exists.
+Organization creation mints a short-lived installation token for that owner. In personal-account mode, personal creation
+exchanges the App refresh token for a short-lived user access token, verifies its `/user` login
+against the target owner, rotates the refresh secret, and then calls `/user/repos`. No PAT fallback
+exists.
 
 > Private keys and user access tokens are accepted only as protected caller secrets. Never put a
 > private key, token, PAT, or credential in workflow inputs, generated repositories, or this repository.
@@ -118,16 +120,20 @@ redirect_uri="https://github.com/settings/apps/new"
 scripts/github-setup/github-app-user-token.sh url CLIENT_ID OWNER "$redirect_uri" STATE
 APP_CLIENT_SECRET_FILE="$credential_dir/app-client-secret" \
 APP_REDIRECT_URI="$redirect_uri" \
-  scripts/github-setup/github-app-user-token.sh exchange CLIENT_ID CODE OWNER "$credential_dir/app-user-token"
+  scripts/github-setup/github-app-user-token.sh exchange CLIENT_ID CODE OWNER \
+    "$credential_dir/app-user-token" "$credential_dir/app-refresh-token"
 scripts/github-setup/install-app-secrets.sh OWNER/github-bootstrap \
   "$credential_dir/app-client-id" \
   "$credential_dir/app-private-key.pem" \
-  "$credential_dir/app-user-token"
+  "$credential_dir/app-client-secret" \
+  "$credential_dir/app-refresh-token"
 ```
 
-The installer sets `BOOTSTRAP_PROVISIONER_APP_CLIENT_ID` as a repository variable and installs only
-`BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY` and the verified `BOOTSTRAP_PROVISIONER_APP_USER_TOKEN` as repository secrets. It
-never accepts a PAT or passes credentials through workflow-dispatch inputs. Run
+The installer sets `BOOTSTRAP_PROVISIONER_APP_CLIENT_ID` as a repository variable and installs
+`BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY`, `BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET`, and
+`BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN` as repository secrets. Each personal run exchanges
+and persists the rotated refresh token using the App's `Secrets: write` permission. It never accepts
+a PAT or passes credentials through workflow-dispatch inputs. Run
 `Test Personal GitHub App E2E` with the personal owner; it creates and cleans up only the two
 repositories named for that run. Organization installation-token E2E remains pending without a
 disposable organization.
@@ -136,9 +142,10 @@ After the disposable E2E, remove the repository configuration and revoke or rota
 credentials. This deletes the stored values without exposing them:
 
 ```bash
-gh secret delete BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY --repo OWNER/github-bootstrap --confirm
-gh secret delete BOOTSTRAP_PROVISIONER_APP_USER_TOKEN --repo OWNER/github-bootstrap --confirm
-gh variable delete BOOTSTRAP_PROVISIONER_APP_CLIENT_ID --repo OWNER/github-bootstrap --confirm
+gh secret delete BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY --repo OWNER/github-bootstrap
+gh secret delete BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET --repo OWNER/github-bootstrap
+gh secret delete BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN --repo OWNER/github-bootstrap
+gh variable delete BOOTSTRAP_PROVISIONER_APP_CLIENT_ID --repo OWNER/github-bootstrap
 ```
 
 Also revoke the App user authorization and delete or rotate the App private key in GitHub if the
@@ -186,8 +193,8 @@ jobs:
       require_cleanup_approval: true
     secrets:
       BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-      # For personal-account creation, use this App user access token instead.
-      BOOTSTRAP_PROVISIONER_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_TOKEN }}
+      BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
+      BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
 ```
 
 This example calls the standard Actions bootstrap workflow (`create-repository.yml`).

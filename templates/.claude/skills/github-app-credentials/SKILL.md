@@ -1,0 +1,1 @@
+../../../.github/skills/github-app-credentials/SKILL.md

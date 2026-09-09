@@ -23,6 +23,11 @@ grep -Fq 'login/device/code' "$helper"
 grep -Fq 'device-start' "$helper"
 grep -Fq 'device-poll' "$helper"
 grep -Fq 'grant_type=urn:ietf:params:oauth:grant-type:device_code' "$helper"
+grep -Fq 'grant_type=refresh_token' "$helper"
+grep -Fq 'refresh_token@' "$helper"
+grep -Fq 'refresh_token_value=' "$helper"
+grep -Fq 'App refresh token' "$helper"
+grep -Fq 'refresh' "$helper"
 grep -Fq 'umask 077' "$helper"
 grep -Fq 'chmod 600' "$helper"
 grep -Fq "poll_file=\"\$(mktemp)\"" "$helper"
@@ -47,10 +52,6 @@ if grep -Fq "printf '%s' \"\$token\" > \"\$token_file\"" "$helper"; then
 fi
 if grep -Fq "client_secret=\$APP_CLIENT_SECRET" "$helper"; then
     echo "user-token helper must not place the client secret in curl arguments" >&2
-    exit 1
-fi
-if grep -Eq 'GH_PAT|gh_token|refresh_token' "$helper"; then
-    echo "user-token helper must not implement PAT or refresh-token fallback" >&2
     exit 1
 fi
 if grep -Fq "echo \"\$token\"" "$helper" || grep -Fq "echo \"\$APP_CLIENT_SECRET\"" "$helper" || grep -Fq "echo \"\$access_token\"" "$helper"; then

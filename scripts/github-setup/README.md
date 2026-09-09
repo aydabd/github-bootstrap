@@ -53,6 +53,26 @@ The default profile does not include the optional planning bundle. Centralized
 delivery requires a user-owned repository and immutable ref; existing
 repositories are not modified automatically.
 
+## Centralized monorepo E2E
+
+Run `make test-centralized-monorepo` to create a temporary central workflow
+repository and a separate `languages=all` consumer. The scenario captures the
+central seed commit SHA, configures the consumer to use that immutable ref,
+validates the generated profile and ruleset, and waits for consumer quality to
+pass.
+
+The target preserves both repositories for inspection. Delete them explicitly
+when finished with the commands printed in the workflow summary:
+
+```bash
+gh repo delete OWNER/bootstrap-e2e-<timestamp>-system-centralized-create-repository --yes
+gh repo delete OWNER/bootstrap-e2e-<timestamp>-system-centralized-central-workflows --yes
+```
+
+If the scenario fails, its guarded cleanup job deletes both generated
+repositories when cleanup is enabled. Only the names emitted by the scenario
+are passed to the cleanup token.
+
 ## Live Verification
 
 Use the manual [.github/workflows/test-local-setup-scripts.yml](../../.github/workflows/test-local-setup-scripts.yml)

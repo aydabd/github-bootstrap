@@ -4,9 +4,12 @@
   "public": false,
   "default_events": [],
   "default_permissions": {
+    "actions": "write",
     "administration": "write",
     "contents": "write",
     "issues": "write",
-    "metadata": "read"
+    "metadata": "read",
+    "secrets": "write",
+    "workflows": "write"
   }
 }

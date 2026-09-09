@@ -9,12 +9,12 @@ payload for auditability.
 
 ## App roles
 
-| App                                  | Scope and authority                                                                                                                                                                                             | Credentials                                                                                                                | Explicitly excluded                                                                                                               |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Bootstrap E2E Admin**              | Test-only administration of repositories created by the generated-repository E2E system, including creation and archive lifecycle operations. Install only in the disposable E2E owner.                         | E2E-only App private key, held in the E2E environment.                                                                     | Production repositories, production maintenance credentials, repository contents, pull requests, workflow approval, and deletion. |
-| **Repository Bootstrap Provisioner** | Consumer-owned setup of an existing or newly created target repository: settings, generated contents, labels, and repository configuration. Install only on the consumer-selected repositories or organization. | Consumer-owned provisioner App private key, held by the consumer's protected workflow secret.                              | E2E administration, maintenance PR review/merge, workflow approval, and ruleset bypass.                                           |
-| **Repository Maintenance Writer**    | Creates verified maintenance commits and opens or updates maintenance pull requests in explicitly selected repositories.                                                                                        | Production Writer App private key, held in the production maintenance environment.                                         | E2E administration, workflow approval, review, auto-merge, and ruleset bypass.                                                    |
-| **Repository Maintenance Reviewer**  | Approves eligible workflow runs, completes the automation review/merge orchestration, and enables auto-merge after all policy gates pass. Install only on explicitly selected maintenance repositories.         | Production Reviewer App private key, held in the production maintenance environment and kept separate from the Writer key. | E2E administration, commit creation, arbitrary repository administration, and ruleset bypass.                                     |
+| App                                  | Scope and authority                                                                                                                                                                                                                               | Credentials                                                                                                                | Explicitly excluded                                                                                                               |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Bootstrap E2E Admin**              | Test-only administration of repositories created by the generated-repository E2E system, including creation and archive lifecycle operations. Install only in the disposable E2E owner.                                                           | E2E-only App private key, held in the E2E environment.                                                                     | Production repositories, production maintenance credentials, repository contents, pull requests, workflow approval, and deletion. |
+| **Repository Bootstrap Provisioner** | Consumer-owned setup of an existing or newly created target repository: settings, generated contents, labels, repository configuration, and the scoped E2E workflow dispatch. Install only on the consumer-selected repositories or organization. | Consumer-owned provisioner App private key, held by the consumer's protected workflow secret.                              | E2E administration, maintenance PR review/merge, workflow approval, and ruleset bypass.                                           |
+| **Repository Maintenance Writer**    | Creates verified maintenance commits and opens or updates maintenance pull requests in explicitly selected repositories.                                                                                                                          | Production Writer App private key, held in the production maintenance environment.                                         | E2E administration, workflow approval, review, auto-merge, and ruleset bypass.                                                    |
+| **Repository Maintenance Reviewer**  | Approves eligible workflow runs, completes the automation review/merge orchestration, and enables auto-merge after all policy gates pass. Install only on explicitly selected maintenance repositories.                                           | Production Reviewer App private key, held in the production maintenance environment and kept separate from the Writer key. | E2E administration, commit creation, arbitrary repository administration, and ruleset bypass.                                     |
 
 The operator runbook for installing these Apps in another owner and running the
 maintenance pipeline is [`maintenance-operations.md`](maintenance-operations.md).
@@ -29,12 +29,12 @@ for signatures, approvals, required checks, linear history, and merge method.
 The payloads intentionally have no webhook events and are private Apps. Their
 default permissions are the complete requested contract:
 
-| App                              | Permissions                                                                     |
-| -------------------------------- | ------------------------------------------------------------------------------- |
-| Bootstrap E2E Admin              | `organization_administration: write`, `administration: write`, `metadata: read` |
-| Repository Bootstrap Provisioner | `administration: write`, `contents: write`, `issues: write`, `metadata: read`   |
-| Repository Maintenance Writer    | `contents: write`, `pull_requests: write`, `metadata: read`                     |
-| Repository Maintenance Reviewer  | `actions: write`, `pull_requests: write`, `metadata: read`                      |
+| App                              | Permissions                                                                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Bootstrap E2E Admin              | `organization_administration: write`, `administration: write`, `metadata: read`                                                       |
+| Repository Bootstrap Provisioner | `administration: write`, `actions: write`, `contents: write`, `issues: write`, `metadata: read`, `secrets: write`, `workflows: write` |
+| Repository Maintenance Writer    | `contents: write`, `pull_requests: write`, `metadata: read`                                                                           |
+| Repository Maintenance Reviewer  | `actions: write`, `pull_requests: write`, `metadata: read`                                                                            |
 
 Permissions are not shared between roles for convenience. GitHub's
 `administration: write` permission includes repository deletion capability;
@@ -50,9 +50,11 @@ ruleset or combine the E2E and production trust boundaries.
 
 Organization consumers install the appropriate App on the organization and
 select only the repositories needed by that role. Personal-account consumers
-must use the supported App user-token flow for personal targets; an
+must use the supported App user-token refresh flow for personal targets; an
 installation token does not become a personal-user credential. The configured
-owner and authenticated identity must match before any operation.
+owner and authenticated identity must match before any operation. `secrets:
+write` is required only to persist the newly rotated refresh token in the
+caller repository.
 
 Store each App's GitHub-generated private key as a protected role-specific
 secret in the environment that owns that role. Use
@@ -73,7 +75,8 @@ scope for a GitHub App).
 Do not commit keys, include them in workflow inputs, print them, or reuse an
 E2E key in production. The production Reviewer key is a distinct secret from
 the Writer key and the E2E key. Client IDs may be non-secret configuration, but
-private keys and App user access tokens remain protected credentials.
+private keys, client secrets, refresh tokens, and short-lived App user access
+tokens remain protected credentials.
 
 E2E repositories and credentials are scoped to the E2E owner and the exact
 system-generated names/markers. E2E lifecycle work must archive generated
