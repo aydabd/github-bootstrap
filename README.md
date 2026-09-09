@@ -142,10 +142,10 @@ After the disposable E2E, remove the repository configuration and revoke or rota
 credentials. This deletes the stored values without exposing them:
 
 ```bash
-gh secret delete BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY --repo OWNER/github-bootstrap --confirm
-gh secret delete BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET --repo OWNER/github-bootstrap --confirm
-gh secret delete BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN --repo OWNER/github-bootstrap --confirm
-gh variable delete BOOTSTRAP_PROVISIONER_APP_CLIENT_ID --repo OWNER/github-bootstrap --confirm
+gh secret delete BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY --repo OWNER/github-bootstrap
+gh secret delete BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET --repo OWNER/github-bootstrap
+gh secret delete BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN --repo OWNER/github-bootstrap
+gh variable delete BOOTSTRAP_PROVISIONER_APP_CLIENT_ID --repo OWNER/github-bootstrap
 ```
 
 Also revoke the App user authorization and delete or rotate the App private key in GitHub if the
