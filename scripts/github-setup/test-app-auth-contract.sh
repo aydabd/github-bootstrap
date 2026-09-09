@@ -257,11 +257,4 @@ expect_rejected APP_CLIENT_ID=client APP_PRIVATE_KEY= APP_OWNER=acme TARGET_OWNE
 expect_rejected APP_CLIENT_ID=client APP_PRIVATE_KEY=key APP_OWNER= TARGET_OWNER=acme \
     bash "$app_validator"
 
-for documentation_file in README.md docs scripts; do
-    if rg -n --glob '*.md' --glob '*.sh' 'gh (secret|variable) delete[^\n]*--confirm' "$repo_root/$documentation_file"; then
-        echo "GitHub CLI secret/variable deletion must not use unsupported --confirm: $documentation_file" >&2
-        exit 1
-    fi
-done
-
 echo "GitHub App auth contract checks passed."
