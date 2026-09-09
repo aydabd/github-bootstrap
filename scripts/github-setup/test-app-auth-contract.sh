@@ -153,6 +153,7 @@ assert_contains "permission_profile: e2e-dispatch" "$repo_root/.github/workflows
 assert_contains "app_user_refresh_token: \${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}" "$repo_root/.github/workflows/test-repository-creation.yml"
 assert_contains "app_client_secret: \${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}" "$repo_root/.github/workflows/test-repository-creation.yml"
 assert_contains "repositories: \${{ needs.create-test-repo.outputs.cleanup_repositories }}" "$repo_root/.github/workflows/test-repository-creation.yml"
+
 assert_contains "contents: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_not_contains "      workflows: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "pull-requests: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
@@ -255,5 +256,12 @@ expect_rejected APP_CLIENT_ID=client APP_PRIVATE_KEY= APP_OWNER=acme TARGET_OWNE
     bash "$app_validator"
 expect_rejected APP_CLIENT_ID=client APP_PRIVATE_KEY=key APP_OWNER= TARGET_OWNER=acme \
     bash "$app_validator"
+
+for documentation_file in README.md docs scripts; do
+    if rg -n --glob '*.md' --glob '*.sh' 'gh (secret|variable) delete[^\n]*--confirm' "$repo_root/$documentation_file"; then
+        echo "GitHub CLI secret/variable deletion must not use unsupported --confirm: $documentation_file" >&2
+        exit 1
+    fi
+done
 
 echo "GitHub App auth contract checks passed."
