@@ -1,0 +1,3 @@
+# Dependency and repository metadata trees are not project YAML.
+node_modules
+.git

@@ -43,7 +43,7 @@ runs:
 
         case "$CAPABILITY" in
           lint-markdown)
-            provider_run markdownlint --config .github/linters/.markdownlint.json --ignore CHANGELOG.md --ignore node_modules --ignore .git .
+            provider_run markdownlint --config .github/linters/.markdownlint.json --ignore-path .github/linters/.markdownlintignore .
             ;;
           lint-json)
             provider_run bash -c "cd \"$WORKING_DIRECTORY\" && find . \\
@@ -51,7 +51,7 @@ runs:
               -type f -name \"*.json\" -exec jq empty {} +"
             ;;
           lint-yaml)
-            provider_run uv run yamllint --config-file .github/linters/.yaml-lint.yml .
+            provider_run bash "$WORKING_DIRECTORY/scripts/lint-yaml.sh" "$WORKING_DIRECTORY"
             ;;
           lint-actions)
             provider_run actionlint -ignore 'SC[0-9]+'

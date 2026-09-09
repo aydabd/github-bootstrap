@@ -129,6 +129,44 @@ if grep -q 'xargs' "$repo_root/templates/centralized-actions-workflows/.github/a
 fi
 grep -q 'LINT_MODE=check provider_run uv run pre-commit' "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -q 'LINT_MODE=check provider_run uv run pre-commit' "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
+for yaml_ignore_file in \
+    "$repo_root/templates/.github/linters/.yaml-lint-ignore" \
+    "$repo_root/templates/centralized-actions-workflows/.github/linters/.yaml-lint-ignore"; do
+    test -f "$yaml_ignore_file"
+    grep -Fxq 'node_modules' "$yaml_ignore_file"
+    grep -Fxq '.git' "$yaml_ignore_file"
+done
+for markdown_ignore_file in \
+    "$repo_root/templates/.github/linters/.markdownlintignore" \
+    "$repo_root/templates/centralized-actions-workflows/.github/linters/.markdownlintignore"; do
+    test -f "$markdown_ignore_file"
+    grep -Fxq 'CHANGELOG.md' "$markdown_ignore_file"
+    grep -Fxq 'node_modules' "$markdown_ignore_file"
+    grep -Fxq '.git' "$markdown_ignore_file"
+done
+for yaml_runner in \
+    "$repo_root/templates/scripts/lint-yaml.sh" \
+    "$repo_root/templates/centralized-actions-workflows/scripts/lint-yaml.sh"; do
+    test -x "$yaml_runner"
+    grep -Fq '.yaml-lint-ignore' "$yaml_runner"
+done
+grep -Fq 'scripts/lint-yaml.sh' "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
+grep -Fq 'scripts/lint-yaml.sh' "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
+grep -Fq 'scripts/lint-yaml.sh' "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+grep -Fq -- "--ignore-path \"\$WORKING_DIRECTORY/.github/linters/.markdownlintignore\"" \
+    "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
+grep -Fq -- '--ignore-path .github/linters/.markdownlintignore' \
+    "$repo_root/templates/.github/actions/quality/run-capability/action.yml" \
+    "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+grep -Fq -- '--ignore-path .github/linters/.markdownlintignore' \
+    "$repo_root/templates/languages/agnostic/pre-commit-snippets/base.tmpl"
+if grep -Eq 'yamllint.*--ignore|yamllint --config-file' \
+    "$repo_root/templates/.github/actions/quality/run-quality/action.yml" \
+    "$repo_root/templates/.github/actions/quality/run-capability/action.yml" \
+    "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"; then
+    echo "YAML exclusions must be configured in .yaml-lint-ignore" >&2
+    exit 1
+fi
 grep -qF "(cd \"\$WORKING_DIRECTORY\" && provider_run uv run python3 -m pytest)" "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -qF "(cd \"\$WORKING_DIRECTORY\" && LINT_MODE=check provider_run uv run pre-commit run --all-files --color=always)" \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml"

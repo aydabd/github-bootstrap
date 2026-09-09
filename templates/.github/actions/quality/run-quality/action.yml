@@ -46,7 +46,7 @@ runs:
               lint-markdown)
                 provider_run markdownlint \
                   --config "$WORKING_DIRECTORY/.github/linters/.markdownlint.json" \
-                  --ignore CHANGELOG.md --ignore node_modules --ignore .git \
+                  --ignore-path "$WORKING_DIRECTORY/.github/linters/.markdownlintignore" \
                   "$WORKING_DIRECTORY"
                 ;;
               lint-json)
@@ -54,7 +54,9 @@ runs:
                   -path './.git' -prune -o -path './node_modules' -prune -o \\
                   -type f -name \"*.json\" -exec jq empty {} +"
                 ;;
-              lint-yaml) provider_run uv run yamllint --config-file "$WORKING_DIRECTORY/.github/linters/.yaml-lint.yml" "$WORKING_DIRECTORY" ;;
+              lint-yaml)
+                provider_run bash "$WORKING_DIRECTORY/scripts/lint-yaml.sh" "$WORKING_DIRECTORY"
+                ;;
               lint-actions)
                 (cd "$WORKING_DIRECTORY" && provider_run actionlint)
                 provider_run uv run zizmor --pedantic "$WORKING_DIRECTORY/.github/workflows"

@@ -65,9 +65,9 @@ jobs:
           for capability in "${selected[@]}"; do
             capability="$(printf '%s' "$capability" | sed 's/^ *//;s/ *$//')"
             case "$capability" in
-              lint-markdown) provider_run markdownlint --config .github/linters/.markdownlint.json --ignore CHANGELOG.md --ignore node_modules --ignore .git . ;;
+              lint-markdown) provider_run markdownlint --config .github/linters/.markdownlint.json --ignore-path .github/linters/.markdownlintignore . ;;
               lint-json) provider_run bash -c 'find . -path "./.git" -prune -o -path "./node_modules" -prune -o -type f -name "*.json" -exec jq empty {} +' ;;
-              lint-yaml) provider_run uv run yamllint --config-file .github/linters/.yaml-lint.yml . ;;
+              lint-yaml) provider_run bash scripts/lint-yaml.sh "$PWD" ;;
               lint-actions) provider_run actionlint -ignore 'SC[0-9]+'; provider_run uv run zizmor --pedantic .github ;;
               lint-shell)
                 mapfile -d '' shell_files < <(
