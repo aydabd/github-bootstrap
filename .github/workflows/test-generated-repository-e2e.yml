@@ -253,7 +253,7 @@ jobs:
             --field release_tool=release-please --field enable_repo_settings=false --field enable_codeowners=true \
             --field workflows=quality --field delivery_mode="$DELIVERY" \
             --field central_repository="$CENTRAL_SOURCE" \
-            --field cleanup_on_failure=true
+            --field cleanup_on_failure=false
 
           echo "requested_head_sha=$TARGET_REF" >> "$GITHUB_STEP_SUMMARY"
 

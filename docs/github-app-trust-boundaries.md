@@ -29,12 +29,12 @@ for signatures, approvals, required checks, linear history, and merge method.
 The payloads intentionally have no webhook events and are private Apps. Their
 default permissions are the complete requested contract:
 
-| App                              | Permissions                                                                                                       |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Bootstrap E2E Admin              | `organization_administration: write`, `administration: write`, `metadata: read`                                   |
-| Repository Bootstrap Provisioner | `administration: write`, `actions: write`, `contents: write`, `issues: write`, `metadata: read`, `secrets: write` |
-| Repository Maintenance Writer    | `contents: write`, `pull_requests: write`, `metadata: read`                                                       |
-| Repository Maintenance Reviewer  | `actions: write`, `pull_requests: write`, `metadata: read`                                                        |
+| App                              | Permissions                                                                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Bootstrap E2E Admin              | `organization_administration: write`, `administration: write`, `metadata: read`                                                       |
+| Repository Bootstrap Provisioner | `administration: write`, `actions: write`, `contents: write`, `issues: write`, `metadata: read`, `secrets: write`, `workflows: write` |
+| Repository Maintenance Writer    | `contents: write`, `pull_requests: write`, `metadata: read`                                                                           |
+| Repository Maintenance Reviewer  | `actions: write`, `pull_requests: write`, `metadata: read`                                                                            |
 
 Permissions are not shared between roles for convenience. GitHub's
 `administration: write` permission includes repository deletion capability;

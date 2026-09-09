@@ -9,6 +9,7 @@
     "contents": "write",
     "issues": "write",
     "metadata": "read",
-    "secrets": "write"
+    "secrets": "write",
+    "workflows": "write"
   }
 }
