@@ -36,7 +36,7 @@ require_file "$client_secret_file" "client secret file"
 require_file "$refresh_token_file" "refresh token file"
 
 pem_first_line="$(sed -n '1p' "$private_key_file" | tr -d '\r')"
-pem_last_line="$(tail -n 1 "$private_key_file" | tr -d '\r')"
+pem_last_line="$(sed '/^[[:space:]]*$/d' "$private_key_file" | tail -n 1 | tr -d '\r')"
 if [[ "$pem_first_line" =~ ^-----BEGIN\ ([A-Z0-9]+\ )?PRIVATE\ KEY-----$ ]]; then
     pem_label="${BASH_REMATCH[1]}"
     expected_pem_end="-----END ${pem_label}PRIVATE KEY-----"
