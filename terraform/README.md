@@ -28,11 +28,17 @@ Terraform CLI version **1.5 or later** is required (see `versions.tf`).
 
 1. Fork this repository **or** click **Use this template** inside your organization
 2. Configure App mode:
-   - for an organization target, add `BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY` as a protected Actions secret
+   - use the `production-provisioning` Environment and add `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY`
+     as a protected Actions secret
    - for a personal target, add the App client secret and refresh token as the protected
-     `BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET` and `BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN` secrets
-   - pass `client_id`, the target owner as `app_owner`, and a comma-separated
-     `allowed_repo_owners` value containing the permitted target owners when running the workflow
+     `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET` and
+     `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN` secrets; set
+     `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID` as an Environment variable
+   - select `production-provisioner` explicitly in the launcher (use `e2e-provisioner` and the
+     `e2e-testing` Environment only for disposable E2E runs)
+   - pass the target owner as `app_owner` and a comma-separated `allowed_repo_owners` value
+     containing the permitted target owners when running the workflow; the selected profile
+     supplies the client ID from its Environment variable
    - never pass credentials through workflow inputs
 3. Trigger the
    [**Terraform Create Repository**](../.github/workflows/terraform-create-repository.yml) workflow

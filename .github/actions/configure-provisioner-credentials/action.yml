@@ -1,0 +1,58 @@
+name: Configure provisioner credentials
+description: Export one validated provisioner profile credential set to later steps.
+inputs:
+  client_id:
+    required: true
+  private_key:
+    required: true
+  client_secret:
+    required: true
+  refresh_token:
+    required: true
+  refresh_token_name:
+    required: true
+  environment:
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PROVISIONER_CLIENT_ID_INPUT: ${{ inputs.client_id }}
+        PROVISIONER_PRIVATE_KEY_INPUT: ${{ inputs.private_key }}
+        PROVISIONER_CLIENT_SECRET_INPUT: ${{ inputs.client_secret }}
+        PROVISIONER_REFRESH_TOKEN_INPUT: ${{ inputs.refresh_token }}
+        PROVISIONER_REFRESH_TOKEN_NAME_INPUT: ${{ inputs.refresh_token_name }}
+        PROVISIONER_ENVIRONMENT_INPUT: ${{ inputs.environment }}
+      run: |
+        set -euo pipefail
+        for name in \
+          PROVISIONER_CLIENT_ID_INPUT \
+          PROVISIONER_PRIVATE_KEY_INPUT \
+          PROVISIONER_CLIENT_SECRET_INPUT \
+          PROVISIONER_REFRESH_TOKEN_INPUT \
+          PROVISIONER_REFRESH_TOKEN_NAME_INPUT \
+          PROVISIONER_ENVIRONMENT_INPUT; do
+          if [ -z "${!name}" ]; then
+            echo "::error::Missing provisioner credential input: $name" >&2
+            exit 1
+          fi
+        done
+
+        write_env() {
+          local name="$1"
+          local value="$2"
+          local delimiter="__GITHUB_ENV_$(date +%s%N)_$$__"
+          {
+            printf '%s<<%s\n' "$name" "$delimiter"
+            printf '%s\n' "$value"
+            printf '%s\n' "$delimiter"
+          } >> "$GITHUB_ENV"
+        }
+
+        write_env PROVISIONER_CLIENT_ID "$PROVISIONER_CLIENT_ID_INPUT"
+        write_env PROVISIONER_PRIVATE_KEY "$PROVISIONER_PRIVATE_KEY_INPUT"
+        write_env PROVISIONER_CLIENT_SECRET "$PROVISIONER_CLIENT_SECRET_INPUT"
+        write_env PROVISIONER_REFRESH_TOKEN "$PROVISIONER_REFRESH_TOKEN_INPUT"
+        write_env PROVISIONER_REFRESH_TOKEN_NAME "$PROVISIONER_REFRESH_TOKEN_NAME_INPUT"
+        write_env PROVISIONER_ENVIRONMENT "$PROVISIONER_ENVIRONMENT_INPUT"

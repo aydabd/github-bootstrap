@@ -43,14 +43,14 @@ jobs:
       visibility: public
       cleanup_on_failure: true
       env_manager: system
-      client_id: ${{ vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID }}
+      provisioner_profile: e2e-provisioner
       app_owner: ${{ inputs.personal_owner }}
       allowed_repo_owners: ${{ inputs.personal_owner }}
       require_cleanup_approval: false
     secrets:
-      BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-      BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
-      BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+      BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+      BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}
+      BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}
 
   create-private:
     name: Create private personal repository
@@ -62,20 +62,21 @@ jobs:
       visibility: private
       cleanup_on_failure: true
       env_manager: system
-      client_id: ${{ vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID }}
+      provisioner_profile: e2e-provisioner
       app_owner: ${{ inputs.personal_owner }}
       allowed_repo_owners: ${{ inputs.personal_owner }}
       require_cleanup_approval: false
     secrets:
-      BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-      BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
-      BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+      BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+      BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}
+      BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}
 
   cleanup:
     name: Delete only personal E2E repositories
     if: ${{ always() }}
     needs: [create-public, create-private]
     runs-on: ubuntu-24.04
+    environment: e2e-testing
     permissions:
       contents: read
     steps:
@@ -88,10 +89,12 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          client_id: ${{ vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID }}
-          app_private_key: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-          app_client_secret: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
-          app_user_refresh_token: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          app_client_secret: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}
+          app_user_refresh_token: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          refresh_token_secret: BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN
+          refresh_token_secret_environment: e2e-testing
           app_owner: ${{ inputs.personal_owner }}
           target_owner: ${{ inputs.personal_owner }}
           permission_profile: repository-cleanup

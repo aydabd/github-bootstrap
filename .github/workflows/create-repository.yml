@@ -127,10 +127,6 @@ on:
         required: false
         default: "github.com"
         type: string
-      client_id:
-        description: "GitHub App client ID"
-        required: true
-        type: string
       app_owner:
         description: "Owner whose GitHub App installation or user token should be used"
         required: true
@@ -144,6 +140,14 @@ on:
         required: false
         default: true
         type: boolean
+      provisioner_profile:
+        description: "Credential profile used by the provisioner"
+        required: false
+        default: production-provisioner
+        type: choice
+        options:
+          - production-provisioner
+          - e2e-provisioner
   workflow_call:
     inputs:
       repo_name:
@@ -236,9 +240,6 @@ on:
         required: false
         default: "github.com"
         type: string
-      client_id:
-        required: true
-        type: string
       app_owner:
         required: true
         type: string
@@ -249,23 +250,84 @@ on:
         required: false
         default: true
         type: boolean
+      provisioner_profile:
+        required: false
+        default: production-provisioner
+        type: string
     secrets:
-      BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY:
+      BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY:
         required: false
-      BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET:
+      BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET:
         required: false
-      BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN:
+      BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN:
+        required: false
+      BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY:
+        required: false
+      BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET:
+        required: false
+      BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN:
         required: false
 
 jobs:
+  validate-provisioner:
+    name: Validate Provisioner Profile
+    runs-on: ubuntu-latest
+    outputs:
+      profile: ${{ steps.profile.outputs.profile }}
+      environment: ${{ steps.profile.outputs.environment }}
+      client_id_variable: ${{ steps.profile.outputs.client_id_variable }}
+      private_key_secret: ${{ steps.profile.outputs.private_key_secret }}
+      client_secret_secret: ${{ steps.profile.outputs.client_secret_secret }}
+      refresh_token_secret: ${{ steps.profile.outputs.refresh_token_secret }}
+    steps:
+      - name: Validate provisioner profile
+        id: profile
+        shell: bash
+        env:
+          PROVISIONER_PROFILE: ${{ inputs.provisioner_profile || 'production-provisioner' }}
+        run: |
+          set -euo pipefail
+          case "$PROVISIONER_PROFILE" in
+            production-provisioner)
+              {
+                echo "profile=$PROVISIONER_PROFILE"
+                echo "environment=production-provisioning"
+                echo "client_id_variable=BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID"
+                echo "private_key_secret=BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY"
+                echo "client_secret_secret=BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET"
+                echo "refresh_token_secret=BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN"
+              } >> "$GITHUB_OUTPUT"
+              ;;
+            e2e-provisioner)
+              {
+                echo "profile=$PROVISIONER_PROFILE"
+                echo "environment=e2e-testing"
+                echo "client_id_variable=BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID"
+                echo "private_key_secret=BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY"
+                echo "client_secret_secret=BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET"
+                echo "refresh_token_secret=BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN"
+              } >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error::Unsupported provisioner profile '$PROVISIONER_PROFILE'" >&2
+              exit 1
+              ;;
+          esac
+
   create-repository:
     name: Create Repository
     runs-on: ubuntu-latest
+    needs: validate-provisioner
+    environment: ${{ needs.validate-provisioner.outputs.environment }}
     env:
       GH_HOST: ${{ inputs.github_host || 'github.com' }}
+      PROVISIONER_PROFILE: ${{ needs.validate-provisioner.outputs.profile }}
+      PROVISIONER_ENVIRONMENT: ${{ needs.validate-provisioner.outputs.environment }}
+      PROVISIONER_REFRESH_TOKEN_NAME: ${{ needs.validate-provisioner.outputs.refresh_token_secret }}
     outputs:
       owner: ${{ steps.set-owner.outputs.owner }}
       repo_created: ${{ steps.create-repo.outputs.repo_created }}
+      provisioner_profile: ${{ needs.validate-provisioner.outputs.profile }}
     permissions:
       contents: read
 
@@ -286,6 +348,28 @@ jobs:
           persist-credentials: false
           repository: ${{ steps.bootstrap-repo.outputs.repository }}
           ref: ${{ github.workflow_sha }}
+
+      - name: Configure production provisioner credentials
+        if: needs.validate-provisioner.outputs.profile == 'production-provisioner'
+        uses: ./.github/actions/configure-provisioner-credentials
+        with:
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID }}
+          private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY }}
+          client_secret: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          refresh_token_name: ${{ needs.validate-provisioner.outputs.refresh_token_secret }}
+          environment: ${{ needs.validate-provisioner.outputs.environment }}
+
+      - name: Configure E2E provisioner credentials
+        if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner'
+        uses: ./.github/actions/configure-provisioner-credentials
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          client_secret: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          refresh_token_name: ${{ needs.validate-provisioner.outputs.refresh_token_secret }}
+          environment: ${{ needs.validate-provisioner.outputs.environment }}
 
       - name: Setup Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -439,10 +523,12 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          client_id: ${{ inputs.client_id }}
-          app_private_key: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-          app_client_secret: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
-          app_user_refresh_token: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          client_id: ${{ env.PROVISIONER_CLIENT_ID }}
+          app_private_key: ${{ env.PROVISIONER_PRIVATE_KEY }}
+          app_client_secret: ${{ env.PROVISIONER_CLIENT_SECRET }}
+          app_user_refresh_token: ${{ env.PROVISIONER_REFRESH_TOKEN }}
+          refresh_token_secret: ${{ env.PROVISIONER_REFRESH_TOKEN_NAME }}
+          refresh_token_secret_environment: ${{ env.PROVISIONER_ENVIRONMENT }}
           app_owner: ${{ inputs.app_owner }}
           target_owner: ${{ steps.set-owner.outputs.owner }}
           permission_profile: repository-creation
@@ -938,11 +1024,16 @@ jobs:
   teardown-with-approval:
     name: Cleanup Repository (Approved)
     runs-on: ubuntu-latest
+    environment: ${{ needs.validate-provisioner.outputs.environment }}
     needs:
       - create-repository
+      - validate-provisioner
       - cleanup-approval
     env:
       GH_HOST: ${{ inputs.github_host || 'github.com' }}
+      PROVISIONER_PROFILE: ${{ needs.validate-provisioner.outputs.profile }}
+      PROVISIONER_ENVIRONMENT: ${{ needs.validate-provisioner.outputs.environment }}
+      PROVISIONER_REFRESH_TOKEN_NAME: ${{ needs.validate-provisioner.outputs.refresh_token_secret }}
     # Only cleanup if repo was created AND (creation failed AND cleanup is enabled)
     if: >-
       always() &&
@@ -969,14 +1060,38 @@ jobs:
           repository: ${{ steps.bootstrap-repo.outputs.repository }}
           ref: ${{ github.workflow_sha }}
 
+      - name: Configure production provisioner credentials
+        if: needs.validate-provisioner.outputs.profile == 'production-provisioner'
+        uses: ./.github/actions/configure-provisioner-credentials
+        with:
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID }}
+          private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY }}
+          client_secret: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          refresh_token_name: ${{ needs.validate-provisioner.outputs.refresh_token_secret }}
+          environment: ${{ needs.validate-provisioner.outputs.environment }}
+
+      - name: Configure E2E provisioner credentials
+        if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner'
+        uses: ./.github/actions/configure-provisioner-credentials
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          client_secret: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          refresh_token_name: ${{ needs.validate-provisioner.outputs.refresh_token_secret }}
+          environment: ${{ needs.validate-provisioner.outputs.environment }}
+
       - name: Resolve GitHub token
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          client_id: ${{ inputs.client_id }}
-          app_private_key: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-          app_client_secret: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
-          app_user_refresh_token: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          client_id: ${{ env.PROVISIONER_CLIENT_ID }}
+          app_private_key: ${{ env.PROVISIONER_PRIVATE_KEY }}
+          app_client_secret: ${{ env.PROVISIONER_CLIENT_SECRET }}
+          app_user_refresh_token: ${{ env.PROVISIONER_REFRESH_TOKEN }}
+          refresh_token_secret: ${{ env.PROVISIONER_REFRESH_TOKEN_NAME }}
+          refresh_token_secret_environment: ${{ env.PROVISIONER_ENVIRONMENT }}
           app_owner: ${{ inputs.app_owner }}
           target_owner: ${{ needs.create-repository.outputs.owner }}
           permission_profile: repository-cleanup
@@ -1006,9 +1121,15 @@ jobs:
   teardown-no-approval:
     name: Cleanup Repository (No Approval)
     runs-on: ubuntu-latest
-    needs: create-repository
+    environment: ${{ needs.validate-provisioner.outputs.environment }}
+    needs:
+      - create-repository
+      - validate-provisioner
     env:
       GH_HOST: ${{ inputs.github_host || 'github.com' }}
+      PROVISIONER_PROFILE: ${{ needs.validate-provisioner.outputs.profile }}
+      PROVISIONER_ENVIRONMENT: ${{ needs.validate-provisioner.outputs.environment }}
+      PROVISIONER_REFRESH_TOKEN_NAME: ${{ needs.validate-provisioner.outputs.refresh_token_secret }}
     if: >-
       always() &&
       needs.create-repository.outputs.repo_created == 'true' &&
@@ -1033,14 +1154,38 @@ jobs:
           repository: ${{ steps.bootstrap-repo.outputs.repository }}
           ref: ${{ github.workflow_sha }}
 
+      - name: Configure production provisioner credentials
+        if: needs.validate-provisioner.outputs.profile == 'production-provisioner'
+        uses: ./.github/actions/configure-provisioner-credentials
+        with:
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID }}
+          private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY }}
+          client_secret: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          refresh_token_name: ${{ needs.validate-provisioner.outputs.refresh_token_secret }}
+          environment: ${{ needs.validate-provisioner.outputs.environment }}
+
+      - name: Configure E2E provisioner credentials
+        if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner'
+        uses: ./.github/actions/configure-provisioner-credentials
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          client_secret: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}
+          refresh_token: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          refresh_token_name: ${{ needs.validate-provisioner.outputs.refresh_token_secret }}
+          environment: ${{ needs.validate-provisioner.outputs.environment }}
+
       - name: Resolve GitHub token
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          client_id: ${{ inputs.client_id }}
-          app_private_key: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-          app_client_secret: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
-          app_user_refresh_token: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+          client_id: ${{ env.PROVISIONER_CLIENT_ID }}
+          app_private_key: ${{ env.PROVISIONER_PRIVATE_KEY }}
+          app_client_secret: ${{ env.PROVISIONER_CLIENT_SECRET }}
+          app_user_refresh_token: ${{ env.PROVISIONER_REFRESH_TOKEN }}
+          refresh_token_secret: ${{ env.PROVISIONER_REFRESH_TOKEN_NAME }}
+          refresh_token_secret_environment: ${{ env.PROVISIONER_ENVIRONMENT }}
           app_owner: ${{ inputs.app_owner }}
           target_owner: ${{ needs.create-repository.outputs.owner }}
           permission_profile: repository-cleanup

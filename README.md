@@ -35,6 +35,7 @@ Recommended: use a **tenant-installed GitHub App** (safer, short-lived installat
    | ----------------------------- | -------------- | ------------------------------------------------------- |
    | `Contents`                    | Read and write | Clone template, push initial commits                    |
    | `Administration`              | Read and write | Configure settings, environments, rulesets, and cleanup |
+   | `Environments`                | Read and write | Read and rotate protected environment secrets           |
    | `Metadata`                    | Read-only      | Read repository info (auto-granted)                     |
    | `Organization administration` | Read and write | Create repositories in the target organization          |
    | `Issues`                      | Read and write | Create and update repository labels                     |
@@ -51,13 +52,13 @@ Recommended: use a **tenant-installed GitHub App** (safer, short-lived installat
 2. Install the App in each target organization (tenant isolation), or authorize it for the
    personal account that will own a personal repository. The `app_owner` value must match the
    target owner.
-3. In the repository that runs bootstrap, set:
-   - `BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY` (protected Actions secret — required for organization installation-token mode)
-   - `BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET` (protected Actions secret — required to refresh personal user tokens)
-   - `BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN` (protected Actions secret — the `ghr_` token; it is rotated automatically)
-4. When running the workflow, provide:
-   - `client_id` (the GitHub App client ID, visible in the App's settings)
-   - `app_owner` (target organization or personal-account owner)
+3. In the `production-provisioning` Environment of the repository that runs real bootstrap, set:
+   - `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY` (protected Actions secret — required for organization installation-token mode)
+   - `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET` (protected Actions secret — required to refresh personal user tokens)
+   - `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN` (protected Actions secret — the `ghr_` token; it is rotated automatically)
+   - `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID` (Environment variable)
+4. When running the workflow, provide `app_owner` (target organization or personal-account owner).
+   The profile-selected workflow reads the client ID from the protected Environment variable.
 
 Organization creation mints a short-lived installation token for that owner. In personal-account mode, personal creation
 exchanges the App refresh token for a short-lived user access token, verifies its `/user` login
@@ -96,13 +97,31 @@ rules control access.
 The Writer App must remain separate from the Provisioner, Reviewer, and E2E
 Admin Apps. Never commit or print its private key.
 
-### Personal App Manifest E2E setup
+Install the production provisioner credentials explicitly into the production Environment:
+
+```bash
+credential_dir="$HOME/.local/state/github-bootstrap/production-provisioner"
+scripts/github-setup/install-app-secrets.sh OWNER/github-bootstrap production-provisioner \
+  "$credential_dir/app-client-id" "$credential_dir/app-private-key.pem" \
+  "$credential_dir/app-client-secret" "$credential_dir/app-refresh-token"
+```
+
+### Provisioner App profiles and E2E setup
+
+Create two separate Repository Bootstrap Provisioner Apps: one for real repository creation and
+one for disposable E2E runs. The production App uses the `production-provisioning` Environment;
+the E2E App uses the `e2e-testing` Environment. Keep their private keys, client secrets, client
+IDs, and refresh tokens separate. The lifecycle App (`bootstrap-e2e-admin`) is a separate App and
+must not be used as a provisioner.
+
+The production and E2E refresh tokens are rotated back into their own Environment secret after
+each personal-account run. Never share or copy a refresh token between profiles.
 
 For a disposable personal-account E2E, create the App through GitHub's App Manifest flow. GitHub
 generates the private key during conversion; do not generate one locally:
 
 ```bash
-credential_dir="$HOME/.local/state/github-bootstrap"
+credential_dir="$HOME/.local/state/github-bootstrap/e2e-provisioner"
 scripts/github-setup/github-app-manifest.sh start repository-bootstrap-provisioner "$credential_dir"
 # Open the printed URL, approve the App, and let the local callback capture the code.
 scripts/github-setup/github-app-manifest.sh convert-file \
@@ -115,24 +134,24 @@ repository checkout; remove it after setup. Use the App client ID and secret to 
 personal account, then exchange the callback code:
 
 ```bash
-credential_dir="$HOME/.local/state/github-bootstrap"
+credential_dir="$HOME/.local/state/github-bootstrap/e2e-provisioner"
 redirect_uri="https://github.com/settings/apps/new"
 scripts/github-setup/github-app-user-token.sh url CLIENT_ID OWNER "$redirect_uri" STATE
 APP_CLIENT_SECRET_FILE="$credential_dir/app-client-secret" \
 APP_REDIRECT_URI="$redirect_uri" \
   scripts/github-setup/github-app-user-token.sh exchange CLIENT_ID CODE OWNER \
     "$credential_dir/app-user-token" "$credential_dir/app-refresh-token"
-scripts/github-setup/install-app-secrets.sh OWNER/github-bootstrap \
+scripts/github-setup/install-app-secrets.sh OWNER/github-bootstrap e2e-provisioner \
   "$credential_dir/app-client-id" \
   "$credential_dir/app-private-key.pem" \
   "$credential_dir/app-client-secret" \
   "$credential_dir/app-refresh-token"
 ```
 
-The installer sets `BOOTSTRAP_PROVISIONER_APP_CLIENT_ID` as a repository variable and installs
-`BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY`, `BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET`, and
-`BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN` as repository secrets. Each personal run exchanges
-and persists the rotated refresh token using the App's `Secrets: write` permission. It never accepts
+The installer sets `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` in the `e2e-testing` Environment and installs
+`BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY`, `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET`, and
+`BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN` there. Each personal run exchanges
+and persists the rotated refresh token using the App's `Environments: write` permission. It never accepts
 a PAT or passes credentials through workflow-dispatch inputs. Run
 `Test Personal GitHub App E2E` with the personal owner; it creates and cleans up only the two
 repositories named for that run. Organization installation-token E2E remains pending without a
@@ -142,10 +161,10 @@ After the disposable E2E, remove the repository configuration and revoke or rota
 credentials. This deletes the stored values without exposing them:
 
 ```bash
-gh secret delete BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY --repo OWNER/github-bootstrap
-gh secret delete BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET --repo OWNER/github-bootstrap
-gh secret delete BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN --repo OWNER/github-bootstrap
-gh variable delete BOOTSTRAP_PROVISIONER_APP_CLIENT_ID --repo OWNER/github-bootstrap
+gh secret delete BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY --repo OWNER/github-bootstrap --env e2e-testing
+gh secret delete BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET --repo OWNER/github-bootstrap --env e2e-testing
+gh secret delete BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN --repo OWNER/github-bootstrap --env e2e-testing
+gh variable delete BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID --repo OWNER/github-bootstrap --env e2e-testing
 ```
 
 Also revoke the App user authorization and delete or rotate the App private key in GitHub if the
@@ -187,14 +206,14 @@ jobs:
       node_version: "24"
       java_version: "25"
       visibility: private
-    client_id: ${{ vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID }}
+      provisioner_profile: production-provisioner
       app_owner: ${{ inputs.repo_owner }}
       allowed_repo_owners: ${{ vars.ALLOWED_REPO_OWNERS }}
       require_cleanup_approval: true
     secrets:
-      BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-      BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
-      BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+      BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY }}
+      BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET }}
+      BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN }}
 ```
 
 This example calls the standard Actions bootstrap workflow (`create-repository.yml`).

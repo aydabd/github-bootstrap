@@ -13,10 +13,6 @@ on:
         description: Exact 40-character PR head commit SHA to test instead of target_ref.
         required: false
         type: string
-      client_id:
-        description: GitHub App client ID for the credentialed E2E run.
-        required: true
-        type: string
       app_owner:
         description: Organization used by the credentialed E2E run.
         required: true
@@ -58,6 +54,9 @@ jobs:
     environment: e2e-testing
     strategy:
       fail-fast: false
+      # Personal App refresh tokens are single-use and are rotated by each
+      # nested repository-creation run. Serialize the matrix to avoid races.
+      max-parallel: 1
       matrix:
         include:
           - provider: micromamba
@@ -106,8 +105,9 @@ jobs:
         id: token
         uses: ./.github/actions/resolve-gh-token
         with:
-          client_id: ${{ inputs.client_id }}
-          app_private_key: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
           app_owner: ${{ inputs.app_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: e2e-dispatch
@@ -118,6 +118,7 @@ jobs:
         uses: ./.github/actions/resolve-gh-token
         with:
           client_id: ${{ vars.BOOTSTRAP_E2E_APP_CLIENT_ID }}
+          refresh_token_secret: ""
           app_private_key: ${{ secrets.BOOTSTRAP_E2E_APP_PRIVATE_KEY }}
           app_owner: ${{ github.repository_owner }}
           target_owner: ${{ github.repository_owner }}
@@ -153,7 +154,6 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           E2E_GH_TOKEN: ${{ steps.e2e-token.outputs.token }}
-          PROVISIONER_CLIENT_ID: ${{ inputs.client_id }}
           APP_OWNER: ${{ inputs.app_owner }}
           OWNER: ${{ github.repository_owner }}
           TARGET_REF: ${{ inputs.head_sha || inputs.target_ref || 'main' }}
@@ -243,7 +243,7 @@ jobs:
           fi
 
           gh workflow run "$CREATION_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref "$DISPATCH_REF" \
-            --field client_id="$PROVISIONER_CLIENT_ID" \
+            --field provisioner_profile=e2e-provisioner \
             --field app_owner="$APP_OWNER" \
             --field allowed_repo_owners="$OWNER" \
             --field repo_name="$REPO_NAME" \
@@ -269,12 +269,6 @@ jobs:
           done
           [ -n "$CREATION_RUN" ] || { echo "creation run not found" >&2; exit 1; }
 
-          if ! e2e_gh api --method PUT "/repos/$OWNER/$REPO_NAME/topics" \
-            -f 'names[]=bootstrap-e2e' > /dev/null; then
-            echo "failed to mark E2E repository with bootstrap-e2e topic" >&2
-            exit 1
-          fi
-
           CREATION_RUN_JSON="$RUNNER_TEMP/creation-run-$REPO_NAME.json"
           gh run view "$CREATION_RUN" --repo "$GITHUB_REPOSITORY" --json headSha,status,conclusion > "$CREATION_RUN_JSON"
           if [ -n "$REQUESTED_HEAD_SHA" ]; then
@@ -291,6 +285,15 @@ jobs:
             [ "$RUN_STATUS" = completed ] && break
             sleep 10
           done
+
+          if e2e_gh api "/repos/$OWNER/$REPO_NAME" > /dev/null 2>&1; then
+            if ! e2e_gh api --method PUT "/repos/$OWNER/$REPO_NAME/topics" \
+              -f 'names[]=bootstrap-e2e' > /dev/null; then
+              echo "failed to mark E2E repository with bootstrap-e2e topic" >&2
+              exit 1
+            fi
+          fi
+
           [ "$RUN_STATUS" = completed ] && [ "$CONCLUSION" = success ] || {
             echo "creation failed: $CONCLUSION" >&2
             exit 1

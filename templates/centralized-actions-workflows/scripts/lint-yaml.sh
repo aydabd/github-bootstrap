@@ -31,6 +31,10 @@ while IFS= read -r -d '' yaml_file; do
                 excluded=true
                 break
                 ;;
+            */"$ignored_path")
+                excluded=true
+                break
+                ;;
         esac
     done
     [ "$excluded" = false ] && yaml_files+=("$yaml_file")

@@ -13,6 +13,7 @@ cleanup_archived_e2e_repositories() {
     local already_gone=0
     local failures=0
     local deleted_names=""
+    local min_age_days="${MIN_AGE_DAYS:-90}"
 
     if [ -z "$repositories_endpoint" ] || [ -z "${E2E_GH_TOKEN:-}" ] ||
         [ -z "${ALLOWED_OWNERS:-}" ] || [ -z "${APP_OWNER:-}" ] ||
@@ -21,6 +22,10 @@ cleanup_archived_e2e_repositories() {
         echo "E2E cleanup configuration is incomplete" >&2
         return 1
     fi
+    [[ "$min_age_days" =~ ^[0-9]+$ ]] || {
+        echo "minimum E2E repository age is invalid" >&2
+        return 1
+    }
     if [ ! -x "$validator" ]; then
         echo "E2E cleanup validator is not executable: $validator" >&2
         return 1
@@ -80,7 +85,7 @@ cleanup_archived_e2e_repositories() {
             return 1
         fi
 
-        if ! "$validator" "$ALLOWED_OWNERS" "$candidate_file" "$exclusions" "$now_epoch"; then
+        if ! "$validator" "$ALLOWED_OWNERS" "$candidate_file" "$exclusions" "$now_epoch" "$min_age_days"; then
             continue
         fi
 

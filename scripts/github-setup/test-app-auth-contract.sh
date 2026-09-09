@@ -25,12 +25,41 @@ assert_not_contains() {
     fi
 }
 
+assert_not_line() {
+    local pattern="$1"
+    local file="$2"
+    if grep -Eq -- "$pattern" "$file"; then
+        echo "unexpected line matching '$pattern' in $file" >&2
+        exit 1
+    fi
+}
+
+# Keep helper declarations before every contract assertion so ShellCheck can
+# resolve the functions when this script is analyzed as a whole.
+first_assertion_line="$(awk '
+    /^[[:space:]]*assert_(contains|not_contains|not_line)[[:space:]]+/ &&
+        $0 !~ /^[[:space:]]*assert_(contains|not_contains|not_line)\(\)[[:space:]]*\{/ {
+        print NR
+        exit
+    }
+' "${BASH_SOURCE[0]}")"
+for helper in assert_contains assert_not_contains assert_not_line; do
+    helper_definition_line="$(awk -v name="$helper" '$0 ~ ("^" name "\\(\\)") { print NR; exit }' "${BASH_SOURCE[0]}")"
+    [ "$helper_definition_line" -lt "$first_assertion_line" ] || {
+        echo "$helper must be defined before contract assertions" >&2
+        exit 1
+    }
+done
+
 assert_contains "client-id: \${{ inputs.client_id }}" "$resolver"
 assert_contains "private-key: \${{ inputs.app_private_key }}" "$resolver"
 assert_contains "app_user_refresh_token" "$resolver"
 assert_contains "app_client_secret" "$resolver"
-assert_contains "BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN" "$resolver"
-assert_contains "BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET" "$resolver"
+assert_contains "refresh_token_secret" "$resolver"
+assert_contains "refresh_token_secret_environment" "$resolver"
+legacy_prefix='BOOTSTRAP_PROVISIONER_APP_'
+assert_not_contains "${legacy_prefix}USER_REFRESH_TOKEN" "$resolver"
+assert_not_contains "${legacy_prefix}CLIENT_SECRET" "$resolver"
 assert_contains "ghr_ prefix" "$resolver"
 assert_contains "GH_TOKEN: \${{ github.token }}" "$resolver"
 assert_contains "target_owner_type=\"\$(gh api \"/users/\$TARGET_OWNER\" --jq '.type')\"" "$resolver"
@@ -39,7 +68,7 @@ assert_contains "AUTH_MODE=app-user bash ./scripts/github-setup/validate-app-aut
 assert_contains "echo \"::add-mask::\$APP_USER_REFRESH_TOKEN\"" "$resolver"
 assert_contains "case \"\$target_owner_type\" in" "$resolver"
 assert_contains "Organization)" "$resolver"
-assert_contains "repository-creation|repository-cleanup" "$resolver"
+assert_contains "repository-creation|repository-cleanup|e2e-dispatch" "$resolver"
 assert_contains "e2e-dispatch" "$resolver"
 assert_contains "mode=app-user" "$resolver"
 assert_contains "owner: \${{ inputs.app_owner }}" "$resolver"
@@ -108,20 +137,40 @@ assert_not_contains "gh pr edit \"\$PR_NUMBER\"" "$template_classifier"
 
 for workflow in create-repository.yml terraform-create-repository.yml; do
     workflow_path="$repo_root/.github/workflows/$workflow"
-    assert_contains "client_id: \${{ inputs.client_id }}" "$workflow_path"
-    assert_contains "app_private_key: \${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}" "$workflow_path"
-    assert_contains "app_user_refresh_token: \${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}" "$workflow_path"
-    assert_contains "app_client_secret: \${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}" "$workflow_path"
+    assert_contains "provisioner_profile:" "$workflow_path"
+    assert_contains "default: production-provisioner" "$workflow_path"
+    assert_contains "- production-provisioner" "$workflow_path"
+    assert_contains "- e2e-provisioner" "$workflow_path"
+    assert_contains "needs.validate-provisioner.outputs.profile" "$workflow_path"
+    assert_contains "BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY" "$workflow_path"
+    assert_contains "BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET" "$workflow_path"
+    assert_contains "BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN" "$workflow_path"
+    assert_contains "BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY" "$workflow_path"
+    assert_contains "BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET" "$workflow_path"
+    assert_contains "BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN" "$workflow_path"
+    assert_not_contains "secrets.${legacy_prefix}PRIVATE_KEY" "$workflow_path"
+    assert_not_contains "secrets.${legacy_prefix}CLIENT_SECRET" "$workflow_path"
+    assert_not_contains "secrets.${legacy_prefix}USER_REFRESH_TOKEN" "$workflow_path"
+    assert_contains "refresh_token_secret:" "$workflow_path"
+    assert_contains "refresh_token_secret_environment:" "$workflow_path"
+    assert_not_line '^      client_id:' "$workflow_path"
+    assert_not_contains "inputs.client_id ||" "$workflow_path"
+    assert_contains "PROVISIONER_PROFILE: \${{ needs.validate-provisioner.outputs.profile }}" "$workflow_path"
+    assert_contains "environment: \${{ needs.validate-provisioner.outputs.environment }}" "$workflow_path"
+    assert_contains "PROVISIONER_ENVIRONMENT: \${{ needs.validate-provisioner.outputs.environment }}" "$workflow_path"
+    assert_not_contains "secrets[" "$workflow_path"
+    assert_contains "uses: ./.github/actions/configure-provisioner-credentials" "$workflow_path"
+    assert_contains "if: needs.validate-provisioner.outputs.profile == 'production-provisioner'" "$workflow_path"
+    assert_contains "if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner'" "$workflow_path"
+    assert_contains "app_private_key: \${{ env.PROVISIONER_PRIVATE_KEY }}" "$workflow_path"
+    assert_contains "app_user_refresh_token: \${{ env.PROVISIONER_REFRESH_TOKEN }}" "$workflow_path"
+    assert_contains "app_client_secret: \${{ env.PROVISIONER_CLIENT_SECRET }}" "$workflow_path"
     assert_contains "target_owner:" "$workflow_path"
     assert_contains "Reject internal visibility for personal accounts" "$workflow_path"
     assert_contains "inputs.visibility == 'internal'" "$workflow_path"
     assert_contains "Internal visibility is supported only for organization repositories" "$workflow_path"
     assert_contains "git remote set-url origin" "$workflow_path"
-    if [ "$workflow" = create-repository.yml ]; then
-        assert_contains "http.extraheader=\"AUTHORIZATION: basic \$GIT_AUTH_HEADER\"" "$workflow_path"
-    else
-        assert_contains "http.extraheader=\"AUTHORIZATION: bearer \$GH_TOKEN\"" "$workflow_path"
-    fi
+    assert_contains "http.extraheader=\"AUTHORIZATION: basic \$GIT_AUTH_HEADER\"" "$workflow_path"
     assert_contains "allowed_repo_owners:" "$workflow_path"
     assert_not_contains "GH_PAT" "$workflow_path"
     assert_not_contains "gh_token: \${{ inputs.gh_token }}" "$workflow_path"
@@ -133,13 +182,42 @@ for workflow in create-repository.yml terraform-create-repository.yml; do
     assert_not_contains "OWNER=\"\${{ needs." "$workflow_path"
 done
 
+assert_contains "needs: validate-provisioner" "$repo_root/.github/workflows/create-repository.yml"
+assert_contains "needs: validate-provisioner" "$repo_root/.github/workflows/terraform-create-repository.yml"
+assert_not_contains "environment: \${{ inputs.provisioner_profile == 'e2e-provisioner' && 'e2e-testing' || 'production-provisioning' }}" "$repo_root/.github/workflows/create-repository.yml"
+assert_not_contains "environment: \${{ inputs.provisioner_profile == 'e2e-provisioner' && 'e2e-testing' || 'production-provisioning' }}" "$repo_root/.github/workflows/terraform-create-repository.yml"
+
+for workflow in "$repo_root"/.github/workflows/*.yml; do
+    resolver_calls=$(grep -cF 'uses: ./.github/actions/resolve-gh-token' "$workflow" || true)
+    [ "$resolver_calls" -eq 0 ] && continue
+    refresh_inputs=$(grep -cE '^          refresh_token_secret:' "$workflow" || true)
+    [ "$resolver_calls" -eq "$refresh_inputs" ] || {
+        echo "every resolve-gh-token caller must provide refresh_token_secret: $workflow" >&2
+        exit 1
+    }
+done
+
+for workflow in approve-automation-workflows.yml classify-maintenance-pr.yml cleanup-archived-e2e.yml delete-repo.yml dispatch-maintenance-e2e.yml merge-maintenance-pr.yml release-please.yml setup-existing-repository.yml test-local-setup-scripts.yml weekly-tooling-updates.yml; do
+    workflow_path="$repo_root/.github/workflows/$workflow"
+    assert_contains 'refresh_token_secret: ""' "$workflow_path"
+done
+
+assert_contains "provisioner_profile: e2e-provisioner" "$repo_root/.github/workflows/test-personal-app-e2e.yml"
+assert_not_line '^      client_id:' "$repo_root/.github/workflows/test-personal-app-e2e.yml"
+assert_not_contains "${legacy_prefix}" "$repo_root/.github/workflows/test-personal-app-e2e.yml"
+assert_contains "BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY" "$repo_root/.github/workflows/test-personal-app-e2e.yml"
+assert_contains "BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET" "$repo_root/.github/workflows/test-personal-app-e2e.yml"
+assert_contains "BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN" "$repo_root/.github/workflows/test-personal-app-e2e.yml"
+
 assert_contains "AUTH_MODE: \${{ steps.resolve-token.outputs.auth_mode }}" "$repo_root/.github/workflows/create-repository.yml"
 assert_contains "set -euo pipefail" "$repo_root/.github/workflows/create-repository.yml"
 assert_not_contains "echo \"repo_created=false\" >> \"\$GITHUB_OUTPUT\"" "$repo_root/.github/workflows/create-repository.yml"
 
 for workflow in create-repository.yml terraform-create-repository.yml; do
-    assert_contains "BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN:" "$repo_root/.github/workflows/$workflow"
-    assert_contains "BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET:" "$repo_root/.github/workflows/$workflow"
+    assert_contains "BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN:" "$repo_root/.github/workflows/$workflow"
+    assert_contains "BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET:" "$repo_root/.github/workflows/$workflow"
+    assert_contains "BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN:" "$repo_root/.github/workflows/$workflow"
+    assert_contains "BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET:" "$repo_root/.github/workflows/$workflow"
     assert_contains "required: false" "$repo_root/.github/workflows/$workflow"
 done
 
@@ -147,12 +225,18 @@ assert_contains "target_owner: \${{ steps.target.outputs.owner }}" "$repo_root/.
 assert_contains "repositories: \${{ steps.target.outputs.repository }}" "$repo_root/.github/workflows/delete-repo.yml"
 assert_contains "bash ./scripts/github-setup/validate-app-auth.sh" "$resolver"
 assert_contains "repositories: \${{ inputs.repo_name }}" "$repo_root/.github/workflows/setup-existing-repository.yml"
-assert_contains "repositories: \${{ github.event.repository.name }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_contains "environment: e2e-testing" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+assert_contains "repositories: \${{ github.event.repository.name }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_contains "permission_profile: e2e-dispatch" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+assert_not_line '^      client_id:' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+assert_not_contains "app_client_secret: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+assert_not_contains "app_user_refresh_token: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+assert_contains "--field provisioner_profile=e2e-provisioner" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+assert_not_contains "--field provisioner_profile=production-provisioner" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+assert_not_contains 'BOOTSTRAP_PRODUCTION_PROVISIONER_APP' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_contains "--field cleanup_on_failure=false" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
-assert_contains "app_user_refresh_token: \${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}" "$repo_root/.github/workflows/test-repository-creation.yml"
-assert_contains "app_client_secret: \${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}" "$repo_root/.github/workflows/test-repository-creation.yml"
+assert_contains "app_user_refresh_token: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}" "$repo_root/.github/workflows/test-repository-creation.yml"
+assert_contains "app_client_secret: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}" "$repo_root/.github/workflows/test-repository-creation.yml"
 assert_contains "repositories: \${{ needs.create-test-repo.outputs.cleanup_repositories }}" "$repo_root/.github/workflows/test-repository-creation.yml"
 
 assert_contains "contents: write" "$repo_root/.github/workflows/weekly-tooling-updates.yml"

@@ -13,6 +13,13 @@ inputs:
   app_user_refresh_token:
     description: GitHub App refresh token for the target personal account.
     required: false
+  refresh_token_secret:
+    description: Secret name where the rotated GitHub App refresh token is stored.
+    required: true
+  refresh_token_secret_environment:
+    description: Actions environment whose refresh token should be rotated.
+    required: false
+    default: ""
   app_client_secret:
     description: GitHub App client secret used to exchange the refresh token.
     required: false
@@ -83,9 +90,9 @@ runs:
                 exit 1
               fi
               case "$PERMISSION_PROFILE" in
-                repository-creation|repository-cleanup) ;;
+                repository-creation|repository-cleanup|e2e-dispatch) ;;
                 *)
-                  echo "::error::GitHub App user access tokens are supported only for repository creation and its explicitly scoped cleanup." >&2
+                  echo "::error::GitHub App user access tokens are supported only for repository creation, explicitly scoped cleanup, and E2E dispatch." >&2
                   exit 1
                   ;;
               esac
@@ -101,7 +108,7 @@ runs:
             else
               case "$PERMISSION_PROFILE" in
                 repository-creation|repository-cleanup)
-                  echo "::error::Personal-account creation requires BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN and BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET." >&2
+                  echo "::error::Personal-account creation requires the App user refresh token and client secret inputs." >&2
                   exit 1
                   ;;
               esac
@@ -144,9 +151,15 @@ runs:
         APP_CLIENT_ID: ${{ inputs.client_id }}
         APP_CLIENT_SECRET: ${{ inputs.app_client_secret }}
         APP_REFRESH_TOKEN: ${{ inputs.app_user_refresh_token }}
+        REFRESH_TOKEN_SECRET: ${{ inputs.refresh_token_secret }}
+        REFRESH_TOKEN_SECRET_ENVIRONMENT: ${{ inputs.refresh_token_secret_environment }}
         OWNER: ${{ inputs.target_owner }}
       run: |
         set -euo pipefail
+        if [ -z "$REFRESH_TOKEN_SECRET_ENVIRONMENT" ]; then
+          echo "::error::Refreshing a GitHub App user token requires an explicit refresh-token secret environment." >&2
+          exit 1
+        fi
         secret_file="$(mktemp)"
         refresh_file="$(mktemp)"
         access_file="$(mktemp)"
@@ -164,11 +177,10 @@ runs:
         normalized_owner="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
         normalized_caller="$(printf '%s' "$caller_owner" | tr '[:upper:]' '[:lower:]')"
         if [ "$normalized_owner" != "$normalized_caller" ]; then
-          echo "::error::Cannot rotate the caller repository secret: target user '$OWNER' does not own '$GITHUB_REPOSITORY'. Use an external secret manager or rotate the refresh secret manually." >&2
+          echo "::error::Cannot rotate the configured refresh-token secret: target user '$OWNER' does not own '$GITHUB_REPOSITORY'. Use an external secret manager or rotate the refresh secret manually." >&2
           exit 1
         fi
-        GH_TOKEN="$access_token" gh secret set BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN \
-          --repo "$GITHUB_REPOSITORY" < "$refresh_file"
+        GH_TOKEN="$access_token" gh secret set "$REFRESH_TOKEN_SECRET" --repo "$GITHUB_REPOSITORY" --env "$REFRESH_TOKEN_SECRET_ENVIRONMENT" < "$refresh_file"
         {
           echo "token=$access_token"
           echo "auth_mode=app-user"
