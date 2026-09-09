@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/aydabd/github-bootstrap/compare/v2.3.0...v2.3.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* isolate provisioners and harden repository E2E ([#209](https://github.com/aydabd/github-bootstrap/issues/209)) ([0cb5647](https://github.com/aydabd/github-bootstrap/commit/0cb5647a1929aa0df2ef70e0aea78693543fc41a))
+
 ## [2.3.0](https://github.com/aydabd/github-bootstrap/compare/v2.2.1...v2.3.0) (2026-09-09)
 
 
