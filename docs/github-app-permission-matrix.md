@@ -82,9 +82,8 @@ ruleset bypass authority.
 Creation installation tokens intentionally omit a repository list because the target repository
 does not exist yet. Existing-repository setup, cleanup, and weekly tooling callers pass the
 repository name to scope the installation token to that repository. Personal creation uses
-`POST /user/repos`, which is tied to the authenticated user. Personal App user tokens may also
-dispatch the explicitly scoped generated-repository E2E workflow; they are never used for
-organization creation.
+`POST /user/repos`, which is tied to the authenticated user; user access tokens are never accepted
+as workflow-dispatch inputs or used for organization creation.
 
 | Creation target | Authentication         | Endpoint                 | Why                                                                                      |
 | --------------- | ---------------------- | ------------------------ | ---------------------------------------------------------------------------------------- |
