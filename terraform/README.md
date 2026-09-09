@@ -29,8 +29,8 @@ Terraform CLI version **1.5 or later** is required (see `versions.tf`).
 1. Fork this repository **or** click **Use this template** inside your organization
 2. Configure App mode:
    - for an organization target, add `BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY` as a protected Actions secret
-   - for a personal target, add the authorized App user access token as the protected
-     `BOOTSTRAP_PROVISIONER_APP_USER_TOKEN` reusable-workflow secret
+   - for a personal target, add the App client secret and refresh token as the protected
+     `BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET` and `BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN` secrets
    - pass `client_id`, the target owner as `app_owner`, and a comma-separated
      `allowed_repo_owners` value containing the permitted target owners when running the workflow
    - never pass credentials through workflow inputs

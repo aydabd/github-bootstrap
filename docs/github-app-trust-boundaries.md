@@ -29,12 +29,12 @@ for signatures, approvals, required checks, linear history, and merge method.
 The payloads intentionally have no webhook events and are private Apps. Their
 default permissions are the complete requested contract:
 
-| App                              | Permissions                                                                                     |
-| -------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Bootstrap E2E Admin              | `organization_administration: write`, `administration: write`, `metadata: read`                 |
-| Repository Bootstrap Provisioner | `administration: write`, `actions: write`, `contents: write`, `issues: write`, `metadata: read` |
-| Repository Maintenance Writer    | `contents: write`, `pull_requests: write`, `metadata: read`                                     |
-| Repository Maintenance Reviewer  | `actions: write`, `pull_requests: write`, `metadata: read`                                      |
+| App                              | Permissions                                                                                                       |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Bootstrap E2E Admin              | `organization_administration: write`, `administration: write`, `metadata: read`                                   |
+| Repository Bootstrap Provisioner | `administration: write`, `actions: write`, `contents: write`, `issues: write`, `metadata: read`, `secrets: write` |
+| Repository Maintenance Writer    | `contents: write`, `pull_requests: write`, `metadata: read`                                                       |
+| Repository Maintenance Reviewer  | `actions: write`, `pull_requests: write`, `metadata: read`                                                        |
 
 Permissions are not shared between roles for convenience. GitHub's
 `administration: write` permission includes repository deletion capability;
@@ -50,9 +50,11 @@ ruleset or combine the E2E and production trust boundaries.
 
 Organization consumers install the appropriate App on the organization and
 select only the repositories needed by that role. Personal-account consumers
-must use the supported App user-token flow for personal targets; an
+must use the supported App user-token refresh flow for personal targets; an
 installation token does not become a personal-user credential. The configured
-owner and authenticated identity must match before any operation.
+owner and authenticated identity must match before any operation. `secrets:
+write` is required only to persist the newly rotated refresh token in the
+caller repository.
 
 Store each App's GitHub-generated private key as a protected role-specific
 secret in the environment that owns that role. Use
@@ -73,7 +75,8 @@ scope for a GitHub App).
 Do not commit keys, include them in workflow inputs, print them, or reuse an
 E2E key in production. The production Reviewer key is a distinct secret from
 the Writer key and the E2E key. Client IDs may be non-secret configuration, but
-private keys and App user access tokens remain protected credentials.
+private keys, client secrets, refresh tokens, and short-lived App user access
+tokens remain protected credentials.
 
 E2E repositories and credentials are scoped to the E2E owner and the exact
 system-generated names/markers. E2E lifecycle work must archive generated

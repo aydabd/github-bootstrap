@@ -10,8 +10,11 @@ inputs:
   app_private_key:
     description: GitHub App private key (PEM) for App-based auth.
     required: false
-  app_user_token:
-    description: GitHub App user access token for the target personal account.
+  app_user_refresh_token:
+    description: GitHub App refresh token for the target personal account.
+    required: false
+  app_client_secret:
+    description: GitHub App client secret used to exchange the refresh token.
     required: false
   app_owner:
     description: Owner bound to the App installation or user access token.
@@ -33,7 +36,7 @@ outputs:
     value: ${{ steps.finalize.outputs.token }}
   auth_mode:
     description: Authentication mode used (app or app-user).
-    value: ${{ steps.validate-auth-mode.outputs.mode }}
+    value: ${{ steps.finalize.outputs.auth_mode }}
   app_slug:
     description: Authenticated GitHub App slug for bot commit identity.
     value: ${{ steps.app-token.outputs.app-slug }}
@@ -46,7 +49,8 @@ runs:
       env:
         APP_CLIENT_ID: ${{ inputs.client_id }}
         APP_PRIVATE_KEY: ${{ inputs.app_private_key }}
-        APP_USER_TOKEN: ${{ inputs.app_user_token }}
+        APP_USER_REFRESH_TOKEN: ${{ inputs.app_user_refresh_token }}
+        APP_CLIENT_SECRET: ${{ inputs.app_client_secret }}
         GH_TOKEN: ${{ github.token }}
         APP_OWNER: ${{ inputs.app_owner }}
         TARGET_OWNER: ${{ inputs.target_owner }}
@@ -62,15 +66,22 @@ runs:
           echo "::error::Repository scoping is required for the '$PERMISSION_PROFILE' permission profile." >&2
           exit 1
         fi
-        if [ -n "$APP_USER_TOKEN" ]; then
-          echo "::add-mask::$APP_USER_TOKEN"
+        if [ -n "$APP_USER_REFRESH_TOKEN" ]; then
+          echo "::add-mask::$APP_USER_REFRESH_TOKEN"
+        fi
+        if [ -n "$APP_CLIENT_SECRET" ]; then
+          echo "::add-mask::$APP_CLIENT_SECRET"
         fi
         AUTH_MODE=owner-only bash ./scripts/github-setup/validate-app-auth.sh
         target_owner_type="$(gh api "/users/$TARGET_OWNER" --jq '.type')"
 
         case "$target_owner_type" in
           User)
-            if [ -n "$APP_USER_TOKEN" ]; then
+            if [ -n "$APP_USER_REFRESH_TOKEN" ] || [ -n "$APP_CLIENT_SECRET" ]; then
+              if [ -z "$APP_USER_REFRESH_TOKEN" ] || [ -z "$APP_CLIENT_SECRET" ]; then
+                echo "::error::Personal-account creation requires both the App refresh token and client secret." >&2
+                exit 1
+              fi
               case "$PERMISSION_PROFILE" in
                 repository-creation|repository-cleanup) ;;
                 *)
@@ -78,26 +89,19 @@ runs:
                   exit 1
                   ;;
               esac
-              case "$APP_USER_TOKEN" in
-                ghu_*) ;;
+              case "$APP_USER_REFRESH_TOKEN" in
+                ghr_*) ;;
                 *)
-                  echo "::error::Personal-account creation requires a GitHub App user access token (ghu_ prefix); PATs and other token types are rejected." >&2
+                  echo "::error::Personal-account creation requires a GitHub App refresh token (ghr_ prefix); PATs and other token types are rejected." >&2
                   exit 1
                   ;;
               esac
-              authenticated_user="$(GH_TOKEN="$APP_USER_TOKEN" gh api /user --jq '.login')"
-              normalized_user="$(printf '%s' "$authenticated_user" | tr '[:upper:]' '[:lower:]')"
-              normalized_target="$(printf '%s' "$TARGET_OWNER" | tr '[:upper:]' '[:lower:]')"
-              if [ "$normalized_user" != "$normalized_target" ]; then
-                echo "::error::GitHub App user token belongs to '$authenticated_user', not target owner '$TARGET_OWNER'." >&2
-                exit 1
-              fi
               AUTH_MODE=app-user bash ./scripts/github-setup/validate-app-auth.sh
-              echo "mode=app-user" >> "$GITHUB_OUTPUT"
+              echo "mode=app-user-refresh" >> "$GITHUB_OUTPUT"
             else
               case "$PERMISSION_PROFILE" in
                 repository-creation|repository-cleanup)
-                  echo "::error::Personal-account creation requires BOOTSTRAP_PROVISIONER_APP_USER_TOKEN; installation credentials are for existing-repository operations only." >&2
+                  echo "::error::Personal-account creation requires BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN and BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET." >&2
                   exit 1
                   ;;
               esac
@@ -106,7 +110,7 @@ runs:
             fi
             ;;
           Organization)
-            if [ -n "$APP_USER_TOKEN" ]; then
+            if [ -n "$APP_USER_REFRESH_TOKEN" ] || [ -n "$APP_CLIENT_SECRET" ]; then
               echo "::error::User access tokens cannot be used for organization targets; use an installation token." >&2
               exit 1
             fi
@@ -136,16 +140,54 @@ runs:
         permission-pull-requests: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-review' || inputs.permission_profile == 'maintenance-labeling' || inputs.permission_profile == 'release-please' || inputs.permission_profile == 'maintenance-merge') && 'write' || inputs.permission_profile == 'workflow-approval' && 'read' || '' }}
         permission-workflows: ${{ inputs.permission_profile == 'weekly-tooling' && 'write' || '' }}
 
+    - name: Refresh GitHub App user token
+      id: refresh-user-token
+      if: steps.validate-auth-mode.outputs.mode == 'app-user-refresh'
+      shell: bash
+      env:
+        APP_CLIENT_ID: ${{ inputs.client_id }}
+        APP_CLIENT_SECRET: ${{ inputs.app_client_secret }}
+        APP_REFRESH_TOKEN: ${{ inputs.app_user_refresh_token }}
+        OWNER: ${{ inputs.target_owner }}
+      run: |
+        set -euo pipefail
+        secret_file="$(mktemp)"
+        refresh_file="$(mktemp)"
+        access_file="$(mktemp)"
+        chmod 600 "$secret_file" "$refresh_file" "$access_file"
+        trap 'rm -f "$secret_file" "$refresh_file" "$access_file"' EXIT
+        printf '%s' "$APP_CLIENT_SECRET" > "$secret_file"
+        printf '%s' "$APP_REFRESH_TOKEN" > "$refresh_file"
+        APP_CLIENT_SECRET_FILE="$secret_file" bash ./scripts/github-setup/github-app-user-token.sh \
+          refresh "$APP_CLIENT_ID" "$refresh_file" "$OWNER" "$access_file" "$refresh_file"
+        access_token="$(tr -d '\r\n' < "$access_file")"
+        rotated_refresh_token="$(tr -d '\r\n' < "$refresh_file")"
+        echo "::add-mask::$access_token"
+        echo "::add-mask::$rotated_refresh_token"
+        caller_owner="${GITHUB_REPOSITORY%%/*}"
+        normalized_owner="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
+        normalized_caller="$(printf '%s' "$caller_owner" | tr '[:upper:]' '[:lower:]')"
+        if [ "$normalized_owner" != "$normalized_caller" ]; then
+          echo "::error::Cannot rotate the caller repository secret: target user '$OWNER' does not own '$GITHUB_REPOSITORY'. Use an external secret manager or rotate the refresh secret manually." >&2
+          exit 1
+        fi
+        GH_TOKEN="$access_token" gh secret set BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN \
+          --repo "$GITHUB_REPOSITORY" < "$refresh_file"
+        {
+          echo "token=$access_token"
+          echo "auth_mode=app-user"
+        } >> "$GITHUB_OUTPUT"
+
     - name: Finalize token output
       id: finalize
       shell: bash
       env:
         AUTH_MODE: ${{ steps.validate-auth-mode.outputs.mode }}
         APP_TOKEN: ${{ steps.app-token.outputs.token }}
-        APP_USER_TOKEN: ${{ inputs.app_user_token }}
+        APP_USER_TOKEN: ${{ steps.refresh-user-token.outputs.token }}
       run: |
         set -euo pipefail
-        if [ "$AUTH_MODE" = "app-user" ]; then
+        if [ "$AUTH_MODE" = "app-user-refresh" ]; then
           TOKEN="$APP_USER_TOKEN"
         elif [ "$AUTH_MODE" = "app" ]; then
           TOKEN="$APP_TOKEN"
@@ -161,3 +203,8 @@ runs:
 
         echo "::add-mask::$TOKEN"
         echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+        if [ "$AUTH_MODE" = "app-user-refresh" ]; then
+          echo "auth_mode=app-user" >> "$GITHUB_OUTPUT"
+        else
+          echo "auth_mode=$AUTH_MODE" >> "$GITHUB_OUTPUT"
+        fi

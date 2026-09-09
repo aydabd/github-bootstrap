@@ -35,6 +35,7 @@ assert manifest["default_permissions"] == {
     "contents": "write",
     "issues": "write",
     "metadata": "read",
+    "secrets": "write",
 }
 PY
 
@@ -143,6 +144,7 @@ expected = {
             "contents": "write",
             "issues": "write",
             "metadata": "read",
+            "secrets": "write",
         },
     },
     "repository-maintenance-writer.json": {

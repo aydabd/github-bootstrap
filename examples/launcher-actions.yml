@@ -7,7 +7,8 @@
 # ──────────────────────────────────────────
 # Secrets:
 #   BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY — PEM private key of your GitHub App (organization mode)
-#   BOOTSTRAP_PROVISIONER_APP_USER_TOKEN — authorized App user access token (personal mode)
+#   BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET — App client secret (personal mode)
+#   BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN — App refresh token (personal mode)
 #
 # Variables (Settings → Secrets and variables → Actions → Variables):
 #   BOOTSTRAP_PROVISIONER_APP_CLIENT_ID   — App client ID (found in the App's settings page)
@@ -136,5 +137,5 @@ jobs:
       require_cleanup_approval: true
     secrets:
       BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-      # Use this instead of the private key for personal-account creation.
-      BOOTSTRAP_PROVISIONER_APP_USER_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_TOKEN }}
+      BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
+      BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}

@@ -37,15 +37,81 @@ usage() {
 Usage:
     github-app-user-token.sh url CLIENT_ID OWNER REDIRECT_URI STATE
     github-app-user-token.sh device-start CLIENT_ID RESPONSE_FILE
-    github-app-user-token.sh device-poll CLIENT_ID RESPONSE_FILE OWNER TOKEN_FILE
-    APP_CLIENT_SECRET_FILE=... APP_REDIRECT_URI=... github-app-user-token.sh exchange CLIENT_ID CODE OWNER TOKEN_FILE
-    APP_CLIENT_SECRET_FILE=... APP_REDIRECT_URI=... github-app-user-token.sh exchange-file CLIENT_ID CODE_FILE OWNER TOKEN_FILE
+    github-app-user-token.sh device-poll CLIENT_ID RESPONSE_FILE OWNER ACCESS_TOKEN_FILE REFRESH_TOKEN_FILE
+    APP_CLIENT_SECRET_FILE=... github-app-user-token.sh refresh CLIENT_ID REFRESH_TOKEN_FILE OWNER ACCESS_TOKEN_FILE REFRESH_TOKEN_FILE_OUT
+    APP_CLIENT_SECRET_FILE=... APP_REDIRECT_URI=... github-app-user-token.sh exchange CLIENT_ID CODE OWNER ACCESS_TOKEN_FILE REFRESH_TOKEN_FILE
+    APP_CLIENT_SECRET_FILE=... APP_REDIRECT_URI=... github-app-user-token.sh exchange-file CLIENT_ID CODE_FILE OWNER ACCESS_TOKEN_FILE REFRESH_TOKEN_FILE
 
-The exchange command verifies the token's /user identity and writes only the
-short-lived access token to TOKEN_FILE with mode 0600. Other OAuth response
-credentials are never written or printed.
+The exchange commands verify the token's /user identity and write protected
+access and refresh token files with mode 0600. Credentials are never printed.
 EOF
     exit 2
+}
+
+refresh_token() {
+    require_command curl
+    require_command jq
+    require_command gh
+    client_id="${2:-}"
+    refresh_token_file="${3:-}"
+    owner="${4:-}"
+    access_token_file="${5:-}"
+    next_refresh_token_file="${6:-}"
+    if [ -z "${APP_CLIENT_SECRET_FILE:-}" ] || [ ! -f "$APP_CLIENT_SECRET_FILE" ]; then
+        echo "APP_CLIENT_SECRET_FILE must name a protected App client secret file" >&2
+        exit 1
+    fi
+    if [ -z "$client_id" ] || [ ! -f "$refresh_token_file" ] || [ -z "$owner" ] ||
+        [ -z "$access_token_file" ] || [ -z "$next_refresh_token_file" ]; then
+        usage
+    fi
+    response_file="$(mktemp)"
+    chmod 600 "$response_file"
+    sanitized_secret_file="$(mktemp)"
+    chmod 600 "$sanitized_secret_file"
+    sanitized_refresh_file="$(mktemp)"
+    chmod 600 "$sanitized_refresh_file"
+    trap 'rm -f "$response_file" "$sanitized_secret_file" "$sanitized_refresh_file"' EXIT
+    tr -d '\r\n' < "$APP_CLIENT_SECRET_FILE" > "$sanitized_secret_file"
+    tr -d '\r\n' < "$refresh_token_file" > "$sanitized_refresh_file"
+    [ -s "$sanitized_secret_file" ] || {
+        echo "App client secret file is empty" >&2
+        exit 1
+    }
+    case "$(cat "$sanitized_refresh_file")" in
+        ghr_*) ;;
+        *)
+            echo "refresh token file must contain a GitHub App refresh token with ghr_ prefix" >&2
+            exit 1
+            ;;
+    esac
+    curl --fail --silent --show-error --location \
+        --header 'Accept: application/json' \
+        --data-urlencode "client_id=$client_id" \
+        --data-urlencode "client_secret@$sanitized_secret_file" \
+        --data-urlencode "grant_type=refresh_token" \
+        --data-urlencode "refresh_token@$sanitized_refresh_file" \
+        'https://github.com/login/oauth/access_token' > "$response_file"
+    access_token="$(jq -er '.access_token // empty' "$response_file")"
+    next_refresh_token="$(jq -er '.refresh_token // empty' "$response_file")"
+    case "$access_token" in
+        ghu_*) ;;
+        *)
+            echo "GitHub returned a non-App user access token; refusing to continue." >&2
+            exit 1
+            ;;
+    esac
+    case "$next_refresh_token" in
+        ghr_*) ;;
+        *)
+            echo "GitHub returned a non-App refresh token; refusing to continue." >&2
+            exit 1
+            ;;
+    esac
+    verify_token_owner "$access_token" "$owner"
+    write_protected_token "$access_token" "$access_token_file"
+    write_protected_token "$next_refresh_token" "$next_refresh_token_file"
+    printf 'Refreshed and verified GitHub App user token for %s; protected files updated.\n' "$owner"
 }
 
 device_start() {
@@ -92,7 +158,8 @@ device_poll() {
     response_file="${3:-}"
     owner="${4:-}"
     token_file="${5:-}"
-    if [ -z "$client_id" ] || [ ! -f "$response_file" ] || [ -z "$owner" ] || [ -z "$token_file" ]; then
+    refresh_token_file="${6:-}"
+    if [ -z "$client_id" ] || [ ! -f "$response_file" ] || [ -z "$owner" ] || [ -z "$token_file" ] || [ -z "$refresh_token_file" ]; then
         usage
     fi
     device_code="$(jq -er '.device_code' "$response_file")"
@@ -117,9 +184,18 @@ device_poll() {
                     exit 1
                     ;;
             esac
+            refresh_token_value="$(jq -er '.refresh_token // empty' "$poll_file")"
+            case "$refresh_token_value" in
+                ghr_*) ;;
+                *)
+                    echo "GitHub did not return an App refresh token; refusing to continue." >&2
+                    exit 1
+                    ;;
+            esac
             verify_token_owner "$token" "$owner"
             write_protected_token "$token" "$token_file"
-            printf 'Verified GitHub App user token for %s; protected token written to %s\n' "$owner" "$token_file"
+            write_protected_token "$refresh_token_value" "$refresh_token_file"
+            printf 'Verified GitHub App user token for %s; protected access and refresh files updated.\n' "$owner"
             exit 0
         fi
         oauth_error="$(jq -r '.error // "missing_access_token"' "$poll_file")"
@@ -172,7 +248,8 @@ exchange_token() {
     code_or_file="${3:-}"
     owner="${4:-}"
     token_file="${5:-}"
-    redirect_uri="${6:-${APP_REDIRECT_URI:-}}"
+    refresh_token_file="${6:-}"
+    redirect_uri="${7:-${APP_REDIRECT_URI:-}}"
     if [ "$command_name" = exchange-file ] && [ ! -f "$code_or_file" ]; then
         echo "OAuth authorization code file is missing" >&2
         exit 1
@@ -181,7 +258,7 @@ exchange_token() {
         echo "APP_CLIENT_SECRET_FILE must name a protected App client secret file" >&2
         exit 1
     fi
-    if [ -z "$client_id" ] || [ -z "$code_or_file" ] || [ -z "$owner" ] || [ -z "$token_file" ] || [ -z "$redirect_uri" ]; then
+    if [ -z "$client_id" ] || [ -z "$code_or_file" ] || [ -z "$owner" ] || [ -z "$token_file" ] || [ -z "$refresh_token_file" ] || [ -z "$redirect_uri" ]; then
         usage
     fi
     response_file="$(mktemp)"
@@ -224,6 +301,7 @@ exchange_token() {
         echo "GitHub OAuth exchange failed: $oauth_error" >&2
         exit 1
     fi
+    refresh_token_value="$(jq -er '.refresh_token // empty' "$response_file")"
     case "$token" in
         ghu_*) ;;
         *)
@@ -233,11 +311,20 @@ exchange_token() {
     esac
     verify_token_owner "$token" "$owner"
     write_protected_token "$token" "$token_file"
-    printf 'Verified GitHub App user token for %s; protected token written to %s\n' "$owner" "$token_file"
+    case "$refresh_token_value" in
+        ghr_*) ;;
+        *)
+            echo "GitHub did not return an App refresh token; refusing to continue." >&2
+            exit 1
+            ;;
+    esac
+    write_protected_token "$refresh_token_value" "$refresh_token_file"
+    printf 'Verified GitHub App user token for %s; protected access and refresh files updated.\n' "$owner"
 }
 
 main() {
     case "${1:-}" in
+        refresh) refresh_token "$@" ;;
         device-start) device_start "$@" ;;
         device-poll) device_poll "$@" ;;
         url) print_url "$@" ;;
