@@ -108,8 +108,6 @@ jobs:
         with:
           client_id: ${{ inputs.client_id }}
           app_private_key: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-          app_client_secret: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
-          app_user_refresh_token: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
           app_owner: ${{ inputs.app_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: e2e-dispatch
