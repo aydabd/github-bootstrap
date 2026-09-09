@@ -52,7 +52,7 @@ runs:
               lint-json)
                 provider_run bash -c "cd \"$WORKING_DIRECTORY\" && find . \\
                   -path './.git' -prune -o -path './node_modules' -prune -o \\
-                  -type f -name '*.json' -exec jq empty {} +"
+                  -type f -name \"*.json\" -exec jq empty {} +"
                 ;;
               lint-yaml) provider_run uv run yamllint --config-file "$WORKING_DIRECTORY/.github/linters/.yaml-lint.yml" "$WORKING_DIRECTORY" ;;
               lint-actions)

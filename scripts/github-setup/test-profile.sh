@@ -150,12 +150,17 @@ for json_quality_file in \
     "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"; do
     grep -q 'provider_run bash -c' "$json_quality_file"
     grep -Eq -- "-path ['\"]\\./\\.git['\"] -prune -o -path ['\"]\\./node_modules['\"] -prune -o" "$json_quality_file"
-    grep -Eq -- "-type f -name ['\"]\\*\.json['\"] -exec jq empty \\{\\} \\+" "$json_quality_file"
+    grep -Fq -- '-type f -name' "$json_quality_file"
+    grep -Fq -- '-exec jq empty {} +' "$json_quality_file"
     if grep -Eq 'while .*provider_run jq empty' "$json_quality_file"; then
         echo "lint-json must enter the provider once per capability: $json_quality_file" >&2
         exit 1
     fi
 done
+grep -Fq -- '-type f -name \"*.json\" -exec jq empty {} +' \
+    "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
+grep -Fq -- '-type f -name \"*.json\" -exec jq empty {} +' \
+    "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
 grep -q 'zizmor==1.29.0' "$repo_root/pyproject.toml"
 grep -q '\- uv=' "$repo_root/environment.yml"
 grep -q 'uv = "' "$repo_root/mise.toml"
