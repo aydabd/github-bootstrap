@@ -18,3 +18,10 @@ the user explicitly requested setup and the required permission is available.
 
 When an issue is too large to implement safely, use `backlog-breakdown` before
 assigning it to implementation.
+
+Before concluding that GitHub authentication is invalid, distinguish sandbox
+connectivity from credential state. Verify the active `personal` profile, then
+retry `gh auth status`, `gh api user`, and the intended issue operation with
+network-enabled execution when the sandbox reports connection failures. Only
+ask the user to re-authenticate after a network-enabled request reaches GitHub
+and returns an authentication error.
