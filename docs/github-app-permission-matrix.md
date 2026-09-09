@@ -6,22 +6,23 @@ matrix retains the operation-level profiles used by the existing bootstrap
 workflows; those profiles must remain within the corresponding App role.
 
 Organization repository creation uses an installation token for the requested `app_owner` only.
-Personal repository creation uses an explicitly supplied GitHub App user access token whose `/user`
-identity is checked against the target owner. The resolver passes permissions explicitly so an
-installation token does not inherit unused permissions from the App installation.
+Personal repository creation exchanges the protected App refresh token for a short-lived GitHub App
+user access token whose `/user` identity is checked against the target owner. The user token also
+updates the rotated refresh secret in the caller repository; the resolver passes installation
+permissions explicitly so organization tokens do not inherit unused permissions.
 
-| Permission profile     | Explicit App permissions                                                                          | Used for                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `repository-creation`  | `organization-administration: write`, `administration: write`, `contents: write`, `issues: write` | Create and configure a repository.                                              |
-| `repository-setup`     | `administration: write`, `contents: write`, `issues: write`                                       | Configure an existing repository.                                               |
-| `e2e-dispatch`         | `administration: write`, `actions: write`, `contents: write`, `issues: write`                     | Dispatch and observe repository-creation workflows for generated E2E scenarios. |
-| `repository-cleanup`   | `administration: write`                                                                           | Delete a failed repository.                                                     |
-| `e2e-lifecycle`        | `administration: write`                                                                           | Archive generated E2E repositories in the isolated E2E owner.                   |
-| `weekly-tooling`       | `contents: write`, `issues: write`, `pull-requests: write`, `workflows: write`                    | Commit tooling updates, action pins, labels, and manage the weekly PR.          |
-| `maintenance-labeling` | `issues: write`, `pull-requests: write`                                                           | Classify trusted Dependabot and release-please PRs.                             |
-| `workflow-approval`    | `actions: write`, `pull-requests: read`                                                           | Approve eligible `action_required` workflow runs only.                          |
-| `maintenance-review`   | `pull-requests: write`                                                                            | Approve eligible maintenance PRs (Reviewer App).                                |
-| `maintenance-merge`    | `contents: write`, `pull-requests: write`                                                         | Enable squash auto-merge on an approved maintenance PR (Writer App).            |
+| Permission profile     | Explicit App permissions                                                                          | Used for                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `repository-creation`  | `organization-administration: write`, `administration: write`, `contents: write`, `issues: write` | Create and configure a repository; personal mode additionally uses App `secrets: write` for refresh rotation. |
+| `repository-setup`     | `administration: write`, `contents: write`, `issues: write`                                       | Configure an existing repository.                                                                             |
+| `e2e-dispatch`         | `administration: write`, `actions: write`, `contents: write`, `issues: write`                     | Dispatch and observe repository-creation workflows for generated E2E scenarios.                               |
+| `repository-cleanup`   | `administration: write`                                                                           | Delete a failed repository.                                                                                   |
+| `e2e-lifecycle`        | `administration: write`                                                                           | Archive generated E2E repositories in the isolated E2E owner.                                                 |
+| `weekly-tooling`       | `contents: write`, `issues: write`, `pull-requests: write`, `workflows: write`                    | Commit tooling updates, action pins, labels, and manage the weekly PR.                                        |
+| `maintenance-labeling` | `issues: write`, `pull-requests: write`                                                           | Classify trusted Dependabot and release-please PRs.                                                           |
+| `workflow-approval`    | `actions: write`, `pull-requests: read`                                                           | Approve eligible `action_required` workflow runs only.                                                        |
+| `maintenance-review`   | `pull-requests: write`                                                                            | Approve eligible maintenance PRs (Reviewer App).                                                              |
+| `maintenance-merge`    | `contents: write`, `pull-requests: write`                                                         | Enable squash auto-merge on an approved maintenance PR (Writer App).                                          |
 
 | App permission                | Level | Endpoint or operation                                                      | Why it is required                                                                                     |
 | ----------------------------- | ----- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -32,6 +33,7 @@ installation token does not inherit unused permissions from the App installation
 | `pull-requests`               | write | Weekly tooling PR creation, updates, and auto-merge                        | Run the App-authenticated weekly tooling automation.                                                   |
 | `workflows`                   | write | Create refs containing workflow-file updates                               | Update action pins in workflow files through the Git database API.                                     |
 | `actions`                     | write | `POST /repos/{owner}/{repo}/actions/runs/{run_id}/approve`                 | Approve an eligible workflow run after all identity and freshness checks pass.                         |
+| `secrets`                     | write | `PUT /repos/{owner}/{repo}/actions/secrets/{secret_name}`                  | Persist the rotated personal App refresh token in the caller repository.                               |
 
 `metadata: read` is automatically available for repository access. Members, security-events,
 and unrelated-owner permissions are not granted by this resolver. The `actions: write`
