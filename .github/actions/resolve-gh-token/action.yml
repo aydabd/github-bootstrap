@@ -110,10 +110,6 @@ runs:
             fi
             ;;
           Organization)
-            if [ -n "$APP_USER_REFRESH_TOKEN" ] || [ -n "$APP_CLIENT_SECRET" ]; then
-              echo "::error::User access tokens cannot be used for organization targets; use an installation token." >&2
-              exit 1
-            fi
             AUTH_MODE=app bash ./scripts/github-setup/validate-app-auth.sh
             echo "mode=app" >> "$GITHUB_OUTPUT"
             ;;

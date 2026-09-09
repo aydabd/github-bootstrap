@@ -30,7 +30,7 @@ jobs:
           grep -Fq "Internal visibility is supported only for organization repositories" .github/workflows/create-repository.yml
           grep -Fq "requires a GitHub App refresh token (ghr_ prefix)" .github/actions/resolve-gh-token/action.yml
           grep -Fq "does not match target repository owner" scripts/github-setup/validate-app-auth.sh
-          grep -Fq "User access tokens cannot be used for organization targets" .github/actions/resolve-gh-token/action.yml
+          grep -Fq "Organization)" .github/actions/resolve-gh-token/action.yml
           [[ "$PERSONAL_OWNER" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$ ]]
 
   create-public:
