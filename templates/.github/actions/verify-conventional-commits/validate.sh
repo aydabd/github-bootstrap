@@ -30,8 +30,8 @@ fi
 if [ -n "$CONFIG_PATH" ]; then
     # shellcheck disable=SC2016
     mise x node@26.6.0 -- npm exec --yes \
-        --package=@commitlint/cli@19.8.1 \
-        --package=@commitlint/config-conventional@19.8.1 \
+        --package=@commitlint/cli@21.2.2 \
+        --package=@commitlint/config-conventional@21.2.2 \
         -- bash -euo pipefail -c '
             while IFS= read -r -d "" message; do
                 printf "%s\\n" "$message" | commitlint --config "$CONFIG_PATH"
@@ -40,8 +40,8 @@ if [ -n "$CONFIG_PATH" ]; then
 else
     # shellcheck disable=SC2016
     mise x node@26.6.0 -- npm exec --yes \
-        --package=@commitlint/cli@19.8.1 \
-        --package=@commitlint/config-conventional@19.8.1 \
+        --package=@commitlint/cli@21.2.2 \
+        --package=@commitlint/config-conventional@21.2.2 \
         -- bash -euo pipefail -c '
             package_root="$(cd "$(dirname "$(command -v commitlint)")/.." && pwd)"
             while IFS= read -r -d "" message; do

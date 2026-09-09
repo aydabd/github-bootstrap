@@ -9,12 +9,9 @@
 # Prerequisites in YOUR launcher repository
 # ──────────────────────────────────────────
 # Secrets:
-#   BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY — PEM private key of your GitHub App (organization mode)
-#   BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET — App client secret (personal mode)
-#   BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN — App refresh token (personal mode)
-#
-# Variables (Settings → Secrets and variables → Actions → Variables):
-#   BOOTSTRAP_PROVISIONER_APP_CLIENT_ID   — App client ID (found in the App's settings page)
+#   BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY — PEM private key (production-provisioning)
+#   BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET — App client secret (production-provisioning)
+#   BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN — App refresh token (production-provisioning)
 #
 # GitHub App requirements:
 #   Same as launcher-actions.yml. See that file for the full list.
@@ -28,7 +25,7 @@
 # ──────
 # 1. Copy this file to .github/workflows/bootstrap-repository-terraform.yml
 # 2. Replace BOOTSTRAP_OWNER with the GitHub user/org that owns github-bootstrap
-# 3. Set the protected App secret for the target type and BOOTSTRAP_PROVISIONER_APP_CLIENT_ID variable
+# 3. Set the production-provisioning Environment credentials listed above
 # 4. Create the bootstrap-cleanup environment (or set require_cleanup_approval: false)
 # 5. Go to Actions → Bootstrap Repository (Terraform) → Run workflow
 # ============================================================================
@@ -118,7 +115,7 @@ jobs:
       release_tool: ${{ inputs.release_tool }}
       cleanup_on_failure: ${{ inputs.cleanup_on_failure }}
       # GitHub App authentication
-      client_id: ${{ vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID }}
+      provisioner_profile: production-provisioner
       app_owner: ${{ inputs.repo_owner }}
       # Restrict which owners this launcher may target.
       # Use a fixed owner or a repo/org variable — NOT a user-controlled input.
@@ -133,6 +130,6 @@ jobs:
       # Needs a "bootstrap-cleanup" environment in THIS repository.
       require_cleanup_approval: true
     secrets:
-      BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY }}
-      BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET }}
-      BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN }}
+      BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY }}
+      BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET }}
+      BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN }}

@@ -5,13 +5,15 @@ allowed_owners="${1:-}"
 repository_file="${2:-}"
 excluded_names="${3:-}"
 now_epoch="${4:-}"
+min_age_days="${5:-90}"
 
-if [ -z "$allowed_owners" ] || [ ! -s "$repository_file" ] || ! [[ "$now_epoch" =~ ^[0-9]+$ ]]; then
+if [ -z "$allowed_owners" ] || [ ! -s "$repository_file" ] || ! [[ "$now_epoch" =~ ^[0-9]+$ ]] ||
+    ! [[ "$min_age_days" =~ ^[0-9]+$ ]]; then
     echo "E2E cleanup candidate inputs are incomplete" >&2
     exit 1
 fi
 
-cutoff_epoch=$((now_epoch - 90 * 24 * 60 * 60))
+cutoff_epoch=$((now_epoch - min_age_days * 24 * 60 * 60))
 jq -e \
     --arg allowed_owners "$allowed_owners" \
     --arg excluded_names "$excluded_names" \

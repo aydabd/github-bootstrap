@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMMITLINT_CLI_VERSION="19.8.1"
-COMMITLINT_CONFIG_CONVENTIONAL_VERSION="19.8.1"
+COMMITLINT_CLI_VERSION="21.2.2"
+COMMITLINT_CONFIG_CONVENTIONAL_VERSION="21.2.2"
 
 policy_actions=(
     ".github/actions/verify-conventional-commits/action.yml"

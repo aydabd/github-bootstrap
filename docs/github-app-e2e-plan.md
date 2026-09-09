@@ -9,8 +9,8 @@ The follow-up E2E change should cover both supported owner types:
    permission matrix. Exchange the one-time manifest code for the App credentials programmatically.
 2. For organization coverage, install it on a disposable test organization. For personal coverage,
    authorize it for a disposable test user and provide the App client secret and refresh token only as
-   protected caller/environment secrets (`BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET` and
-   `BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN`, a `ghr_` GitHub App refresh token).
+   protected `e2e-testing` Environment secrets (`BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET` and
+   `BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN`, a `ghr_` GitHub App refresh token).
 3. Keep private keys, client secrets, refresh tokens, and user access tokens in an ephemeral runner
    or external secret manager, never in Git, a generated repository, or a test repository secret.
    Store only the Client ID as non-secret configuration.

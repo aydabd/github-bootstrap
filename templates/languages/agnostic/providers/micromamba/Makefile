@@ -86,7 +86,7 @@ setup-env: ## Setup isolated environment with micromamba (skip with USE_MAMBA=0)
 			fi; \
 		if ! $(call mamba_env_exists); then \
 			echo "Creating environment '$(MAMBA_ENV)'..."; \
-			$(MICROMAMBA) create -y -f $(MAMBA_SPEC); \
+			$(MICROMAMBA) create -y -n $(MAMBA_ENV) -f $(MAMBA_SPEC); \
 		elif [ "$(CI)" != "true" ]; then \
 			$(MICROMAMBA) env update -n $(MAMBA_ENV) -f $(MAMBA_SPEC); \
 		fi; \

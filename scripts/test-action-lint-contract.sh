@@ -54,7 +54,7 @@ done
 # conda environment.
 for project in "$repo_root/pyproject.toml" \
     "$repo_root/templates/languages/agnostic/pyproject.toml"; do
-    assert_contains "zizmor==1.29.0" "$project"
+    assert_contains "zizmor==1.30.0" "$project"
 done
 
 echo "Action lint contract checks passed."

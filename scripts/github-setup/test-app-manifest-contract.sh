@@ -33,6 +33,7 @@ assert manifest["default_permissions"] == {
     "actions": "write",
     "administration": "write",
     "contents": "write",
+    "environments": "write",
     "issues": "write",
     "metadata": "read",
     "secrets": "write",
@@ -143,6 +144,7 @@ expected = {
             "actions": "write",
             "administration": "write",
             "contents": "write",
+            "environments": "write",
             "issues": "write",
             "metadata": "read",
             "secrets": "write",
@@ -192,7 +194,8 @@ for required_text in \
     "No App is a ruleset bypass actor" \
     "\`administration: write\` permission includes repository deletion capability" \
     "must never delete arbitrary or" \
-    "BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY" \
+    "BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY" \
+    "BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY" \
     "E2E"; do
     grep -Fq "$required_text" "$trust_boundary_doc" || {
         echo "expected '$required_text' in $trust_boundary_doc" >&2

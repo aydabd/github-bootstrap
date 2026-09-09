@@ -39,6 +39,8 @@ for fixture in wrong-owner wrong-name unarchived unmarked recent excluded; do
     fi
 done
 
+"$validator" "e2e-owner" "$tmp_dir/recent.json" "e2e-owner/github-bootstrap" "$now_epoch" 0
+
 if "$validator" "e2e-owner" "$tmp_dir/eligible.json" "E2E-OWNER/bootstrap-e2e-123-1-system-embedded-create-repository" "$now_epoch"; then
     echo "case-variant exclusion was ignored" >&2
     exit 1
@@ -49,5 +51,7 @@ grep -Fq "\"\$validator\" \"\$ALLOWED_OWNERS\"" "$common_script"
 grep -Fq 'gh api --include --method DELETE' "$common_script"
 grep -Fq 'GITHUB_STEP_SUMMARY' "$common_script"
 grep -Fq 'HTTP/[0-9.]+ 404' "$common_script"
+grep -Fq 'MIN_AGE_DAYS' "$common_script"
+grep -Fq 'min_age_days' "$common_script"
 
 echo "E2E cleanup common contract passed."

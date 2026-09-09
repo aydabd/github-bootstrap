@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: "17 3 * * 0"
   workflow_dispatch:
+    inputs:
+      min_age_days:
+        description: "Optional retention age in days before deletion (90 is conservative)"
+        required: false
+        default: "90"
+        type: string
 
 permissions:
   contents: read
@@ -24,6 +30,7 @@ jobs:
         uses: ./.github/actions/resolve-gh-token
         with:
           client_id: ${{ vars.BOOTSTRAP_E2E_APP_CLIENT_ID }}
+          refresh_token_secret: ""
           app_private_key: ${{ secrets.BOOTSTRAP_E2E_APP_PRIVATE_KEY }}
           app_owner: ${{ vars.BOOTSTRAP_E2E_APP_OWNER }}
           target_owner: ${{ vars.BOOTSTRAP_E2E_APP_OWNER }}
@@ -36,6 +43,7 @@ jobs:
           APP_OWNER: ${{ vars.BOOTSTRAP_E2E_APP_OWNER }}
           CENTRAL_REPOSITORY: ${{ vars.BOOTSTRAP_E2E_CENTRAL_REPOSITORY }}
           BOOTSTRAP_REPOSITORY: ${{ github.repository }}
+          MIN_AGE_DAYS: ${{ inputs.min_age_days || '90' }}
           VALIDATOR: ${{ github.workspace }}/scripts/github-setup/validate-e2e-cleanup-candidate.sh
         shell: bash
         run: scripts/github-setup/cleanup-e2e-user-repositories.sh

@@ -9,21 +9,29 @@ source "$script_dir/gh-common.sh"
 
 usage() {
     cat >&2 << 'EOF'
-Usage: install-app-secrets.sh REPOSITORY CLIENT_ID_FILE PRIVATE_KEY_FILE CLIENT_SECRET_FILE REFRESH_TOKEN_FILE
+Usage: install-app-secrets.sh REPOSITORY PROFILE CLIENT_ID_FILE PRIVATE_KEY_FILE CLIENT_SECRET_FILE REFRESH_TOKEN_FILE
 
-Installs the GitHub-generated private key, App client secret, and ghr_-prefixed
-App refresh token as repository secrets, and the client ID as a repository
-variable. The refresh token is exchanged by workflows at runtime.
+Installs the GitHub App client ID as an environment variable and the
+GitHub-generated private key, App client secret, and ghr_-prefixed App refresh
+token as environment secrets for the selected profile. The refresh token is
+exchanged by workflows at runtime.
 EOF
     exit 2
 }
 
 repo="${1:-}"
-client_id_file="${2:-}"
-private_key_file="${3:-}"
-client_secret_file="${4:-}"
-refresh_token_file="${5:-}"
-[ "$#" -eq 5 ] || usage
+profile="${2:-}"
+client_id_file="${3:-}"
+private_key_file="${4:-}"
+client_secret_file="${5:-}"
+refresh_token_file="${6:-}"
+[ "$#" -eq 6 ] || usage
+profile_loader="$script_dir/app-credential-profile.sh"
+client_id_variable="$("$profile_loader" "$profile" client_id_variable)"
+private_key_secret="$("$profile_loader" "$profile" private_key_secret)"
+client_secret_secret="$("$profile_loader" "$profile" client_secret_secret)"
+refresh_token_secret="$("$profile_loader" "$profile" refresh_token_secret)"
+environment="$("$profile_loader" "$profile" environment)"
 require_command gh
 owner_pattern='[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?'
 [[ "$repo" =~ ^${owner_pattern}/[A-Za-z0-9._-]+$ ]] || {
@@ -72,8 +80,8 @@ tr -d '\r' < "$private_key_file" > "$sanitized_private_key_file"
 tr -d '\r\n' < "$client_secret_file" > "$sanitized_client_secret_file"
 printf '%s' "$refresh_token" > "$sanitized_token_file"
 
-gh variable set BOOTSTRAP_PROVISIONER_APP_CLIENT_ID --repo "$repo" --body "$client_id"
-gh secret set BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY --repo "$repo" < "$sanitized_private_key_file"
-gh secret set BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET --repo "$repo" < "$sanitized_client_secret_file"
-gh secret set BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN --repo "$repo" < "$sanitized_token_file"
+gh variable set "$client_id_variable" --repo "$repo" --env "$environment" --body "$client_id"
+gh secret set "$private_key_secret" --repo "$repo" --env "$environment" < "$sanitized_private_key_file"
+gh secret set "$client_secret_secret" --repo "$repo" --env "$environment" < "$sanitized_client_secret_file"
+gh secret set "$refresh_token_secret" --repo "$repo" --env "$environment" < "$sanitized_token_file"
 printf 'Installed App client ID configuration and three protected App credentials for %s\n' "$repo"

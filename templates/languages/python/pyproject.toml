@@ -23,7 +23,7 @@ dev = [
   "pre-commit==4.6.2",
   "yamllint==1.38.0",
   "editorconfig-checker==3.11.1",
-  "zizmor==1.29.0",
+  "zizmor==1.30.0",
   "ruff",
   "mypy",
   "types-PyYAML",

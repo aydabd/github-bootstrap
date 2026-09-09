@@ -109,24 +109,6 @@ updates:
       prefix: "chore(deps)"
       include: "scope"
 
-  - package-ecosystem: "poetry"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    groups:
-      poetry:
-        patterns:
-          - "*"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "python"
-    pull-request-branch-name:
-      separator: "-"
-    commit-message:
-      prefix: "chore(deps)"
-      include: "scope"
-
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:

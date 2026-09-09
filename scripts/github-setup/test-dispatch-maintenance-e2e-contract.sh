@@ -60,7 +60,7 @@ assert_contains '-f preset=centralized-monorepo'
 assert_contains '-f languages=all'
 assert_contains '-f cleanup_after_test=true'
 assert_contains 'isolated_existing'
-assert_contains "vars.BOOTSTRAP_PROVISIONER_APP_CLIENT_ID"
+assert_contains "vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID"
 assert_contains '[[ "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]]'
 
 # A re-label or repeated synchronize must not stack duplicate E2E runs: a

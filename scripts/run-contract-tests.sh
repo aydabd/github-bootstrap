@@ -18,6 +18,7 @@ contract_tests=(
     "$script_dir/test-weekly-tooling-lock-refresh-contract.sh"
     "$script_dir/check-commit-policy-fixtures.sh"
     "$script_dir/github-setup/test-app-auth-contract.sh"
+    "$script_dir/github-setup/test-app-credential-profile-contract.sh"
     "$script_dir/github-setup/test-app-manifest-contract.sh"
     "$script_dir/github-setup/test-app-user-token-contract.sh"
     "$script_dir/github-setup/test-commit-verification-contract.sh"
@@ -37,6 +38,8 @@ contract_tests=(
     "$script_dir/github-setup/test-label-creation-contract.sh"
     "$script_dir/github-setup/test-payloads.sh"
     "$script_dir/github-setup/test-personal-app-e2e-contract.sh"
+    "$script_dir/github-setup/test-generated-e2e-concurrency-contract.sh"
+    "$script_dir/github-setup/test-refresh-token-secret-scope-contract.sh"
     "$script_dir/github-setup/test-centralized-monorepo-e2e-contract.sh"
     "$script_dir/github-setup/test-profile.sh"
 )

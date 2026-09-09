@@ -14,6 +14,8 @@ grep -Fq 'BOOTSTRAP_E2E_APP_PRIVATE_KEY' "$workflow"
 grep -Fq 'E2E_GH_TOKEN' "$workflow"
 grep -Fq 'BOOTSTRAP_E2E_ALLOWED_OWNERS' "$workflow"
 grep -Fq 'BOOTSTRAP_E2E_CENTRAL_REPOSITORY' "$workflow"
+grep -Fq 'min_age_days:' "$workflow"
+grep -Fq "MIN_AGE_DAYS: \${{ inputs.min_age_days || '90' }}" "$workflow"
 
 if grep -Eq 'owner_type=|repos_endpoint=|/orgs/|/users/|gh api --include --method DELETE' "$workflow"; then
     echo "user cleanup workflow contains owner-selection or cleanup implementation" >&2

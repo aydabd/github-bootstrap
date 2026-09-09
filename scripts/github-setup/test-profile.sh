@@ -88,6 +88,10 @@ for creation_workflow in \
     grep -q 'OWNER/REPOSITORY@REF' "$creation_workflow"
     grep -q "OPTIONAL_FEATURES=\"\${{ inputs.optional_features || 'none' }}\"" "$creation_workflow"
 done
+grep -q 'for file in .github/workflows/\*.yml' \
+    "$repo_root/.github/workflows/terraform-create-repository.yml"
+grep -q 'commit-policy.yml) keep=true' \
+    "$repo_root/.github/workflows/terraform-create-repository.yml"
 if grep -Eq '^    if: .*matrix\.' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"; then
     echo "E2E workflow must not use matrix context in a job-level condition" >&2
     exit 1
@@ -107,7 +111,11 @@ for runtime_input in python_version node_version go_version java_version; do
         "$repo_root/.github/workflows/test-repository-creation.yml"
 done
 grep -q "REQUESTED_DELIVERY: \${{ inputs.delivery }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
-grep -q -- "--field client_id=\"\$PROVISIONER_CLIENT_ID\"" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+grep -q -- '--field provisioner_profile=e2e-provisioner' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+if grep -q -- '--field client_id=' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"; then
+    echo "generated E2E must not pass the removed client_id input" >&2
+    exit 1
+fi
 grep -q -- "--field app_owner=\"\$APP_OWNER\"" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 grep -q -- "--field allowed_repo_owners=\"\$OWNER\"" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 grep -q -- '--json status,conclusion,url' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
@@ -223,7 +231,7 @@ grep -Fq -- '-type f -name \"*.json\" -exec jq empty {} +' \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -Fq -- '-type f -name \"*.json\" -exec jq empty {} +' \
     "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
-grep -q 'zizmor==1.29.0' "$repo_root/pyproject.toml"
+grep -q 'zizmor==1.30.0' "$repo_root/pyproject.toml"
 grep -q '\- uv=' "$repo_root/environment.yml"
 grep -q 'uv = "' "$repo_root/mise.toml"
 grep -q 'actionlint=1.7.12' "$repo_root/environment.yml"
@@ -260,6 +268,10 @@ grep -q "ENV_MANAGER=\"\\\$ENVIRONMENT_MANAGER\" make install" \
     "$repo_root/templates/.github/workflows/quality-capability.yml"
 grep -q "ENV_MANAGER=\"\\\$ENVIRONMENT_MANAGER\" make install" \
     "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+if grep -R -q 'package-ecosystem: "poetry"' "$repo_root/templates"; then
+    echo "Dependabot templates must not use the unsupported poetry ecosystem" >&2
+    exit 1
+fi
 if grep -q 'shellcheck' \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml" \
     "$repo_root/templates/.github/actions/quality/run-capability/action.yml" \
@@ -276,10 +288,13 @@ for provider_file in "$repo_root"/templates/languages/*/providers/mise/mise.toml
     grep -q 'uv = "' "$provider_file"
 done
 for lang_dir in "$repo_root"/templates/languages/*/; do
-    grep -q 'zizmor==1.29.0' "$lang_dir/pyproject.toml"
+    grep -q 'zizmor==1.30.0' "$lang_dir/pyproject.toml"
 done
 for provider_file in "$repo_root"/templates/languages/*/providers/micromamba/environment.yml; do
     grep -q 'terraform' "$provider_file"
+done
+for provider_makefile in "$repo_root"/templates/languages/*/providers/micromamba/Makefile; do
+    grep -q "\$(MICROMAMBA) create -y -n \$(MAMBA_ENV) -f \$(MAMBA_SPEC)" "$provider_makefile"
 done
 if jq -e '.profiles.baseline.bundles | index("planning")' "$profile_file" > /dev/null; then
     echo "planning bundle unexpectedly enabled in baseline profile" >&2
