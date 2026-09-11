@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/aydabd/github-bootstrap/compare/v2.4.0...v2.5.0) (2026-09-11)
+
+
+### Features
+
+* make issue and project workflow canonical ([#217](https://github.com/aydabd/github-bootstrap/issues/217)) ([f2e29a8](https://github.com/aydabd/github-bootstrap/commit/f2e29a8113cc512a134ef37644b80d6754bb24e3))
+
 ## [2.4.0](https://github.com/aydabd/github-bootstrap/compare/v2.3.1...v2.4.0) (2026-09-11)
 
 
