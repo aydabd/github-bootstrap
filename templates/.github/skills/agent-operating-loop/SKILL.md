@@ -19,20 +19,20 @@ ad-hoc workflow.
 
 ## Lifecycle gates
 
-| Gate | Required skill | Evidence |
-| --- | --- | --- |
-| Start and orient | `using-superpowers` | profile, repository, branch, Project state |
-| Select work | `roadmap-prioritization` | ranked issue JSON |
-| Refine issue | `backlog-breakdown` | complete issue contract |
-| Understand and design | `brainstorming` | approved issue design |
-| Plan | `writing-plans` | ordered Issue checklist |
-| Isolate | `using-git-worktrees` | branch/worktree mapping |
-| Implement | `test-driven-development` | observed red, green, refactor |
-| Debug | `systematic-debugging` | evidence and root cause |
-| Parallelize | `dispatching-parallel-agents` | dependency/file-overlap JSON |
-| Review | `requesting-code-review`, `receiving-code-review` | resolved or justified comments |
-| Verify | `verification-before-completion` | machine-readable test evidence |
-| Finish | `finishing-a-development-branch` | merge, cleanup, and handoff state |
+| Gate                  | Required skill                                    | Evidence                                   |
+| --------------------- | ------------------------------------------------- | ------------------------------------------ |
+| Start and orient      | `using-superpowers`                               | profile, repository, branch, Project state |
+| Select work           | `roadmap-prioritization`                          | ranked issue JSON                          |
+| Refine issue          | `backlog-breakdown`                               | complete issue contract                    |
+| Understand and design | `brainstorming`                                   | approved issue design                      |
+| Plan                  | `writing-plans`                                   | ordered Issue checklist                    |
+| Isolate               | `using-git-worktrees`                             | branch/worktree mapping                    |
+| Implement             | `test-driven-development`                         | observed red, green, refactor              |
+| Debug                 | `systematic-debugging`                            | evidence and root cause                    |
+| Parallelize           | `dispatching-parallel-agents`                     | dependency/file-overlap JSON               |
+| Review                | `requesting-code-review`, `receiving-code-review` | resolved or justified comments             |
+| Verify                | `verification-before-completion`                  | machine-readable test evidence             |
+| Finish                | `finishing-a-development-branch`                  | merge, cleanup, and handoff state          |
 
 ## Start and selection
 

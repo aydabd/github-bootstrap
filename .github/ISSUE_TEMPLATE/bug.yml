@@ -8,21 +8,25 @@ body:
     attributes:
       label: Summary
       description: Describe the incorrect behavior in plain language.
-    validations: {required: true}
+    validations:
+      required: true
   - type: textarea
     id: evidence
     attributes:
       label: Evidence
       description: Include failing commands or observations and redact secrets.
-    validations: {required: true}
+    validations:
+      required: true
   - type: textarea
     id: expected
     attributes:
       label: Expected and actual behavior
-    validations: {required: true}
+    validations:
+      required: true
   - type: textarea
     id: verification
     attributes:
       label: Acceptance and verification
       description: State the smallest observable fix and exact test command.
-    validations: {required: true}
+    validations:
+      required: true

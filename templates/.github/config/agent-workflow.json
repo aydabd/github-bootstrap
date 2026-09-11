@@ -21,41 +21,88 @@
   },
   "project": {
     "fields": [
-      {"name": "Status", "required": true, "options": ["Backlog", "Spec Needed", "Spec Ready", "In Progress", "Blocked-Needs-Human", "Done"]},
-      {"name": "Priority", "required": true, "options": ["P0", "P1", "P2", "P3", "P4"]},
-      {"name": "Target release", "required": true, "options": ["Unscheduled"]},
-      {"name": "Area", "required": true, "options": ["Process", "Security", "Repository", "CI", "Templates", "Tooling"]},
-      {"name": "Work type", "required": true, "options": ["Epic", "Story", "Task", "Bug", "Security", "Research", "Maintenance"]},
-      {"name": "Risk", "required": true, "options": ["Low", "Medium", "High"]},
-      {"name": "Effort", "required": true, "options": ["XS", "S", "M", "L", "XL"]},
-      {"name": "Parent issue", "required": true},
-      {"name": "Sub-issues progress", "required": true}
+      {
+        "name": "Status",
+        "required": true,
+        "options": [
+          "Backlog",
+          "Spec Needed",
+          "Spec Ready",
+          "In Progress",
+          "Blocked-Needs-Human",
+          "Done"
+        ]
+      },
+      { "name": "Priority", "required": true, "options": ["P0", "P1", "P2", "P3", "P4"] },
+      { "name": "Target release", "required": true, "options": ["Unscheduled"] },
+      {
+        "name": "Area",
+        "required": true,
+        "options": ["Process", "Security", "Repository", "CI", "Templates", "Tooling"]
+      },
+      {
+        "name": "Work type",
+        "required": true,
+        "options": ["Epic", "Story", "Task", "Bug", "Security", "Research", "Maintenance"]
+      },
+      { "name": "Risk", "required": true, "options": ["Low", "Medium", "High"] },
+      { "name": "Effort", "required": true, "options": ["XS", "S", "M", "L", "XL"] },
+      { "name": "Parent issue", "required": true },
+      { "name": "Sub-issues progress", "required": true }
     ],
     "views": [
-      {"name": "Roadmap", "layout": "table", "filter": ""},
-      {"name": "Ready to work", "layout": "table", "filter": "status:\"Spec Ready\" OR status:\"In Progress\""},
-      {"name": "Epics", "layout": "table", "filter": "work-type:Epic"},
-      {"name": "By release", "layout": "board", "filter": ""}
+      { "name": "Roadmap", "layout": "table", "filter": "" },
+      {
+        "name": "Ready to work",
+        "layout": "table",
+        "filter": "status:\"Spec Ready\" OR status:\"In Progress\""
+      },
+      { "name": "Epics", "layout": "table", "filter": "work-type:Epic" },
+      { "name": "By release", "layout": "board", "filter": "" }
     ]
   },
   "issue_templates": [
-    {"name": "Epic", "file": "epic.yml", "parent": false},
-    {"name": "Story", "file": "story.yml", "parent": true},
-    {"name": "Task", "file": "task.yml", "parent": true},
-    {"name": "Bug", "file": "bug.yml", "parent": true},
-    {"name": "Security", "file": "security.yml", "parent": true}
+    { "name": "Epic", "file": "epic.yml", "parent": false },
+    { "name": "Story", "file": "story.yml", "parent": true },
+    { "name": "Task", "file": "task.yml", "parent": true },
+    { "name": "Bug", "file": "bug.yml", "parent": true },
+    { "name": "Security", "file": "security.yml", "parent": true }
   ],
   "lifecycle": [
-    {"gate": "select-next-work", "skill": "roadmap-prioritization", "evidence": "ranked issue JSON"},
-    {"gate": "refine-issue", "skill": "backlog-breakdown", "evidence": "complete issue contract"},
-    {"gate": "design", "skill": "brainstorming", "evidence": "approved issue design"},
-    {"gate": "plan", "skill": "writing-plans", "evidence": "ordered issue checklist"},
-    {"gate": "isolate", "skill": "using-git-worktrees", "evidence": "branch and worktree JSON"},
-    {"gate": "implement", "skill": "test-driven-development", "evidence": "red-green-refactor evidence"},
-    {"gate": "parallelize", "skill": "dispatching-parallel-agents", "evidence": "dependency and file-overlap JSON"},
-    {"gate": "triage", "skill": "test-log-triage", "evidence": "classified machine-readable test result"},
-    {"gate": "verify", "skill": "verification-before-completion", "evidence": "machine-readable test results"},
-    {"gate": "improve-process", "skill": "using-superpowers", "evidence": "reusable process change or explicit none"}
+    {
+      "gate": "select-next-work",
+      "skill": "roadmap-prioritization",
+      "evidence": "ranked issue JSON"
+    },
+    { "gate": "refine-issue", "skill": "backlog-breakdown", "evidence": "complete issue contract" },
+    { "gate": "design", "skill": "brainstorming", "evidence": "approved issue design" },
+    { "gate": "plan", "skill": "writing-plans", "evidence": "ordered issue checklist" },
+    { "gate": "isolate", "skill": "using-git-worktrees", "evidence": "branch and worktree JSON" },
+    {
+      "gate": "implement",
+      "skill": "test-driven-development",
+      "evidence": "red-green-refactor evidence"
+    },
+    {
+      "gate": "parallelize",
+      "skill": "dispatching-parallel-agents",
+      "evidence": "dependency and file-overlap JSON"
+    },
+    {
+      "gate": "triage",
+      "skill": "test-log-triage",
+      "evidence": "classified machine-readable test result"
+    },
+    {
+      "gate": "verify",
+      "skill": "verification-before-completion",
+      "evidence": "machine-readable test results"
+    },
+    {
+      "gate": "improve-process",
+      "skill": "using-superpowers",
+      "evidence": "reusable process change or explicit none"
+    }
   ],
   "selection": {
     "actionable_statuses": ["Spec Ready", "In Progress"],

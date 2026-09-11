@@ -8,25 +8,29 @@ body:
     attributes:
       label: Summary
       description: State the concrete change in one or two sentences.
-    validations: {required: true}
+    validations:
+      required: true
   - type: textarea
     id: scope
     attributes:
       label: Scope and requirement
       description: State the exact change and requirement it satisfies.
-    validations: {required: true}
+    validations:
+      required: true
   - type: input
     id: validation
     attributes:
       label: Validation command
       description: Give the exact command that proves this task is complete.
-    validations: {required: true}
+    validations:
+      required: true
   - type: textarea
     id: acceptance
     attributes:
       label: Acceptance and test traceability
       description: Name tests at the lowest suitable layer.
-    validations: {required: true}
+    validations:
+      required: true
   - type: input
     id: parent
     attributes:

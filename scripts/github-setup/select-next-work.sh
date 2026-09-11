@@ -50,7 +50,7 @@ else
     items_json="$(gh project item-list "$number" --owner "$owner" --limit 200 --format json)"
 fi
 
-if ! printf '%s' "$items_json" | jq -e '.items | type == "array"' >/dev/null 2>&1; then
+if ! printf '%s' "$items_json" | jq -e '.items | type == "array"' > /dev/null 2>&1; then
     jq -cn --arg repository "$repository" \
         '{schema_version:1,result:"FAIL",repository:$repository,checks:[{result:"FAIL",check:"project-items",evidence:{valid:false},error_code:"INVALID_PROJECT_DATA",remediation:"provide GitHub Project JSON with an items array"}],summary:{passed:0,failed:1,skipped:0}}'
     exit 1
@@ -60,13 +60,13 @@ candidates="$(printf '%s' "$items_json" | jq -c --argjson policy "$policy" '
     def priority_rank: .priority as $priority | ($policy.priority_order | index($priority)) // 99;
     def status_rank: .status as $status | (["In Progress", "Spec Ready"] | index($status)) // 99;
     def security_rank:
-      (.labels // []) as $labels
-      | if any($labels[]; . as $label | ($policy.security_labels | index($label)) != null) then 0 else 1 end;
+        (.labels // []) as $labels
+        | if any($labels[]; . as $label | ($policy.security_labels | index($label)) != null) then 0 else 1 end;
     [.items[]
-      | .status as $status
-      | select(($policy.actionable_statuses | index($status)) != null)
-      | {number, title, status, priority, area, work_type, parent_issue, labels}
-      | . + {rank: [security_rank, priority_rank, status_rank, (.number // 999999)]}
+        | .status as $status
+        | select(($policy.actionable_statuses | index($status)) != null)
+        | {number, title, status, priority, area, work_type, parent_issue, labels}
+        | . + {rank: [security_rank, priority_rank, status_rank, (.number // 999999)]}
     ] | sort_by(.rank) | map(del(.rank))
 ')"
 

@@ -27,7 +27,7 @@ jq -e '
     (.issue_templates | map(.name) | index("Epic")) != null and
     (.issue_templates | map(.name) | index("Task")) != null and
     (.lifecycle | map(.gate) | index("select-next-work")) != null
-' "$manifest" >/dev/null || fail "manifest schema or required values are invalid"
+' "$manifest" > /dev/null || fail "manifest schema or required values are invalid"
 
 result="$($validator --repository "$repo_root")"
 printf '%s\n' "$result" | jq -e '
@@ -36,9 +36,9 @@ printf '%s\n' "$result" | jq -e '
     (.checks | type == "array" and length > 0) and
     (.summary.failed == 0) and
     (.summary.skipped == 0)
-' >/dev/null || fail "validator did not produce a passing deterministic JSON result"
+' > /dev/null || fail "validator did not produce a passing deterministic JSON result"
 
-if printf '%s\n' "$result" | rg -i 'private[_ -]?key|client[_ -]?secret|refresh[_ -]?token|bearer|gho_|ghp_|ghr_' >/dev/null; then
+if printf '%s\n' "$result" | grep -Eiq 'private[_ -]?key|client[_ -]?secret|refresh[_ -]?token|bearer|gho_|ghp_|ghr_'; then
     fail "validator output contains credential-like material"
 fi
 
@@ -46,7 +46,7 @@ grep -Fq 'desired_status="Spec Needed"' "$repo_root/templates/.github/workflows/
     fail "project status sync does not use Spec Needed"
 grep -Fq 'desired_status="In Progress"' "$repo_root/templates/.github/workflows/project-status-sync.yml" ||
     fail "project status sync does not use In Progress"
-if rg -n 'Needs plan|In progress|In review' "$repo_root/templates/.github/workflows/project-status-sync.yml" >/dev/null; then
+if grep -En 'Needs plan|In progress|In review' "$repo_root/templates/.github/workflows/project-status-sync.yml" > /dev/null; then
     fail "project status sync contains non-canonical status names"
 fi
 
@@ -64,6 +64,7 @@ for workflow in .github/workflows/create-repository.yml .github/workflows/terraf
         fail "$workflow does not enable GitHub planning by default"
 done
 
+# shellcheck disable=SC2016 # The literal shell snippet is the contract under test.
 grep -Fq 'cp "$bootstrap_root/templates/AGENTS.md" AGENTS.md' \
     "$repo_root/.github/actions/apply-agent-instructions/action.yml" ||
     fail "existing-repository setup does not install the generic AGENTS.md template"

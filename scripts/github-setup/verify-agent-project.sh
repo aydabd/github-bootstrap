@@ -11,7 +11,7 @@ project=""
 repository=""
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        --metadata-file|--project|--repository)
+        --metadata-file | --project | --repository)
             [ "$#" -ge 2 ] || usage
             case "$1" in
                 --metadata-file) metadata_file="$2" ;;
@@ -45,23 +45,23 @@ else
     number="${project#*/}"
     [[ "$owner" != "$project" && "$number" =~ ^[0-9]+$ ]] || usage
     fields_json="$(gh project field-list "$number" --owner "$owner" --limit 100 --format json)"
-    query='query($owner:String!,$number:Int!){user(login:$owner){projectV2(number:$number){views(first:20){nodes{name layout filter}}}}organization(login:$owner){projectV2(number:$number){views(first:20){nodes{name layout filter}}}}}'
+    query="query(\$owner:String!,\$number:Int!){user(login:\$owner){projectV2(number:\$number){views(first:20){nodes{name layout filter}}}}organization(login:\$owner){projectV2(number:\$number){views(first:20){nodes{name layout filter}}}}}"
     views_json="$(gh api graphql -f query="$query" -f owner="$owner" -F number="$number" | jq -c '.data.user.projectV2.views.nodes // .data.organization.projectV2.views.nodes // []')"
-    metadata="$(jq -cn --argjson fields "$(jq -c '.fields' <<<"$fields_json")" --argjson views "$views_json" '{fields:$fields,views:$views}')"
+    metadata="$(jq -cn --argjson fields "$(jq -c '.fields' <<< "$fields_json")" --argjson views "$views_json" '{fields:$fields,views:$views}')"
 fi
 
-if ! jq -e '.fields | type == "array"' <<<"$metadata" >/dev/null 2>&1 ||
-    ! jq -e '.views | type == "array"' <<<"$metadata" >/dev/null 2>&1; then
+if ! jq -e '.fields | type == "array"' <<< "$metadata" > /dev/null 2>&1 ||
+    ! jq -e '.views | type == "array"' <<< "$metadata" > /dev/null 2>&1; then
     add_check FAIL "project-metadata" '{"valid":false}' "INVALID_PROJECT_DATA" "provide Project field and view metadata"
 else
-    while IFS=$'\t' read -r field required options; do
-        field_json="$(jq -c --arg name "$field" '.fields[] | select(.name == $name)' <<<"$metadata" | head -n 1)"
+    while IFS=$'\t' read -r field _ options; do
+        field_json="$(jq -c --arg name "$field" '.fields[] | select(.name == $name)' <<< "$metadata" | head -n 1)"
         if [ -z "$field_json" ]; then
             add_check FAIL "field:$field" '{"exists":false}' "MISSING_PROJECT_FIELD" "create or configure the required Project field"
             continue
         fi
         missing="$(jq -cn --argjson field "$field_json" --argjson required "$options" '$required - (($field.options // []) | map(if type == "object" then .name else . end))')"
-        if [ "$(jq 'length' <<<"$missing")" -eq 0 ]; then
+        if [ "$(jq 'length' <<< "$missing")" -eq 0 ]; then
             add_check PASS "field:$field" "$(jq -cn --argjson field "$field_json" '{exists:true,options:(($field.options // []) | map(if type == "object" then .name else . end))}')"
         else
             add_check FAIL "field:$field" "$(jq -cn --arg missing "$missing" '{exists:true,missing_options:$missing}')" "INVALID_PROJECT_FIELD" "add the missing canonical Project field options"
@@ -69,7 +69,7 @@ else
     done < <(jq -r '.project.fields[] | [.name, (.required | tostring), ((.options // []) | tojson)] | @tsv' "$manifest")
 
     while IFS=$'\t' read -r view layout; do
-        view_json="$(jq -c --arg name "$view" '.views[] | select(.name == $name)' <<<"$metadata" | head -n 1)"
+        view_json="$(jq -c --arg name "$view" '.views[] | select(.name == $name)' <<< "$metadata" | head -n 1)"
         if [ -z "$view_json" ]; then
             add_check FAIL "view:$view" '{"exists":false}' "MISSING_PROJECT_VIEW" "create the required Project view"
         else
@@ -79,9 +79,9 @@ else
 fi
 
 checks_json="$(printf '%s\n' "${checks[@]}" | jq -s '.')"
-failed="$(jq '[.[] | select(.result == "FAIL")] | length' <<<"$checks_json")"
-skipped="$(jq '[.[] | select(.result == "SKIP")] | length' <<<"$checks_json")"
-passed="$(jq '[.[] | select(.result == "PASS")] | length' <<<"$checks_json")"
+failed="$(jq '[.[] | select(.result == "FAIL")] | length' <<< "$checks_json")"
+skipped="$(jq '[.[] | select(.result == "SKIP")] | length' <<< "$checks_json")"
+passed="$(jq '[.[] | select(.result == "PASS")] | length' <<< "$checks_json")"
 result=PASS
 [ "$failed" -eq 0 ] && [ "$skipped" -eq 0 ] || result=FAIL
 

@@ -42,7 +42,7 @@ check_file() {
 if [ ! -f "$manifest" ]; then
     add_check FAIL "manifest" '{"exists":false}' "MISSING_CONFIGURATION" "add templates/.github/config/agent-workflow.json"
 else
-    if jq -e '.schema_version == 1 and .required_plugins.superpowers.required == true' "$manifest" >/dev/null 2>&1; then
+    if jq -e '.schema_version == 1 and .required_plugins.superpowers.required == true' "$manifest" > /dev/null 2>&1; then
         add_check PASS "manifest" '{"schema_version":1,"superpowers_required":true}'
     else
         add_check FAIL "manifest" '{"schema_version":null,"superpowers_required":false}' "INVALID_CONFIGURATION" "declare the required Superpowers plugin in the manifest"
@@ -69,7 +69,7 @@ else
 fi
 
 if rg -n -i 'ghp_|gho_|ghr_|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|client_secret|refresh_token|bearer' \
-    "$manifest" >/dev/null 2>&1; then
+    "$manifest" > /dev/null 2>&1; then
     add_check FAIL "manifest:no-secrets" '{"credential_like_values":true}' "SECRET_EXPOSURE" "remove credential material from the manifest"
 else
     add_check PASS "manifest:no-secrets" '{"credential_like_values":false}'
