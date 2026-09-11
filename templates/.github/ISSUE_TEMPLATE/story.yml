@@ -1,0 +1,39 @@
+name: Story
+description: A user-facing or architectural slice delivered by one or more PRs.
+title: "[STORY] "
+labels:
+  - type:story
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: State what this delivers and why it is needed.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: State what was checked to confirm the gap and intended scope.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: List independently reviewable tasks and dependencies.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance and verification
+      description: Map every requirement to a named test or exact observation.
+    validations:
+      required: true
+  - type: input
+    id: parent
+    attributes:
+      label: Parent epic
+      description: Use #123 when this Story belongs to an Epic.

@@ -51,22 +51,22 @@ jobs:
           desired_status=""
           case "$EVENT_NAME:$ACTION" in
             issues:opened|issues:reopened)
-              desired_status="Needs plan"
+              desired_status="Spec Needed"
               ;;
             issues:closed|pull_request:closed)
               desired_status="Done"
               ;;
             pull_request:opened|pull_request:reopened)
-              if [ "$DRAFT" = "true" ]; then desired_status="Needs plan"; else desired_status="In progress"; fi
+              if [ "$DRAFT" = "true" ]; then desired_status="Spec Needed"; else desired_status="In Progress"; fi
               ;;
             pull_request:ready_for_review)
-              desired_status="In progress"
+              desired_status="In Progress"
               ;;
             pull_request_review:submitted)
-              desired_status="In review"
+              desired_status="In Progress"
               ;;
             pull_request_review:dismissed)
-              desired_status="In progress"
+              desired_status="In Progress"
               ;;
           esac
 

@@ -62,7 +62,7 @@ on:
       include_github_planning:
         description: "Install optional issue, tracker, roadmap, and Project workflow assets"
         required: false
-        default: false
+        default: true
         type: boolean
       agent_mode:
         description: "Agent instruction file apply mode"

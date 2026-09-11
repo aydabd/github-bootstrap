@@ -13,7 +13,7 @@ inputs:
     description: "AI agent provider: none, copilot, claude, cursor, windsurf, codex, or all."
     required: true
   include_github_planning:
-    description: "Install optional issue, tracker, roadmap, and Project workflow assets."
+    description: "Legacy compatibility input; issue, tracker, roadmap, and Project workflow assets are always installed."
     required: false
     default: "false"
   mode:
@@ -95,8 +95,18 @@ runs:
 
         # Provider-neutral workflow documents are always installed.
         cp "$bootstrap_root/WORKTREES.md" WORKTREES.md
-        cp "$bootstrap_root/AGENTS.md" AGENTS.md
+        cp "$bootstrap_root/templates/AGENTS.md" AGENTS.md
         rm -f AGENT.md
+
+        mkdir -p .github
+        rm -rf .github/config .github/instructions .github/skills .github/ISSUE_TEMPLATE
+        cp -R "$bootstrap_root/templates/.github/config" .github/config
+        cp -R "$bootstrap_root/templates/.github/instructions" .github/instructions
+        cp -R "$bootstrap_root/templates/.github/skills" .github/skills
+        cp -R "$bootstrap_root/templates/.github/ISSUE_TEMPLATE" .github/ISSUE_TEMPLATE
+        mkdir -p .github/agents .github/workflows
+        cp "$bootstrap_root/templates/.github/agents/roadmap-prioritizer.agent.md" .github/agents/roadmap-prioritizer.agent.md
+        cp "$bootstrap_root/templates/.github/workflows/project-status-sync.yml" .github/workflows/project-status-sync.yml
 
         copy_copilot() {
           mkdir -p .github .github/workflows
@@ -123,7 +133,7 @@ runs:
         }
 
         copy_codex() {
-          cp "$bootstrap_root/AGENTS.md" AGENTS.md
+          cp "$bootstrap_root/templates/AGENTS.md" AGENTS.md
         }
 
         if [ "$AGENT_PROVIDER" = "copilot" ] || [ "$AGENT_PROVIDER" = "all" ]; then
@@ -156,20 +166,7 @@ runs:
         fi
 
         if [ "$INCLUDE_GITHUB_PLANNING" = "false" ]; then
-          rm -rf \
-            .github/agents/roadmap-prioritizer.agent.md \
-            .github/skills/backlog-breakdown \
-            .github/skills/github-issue-triage \
-            .github/skills/roadmap-prioritization \
-            .github/skills/tracker-setup \
-            .github/skills/tracker-views \
-            .claude/skills/backlog-breakdown \
-            .claude/skills/git-worktree \
-            .claude/skills/github-issue-triage \
-            .claude/skills/github-stack \
-            .claude/skills/roadmap-prioritization \
-            .claude/skills/tracker-setup \
-            .claude/skills/tracker-views
+          echo "::notice::Planning assets are required and remain installed; the legacy opt-out is ignored."
         fi
 
         if git diff --quiet; then

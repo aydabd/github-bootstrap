@@ -26,6 +26,20 @@ scripts/                 # Utility scripts (sync-skills.sh)
 4. **Zero-install agents** — agents must work with only `git`, `grep`, `gh`, and standard POSIX tools.
 5. **Quality before commit** — `LINT_MODE=check make quality` must pass.
 
+## Issue and Project workflow
+
+Use the live GitHub Issue as the work contract and the live GitHub Project as
+the source of truth for priority, readiness, release, area, risk, effort, and
+parent/child relationships. Follow
+`templates/.github/skills/agent-operating-loop/SKILL.md` before any task.
+Superpowers is a required plugin for the workflow; missing capabilities must
+fail closed with installation instructions.
+
+The machine-readable contract is
+`templates/.github/config/agent-workflow.json`. Verification and handoffs use
+JSON so agents and humans can inspect the same evidence. Do not add local
+planning/specification files for ordinary implementation work.
+
 ## Code Style
 
 - Follow language idioms and standard formatting tools.

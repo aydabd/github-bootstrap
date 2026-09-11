@@ -11,9 +11,10 @@ disable-model-invocation: false
 user-invocable: true
 ---
 
-Use `.github/skills/roadmap-prioritization/SKILL.md`. Inspect open issues, their
-labels and relationships, and the configured GitHub Project if one exists.
-Recommend exactly one next issue and an ordered queue with readiness, priority,
-parallel/sequential reasoning, mismatches, and validation evidence. Do not
-create issues, edit project fields, implement code, or change release scope
-unless explicitly asked.
+Use `.github/skills/agent-operating-loop/SKILL.md` and
+`.github/skills/roadmap-prioritization/SKILL.md`. Verify required Superpowers
+before acting. Run `scripts/github-setup/select-next-work.sh` against the live
+Project and report its JSON result before reading candidate issues. Inspect
+dependencies and actual file/module overlap before recommending parallel work.
+Do not create issues, edit project fields, implement code, or change release
+scope unless explicitly asked.

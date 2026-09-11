@@ -1,0 +1,42 @@
+name: Security hardening
+description: Planned security, privacy, supply-chain, or production-readiness work.
+title: "[SECURITY] "
+labels:
+  - security
+body:
+  - type: markdown
+    attributes:
+      value: Do not disclose a vulnerability publicly. Use the repository security policy.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: State what is being hardened or verified and why now.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Record the live configuration, code path, or test evidence that confirms the gap.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and risk
+      description: List included work, threats, affected boundaries, and non-goals.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Acceptance and verification
+      description: Map each security requirement to a named test or redacted observation.
+    validations:
+      required: true
+  - type: input
+    id: parent
+    attributes:
+      label: Parent issue
+      description: Use #123 when this work belongs to a Story or Epic.

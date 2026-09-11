@@ -106,9 +106,9 @@ on:
         default: "all"
         type: string
       optional_features:
-        description: Optional feature bundles to include, such as github-planning.
+        description: Legacy compatibility input; GitHub planning assets are always included.
         required: false
-        default: "none"
+        default: "github-planning"
         type: string
       delivery_mode:
         description: Embed workflows locally or reference a user-owned central repository.
@@ -678,7 +678,7 @@ jobs:
           cp templates/.prettierrc.yaml new-repo/
           cp templates/.prettierignore new-repo/
           cp templates/.windsurfrules new-repo/
-          cp AGENTS.md new-repo/
+          cp templates/AGENTS.md new-repo/AGENTS.md
           cp WORKTREES.md new-repo/
 
           cp templates/.github/linters/.editorconfig new-repo/
@@ -834,18 +834,10 @@ jobs:
         id: filter-workflows
         run: |
           cd new-repo
-          OPTIONAL_FEATURES="${{ inputs.optional_features || 'none' }}"
+          OPTIONAL_FEATURES="${{ inputs.optional_features || 'github-planning' }}"
           case "$OPTIONAL_FEATURES" in
             ""|"none")
-              rm -rf .github/ISSUE_TEMPLATE \
-                .github/agents/roadmap-prioritizer.agent.md \
-                .github/skills/backlog-breakdown \
-                .github/skills/github-issue-triage \
-                .github/skills/roadmap-prioritization \
-                .github/skills/tracker-setup \
-                .github/skills/tracker-views \
-                .github/workflows/project-status-sync.yml
-              echo "✅ Optional GitHub planning assets disabled (default)." >> "$GITHUB_STEP_SUMMARY"
+              echo "✅ GitHub planning assets are mandatory and remain installed." >> "$GITHUB_STEP_SUMMARY"
               ;;
             "github-planning")
               echo "✅ Optional GitHub planning assets enabled." >> "$GITHUB_STEP_SUMMARY"
