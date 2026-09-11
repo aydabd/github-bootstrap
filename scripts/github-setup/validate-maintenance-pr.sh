@@ -8,19 +8,35 @@ full_repository="${FULL_REPOSITORY:-}"
 # "release-please[bot]". Accept that identity too when it carries the
 # "autorelease: pending" label.
 writer_app_slug="${WRITER_APP_SLUG:-}"
+identity_mode="${MAINTENANCE_IDENTITY_MODE:-production}"
+fixture_login="${MAINTENANCE_FIXTURE_LOGIN:-}"
 
 if [ -z "$pr_file" ] || [ ! -s "$pr_file" ] || [ -z "$full_repository" ]; then
     echo "maintenance PR validation inputs are incomplete" >&2
     exit 1
 fi
 
+case "$identity_mode" in
+    production) fixture_login="" ;;
+    e2e-disposable) [ -n "$fixture_login" ] || {
+        echo "E2E maintenance fixture identity is not configured" >&2
+        exit 1
+    } ;;
+    *)
+        echo "unsupported maintenance identity mode '$identity_mode'" >&2
+        exit 1
+        ;;
+esac
+
 classification="$(jq -r \
     --arg full_repository "$full_repository" \
-    --arg writer_bot "${writer_app_slug:+${writer_app_slug}[bot]}" '
+    --arg writer_bot "${writer_app_slug:+${writer_app_slug}[bot]}" \
+    --arg identity_mode "$identity_mode" --arg fixture_login "$fixture_login" '
     if .state != "open" then ""
     elif .draft == true then ""
     elif .base.ref != "main" then ""
     elif .base.repo.full_name != $full_repository or .head.repo.full_name != $full_repository then ""
+    elif $identity_mode == "e2e-disposable" and .user.login == $fixture_login then "e2e-fixture"
     elif .user.login == "dependabot[bot]" then "dependabot"
     elif (.user.login == "release-please[bot]"
             or .user.login == "github-actions[bot]"
@@ -31,7 +47,7 @@ classification="$(jq -r \
 ' "$pr_file")"
 
 case "$classification" in
-    dependabot | release-please)
+    dependabot | release-please | e2e-fixture)
         printf '%s\n' "$classification"
         ;;
     *)

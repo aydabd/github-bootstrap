@@ -43,6 +43,11 @@ on:
           - both
           - embedded
           - centralized
+      maintenance_lifecycle:
+        description: Run the single-repository maintenance lifecycle scenario.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -51,6 +56,7 @@ jobs:
   generated-repository:
     name: ${{ matrix.creation_workflow }} / ${{ matrix.delivery }} / ${{ matrix.provider }} @ ${{ inputs.head_sha || inputs.target_ref || 'main' }}
     runs-on: ubuntu-24.04
+    if: inputs.maintenance_lifecycle != true
     environment: e2e-testing
     strategy:
       fail-fast: false
@@ -251,7 +257,7 @@ jobs:
             --field visibility=public --field team_name="* @$OWNER" --field license_holder="$OWNER" \
             --field languages=language-agnostic-only --field env_manager="$PROVIDER" \
             --field release_tool=release-please --field enable_repo_settings=false --field enable_codeowners=true \
-            --field workflows=quality --field delivery_mode="$DELIVERY" \
+            --field workflows=quality,maintenance --field delivery_mode="$DELIVERY" \
             --field central_repository="$CENTRAL_SOURCE" \
             --field cleanup_on_failure=false
 
@@ -397,3 +403,464 @@ jobs:
             exit 1
           }
           echo "E2E passed: $OWNER/$REPO_NAME ($PROVIDER, $DELIVERY): $QUALITY_URL"
+
+  generated-maintenance-lifecycle:
+    name: Generated Maintenance Lifecycle
+    if: inputs.maintenance_lifecycle == true
+    runs-on: ubuntu-24.04
+    environment: e2e-maintenance
+    outputs:
+      cleanup_armed: ${{ steps.arm-cleanup.outputs.cleanup_armed }}
+    permissions:
+      contents: read
+    steps:
+      - name: Arm cleanup before repository creation
+        id: arm-cleanup
+        shell: bash
+        run: echo 'cleanup_armed=true' >> "$GITHUB_OUTPUT"
+
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve E2E provisioner token in consuming job
+        id: provisioner-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: e2e-dispatch
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Resolve E2E lifecycle token in consuming job
+        id: e2e-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: e2e-lifecycle
+
+      - name: Create deterministic maintenance repository
+        id: create-maintenance-repository
+        env:
+          GH_TOKEN: ${{ steps.provisioner-token.outputs.token }}
+          E2E_GH_TOKEN: ${{ steps.e2e-token.outputs.token }}
+          APP_OWNER: ${{ inputs.app_owner }}
+          OWNER: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_REF: ${{ inputs.head_sha || inputs.target_ref || 'main' }}
+          REPO_NAME: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          creation_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          requested_target_sha="$(gh api "/repos/$REPOSITORY/commits/$TARGET_REF" --jq '.sha')"
+          [ -n "$requested_target_sha" ] || { echo "requested target SHA is missing" >&2; exit 1; }
+          gh workflow run create-repository.yml --repo "$REPOSITORY" \
+            --ref "$TARGET_REF" \
+            --field provisioner_profile=e2e-provisioner --field app_owner="$APP_OWNER" \
+            --field allowed_repo_owners="$OWNER" --field repo_name="$REPO_NAME" \
+            --field repo_description="Generated maintenance lifecycle E2E" \
+            --field visibility=public --field team_name="* @$OWNER" \
+            --field license_holder="$OWNER" --field languages=language-agnostic-only \
+            --field env_manager=system --field release_tool=release-please \
+            --field enable_repo_settings=false --field enable_codeowners=true \
+            --field workflows=quality,codeql,maintenance --field delivery_mode=embedded \
+            --field cleanup_on_failure=false
+          creation_run=""
+          for _ in $(seq 1 60); do
+            creation_run="$(gh api "/repos/$REPOSITORY/actions/workflows/create-repository.yml/runs?event=workflow_dispatch&per_page=50" |
+              jq -r --arg repo "$REPO_NAME" --arg since "$creation_started_at" \
+                --arg ref "$TARGET_REF" --arg sha "$requested_target_sha" \
+                '[.workflow_runs[] | select((.display_title // "") | contains($repo)) |
+                  select(.head_branch == $ref and .head_sha == $sha and .created_at >= $since)] |
+                  first | .id // empty')"
+            [ -n "$creation_run" ] && break
+            sleep 10
+          done
+          [ -n "$creation_run" ] || { echo "creation run not found" >&2; exit 1; }
+          for _ in $(seq 1 90); do
+            run_state="$(gh run view "$creation_run" --repo "$REPOSITORY" \
+              --json status,conclusion,url --jq '[.status,.conclusion,.url] | @tsv')"
+            echo "diagnostic: create-repository state=$(printf '%s' "$run_state" | cut -f1-2) url=$(printf '%s' "$run_state" | cut -f3)" >&2
+            [ "${run_state%%$'\t'*}" = completed ] && break
+            sleep 10
+          done
+          run_conclusion="${run_state#*$'\t'}"
+          run_conclusion="${run_conclusion%%$'\t'*}"
+          [ "${run_state%%$'\t'*}" = completed ] && [ "$run_conclusion" = success ] || {
+            echo "generated repository creation did not complete successfully" >&2
+            exit 1
+          }
+          credential_job_conclusion="$(gh run view "$creation_run" --repo "$REPOSITORY" \
+            --json jobs --jq '[.jobs[] | select(.name == "Configure E2E maintenance credentials") |
+              .conclusion] | first // empty')"
+          [ "$credential_job_conclusion" = success ] || {
+            echo "credential configuration jobs did not complete successfully" >&2
+            exit 1
+          }
+          GH_TOKEN="$E2E_GH_TOKEN" gh api --method PUT "/repos/$OWNER/$REPO_NAME/topics" \
+            -f 'names[]=bootstrap-e2e' >/dev/null
+          GH_TOKEN="$E2E_GH_TOKEN" gh api "/repos/$OWNER/$REPO_NAME/topics" | \
+            jq -e '.names | index("bootstrap-e2e") != null' >/dev/null
+
+      - name: Resolve E2E maintenance Writer token
+        id: writer-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          # Credential profile: e2e-maintenance-writer; target Environment: e2e-maintenance.
+          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: maintenance-merge
+          repositories: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
+
+      - name: Resolve E2E maintenance Reviewer token
+        id: reviewer-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          # Credential profile: e2e-maintenance-reviewer; target Environment: e2e-maintenance.
+          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: maintenance-review
+          repositories: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
+
+      - name: Resolve E2E maintenance fixture user token
+        id: fixture-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          # Credential profile: e2e-maintenance-fixture; target Environment: e2e-maintenance.
+          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_PRIVATE_KEY }}
+          app_client_secret: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_SECRET }}
+          app_user_refresh_token: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_USER_REFRESH_TOKEN }}
+          refresh_token_secret: BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_USER_REFRESH_TOKEN
+          refresh_token_secret_environment: e2e-maintenance
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: e2e-maintenance-fixture
+          repositories: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
+
+      - name: Create and verify maintenance lifecycle
+        env:
+          GH_TOKEN: ${{ steps.provisioner-token.outputs.token }}
+          WRITER_TOKEN: ${{ steps.writer-token.outputs.token }}
+          REVIEWER_TOKEN: ${{ steps.reviewer-token.outputs.token }}
+          PR_AUTHOR_USER_TOKEN: ${{ steps.fixture-token.outputs.token }}
+          E2E_GH_TOKEN: ${{ steps.e2e-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          APP_OWNER: ${{ inputs.app_owner }}
+          REPOSITORY: ${{ github.repository }}
+          REPO_NAME: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
+          WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_SLUG }}
+          REVIEWER_APP_SLUG: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_SLUG }}
+          MAINTENANCE_IDENTITY_MODE: e2e-disposable
+          MAINTENANCE_FIXTURE_LOGIN: e2e-maintenance-user
+          MAINTENANCE_COPILOT_REVIEWER_LOGIN: copilot-pull-request-reviewer[bot]
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # The disposable fixture user creates a human-controlled PR so
+          # Copilot can review it; only the E2E maintenance Apps operate it.
+
+          e2e_gh() { GH_TOKEN="$E2E_GH_TOKEN" gh "$@"; }
+          writer_gh() { GH_TOKEN="$WRITER_TOKEN" gh "$@"; }
+          reviewer_gh() { GH_TOKEN="$REVIEWER_TOKEN" gh "$@"; }
+          author_gh() {
+            [ -n "$PR_AUTHOR_USER_TOKEN" ] || {
+              echo "short-lived maintenance fixture user token is missing" >&2
+              return 1
+            }
+            GH_TOKEN="$PR_AUTHOR_USER_TOKEN" gh "$@"
+          }
+          diagnostic() {
+            local label="$1" url="$2" state="$3"
+            echo "diagnostic: $label state=$state url=${url:-unavailable}" >&2
+          }
+          wait_for_run() {
+            local workflow="$1" expected_event="$2" expected_sha="$3" expected_branch="$4" since="$5" expected_pr="$6" allow_missing_pr="${7:-false}" timeout_seconds=900
+            local deadline=$((SECONDS + timeout_seconds))
+            local run_id="" status="" conclusion="" url=""
+            local expected_repository="$OWNER/$REPO_NAME"
+            for _ in $(seq 1 60); do
+              [ "$SECONDS" -lt "$deadline" ] || break
+              # shellcheck disable=SC2016
+              run_id="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/actions/workflows/$workflow/runs?per_page=20" |
+                  jq -r --arg event "$expected_event" --arg sha "$expected_sha" \
+                  --arg branch "$expected_branch" --arg since "$since" --arg pr "$expected_pr" \
+                  --arg repository "$expected_repository" \
+                  --arg allow_missing "$allow_missing_pr" \
+                  '[.workflow_runs[] | select(.event == $event) | select(.head_sha == $sha) |
+                    select(.head_branch == $branch) | select(.head_repository.full_name == $repository) |
+                    select(.created_at >= $since) |
+                    select($pr == "0" or any(.pull_requests[]?.number; . == ($pr | tonumber)) or
+                      ($allow_missing == "true" and (.pull_requests | length) == 0))] |
+                  first | .id // empty')"
+              [ -n "$run_id" ] && break
+              sleep 10
+            done
+            [ -n "$run_id" ] || { diagnostic "$workflow" "" "missing"; return 1; }
+            # pull_request_target and workflow_run payloads can omit PR data;
+            # correlate the run to the same repository, pull request, and head
+            # so an unrelated run can never satisfy this lifecycle gate.
+            # before accepting it, regardless of the event's payload shape.
+            if [ "$expected_pr" != 0 ]; then
+              correlated_pr="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$expected_pr" \
+                --jq '[.head.sha,.head.ref,.base.ref,.created_at] | @tsv')"
+              [ "$(printf '%s' "$correlated_pr" | cut -f1)" = "$expected_sha" ] || return 1
+              [ "$(printf '%s' "$correlated_pr" | cut -f2)" = "$expected_branch" ] || return 1
+              [ "$(printf '%s' "$correlated_pr" | cut -f3)" = main ] || return 1
+              [ "$(printf '%s' "$correlated_pr" | cut -f4)" \> "$since" ] || return 1
+            fi
+            for _ in $(seq 1 90); do
+              [ "$SECONDS" -lt "$deadline" ] || break
+              read -r status conclusion url < <(e2e_gh run view "$run_id" --repo "$OWNER/$REPO_NAME" \
+                --json status,conclusion,url --jq '[.status,.conclusion,.url] | @tsv')
+              diagnostic "$workflow" "$url" "$status/$conclusion"
+              [ "$status" = completed ] && break
+              sleep 10
+            done
+            [ "$status" = completed ] && [ "$conclusion" = success ] || {
+              diagnostic "$workflow" "$url" "$conclusion"
+              return 1
+            }
+          }
+          wait_for_label() {
+            local label="$1"
+            for _ in $(seq 1 60); do
+              if e2e_gh api "/repos/$OWNER/$REPO_NAME/issues/$PR_NUMBER/labels" --jq '.[].name' |
+                grep -Fxq "$label"; then return 0; fi
+              sleep 10
+            done
+            echo "diagnostic: missing label $label for PR $PR_NUMBER" >&2
+            return 1
+          }
+          main_sha="$(writer_gh api "/repos/$OWNER/$REPO_NAME/git/ref/heads/main" --jq '.object.sha')"
+          branch="e2e-maintenance-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          author_gh api --method POST "/repos/$OWNER/$REPO_NAME/git/refs" \
+            -f "ref=refs/heads/$branch" -f "sha=$main_sha" >/dev/null
+          marker="maintenance-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          content="$(printf 'fix: controlled Dependabot-style maintenance update (%s)\n' "$marker" | base64 | tr -d '\n')"
+          author_gh api --method PUT "/repos/$OWNER/$REPO_NAME/contents/.github/$marker" \
+            -f message="fix: controlled Dependabot-style maintenance update" -f content="$content" \
+            -f branch="$branch" >/dev/null
+          PR_NUMBER="$(author_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls" \
+            -f title="fix(deps): controlled Dependabot-style maintenance update" \
+            -f body="Deterministic E2E maintenance PR; no production repository operations." \
+            -f head="$branch" -f base=main --jq '.number')"
+          [ -n "$PR_NUMBER" ] || { echo "maintenance PR was not created" >&2; exit 1; }
+          maintenance_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          pr_head_sha="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" --jq '.head.sha')"
+          [ -n "$pr_head_sha" ] || { echo "maintenance PR head SHA is missing" >&2; exit 1; }
+          pr_author="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" --jq '.user.login')"
+          [ "$pr_author" = "$MAINTENANCE_FIXTURE_LOGIN" ] || {
+            echo "maintenance fixture PR author '$pr_author' is not the configured disposable identity" >&2
+            exit 1
+          }
+          e2e_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/requested_reviewers" \
+            -f "reviewers[]=$MAINTENANCE_COPILOT_REVIEWER_LOGIN" >/dev/null
+          wait_for_label 'automation: maintenance'
+          wait_for_label 'automation: validating'
+          wait_for_run quality.yml pull_request "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER"
+          wait_for_run classify-maintenance-pr.yml pull_request_target "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER"
+
+          copilot_dir="$RUNNER_TEMP/copilot-$REPO_NAME"
+          mkdir -p "$copilot_dir"
+          copilot_validated=false
+          for _ in $(seq 1 60); do
+            e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" > "$copilot_dir/pr.json"
+            jq -e --arg sha "$pr_head_sha" --arg login "$MAINTENANCE_COPILOT_REVIEWER_LOGIN" \
+              '.head.sha == $sha and any(.requested_reviewers[]?; .login == $login)' \
+              "$copilot_dir/pr.json" >/dev/null || { sleep 10; continue; }
+            reviewer_gh api --paginate --slurp \
+              "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/reviews" | jq '[.[][]]' > "$copilot_dir/reviews.json"
+            # shellcheck disable=SC2016
+            e2e_gh api graphql \
+              -f query='query($owner:String!,$repository:String!,$number:Int!){repository(owner:$owner,name:$repository){pullRequest(number:$number){reviewThreads(first:100){pageInfo{hasNextPage}nodes{isResolved comments(first:1){nodes{author{login}}}}}}}}' \
+              -F owner="$OWNER" -F repository="$REPO_NAME" -F number="$PR_NUMBER" > "$copilot_dir/thread-response.json"
+            jq -e '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage == false' \
+              "$copilot_dir/thread-response.json" >/dev/null || {
+              echo "Copilot review threads exceed validation page; refusing to pass" >&2
+              exit 1
+            }
+            jq '[.data.repository.pullRequest.reviewThreads.nodes[] |
+              {isResolved, author_login: (.comments.nodes[0].author.login // "")}]' \
+              "$copilot_dir/thread-response.json" > "$copilot_dir/threads.json"
+            if REQUIRE_COPILOT_REVIEW=true bash scripts/github-setup/validate-copilot-review.sh \
+              "$copilot_dir/pr.json" "$copilot_dir/reviews.json" "$copilot_dir/threads.json" \
+              "$MAINTENANCE_COPILOT_REVIEWER_LOGIN"; then
+              copilot_validated=true
+              break
+            fi
+            sleep 10
+          done
+          [ "$copilot_validated" = true ] || {
+            echo "Copilot review evidence was not observed for the current PR head" >&2
+            exit 1
+          }
+          # Maintenance safety must pass before the Reviewer approval and
+          # Writer auto-merge stages are allowed to proceed.
+          wait_for_run maintenance-safety.yml pull_request_target "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
+          wait_for_run merge-maintenance-pr.yml workflow_run "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
+          merge_reviews_file="$RUNNER_TEMP/merge-reviews-$REPO_NAME.json"
+          merge_authority_validated=false
+          for _ in $(seq 1 60); do
+            e2e_gh api --paginate --slurp \
+              "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/reviews" | jq '[.[][]]' > "$merge_reviews_file"
+            e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" > "$copilot_dir/merge-pr.json"
+            jq -e --arg writer "${WRITER_APP_SLUG}[bot]" \
+              '.auto_merge.enabled_by.login == $writer and .auto_merge.merge_method == "SQUASH"' \
+              "$copilot_dir/merge-pr.json" >/dev/null || continue
+            if bash scripts/github-setup/validate-maintenance-merge-state.sh \
+              "$copilot_dir/merge-pr.json" "$merge_reviews_file" "$pr_head_sha" \
+              "$WRITER_APP_SLUG" "$REVIEWER_APP_SLUG"; then
+              merge_authority_validated=true
+              break
+            fi
+            sleep 10
+          done
+          [ "$merge_authority_validated" = true ] || {
+            echo "Reviewer approval and Writer auto-merge authority were not observed before merge" >&2
+            exit 1
+          }
+          for _ in $(seq 1 120); do
+            pr_state="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" --jq '[.state,.merged,.merged_by.login] | @tsv')"
+            diagnostic 'Writer auto-merge/final merge' "https://github.com/$OWNER/$REPO_NAME/pull/$PR_NUMBER" "$pr_state"
+            if [ "${pr_state%%$'\t'*}" = closed ] && [ "$(printf '%s' "$pr_state" | cut -f2)" = true ]; then
+              [ "$(printf '%s' "$pr_state" | cut -f3)" = "${WRITER_APP_SLUG}[bot]" ] || {
+                echo "merged PR actor was not the configured Writer App" >&2
+                exit 1
+              }
+              break
+            fi
+            sleep 10
+          done
+          [ "$(printf '%s' "$pr_state" | cut -f1-2)" = $'closed\ttrue' ] || {
+            echo "maintenance PR did not merge" >&2
+            exit 1
+          }
+          [ "$(printf '%s' "$pr_state" | cut -f3)" = "${WRITER_APP_SLUG}[bot]" ] || {
+            echo "merged_by actor was not the configured Writer App" >&2
+            exit 1
+          }
+          merged_sha="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" --jq '.merge_commit_sha // empty')"
+          [ -n "$merged_sha" ] || { echo "maintenance merge SHA is missing" >&2; exit 1; }
+          release_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          # Release Please first creates a release PR from the maintenance
+          # merge, then a later push after that PR merges creates the tag and
+          # GitHub release. Validate both transitions independently.
+          wait_for_run release-please.yml push "$merged_sha" main "$release_started_at" 0
+          release_pr_number=""
+          for _ in $(seq 1 90); do
+            release_pr_number="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls?state=open&base=main&per_page=100" |
+              jq -r --arg writer "${WRITER_APP_SLUG}[bot]" --arg since "$release_started_at" \
+                '[.[] | select(.user.login == $writer) | select(.created_at >= $since) |
+                  select(any(.labels[]?.name; . == "autorelease: pending"))] |
+                first | .number // empty')"
+            [ -n "$release_pr_number" ] && break
+            sleep 10
+          done
+          [ -n "$release_pr_number" ] || { echo "Release Please PR was not created" >&2; exit 1; }
+          release_pr_head="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$release_pr_number" --jq '.head.sha')"
+          release_pr_branch="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$release_pr_number" --jq '.head.ref')"
+          wait_for_run maintenance-safety.yml pull_request_target "$release_pr_head" \
+            "$release_pr_branch" "$release_started_at" "$release_pr_number"
+          wait_for_run merge-maintenance-pr.yml workflow_run "$release_pr_head" \
+            "$release_pr_branch" "$release_started_at" "$release_pr_number" true
+          release_merge_sha=""
+          for _ in $(seq 1 120); do
+            release_state="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$release_pr_number" \
+              --jq '[.state,.merged,.merged_by.login,.merge_commit_sha] | @tsv')"
+            if [ "$(printf '%s' "$release_state" | cut -f1-2)" = $'closed\ttrue' ]; then
+              [ "$(printf '%s' "$release_state" | cut -f3)" = "${WRITER_APP_SLUG}[bot]" ] || {
+                echo "Release Please PR was not merged by the Writer App" >&2
+                exit 1
+              }
+              release_merge_sha="$(printf '%s' "$release_state" | cut -f4)"
+              break
+            fi
+            sleep 10
+          done
+          [ -n "$release_merge_sha" ] || { echo "Release Please PR did not merge" >&2; exit 1; }
+          release_pushed_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          wait_for_run release-please.yml push "$release_merge_sha" main "$release_pushed_at" 0
+          releases_file="$RUNNER_TEMP/releases-$REPO_NAME.json"
+          tags_file="$RUNNER_TEMP/tags-$REPO_NAME.json"
+          e2e_gh api "/repos/$OWNER/$REPO_NAME/releases?per_page=100" > "$releases_file"
+          e2e_gh api "/repos/$OWNER/$REPO_NAME/tags?per_page=100" > "$tags_file"
+          bash scripts/github-setup/validate-maintenance-release.sh \
+            "$releases_file" "$tags_file" "$release_merge_sha" "$release_pushed_at"
+          echo "Generated maintenance lifecycle completed for $OWNER/$REPO_NAME"
+
+  cleanup-generated-maintenance:
+    name: Cleanup Generated Maintenance Repository
+    if: >-
+      always() &&
+      inputs.maintenance_lifecycle == true
+    needs: generated-maintenance-lifecycle
+    runs-on: ubuntu-24.04
+    environment: e2e-testing
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve E2E provisioner cleanup token
+        id: cleanup-token
+        continue-on-error: true
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: repository-cleanup
+          repositories: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
+
+      - name: Archive generated maintenance repository
+        env:
+          E2E_GH_TOKEN: ${{ steps.cleanup-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO_NAME: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$REPO_NAME" =~ ^bootstrap-e2e-[0-9]+-[0-9]+-system-embedded-create-repository$ ]]
+          if [ -z "$E2E_GH_TOKEN" ]; then
+            echo "provisioner cleanup token resolver failed; cleanup cannot archive without a guarded token" >&2
+            exit 1
+          fi
+          if ! GH_TOKEN="$E2E_GH_TOKEN" gh api "/repos/$OWNER/$REPO_NAME" >/dev/null 2>&1; then
+            echo "generated maintenance repository is absent; nothing to archive"
+            exit 0
+          fi
+          topics_file="$RUNNER_TEMP/topics-$REPO_NAME.json"
+          GH_TOKEN="$E2E_GH_TOKEN" gh api "/repos/$OWNER/$REPO_NAME/topics" > "$topics_file"
+          if ! jq -e '.names | index("bootstrap-e2e") != null' "$topics_file" >/dev/null; then
+            echo "cleanup marker missing; attempting to restore the required marker" >&2
+            GH_TOKEN="$E2E_GH_TOKEN" gh api --method PUT "/repos/$OWNER/$REPO_NAME/topics" \
+              -f 'names[]=bootstrap-e2e' >/dev/null || true
+            GH_TOKEN="$E2E_GH_TOKEN" gh api "/repos/$OWNER/$REPO_NAME/topics" > "$topics_file"
+          fi
+          "$GITHUB_WORKSPACE/scripts/github-setup/validate-e2e-archive-target.sh" \
+            "$OWNER" "$OWNER/$REPO_NAME" "$topics_file"
+          GH_TOKEN="$E2E_GH_TOKEN" gh api --method PATCH "/repos/$OWNER/$REPO_NAME" \
+            -f archived=true >/dev/null
+          echo "Archived $OWNER/$REPO_NAME"

@@ -1,0 +1,141 @@
+name: Maintenance safety
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_run:
+    workflows:
+      - Quality
+      - Commit policy
+      - Test Quality Providers
+      - CodeQL Security Scan
+      - Test Generated Repository E2E
+      - Verify Conda Lockfiles
+    types: [completed]
+  repository_dispatch:
+    types: [maintenance-safety]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to validate.
+        required: true
+        type: string
+      head_sha:
+        description: Exact pull request head SHA to validate.
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  safety:
+    name: Maintenance safety
+    if: |
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.pull_requests[0].number ||
+      (github.event.workflow_run.name == 'Test Generated Repository E2E' &&
+      github.event.workflow_run.head_branch != 'main')
+    runs-on: ubuntu-24.04
+    environment: production-maintenance
+    steps:
+      - name: Checkout validation helpers
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        env:
+          GIT_CONFIG_COUNT: 1
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
+        with:
+          persist-credentials: false
+          ref: main
+          sparse-checkout: |
+            .github/scripts/validate-copilot-review.sh
+            .github/scripts/validate-maintenance-safety.sh
+
+      - name: Validate maintenance safety gates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COPILOT_REVIEWER_LOGIN: ${{ vars.BOOTSTRAP_COPILOT_REVIEWER_LOGIN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.event.inputs.head_sha || github.event.client_payload.head_sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.event.inputs.pr_number || github.event.client_payload.pr_number }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tmp_dir="$(mktemp -d)"
+          cleanup() { rm -rf "$tmp_dir"; }
+          trap cleanup EXIT
+
+          [ -n "$HEAD_SHA" ] || { echo "maintenance safety head SHA is missing" >&2; exit 1; }
+
+          # A dispatched Test Generated Repository E2E run carries no
+          # pull_requests[0]; recover the PR from its head branch so completing
+          # the E2E gate re-evaluates safety without a manual nudge.
+          if [ -z "$PR_NUMBER" ] && [ -n "$HEAD_BRANCH" ] && [ "$HEAD_BRANCH" != "main" ]; then
+            PR_NUMBER="$(gh api --method GET "repos/$GITHUB_REPOSITORY/pulls" \
+              -f head="${GITHUB_REPOSITORY%%/*}:$HEAD_BRANCH" -f base=main -f state=open \
+              --jq '.[0].number // empty')"
+          fi
+
+          # A routine or manual E2E run with no open maintenance PR is not a
+          # gate failure; there is simply nothing to validate.
+          if [ -z "$PR_NUMBER" ] && [ "${GITHUB_EVENT_NAME:-}" = "workflow_run" ]; then
+            echo "no open maintenance PR for this run; nothing to validate."
+            exit 0
+          fi
+
+          [ -n "$PR_NUMBER" ] || { echo "maintenance safety pull request number is missing" >&2; exit 1; }
+          [ -n "$COPILOT_REVIEWER_LOGIN" ] || { echo "Copilot reviewer identity is not configured" >&2; exit 1; }
+
+          pr_file="$tmp_dir/pr.json"
+          runs_file="$tmp_dir/runs.json"
+          e2e_file="$tmp_dir/e2e.json"
+          labels_file="$tmp_dir/labels.json"
+          reviews_file="$tmp_dir/reviews.json"
+          threads_file="$tmp_dir/threads.json"
+
+          # Required workflow completions retrigger this workflow. Check once
+          # for the same SHA and defer while any core gate is still running.
+          required_status_jq="[\"Quality\",\"Commit policy\",\"Test Quality Providers\",\"CodeQL Security Scan\"] as \$need | [.workflow_runs[]] as \$runs | [\$need[] | . as \$name | (\$runs | map(select(.name == \$name)) | sort_by(.created_at) | last | .status) // \"missing\"] | all(. == \"completed\")"
+          settled="$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100" --jq "$required_status_jq" 2>/dev/null || echo false)"
+          if [ "$settled" != "true" ]; then
+            echo "required checks are still running; deferring to the next completion event"
+            exit 0
+          fi
+
+          gh api "/repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels?per_page=100" > "$labels_file"
+          if jq -e 'any(.[]?; .name == "automation: breaking")' "$labels_file" > /dev/null; then
+            e2e_settled="$(gh api --paginate "/repos/$GITHUB_REPOSITORY/actions/workflows/test-generated-repository-e2e.yml/runs?per_page=100" \
+              --jq '.workflow_runs[] | {head_sha,status}' 2>/dev/null | \
+              jq -s --arg head_sha "$HEAD_SHA" 'any(.[]; .head_sha == $head_sha and .status == "completed")' || echo false)"
+            if [ "$e2e_settled" != "true" ]; then
+              echo "breaking-risk E2E is still running; deferring to the next completion event"
+              exit 0
+            fi
+          fi
+
+          gh api "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$pr_file"
+          gh api "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100" \
+            --jq '[.workflow_runs[] | select(.name == "Quality" or .name == "Commit policy" or .name == "Test Quality Providers" or .name == "CodeQL Security Scan") | {name,status,conclusion,head_sha}]' > "$runs_file"
+          gh api --paginate "/repos/$GITHUB_REPOSITORY/actions/workflows/test-generated-repository-e2e.yml/runs?per_page=100" \
+            --jq '.workflow_runs[] | {status,conclusion,head_sha}' | jq -s '.' > "$e2e_file"
+          gh api --paginate --slurp "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" > "$tmp_dir/review-pages.json"
+          jq '[.[][]]' "$tmp_dir/review-pages.json" > "$reviews_file"
+
+          gh api graphql \
+            -f query="query(\$owner:String!,\$repository:String!,\$number:Int!){repository(owner:\$owner,name:\$repository){pullRequest(number:\$number){reviewThreads(first:100){pageInfo{hasNextPage} nodes{isResolved comments(first:1){nodes{author{login}}}}}}}}" \
+            -F owner="${GITHUB_REPOSITORY%%/*}" -F repository="${GITHUB_REPOSITORY#*/}" -F number="$PR_NUMBER" \
+            > "$tmp_dir/thread-response.json"
+          jq -e '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage == false' "$tmp_dir/thread-response.json" > /dev/null || {
+            echo "maintenance safety review threads exceed validation page; refusing to pass" >&2
+            exit 1
+          }
+          jq '[.data.repository.pullRequest.reviewThreads.nodes[] | {isResolved, author_login: (.comments.nodes[0].author.login // "")}]' \
+            "$tmp_dir/thread-response.json" > "$threads_file"
+
+          "$GITHUB_WORKSPACE/.github/scripts/validate-maintenance-safety.sh" \
+            "$pr_file" "$runs_file" "$e2e_file" "$labels_file" "$reviews_file" "$threads_file" \
+            "$HEAD_SHA" "$COPILOT_REVIEWER_LOGIN"

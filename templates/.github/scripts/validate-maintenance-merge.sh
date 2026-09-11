@@ -51,7 +51,7 @@ jq -e --arg repository "$full_repository" --arg expected_sha "$expected_sha" \
     .base.repo.full_name == $repository and
     .head.repo.full_name == $repository and
     .head.sha == $expected_sha and
-    (($identity_mode == "e2e-disposable" and .user.login == $fixture_login) or .user.login == "dependabot[bot]" or .user.login == ($writer_app_slug + "[bot]") or ((.user.login == "release-please[bot]" or .user.login == "github-actions[bot]") and any(.labels[]?; .name == "autorelease: pending"))) and
+    (($identity_mode == "e2e-disposable" and .user.login == $fixture_login) or .user.login == "dependabot[bot]" or .user.login == ($writer_app_slug + "[bot]") or (.user.login == "release-please[bot]" and any(.labels[]?; .name == "autorelease: pending"))) and
     .user.login != ($reviewer_app_slug + "[bot]")
 ' "$pr_file" > /dev/null || {
     echo "pull request is not eligible for maintenance merge" >&2

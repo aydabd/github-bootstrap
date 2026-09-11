@@ -65,8 +65,7 @@ exchanges the App refresh token for a short-lived user access token, verifies it
 against the target owner, rotates the refresh secret, and then calls `/user/repos`. No PAT fallback
 exists.
 
-> Private keys and user access tokens are accepted only as protected caller secrets. Never put a
-> private key, token, PAT, or credential in workflow inputs, generated repositories, or this repository.
+> Never store secrets in generated repository contents, workflow inputs, or logs; the provisioning action may store them only as encrypted Environment secrets.
 
 **Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
 
@@ -96,6 +95,31 @@ rules control access.
 
 The Writer App must remain separate from the Provisioner, Reviewer, and E2E
 Admin Apps. Never commit or print its private key.
+
+For the complete E2E maintenance setup, use the checked-in Writer and Reviewer
+manifests and the exact profile names in
+[`scripts/github-setup/app-credential-profiles.json`](scripts/github-setup/app-credential-profiles.json).
+The Apps belong only in the disposable owner listed in
+`BOOTSTRAP_E2E_ALLOWED_OWNERS`; their client IDs and slugs are variables and
+their private keys are installed into the source `OWNER/github-bootstrap`
+repository's `e2e-maintenance` Environment, then copied/provisioned by the
+creation workflow into each generated repository's `e2e-maintenance` Environment.
+Production maintenance remains bound to
+`production-maintenance` and its separate App credentials.
+
+For E2E maintenance, use the runbook's single
+`install-e2e-maintenance-credentials.sh` command. It validates protected local
+credential files and stores `BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_TOKEN` only in
+the source `e2e-maintenance` Environment; the fixture token is never copied to
+generated repositories.
+
+The operator runbook has copy-pasteable manifest, installation, rotation,
+manual-dispatch, and verification commands:
+[`docs/maintenance-operations.md`](docs/maintenance-operations.md). It uses
+interactive secret entry only through commands that do not place values in
+arguments or output. Live GitHub Actions verification requires manually
+provisioned Apps, manually configured secrets, and operator approval; this
+repository does not perform that provisioning or approval automatically.
 
 Install the production provisioner credentials explicitly into the production Environment:
 

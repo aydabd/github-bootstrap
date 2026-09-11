@@ -5,6 +5,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/../.." && pwd)"
 profile_file="$repo_root/templates/.github/config/bootstrap-profile.json"
 validator="$script_dir/validate-profile.sh"
+workflow_helper="$repo_root/scripts/select-generated-workflows.sh"
 
 command -v jq > /dev/null 2>&1 || {
     echo "jq is required to validate bootstrap profiles" >&2
@@ -13,6 +14,11 @@ command -v jq > /dev/null 2>&1 || {
 
 [ -x "$validator" ] || {
     echo "profile validator is not executable: $validator" >&2
+    exit 1
+}
+
+[ -x "$workflow_helper" ] || {
+    echo "generated workflow helper is not executable: $workflow_helper" >&2
     exit 1
 }
 
@@ -87,11 +93,187 @@ for creation_workflow in \
     grep -q '^      optional_features:' "$creation_workflow"
     grep -q 'OWNER/REPOSITORY@REF' "$creation_workflow"
     grep -q "OPTIONAL_FEATURES=\"\${{ inputs.optional_features || 'none' }}\"" "$creation_workflow"
+    grep -q 'maintenance' "$creation_workflow"
+    grep -q 'e2e-maintenance' "$creation_workflow"
+    grep -q 'scripts/select-generated-workflows.sh' "$creation_workflow"
+    grep -q 'select new-repo' "$creation_workflow"
+    grep -q 'bind-e2e new-repo' "$creation_workflow"
+    if grep -q 'KEEP_FILES=' "$creation_workflow"; then
+        echo "workflow bundle mapping must live in the shared helper: $creation_workflow" >&2
+        exit 1
+    fi
 done
-grep -q 'for file in .github/workflows/\*.yml' \
-    "$repo_root/.github/workflows/terraform-create-repository.yml"
-grep -q 'commit-policy.yml) keep=true' \
-    "$repo_root/.github/workflows/terraform-create-repository.yml"
+grep -q 'production-maintenance' "$workflow_helper"
+grep -q 'e2e-maintenance' "$workflow_helper"
+maintenance_templates=(
+    approve-automation-workflows.yml
+    classify-maintenance-pr.yml
+    maintenance-safety.yml
+    merge-maintenance-pr.yml
+    release-please.yml
+)
+for maintenance_workflow in "${maintenance_templates[@]}"; do
+    template_workflow="$repo_root/templates/.github/workflows/$maintenance_workflow"
+    grep -q '^    environment: production-maintenance$' "$template_workflow"
+done
+for production_reference in \
+    'BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID' \
+    'BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY' \
+    'BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG' \
+    'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID' \
+    'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY' \
+    'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG'; do
+    template_reference_count="$({ grep -Roh "$production_reference" \
+        "$repo_root/templates/.github/workflows" || true; } | wc -l | tr -d ' ')"
+    [ "$template_reference_count" -gt 0 ] || {
+        echo "missing production maintenance credential reference: $production_reference" >&2
+        exit 1
+    }
+done
+for production_workflow in classify-maintenance-pr.yml maintenance-safety.yml \
+    approve-automation-workflows.yml merge-maintenance-pr.yml release-please.yml; do
+    grep -q 'environment: production-maintenance' \
+        "$repo_root/templates/.github/workflows/$production_workflow"
+    if grep -q 'e2e-maintenance' "$repo_root/templates/.github/workflows/$production_workflow"; then
+        echo "production maintenance workflow must not contain E2E maintenance identity: $production_workflow" >&2
+        exit 1
+    fi
+done
+for maintenance_workflow in classify-maintenance-pr.yml maintenance-safety.yml \
+    approve-automation-workflows.yml merge-maintenance-pr.yml; do
+    test -f "$repo_root/templates/.github/workflows/$maintenance_workflow"
+    grep -q "$maintenance_workflow" "$workflow_helper"
+done
+grep -q 'release-please.yml' "$workflow_helper"
+grep -q 'git-cliff-release.yml' "$workflow_helper"
+run_workflow_fixture() {
+    local workflow_input="$1" release_tool="$2" fixture
+    fixture="$(mktemp -d)"
+    mkdir -p "$fixture/.github/workflows"
+    for workflow in commit-policy.yml quality.yml codeql.yml test-quality-providers.yml ai-code-review.yml \
+        classify-maintenance-pr.yml maintenance-safety.yml \
+        approve-automation-workflows.yml merge-maintenance-pr.yml \
+        release-please.yml git-cliff-release.yml unrelated.yml; do
+        template_workflow="$repo_root/templates/.github/workflows/$workflow"
+        if [ -f "$template_workflow" ]; then
+            cp "$template_workflow" "$fixture/.github/workflows/$workflow"
+        else
+            : > "$fixture/.github/workflows/$workflow"
+        fi
+    done
+    "$workflow_helper" select "$fixture" "$workflow_input" "$release_tool" > /dev/null
+    printf '%s\n' "$fixture"
+}
+
+standard_fixture="$(run_workflow_fixture ' quality, maintenance ' release-please)"
+for retained in commit-policy.yml quality.yml codeql.yml test-quality-providers.yml classify-maintenance-pr.yml \
+    maintenance-safety.yml approve-automation-workflows.yml merge-maintenance-pr.yml \
+    release-please.yml; do
+    test -f "$standard_fixture/.github/workflows/$retained"
+done
+for maintenance_workflow in "${maintenance_templates[@]}" release-please.yml; do
+    generated_workflow="$standard_fixture/.github/workflows/$maintenance_workflow"
+    grep -q 'environment: production-maintenance' "$generated_workflow"
+    for production_reference in \
+        BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID \
+        BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY \
+        BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG \
+        BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID \
+        BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY \
+        BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG; do
+        if grep -q "$production_reference" "$repo_root/templates/.github/workflows/$maintenance_workflow"; then
+            grep -q "$production_reference" "$generated_workflow"
+        fi
+    done
+    if grep -Eq 'BOOTSTRAP_E2E_MAINTENANCE_|e2e-maintenance(-writer|-reviewer|-fixture)?' \
+        "$generated_workflow"; then
+        echo "production generated workflow retained E2E maintenance material: $maintenance_workflow" >&2
+        exit 1
+    fi
+done
+e2e_maintenance_workflows=("${maintenance_templates[@]}" release-please.yml)
+E2E_COPILOT_REVIEWER_LOGIN='copilot-pull-request-reviewer[bot]' \
+    "$workflow_helper" bind-e2e "$standard_fixture" ' quality, maintenance ' release-please
+for maintenance_workflow in "${e2e_maintenance_workflows[@]}"; do
+    generated_workflow="$standard_fixture/.github/workflows/$maintenance_workflow"
+    if ! grep -qx '    environment: e2e-maintenance' "$generated_workflow"; then
+        echo "E2E maintenance workflow is missing its E2E Environment: $maintenance_workflow" >&2
+        exit 1
+    fi
+    for e2e_reference in \
+        'BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID' \
+        'BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY' \
+        'BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_SLUG' \
+        'BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_CLIENT_ID' \
+        'BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY' \
+        'BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_SLUG'; do
+        production_reference="${e2e_reference/BOOTSTRAP_E2E_/BOOTSTRAP_}"
+        if grep -q "$production_reference" \
+            "$repo_root/templates/.github/workflows/$maintenance_workflow"; then
+            grep -q "$e2e_reference" "$generated_workflow" || {
+                echo "E2E maintenance workflow is missing credential reference $e2e_reference: $maintenance_workflow" >&2
+                exit 1
+            }
+        fi
+    done
+    for production_reference in \
+        'BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID' \
+        'BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY' \
+        'BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG' \
+        'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID' \
+        'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY' \
+        'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG'; do
+        grep -Fq "$production_reference" "$generated_workflow" && {
+            echo "E2E maintenance workflow retained production credential reference $production_reference: $maintenance_workflow" >&2
+            exit 1
+        }
+    done
+done
+for removed in ai-code-review.yml git-cliff-release.yml unrelated.yml; do
+    test ! -e "$standard_fixture/.github/workflows/$removed"
+done
+rm -rf "$standard_fixture"
+
+terraform_fixture="$(run_workflow_fixture maintenance git-cliff)"
+for retained in commit-policy.yml classify-maintenance-pr.yml maintenance-safety.yml \
+    approve-automation-workflows.yml merge-maintenance-pr.yml git-cliff-release.yml; do
+    test -f "$terraform_fixture/.github/workflows/$retained"
+done
+for removed in ai-code-review.yml release-please.yml unrelated.yml; do
+    test ! -e "$terraform_fixture/.github/workflows/$removed"
+done
+rm -rf "$terraform_fixture"
+
+binding_fixture="$(mktemp -d)"
+mkdir -p "$binding_fixture/.github/workflows"
+for maintenance_workflow in classify-maintenance-pr.yml maintenance-safety.yml \
+    approve-automation-workflows.yml merge-maintenance-pr.yml release-please.yml; do
+    if [ "$maintenance_workflow" = release-please.yml ]; then
+        : > "$binding_fixture/.github/workflows/$maintenance_workflow"
+    else
+        printf '    environment: production-maintenance\n' > \
+            "$binding_fixture/.github/workflows/$maintenance_workflow"
+    fi
+done
+E2E_COPILOT_REVIEWER_LOGIN='copilot-pull-request-reviewer[bot]' \
+    "$workflow_helper" bind-e2e "$binding_fixture" maintenance release-please
+grep -qx '    environment: e2e-maintenance' \
+    "$binding_fixture/.github/workflows/maintenance-safety.yml"
+printf '    environment: production-maintenance\n' > \
+    "$binding_fixture/.github/workflows/maintenance-safety.yml"
+for maintenance_workflow in classify-maintenance-pr.yml maintenance-safety.yml \
+    approve-automation-workflows.yml merge-maintenance-pr.yml release-please.yml; do
+    printf '    environment: production-maintenance\n' > \
+        "$binding_fixture/.github/workflows/$maintenance_workflow"
+done
+printf '    environment: unexpected-environment\n' > \
+    "$binding_fixture/.github/workflows/maintenance-safety.yml"
+if E2E_COPILOT_REVIEWER_LOGIN='copilot-pull-request-reviewer[bot]' \
+    "$workflow_helper" bind-e2e "$binding_fixture" maintenance release-please; then
+    echo "E2E binding unexpectedly accepted a missing expected substitution" >&2
+    exit 1
+fi
+rm -rf "$binding_fixture"
 if grep -Eq '^    if: .*matrix\.' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"; then
     echo "E2E workflow must not use matrix context in a job-level condition" >&2
     exit 1
@@ -105,6 +287,8 @@ grep -q 'validate-generated-e2e-head.sh' "$repo_root/.github/workflows/test-gene
 grep -q 'git/refs' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 grep -q 'DISPATCH_REF' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 grep -q 'requested_head_sha=' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+grep -q -- '--field workflows=quality,maintenance' \
+    "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 for runtime_input in python_version node_version go_version java_version; do
     runtime_env="$(printf '%s' "$runtime_input" | tr '[:lower:]' '[:upper:]')"
     grep -q -- "--field ${runtime_input}=\"\$${runtime_env}\"" \

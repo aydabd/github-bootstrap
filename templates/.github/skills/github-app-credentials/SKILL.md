@@ -12,10 +12,9 @@ debugging personal-account authentication.
 
 - `Organization`: use the App private key and mint a short-lived installation
   token at runtime. The App must be installed in the organization.
-- `User`: use the App client secret and a `ghr_` refresh token. The workflow
-  exchanges them for a short-lived `ghu_` user token, checks `/user` against
-  the target owner, and writes the rotated refresh token back to the caller
-  repository secret.
+- `User`: the bootstrap repository’s protected provisioning workflow performs
+  the refresh exchange. Generated repositories never receive the client secret,
+  refresh token, or short-lived user token.
 
 Do not use a PAT, a `ghu_` access token as a stored credential, or a token in a
 workflow-dispatch input. Do not use an installation token for `/user/repos`.
@@ -23,11 +22,11 @@ workflow-dispatch input. Do not use an installation token for `/user/repos`.
 ## Required configuration
 
 Set the client ID as the repository or Environment variable
-`BOOTSTRAP_PROVISIONER_APP_CLIENT_ID`. Set these as protected secrets:
+`BOOTSTRAP_PROVISIONER_APP_CLIENT_ID`. The bootstrap repository keeps the
+following values as protected secrets; do not configure them in a generated
+repository:
 
 - `BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY`
-- `BOOTSTRAP_PROVISIONER_APP_CLIENT_SECRET`
-- `BOOTSTRAP_PROVISIONER_APP_USER_REFRESH_TOKEN` for personal targets only
 
 The Provisioner App must have `Secrets: write` if personal runs will persist
 rotated refresh tokens. Limit the App installation to the caller repository
@@ -38,11 +37,9 @@ secret manager or rotate that secret manually.
 ## Safe setup
 
 Keep the manifest output directory outside the checkout with mode `0700`.
-Use `scripts/github-setup/github-app-user-token.sh exchange` to produce both
-the access-token file and refresh-token file, then run
-`scripts/github-setup/install-app-secrets.sh` with the client ID, private key,
-client secret, and refresh-token files. Never print a credential or commit the
-files.
+Use the bootstrap repository’s documented setup tooling to produce and install
+credentials. Never print a credential, copy one into a generated repository, or
+commit the files.
 
 Verify without exposing values:
 

@@ -1,0 +1,11 @@
+{
+  "name": "Maintenance Fixture E2E",
+  "url": "https://github.com",
+  "public": false,
+  "default_events": [],
+  "default_permissions": {
+    "contents": "write",
+    "pull_requests": "write",
+    "secrets": "write"
+  }
+}

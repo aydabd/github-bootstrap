@@ -58,6 +58,38 @@ assert manifest["default_permissions"] == {
     "workflows": "write",
 }
 PY
+
+e2e_writer_manifest_url="$($helper url repository-maintenance-writer-e2e 'https://example.test/callback')"
+MANIFEST_URL="$e2e_writer_manifest_url" python3 - << 'PY'
+import json
+import os
+import urllib.parse
+
+manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MANIFEST_URL"]).query)["manifest"][0])
+assert manifest["name"] == "Repository Maintenance Writer E2E"
+assert manifest["redirect_url"] == "https://example.test/callback"
+assert manifest["default_permissions"] == {
+    "contents": "write",
+    "issues": "write",
+    "pull_requests": "write",
+    "workflows": "write",
+}
+PY
+
+e2e_reviewer_manifest_url="$($helper url repository-maintenance-reviewer-e2e 'https://example.test/callback')"
+MANIFEST_URL="$e2e_reviewer_manifest_url" python3 - << 'PY'
+import json
+import os
+import urllib.parse
+
+manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MANIFEST_URL"]).query)["manifest"][0])
+assert manifest["name"] == "Repository Maintenance Reviewer E2E"
+assert manifest["redirect_url"] == "https://example.test/callback"
+assert manifest["default_permissions"] == {
+    "actions": "write",
+    "pull_requests": "write",
+}
+PY
 tmp_dir="$(mktemp -d)"
 start_pid=""
 cleanup() {
@@ -169,6 +201,30 @@ expected = {
             "pull_requests": "write",
         },
     },
+    "repository-maintenance-writer-e2e.json": {
+        "name": "Repository Maintenance Writer E2E",
+        "default_permissions": {
+            "contents": "write",
+            "issues": "write",
+            "pull_requests": "write",
+            "workflows": "write",
+        },
+    },
+    "repository-maintenance-reviewer-e2e.json": {
+        "name": "Repository Maintenance Reviewer E2E",
+        "default_permissions": {
+            "actions": "write",
+            "pull_requests": "write",
+        },
+    },
+    "maintenance-fixture-e2e.json": {
+        "name": "Maintenance Fixture E2E",
+        "default_permissions": {
+            "contents": "write",
+            "pull_requests": "write",
+            "secrets": "write",
+        },
+    },
 }
 
 assert set(path.name for path in manifest_dir.glob("*.json")) == set(expected)
@@ -180,7 +236,11 @@ for filename, contract in expected.items():
     assert payload["public"] is False
     assert "bypass_actors" not in payload
     assert "deletion" not in payload["default_permissions"]
-    if filename in {"repository-bootstrap-provisioner.json", "repository-maintenance-writer.json"}:
+    if filename in {
+        "repository-bootstrap-provisioner.json",
+        "repository-maintenance-writer.json",
+        "repository-maintenance-writer-e2e.json",
+    }:
         assert payload["default_permissions"]["workflows"] == "write"
     else:
         assert "workflows" not in payload["default_permissions"]

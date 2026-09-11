@@ -1,0 +1,12 @@
+{
+  "name": "Repository Maintenance Writer E2E",
+  "url": "https://github.com",
+  "public": false,
+  "default_events": [],
+  "default_permissions": {
+    "contents": "write",
+    "issues": "write",
+    "pull_requests": "write",
+    "workflows": "write"
+  }
+}
