@@ -62,13 +62,13 @@ answers: did it pass, which test failed, and what is the first actionable error?
 First inspect JUnit with targeted search:
 
 ```bash
-rg -n "<failure|<error|testsuite|testcase|message=" test-reports/e2e-junit.xml
+grep -En "<failure|<error|testsuite|testcase|message=" test-reports/e2e-junit.xml
 ```
 
 If JUnit is not enough, search the last run log rather than opening it:
 
 ```bash
-rg -n "failed|passed|Error:|Timed out|expect\(|locator|Running|E2E tests complete" test-reports/e2e-last-run.log | tail -120
+grep -En "failed|passed|Error:|Timed out|expect\(|locator|Running|E2E tests complete" test-reports/e2e-last-run.log | tail -120
 ```
 
 Only then inspect screenshots/traces:
@@ -83,14 +83,14 @@ make test-e2e-report
 Integration tests write `test-reports/integration-junit.xml`.
 
 ```bash
-rg -n "<failure|<error|testsuite|testcase|message=" test-reports/integration-junit.xml
+grep -En "<failure|<error|testsuite|testcase|message=" test-reports/integration-junit.xml
 ```
 
 For unit/Vitest output without a JUnit file, use a short filtered command log:
 
 ```bash
 LOG_FILE=path/to/command.log
-rg -n "FAIL|PASS|Error:|AssertionError|expected|received|Test Files|Tests" "$LOG_FILE" | tail -120
+grep -En "FAIL|PASS|Error:|AssertionError|expected|received|Test Files|Tests" "$LOG_FILE" | tail -120
 ```
 
 ## Stack Startup Failures

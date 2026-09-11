@@ -68,7 +68,7 @@ else
     add_check PASS "issue-templates:no-markdown" '{"markdown_files":false}'
 fi
 
-if rg -n -i 'ghp_|gho_|ghr_|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|client_secret|refresh_token|bearer' \
+if grep -Eni 'ghp_|gho_|ghr_|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|client_secret|refresh_token|bearer' \
     "$manifest" > /dev/null 2>&1; then
     add_check FAIL "manifest:no-secrets" '{"credential_like_values":true}' "SECRET_EXPOSURE" "remove credential material from the manifest"
 else

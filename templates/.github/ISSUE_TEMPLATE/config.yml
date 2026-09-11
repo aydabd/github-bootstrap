@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/aydabd/github-bootstrap/security/advisories/new
+    url: https://github.com/OWNER/REPOSITORY/security/advisories/new
     about: Report vulnerabilities privately instead of opening a public issue.
   - name: Roadmap and priority
-    url: https://github.com/users/aydabd/projects
+    url: https://github.com/OWNER/REPOSITORY/projects
     about: Project fields and views are the live source of truth for priority and readiness.

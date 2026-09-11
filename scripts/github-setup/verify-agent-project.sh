@@ -64,7 +64,7 @@ else
         if [ "$(jq 'length' <<< "$missing")" -eq 0 ]; then
             add_check PASS "field:$field" "$(jq -cn --argjson field "$field_json" '{exists:true,options:(($field.options // []) | map(if type == "object" then .name else . end))}')"
         else
-            add_check FAIL "field:$field" "$(jq -cn --arg missing "$missing" '{exists:true,missing_options:$missing}')" "INVALID_PROJECT_FIELD" "add the missing canonical Project field options"
+            add_check FAIL "field:$field" "$(jq -cn --argjson missing "$missing" '{exists:true,missing_options:$missing}')" "INVALID_PROJECT_FIELD" "add the missing canonical Project field options"
         fi
     done < <(jq -r '.project.fields[] | [.name, (.required | tostring), ((.options // []) | tojson)] | @tsv' "$manifest")
 

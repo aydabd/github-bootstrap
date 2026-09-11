@@ -53,6 +53,12 @@ fi
 for template in epic.yml story.yml task.yml bug.yml security.yml config.yml; do
     [ -f "$repo_root/.github/ISSUE_TEMPLATE/$template" ] || fail "missing root issue form: $template"
 done
+grep -Fq 'https://github.com/OWNER/REPOSITORY/security/advisories/new' \
+    "$repo_root/templates/.github/ISSUE_TEMPLATE/config.yml" ||
+    fail "template issue config contains a repository-specific security URL"
+grep -Fq 'https://github.com/OWNER/REPOSITORY/projects' \
+    "$repo_root/templates/.github/ISSUE_TEMPLATE/config.yml" ||
+    fail "template issue config contains a repository-specific Project URL"
 if find "$repo_root/.github/ISSUE_TEMPLATE" -maxdepth 1 -type f -name '*.md' | grep -q .; then
     fail "root issue templates still contain markdown files"
 fi
