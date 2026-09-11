@@ -9,17 +9,42 @@ on:
       - main
 
 permissions:
-  contents: write # Create release commits and tags.
-  pull-requests: write # Create and update the release pull request.
+  contents: read
+  pull-requests: read
 
 jobs:
   release-please:
     name: Release Please
     runs-on: ubuntu-latest
+    environment: production-maintenance
+    permissions:
+      contents: read
+      pull-requests: read
 
     steps:
+      - name: Resolve Writer App token
+        id: resolve-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Verify resolved App identity
+        env:
+          APP_SLUG: ${{ steps.resolve-token.outputs.app-slug }}
+          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$APP_SLUG" ] || { echo "Writer App slug was not resolved" >&2; exit 1; }
+          [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected Writer App slug is not configured" >&2; exit 1; }
+          [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured Writer" >&2; exit 1; }
+
       - name: Run Release Please
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
+          token: ${{ steps.resolve-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

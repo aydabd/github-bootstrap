@@ -35,18 +35,18 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             .github/actions/resolve-gh-token/action.yml
-            scripts/github-setup/gh-common.sh
-            scripts/github-setup/validate-app-auth.sh
-            scripts/github-setup/validate-workflow-approval.sh
-            scripts/github-setup/validate-copilot-review.sh
+            .github/scripts/gh-common.sh
+            .github/scripts/validate-app-auth.sh
+            .github/scripts/validate-workflow-approval.sh
+            .github/scripts/validate-copilot-review.sh
 
       - name: Resolve Reviewer App token
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          client_id: ${{ vars.BOOTSTRAP_REVIEWER_APP_CLIENT_ID }}
+          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID }}
           refresh_token_secret: ""
-          app_private_key: ${{ secrets.BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY }}
+          app_private_key: ${{ secrets.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}
           app_owner: ${{ github.repository_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: workflow-approval
@@ -71,7 +71,7 @@ jobs:
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
           COPILOT_REVIEWER_LOGIN: ${{ vars.BOOTSTRAP_COPILOT_REVIEWER_LOGIN }}
           RUN_ID: ${{ github.event.workflow_run.id }}
-          VALIDATOR: scripts/github-setup/validate-workflow-approval.sh
+          VALIDATOR: .github/scripts/validate-workflow-approval.sh
         shell: bash
         run: |
           set -euo pipefail
@@ -100,7 +100,7 @@ jobs:
             }
           jq '[.data.repository.pullRequest.reviewThreads.nodes[] | {isResolved, author_login: (.comments.nodes[0].author.login // "")}]' \
             "$RUNNER_TEMP/threads-response.json" > "$threads_file"
-          "$GITHUB_WORKSPACE/scripts/github-setup/validate-copilot-review.sh" \
+          "$GITHUB_WORKSPACE/.github/scripts/validate-copilot-review.sh" \
             "$pr_file" "$reviews_file" "$threads_file" "$COPILOT_REVIEWER_LOGIN"
           printf '%s\n' "$pr_number" > "$RUNNER_TEMP/pull-request-number"
 

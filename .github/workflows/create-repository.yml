@@ -101,7 +101,7 @@ on:
         description: >-
           Comma-separated list of workflows to include, or 'all' to keep
           everything, or 'none' to skip all. Valid names: quality, codeql,
-          ai-code-review, release.
+          ai-code-review, release, maintenance.
         required: false
         default: "all"
         type: string
@@ -266,6 +266,14 @@ on:
       BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET:
         required: false
       BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN:
+        required: false
+      BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY:
+        required: false
+      BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY:
+        required: false
+      BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY:
+        required: false
+      BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY:
         required: false
 
 jobs:
@@ -734,76 +742,17 @@ jobs:
               ;;
           esac
 
-          WORKFLOWS_INPUT="${{ inputs.workflows }}"
+          bash scripts/select-generated-workflows.sh select new-repo \
+            "${{ inputs.workflows }}" "${{ inputs.release_tool }}"
 
-          case "$WORKFLOWS_INPUT" in
-            "all"|"")
-              echo "quality_kept=true" >> "$GITHUB_OUTPUT"
-              echo "Keeping all workflows" >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-              ;;
-          esac
-
-          # Build a space-separated list of workflow filenames to keep
-          KEEP_FILES=" commit-policy.yml"
-          QUALITY_KEPT=false
-          RELEASE_KEPT=false
-          VALID_WORKFLOW_FOUND=false
-
-          case "$WORKFLOWS_INPUT" in
-            "none") VALID_WORKFLOW_FOUND=true ;;
-            *)
-              IFS=',' read -ra WORKFLOW_NAMES <<< "$WORKFLOWS_INPUT"
-              for name in "${WORKFLOW_NAMES[@]}"; do
-                name=$(echo "$name" | xargs)
-                case "$name" in
-                  "quality")        KEEP_FILES="$KEEP_FILES quality.yml"; QUALITY_KEPT=true; VALID_WORKFLOW_FOUND=true ;;
-                  "codeql")         KEEP_FILES="$KEEP_FILES codeql.yml"; VALID_WORKFLOW_FOUND=true ;;
-                  "ai-code-review") KEEP_FILES="$KEEP_FILES ai-code-review.yml"; VALID_WORKFLOW_FOUND=true ;;
-                  "release")
-                    VALID_WORKFLOW_FOUND=true
-                    RELEASE_KEPT=true
-                    case "${{ inputs.release_tool }}" in
-                      "release-please")   KEEP_FILES="$KEEP_FILES release-please.yml" ;;
-                      *)                  KEEP_FILES="$KEEP_FILES git-cliff-release.yml" ;;
-                    esac
-                    ;;
-                  *)
-                    echo "⚠️ Unknown workflow name: '$name' (valid: quality, codeql, ai-code-review, release; commit-policy is always included)" >> "$GITHUB_STEP_SUMMARY"
-                    ;;
-                esac
-              done
-              # Fail fast if every supplied name was unrecognised
-              if [ "$VALID_WORKFLOW_FOUND" = false ]; then
-                echo "❌ No valid workflow names found in '$WORKFLOWS_INPUT'. Valid: quality,codeql,ai-code-review,release" >&2
-                exit 1
-              fi
-              ;;
-          esac
-
-          # Delete any workflow file not in the keep list
-          for file in .github/workflows/*.yml; do
-            filename=$(basename "$file")
-            [[ " $KEEP_FILES " == *" $filename "* ]] && continue
-            rm -f "$file"
-            echo "⏭️ Skipped workflow: $filename" >> "$GITHUB_STEP_SUMMARY"
-          done
-
-          echo "quality_kept=$QUALITY_KEPT" >> "$GITHUB_OUTPUT"
-
-          # If the release workflow was not kept, also remove its config files
-          if [ "$RELEASE_KEPT" = "false" ]; then
-            case "${{ inputs.release_tool }}" in
-              "release-please")
-                rm -f release-please-config.json .release-please-manifest.json
-                echo "⏭️ Removed release-please config files" >> "$GITHUB_STEP_SUMMARY"
-                ;;
-              *)
-                rm -f cliff.toml
-                echo "⏭️ Removed git-cliff config file" >> "$GITHUB_STEP_SUMMARY"
-                ;;
-            esac
-          fi
+      - name: Bind E2E maintenance workflows to their Environment
+        if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner' && inputs.workflows != 'none'
+        env:
+          WORKFLOWS_INPUT: ${{ inputs.workflows }}
+          E2E_COPILOT_REVIEWER_LOGIN: copilot-pull-request-reviewer[bot]
+        run: |
+          bash scripts/select-generated-workflows.sh bind-e2e new-repo "$WORKFLOWS_INPUT" \
+            "${{ inputs.release_tool }}"
 
       - name: Configure CODEOWNERS
         env:
@@ -1002,6 +951,116 @@ jobs:
               echo "- ✅ Selected workflows: ${{ inputs.workflows }}" >> "$GITHUB_STEP_SUMMARY"
               ;;
           esac
+
+  configure-e2e-maintenance-credentials:
+    name: Configure E2E maintenance credentials
+    if: needs.create-repository.result == 'success' && needs.create-repository.outputs.provisioner_profile == 'e2e-provisioner'
+    needs: create-repository
+    runs-on: ubuntu-latest
+    environment: e2e-maintenance
+    env:
+      GH_HOST: ${{ inputs.github_host || 'github.com' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Resolve E2E provisioner token in consuming job
+        id: provisioner-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ needs.create-repository.outputs.owner }}
+          permission_profile: repository-setup
+          repositories: ${{ inputs.repo_name }}
+      - name: Configure E2E maintenance Writer credentials
+        uses: ./.github/actions/configure-provisioner-credentials
+        env:
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+        with:
+          repository: ${{ needs.create-repository.outputs.owner }}/${{ inputs.repo_name }}
+          target_owner: ${{ needs.create-repository.outputs.owner }}
+          repository_name: ${{ inputs.repo_name }}
+          github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
+          profile: e2e-maintenance-writer
+          environment: e2e-maintenance
+          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_SLUG }}
+          gh_token: ${{ steps.provisioner-token.outputs.token }}
+      - name: Configure E2E maintenance Reviewer credentials
+        uses: ./.github/actions/configure-provisioner-credentials
+        env:
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}
+        with:
+          repository: ${{ needs.create-repository.outputs.owner }}/${{ inputs.repo_name }}
+          target_owner: ${{ needs.create-repository.outputs.owner }}
+          repository_name: ${{ inputs.repo_name }}
+          github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
+          profile: e2e-maintenance-reviewer
+          environment: e2e-maintenance
+          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_SLUG }}
+          gh_token: ${{ steps.provisioner-token.outputs.token }}
+
+  configure-production-maintenance-credentials:
+    name: Configure production maintenance credentials
+    if: needs.create-repository.result == 'success' && needs.create-repository.outputs.provisioner_profile == 'production-provisioner'
+    needs: create-repository
+    runs-on: ubuntu-latest
+    environment: production-maintenance
+    env:
+      GH_HOST: ${{ inputs.github_host || 'github.com' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Resolve production provisioner token in consuming job
+        id: provisioner-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ needs.create-repository.outputs.owner }}
+          permission_profile: repository-setup
+          repositories: ${{ inputs.repo_name }}
+      - name: Configure production maintenance Writer credentials
+        uses: ./.github/actions/configure-provisioner-credentials
+        env:
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+        with:
+          repository: ${{ needs.create-repository.outputs.owner }}/${{ inputs.repo_name }}
+          target_owner: ${{ needs.create-repository.outputs.owner }}
+          repository_name: ${{ inputs.repo_name }}
+          github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
+          profile: production-maintenance-writer
+          environment: production-maintenance
+          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+          gh_token: ${{ steps.provisioner-token.outputs.token }}
+      - name: Configure production maintenance Reviewer credentials
+        uses: ./.github/actions/configure-provisioner-credentials
+        env:
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}
+        with:
+          repository: ${{ needs.create-repository.outputs.owner }}/${{ inputs.repo_name }}
+          target_owner: ${{ needs.create-repository.outputs.owner }}
+          repository_name: ${{ inputs.repo_name }}
+          github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
+          profile: production-maintenance-reviewer
+          environment: production-maintenance
+          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG }}
+          gh_token: ${{ steps.provisioner-token.outputs.token }}
 
   cleanup-approval:
     name: Await Cleanup Approval

@@ -33,7 +33,7 @@ main() {
                 redirect_url="${3:-https://github.com/settings/apps/new}"
             fi
             case "$role" in
-                bootstrap-e2e-admin | repository-bootstrap-provisioner | repository-maintenance-writer | repository-maintenance-reviewer) ;;
+                bootstrap-e2e-admin | repository-bootstrap-provisioner | repository-maintenance-writer | repository-maintenance-reviewer | repository-maintenance-writer-e2e | repository-maintenance-reviewer-e2e | maintenance-fixture-e2e) ;;
                 *)
                     echo "unsupported App manifest role: ${role:-missing}" >&2
                     exit 2

@@ -1,58 +1,147 @@
 name: Configure provisioner credentials
-description: Export one validated provisioner profile credential set to later steps.
+description: Configure validated maintenance credentials in a generated repository Environment.
 inputs:
+  repository:
+    required: false
+  target_owner:
+    required: false
+  repository_name:
+    required: false
+  github_api_url:
+    description: GitHub API base URL for GitHub.com or GitHub Enterprise Server.
+    required: false
+    default: https://api.github.com
+  profile:
+    required: false
+  environment:
+    required: false
   client_id:
     required: true
+  app_slug:
+    required: false
   private_key:
-    required: true
+    required: false
   client_secret:
-    required: true
+    required: false
   refresh_token:
-    required: true
+    required: false
   refresh_token_name:
-    required: true
-  environment:
-    required: true
+    required: false
+  gh_token:
+    description: Resolved GitHub token for maintenance credential writes.
+    required: false
 runs:
   using: composite
   steps:
+    - name: Create maintenance App installation token
+      id: maintenance-token
+      if: inputs.profile != ''
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      with:
+        client-id: ${{ inputs.client_id }}
+        private-key: ${{ env.APP_PRIVATE_KEY }}
+        owner: ${{ inputs.target_owner }}
+        repositories: ${{ inputs.repository_name }}
+        github-api-url: ${{ inputs.github_api_url }}
     - shell: bash
       env:
+        REPOSITORY_INPUT: ${{ inputs.repository }}
+        PROFILE_INPUT: ${{ inputs.profile }}
+        ENVIRONMENT_INPUT: ${{ inputs.environment }}
+        CLIENT_ID_INPUT: ${{ inputs.client_id }}
+        APP_SLUG_INPUT: ${{ inputs.app_slug }}
+        APP_PRIVATE_KEY_INPUT: ${{ env.APP_PRIVATE_KEY }}
         PROVISIONER_CLIENT_ID_INPUT: ${{ inputs.client_id }}
         PROVISIONER_PRIVATE_KEY_INPUT: ${{ inputs.private_key }}
         PROVISIONER_CLIENT_SECRET_INPUT: ${{ inputs.client_secret }}
         PROVISIONER_REFRESH_TOKEN_INPUT: ${{ inputs.refresh_token }}
         PROVISIONER_REFRESH_TOKEN_NAME_INPUT: ${{ inputs.refresh_token_name }}
-        PROVISIONER_ENVIRONMENT_INPUT: ${{ inputs.environment }}
+        GH_TOKEN_INPUT: ${{ inputs.gh_token }}
+        MAINTENANCE_TOKEN_INPUT: ${{ steps.maintenance-token.outputs.token }}
       run: |
         set -euo pipefail
-        for name in \
-          PROVISIONER_CLIENT_ID_INPUT \
-          PROVISIONER_PRIVATE_KEY_INPUT \
-          PROVISIONER_CLIENT_SECRET_INPUT \
-          PROVISIONER_REFRESH_TOKEN_INPUT \
-          PROVISIONER_REFRESH_TOKEN_NAME_INPUT \
-          PROVISIONER_ENVIRONMENT_INPUT; do
-          if [ -z "${!name}" ]; then
-            echo "::error::Missing provisioner credential input: $name" >&2
-            exit 1
-          fi
-        done
-
-        write_env() {
-          local name="$1"
-          local value="$2"
-          local delimiter="__GITHUB_ENV_$(date +%s%N)_$$__"
-          {
-            printf '%s<<%s\n' "$name" "$delimiter"
-            printf '%s\n' "$value"
-            printf '%s\n' "$delimiter"
-          } >> "$GITHUB_ENV"
+        if [ -z "$PROFILE_INPUT" ]; then
+          for name in \
+            PROVISIONER_CLIENT_ID_INPUT \
+            PROVISIONER_PRIVATE_KEY_INPUT \
+            PROVISIONER_CLIENT_SECRET_INPUT \
+            PROVISIONER_REFRESH_TOKEN_INPUT \
+            PROVISIONER_REFRESH_TOKEN_NAME_INPUT \
+            ENVIRONMENT_INPUT; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing provisioner credential input: $name" >&2
+              exit 1
+            fi
+          done
+          write_env() {
+            local name="$1"
+            local value="$2"
+            local delimiter="__GITHUB_ENV_$(date +%s%N)_$$__"
+            {
+              printf '%s<<%s\n' "$name" "$delimiter"
+              printf '%s\n' "$value"
+              printf '%s\n' "$delimiter"
+            } >> "$GITHUB_ENV"
+          }
+          write_env PROVISIONER_CLIENT_ID "$PROVISIONER_CLIENT_ID_INPUT"
+          write_env PROVISIONER_PRIVATE_KEY "$PROVISIONER_PRIVATE_KEY_INPUT"
+          write_env PROVISIONER_CLIENT_SECRET "$PROVISIONER_CLIENT_SECRET_INPUT"
+          write_env PROVISIONER_REFRESH_TOKEN "$PROVISIONER_REFRESH_TOKEN_INPUT"
+          write_env PROVISIONER_REFRESH_TOKEN_NAME "$PROVISIONER_REFRESH_TOKEN_NAME_INPUT"
+          write_env PROVISIONER_ENVIRONMENT "$ENVIRONMENT_INPUT"
+          exit 0
+        fi
+        profile_loader="$GITHUB_ACTION_PATH/../../../scripts/github-setup/app-credential-profile.sh"
+        [ -x "$profile_loader" ] || { echo "::error::Credential profile loader is unavailable" >&2; exit 1; }
+        case "$PROFILE_INPUT" in
+          production-maintenance-writer|e2e-maintenance-writer)
+            maintenance_role="Writer"
+            ;;
+          production-maintenance-reviewer|e2e-maintenance-reviewer)
+            maintenance_role="Reviewer"
+            ;;
+          *) echo "::error::Unsupported maintenance profile '$PROFILE_INPUT'" >&2; exit 1 ;;
+        esac
+        if [ -z "$GH_TOKEN_INPUT" ]; then
+          echo "::error::Missing GitHub token for maintenance credential writes" >&2
+          exit 1
+        fi
+        owner_pattern='[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?'
+        [[ "$REPOSITORY_INPUT" =~ ^${owner_pattern}/[A-Za-z0-9._-]+$ ]] || {
+          echo "::error::Repository must match OWNER/REPOSITORY" >&2
+          exit 1
         }
-
-        write_env PROVISIONER_CLIENT_ID "$PROVISIONER_CLIENT_ID_INPUT"
-        write_env PROVISIONER_PRIVATE_KEY "$PROVISIONER_PRIVATE_KEY_INPUT"
-        write_env PROVISIONER_CLIENT_SECRET "$PROVISIONER_CLIENT_SECRET_INPUT"
-        write_env PROVISIONER_REFRESH_TOKEN "$PROVISIONER_REFRESH_TOKEN_INPUT"
-        write_env PROVISIONER_REFRESH_TOKEN_NAME "$PROVISIONER_REFRESH_TOKEN_NAME_INPUT"
-        write_env PROVISIONER_ENVIRONMENT "$PROVISIONER_ENVIRONMENT_INPUT"
+        for value_name in CLIENT_ID_INPUT APP_SLUG_INPUT APP_PRIVATE_KEY_INPUT; do
+          [ -n "${!value_name}" ] || { echo "::error::Missing maintenance credential input: $value_name" >&2; exit 1; }
+        done
+        expected_environment="$(bash "$profile_loader" "$PROFILE_INPUT" environment)"
+        client_id_variable="$(bash "$profile_loader" "$PROFILE_INPUT" client_id_variable)"
+        app_slug_variable="$(bash "$profile_loader" "$PROFILE_INPUT" app_slug_variable)"
+        private_key_secret="$(bash "$profile_loader" "$PROFILE_INPUT" private_key_secret)"
+        remediation_url="${GITHUB_SERVER_URL:-https://github.com}/apps/${APP_SLUG_INPUT}/installations/new"
+        [ "$expected_environment" = "$ENVIRONMENT_INPUT" ] || { echo "::error::Profile and Environment do not match" >&2; exit 1; }
+        [ -n "$MAINTENANCE_TOKEN_INPUT" ] || {
+          echo "::error::Maintenance App installation token was not created for $PROFILE_INPUT" >&2
+          exit 1
+        }
+        installation_repositories="$(mktemp)"
+        trap 'rm -f "$installation_repositories"' EXIT
+        GH_TOKEN="$MAINTENANCE_TOKEN_INPUT" gh api --paginate --slurp /installation/repositories > "$installation_repositories" || {
+          echo "::error::Profile-specific maintenance installation preflight failed for $maintenance_role ($PROFILE_INPUT); install the App in the target owner: $remediation_url" >&2
+          exit 1
+        }
+        jq -e --arg repository "$REPOSITORY_INPUT" \
+          '[.[] | .repositories[] | select(.full_name == $repository)] | length > 0' \
+          "$installation_repositories" > /dev/null || {
+          echo "::error::$maintenance_role installation ($PROFILE_INPUT) cannot see $REPOSITORY_INPUT; install the App in the target owner: $remediation_url" >&2
+          exit 1
+        }
+        GH_TOKEN="$MAINTENANCE_TOKEN_INPUT" gh api "/repos/$REPOSITORY_INPUT" > /dev/null || {
+          echo "::error::$maintenance_role installation ($PROFILE_INPUT) cannot access $REPOSITORY_INPUT" >&2
+          exit 1
+        }
+        printf '::add-mask::%s\n' "$APP_PRIVATE_KEY_INPUT"
+        GH_TOKEN="$GH_TOKEN_INPUT" gh variable set "$client_id_variable" --repo "$REPOSITORY_INPUT" --env "$ENVIRONMENT_INPUT" --body "$CLIENT_ID_INPUT"
+        GH_TOKEN="$GH_TOKEN_INPUT" gh variable set "$app_slug_variable" --repo "$REPOSITORY_INPUT" --env "$ENVIRONMENT_INPUT" --body "$APP_SLUG_INPUT"
+        printf '%s' "$APP_PRIVATE_KEY_INPUT" | GH_TOKEN="$GH_TOKEN_INPUT" gh secret set "$private_key_secret" \
+          --repo "$REPOSITORY_INPUT" --env "$ENVIRONMENT_INPUT"

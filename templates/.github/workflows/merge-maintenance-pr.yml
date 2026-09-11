@@ -1,0 +1,254 @@
+name: Merge Maintenance Pull Request
+
+on:
+  workflow_run:
+    workflows:
+      - Maintenance safety
+      - Verify Conda Lockfiles
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  merge:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch != 'main'
+    name: Approve and enable squash auto-merge
+    runs-on: ubuntu-24.04
+    environment: production-maintenance
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout validation helpers
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        env:
+          GIT_CONFIG_COUNT: 1
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: main
+        with:
+          persist-credentials: false
+          ref: main
+          sparse-checkout: |
+            .github/actions/resolve-gh-token/action.yml
+            .github/scripts/gh-common.sh
+            .github/scripts/validate-app-auth.sh
+            .github/scripts/validate-maintenance-merge.sh
+
+      - name: Resolve Reviewer App token
+        id: resolve-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID }}
+          refresh_token_secret: ""
+          app_private_key: ${{ secrets.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: maintenance-review
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Verify resolved Reviewer App identity
+        env:
+          APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$APP_SLUG" ] || { echo "Reviewer App slug was not resolved" >&2; exit 1; }
+          [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected maintenance Reviewer App slug is not configured" >&2; exit 1; }
+          [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured maintenance Reviewer" >&2; exit 1; }
+
+      # enablePullRequestAutoMerge needs contents:write, which the Reviewer App
+      # does not carry; the Writer App does. The Reviewer still owns the approval.
+      - name: Resolve Writer App merge token
+        id: resolve-merge-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID }}
+          refresh_token_secret: ""
+          app_private_key: ${{ secrets.BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: maintenance-merge
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Approve and enable squash auto-merge after fresh validation
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          MERGE_TOKEN: ${{ steps.resolve-merge-token.outputs.token }}
+          TRIGGER_WORKFLOW: ${{ github.event.workflow_run.name }}
+          TRIGGER_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+          REVIEWER_APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$HEAD_BRANCH" ] || { echo "maintenance trigger has no head branch" >&2; exit 1; }
+          [ -n "$TRIGGER_HEAD_SHA" ] || { echo "maintenance trigger has no head SHA" >&2; exit 1; }
+
+          # Conda pull_request runs carry the exact PR number. Safety runs
+          # created from pull_request_target do not, so resolve their one open
+          # same-owner PR by exact branch and verify its SHA below.
+          if [ -n "$TRIGGER_PR_NUMBER" ]; then
+            PR_NUMBER="$TRIGGER_PR_NUMBER"
+          else
+            PR_NUMBER="$(gh api --method GET "repos/$REPOSITORY/pulls" \
+              -f head="${REPOSITORY%%/*}:$HEAD_BRANCH" -f base=main -f state=open \
+              --jq 'if length == 1 then .[0].number else empty end')"
+          fi
+          [ -n "$PR_NUMBER" ] || {
+            echo "no unique open pull request for maintenance trigger; deferring"
+            exit 0
+          }
+          HEAD_SHA="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json headRefOid --jq '.headRefOid')"
+          [ -n "$HEAD_SHA" ] || { echo "could not resolve the pull request head SHA" >&2; exit 1; }
+          [ "$TRIGGER_HEAD_SHA" = "$HEAD_SHA" ] || {
+            echo "Maintenance trigger validated $TRIGGER_HEAD_SHA but the PR head is now $HEAD_SHA; deferring to the next run"
+            exit 0
+          }
+
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+
+          fetch_state() {
+            gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" > "$tmp_dir/pr.json"
+            gh pr checks "$PR_NUMBER" --required --json name,state > "$tmp_dir/checks.json" || true
+            gh api "/repos/$REPOSITORY/issues/$PR_NUMBER/labels?per_page=100" > "$tmp_dir/labels.json"
+            gh api --paginate --slurp "/repos/$REPOSITORY/pulls/$PR_NUMBER/reviews" > "$tmp_dir/review-pages.json"
+            jq '[.[][]]' "$tmp_dir/review-pages.json" > "$tmp_dir/reviews.json"
+          }
+
+          validate_state() {
+            local require_reviewer_approval="${1:-false}"
+            fetch_state
+            bash .github/scripts/validate-maintenance-merge.sh \
+              "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
+              "$tmp_dir/labels.json" "$REPOSITORY" "$HEAD_SHA" \
+              "$WRITER_APP_SLUG" "$REVIEWER_APP_SLUG" "$require_reviewer_approval"
+          }
+
+          wait_until_safety_check() {
+            local timeout_seconds=60 deadline maintenance_safety_state
+            deadline=$((SECONDS + timeout_seconds))
+            while [ "$SECONDS" -lt "$deadline" ]; do
+              if ! maintenance_safety_state="$(gh pr checks "$PR_NUMBER" --json name,state \
+                --jq '[.[] | select(.name == "Maintenance safety") | .state] | last // "MISSING"' 2>/dev/null)"; then
+                maintenance_safety_state=MISSING
+              fi
+              case "$maintenance_safety_state" in
+                SUCCESS)
+                  return 0
+                  ;;
+                FAILURE|ERROR|CANCELLED|SKIPPED)
+                  return 1
+                  ;;
+                *)
+                  sleep 5
+                  ;;
+              esac
+            done
+            return 1
+          }
+
+          # A direct Conda completion can race the safety run it triggers. Wait
+          # for the same PR's safety check, not for an unrelated workflow run.
+          if [ "$TRIGGER_WORKFLOW" = "Verify Conda Lockfiles" ] &&
+            ! wait_until_safety_check; then
+            echo "Maintenance safety is not successful for this PR; deferring" >&2
+            exit 0
+          fi
+          if ! validate_state; then
+            echo "maintenance merge preconditions are not met; not enabling auto-merge" >&2
+            exit 0
+          fi
+          reviewer_login="${REVIEWER_APP_SLUG}[bot]"
+          if ! jq -e --arg reviewer_login "$reviewer_login" --arg head_sha "$HEAD_SHA" \
+              'any(.[]?; .user.login == $reviewer_login and .state == "APPROVED" and .commit_id == $head_sha)' \
+              "$tmp_dir/reviews.json" > /dev/null; then
+            gh api --method POST "/repos/$REPOSITORY/pulls/$PR_NUMBER/reviews" \
+              -f event=APPROVE \
+              -f commit_id="$HEAD_SHA" \
+              -f body="Maintenance gates passed for $HEAD_SHA; approved by the Reviewer App."
+          fi
+
+          validate_state true
+          node_id="$(jq -r '.node_id' "$tmp_dir/pr.json")"
+          [ -n "$node_id" ] && [ "$node_id" != "null" ] || {
+            echo "pull request node ID is missing" >&2
+            exit 1
+          }
+
+          wait_until_mergeable() {
+            local timeout_seconds="$1" deadline mergeable_state
+            deadline=$((SECONDS + timeout_seconds))
+            while [ "$SECONDS" -lt "$deadline" ]; do
+              mergeable_state="$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.mergeable_state // "unknown"')"
+              case "$mergeable_state" in
+                unstable|unknown)
+                  sleep 5
+                  ;;
+                *)
+                  printf '%s\n' "$mergeable_state"
+                  return 0
+                  ;;
+              esac
+            done
+            return 1
+          }
+
+          merge_with_retry() {
+            local merge_timeout_seconds=60 merge_deadline mergeable_state remaining_seconds response current_head_sha
+            merge_deadline=$((SECONDS + merge_timeout_seconds))
+            while [ "$SECONDS" -lt "$merge_deadline" ]; do
+              if ! current_head_sha="$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.head.sha')"; then
+                echo "could not re-read pull request head; deferring" >&2
+                return 0
+              fi
+              if [ "$current_head_sha" != "$HEAD_SHA" ]; then
+                echo "pull request head changed during merge preparation; deferring" >&2
+                return 0
+              fi
+              remaining_seconds=$((merge_deadline - SECONDS))
+              if ! mergeable_state="$(wait_until_mergeable "$remaining_seconds")"; then
+                echo "mergeability_timeout: state did not stabilize within ${merge_timeout_seconds}s" >&2
+                echo "mergeability remained unstable; deferring to the next trigger" >&2
+                return 0
+              fi
+              if [ "$mergeable_state" = "clean" ]; then
+                GH_TOKEN="$MERGE_TOKEN" gh api --method PUT \
+                  "/repos/$REPOSITORY/pulls/$PR_NUMBER/merge" \
+                  -f sha="$HEAD_SHA" -f merge_method=squash > /dev/null
+                return 0
+              fi
+
+              # shellcheck disable=SC2016
+              if response="$(GH_TOKEN="$MERGE_TOKEN" gh api graphql \
+                -f query='mutation($pullRequestId:ID!,$mergeMethod:PullRequestMergeMethod!){enablePullRequestAutoMerge(input:{pullRequestId:$pullRequestId,mergeMethod:$mergeMethod}){pullRequest{autoMergeRequest{mergeMethod}}}}' \
+                -f pullRequestId="$node_id" \
+                -f mergeMethod=SQUASH 2>&1)"; then
+                return 0
+              fi
+              if grep -Fq 'unstable status' <<< "$response"; then
+                echo "GitHub rejected auto-merge while mergeability was unstable; waiting for a stable state"
+                if [ "$remaining_seconds" -gt 5 ]; then
+                  sleep 5
+                fi
+                continue
+              fi
+              printf '%s\n' "$response" >&2
+              return 1
+            done
+            echo "mergeability_timeout: auto-merge did not stabilize within ${merge_timeout_seconds}s" >&2
+            echo "mergeability remained unstable; deferring to the next trigger" >&2
+            return 0
+          }
+
+          merge_with_retry

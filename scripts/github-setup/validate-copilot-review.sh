@@ -5,9 +5,14 @@ pr_file="${1:-}"
 reviews_file="${2:-}"
 threads_file="${3:-}"
 configured_login="${4:-}"
+require_copilot_review="${REQUIRE_COPILOT_REVIEW:-false}"
 
 if ! [ -s "$pr_file" ] || ! [ -s "$reviews_file" ] || ! [ -s "$threads_file" ]; then
     echo "Copilot review validation inputs are incomplete" >&2
+    exit 1
+fi
+if [ "$require_copilot_review" != false ] && [ "$require_copilot_review" != true ]; then
+    echo "REQUIRE_COPILOT_REVIEW must be true or false" >&2
     exit 1
 fi
 
@@ -19,8 +24,10 @@ fi
 pr_author="$(jq -r '.user.login // ""' "$pr_file")"
 case "$pr_author" in
     *"[bot]")
-        echo "pull request author $pr_author is a bot; Copilot review is not applicable"
-        exit 0
+        if [ "$require_copilot_review" = false ]; then
+            echo "pull request author $pr_author is a bot; Copilot review is not applicable"
+            exit 0
+        fi
         ;;
 esac
 

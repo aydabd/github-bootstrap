@@ -83,12 +83,17 @@ grep -Fq 'pem_last_line=' "$helper"
 grep -Fq 'BASH_REMATCH' "$helper"
 grep -Fq "sanitized_token_file=\"\$(mktemp)\"" "$helper"
 grep -Fq "sanitized_private_key_file=\"\$(mktemp)\"" "$helper"
-grep -Fq "gh variable set \"\$client_id_variable\" --repo \"\$repo\" --env \"\$environment\"" "$helper"
-grep -Fq "gh secret set \"\$private_key_secret\" --repo \"\$repo\" --env \"\$environment\"" "$helper"
-grep -Fq "gh secret set \"\$client_secret_secret\" --repo \"\$repo\" --env \"\$environment\"" "$helper"
-grep -Fq "gh secret set \"\$refresh_token_secret\" --repo \"\$repo\" --env \"\$environment\"" "$helper"
+grep -Fq "GH_TOKEN=\"\$GH_TOKEN\" gh variable set \"\$client_id_variable\" --repo \"\$repo\" --env \"\$environment\"" "$helper"
+grep -Fq "GH_TOKEN=\"\$GH_TOKEN\" gh secret set \"\$private_key_secret\" --repo \"\$repo\" --env \"\$environment\"" "$helper"
+grep -Fq "GH_TOKEN=\"\$GH_TOKEN\" gh secret set \"\$client_secret_secret\" --repo \"\$repo\" --env \"\$environment\"" "$helper"
+grep -Fq "GH_TOKEN=\"\$GH_TOKEN\" gh secret set \"\$refresh_token_secret\" --repo \"\$repo\" --env \"\$environment\"" "$helper"
+grep -Fq "GH_TOKEN=\"\$GH_TOKEN\" gh variable set \"\$app_slug_variable\"" "$helper"
+grep -Fq "< \"\$sanitized_private_key_file\"" "$helper"
+grep -Fq "< \"\$sanitized_client_secret_file\"" "$helper"
+grep -Fq "< \"\$sanitized_token_file\"" "$helper"
 grep -Fq 'ghr_' "$helper"
 grep -Fq 'umask 077' "$helper"
+grep -Fq "if [ -z \"\${GH_TOKEN:-}\" ]; then" "$helper"
 if grep -Eq "${legacy_prefix}${legacy_profile}" "$helper"; then
     echo "secret installer must not hardcode legacy provisioner credential names" >&2
     exit 1
@@ -117,7 +122,7 @@ printf '123456789\\n' > "$test_tmp_dir/client-id"
 printf '%s\\n' '-----BEGIN PRIVATE KEY-----' 'key' '-----END PRIVATE KEY-----' > "$test_tmp_dir/private-key"
 printf 'client-secret\\n' > "$test_tmp_dir/client-secret"
 printf 'ghr_test-token\\n' > "$test_tmp_dir/refresh-token"
-if PATH="$test_tmp_dir/bin:$PATH" "$helper" \
+if GH_TOKEN=contract-test-token PATH="$test_tmp_dir/bin:$PATH" "$helper" \
     octo/repo unknown-profile "$test_tmp_dir/client-id" "$test_tmp_dir/private-key" \
     "$test_tmp_dir/client-secret" "$test_tmp_dir/refresh-token" \
     2> "$test_tmp_dir/installer-error"; then

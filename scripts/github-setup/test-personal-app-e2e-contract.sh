@@ -45,4 +45,16 @@ if grep -Eq 'gh_token:|GH_PAT|organization-administration' "$workflow"; then
     exit 1
 fi
 
+for caller_job in create-public create-private; do
+    caller_block="$(awk -v job="$caller_job" '
+        $0 == "  " job ":" { in_job = 1 }
+        in_job && /^  [A-Za-z0-9_-]+:/ && $0 != "  " job ":" { exit }
+        in_job { print }
+    ' "$workflow")"
+    printf '%s\n' "$caller_block" | grep -Fq \
+        "BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY: \${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}"
+    printf '%s\n' "$caller_block" | grep -Fq \
+        "BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY: \${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}"
+done
+
 echo "Personal App E2E contract checks passed."

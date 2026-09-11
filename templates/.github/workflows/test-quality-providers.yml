@@ -1,0 +1,43 @@
+name: Test Quality Providers
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: quality (${{ matrix['environment-manager'] }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        environment-manager: [mise, system]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: tools/go.mod
+          cache-dependency-path: tools/go.mod
+
+      - name: Setup mise
+        if: matrix['environment-manager'] == 'mise'
+        uses: ./.github/actions/setup-lint-mise
+
+      - name: Setup system tools
+        if: matrix['environment-manager'] == 'system'
+        uses: ./.github/actions/setup-lint-system
+
+      - name: Run quality checks
+        env:
+          ENV_MANAGER: ${{ matrix['environment-manager'] }}
+          LINT_MODE: check
+        shell: bash
+        run: make quality

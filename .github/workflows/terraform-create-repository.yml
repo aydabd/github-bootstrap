@@ -101,7 +101,7 @@ on:
         description: >-
           Comma-separated list of workflows to include, or 'all' to keep
           everything, or 'none' to skip all. Valid names: quality, codeql,
-          ai-code-review, release.
+          ai-code-review, release, maintenance.
         required: false
         default: "all"
         type: string
@@ -266,6 +266,14 @@ on:
       BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET:
         required: false
       BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN:
+        required: false
+      BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY:
+        required: false
+      BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY:
+        required: false
+      BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY:
+        required: false
+      BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY:
         required: false
 
 jobs:
@@ -848,69 +856,17 @@ jobs:
               ;;
           esac
 
-          WORKFLOWS_INPUT="${{ inputs.workflows }}"
+          bash scripts/select-generated-workflows.sh select new-repo \
+            "${{ inputs.workflows }}" "${{ inputs.release_tool }}"
 
-          case "$WORKFLOWS_INPUT" in
-            "all")
-              echo "quality_kept=true" >> "$GITHUB_OUTPUT"
-              echo "✅ All workflows kept" >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            "none")
-              echo "quality_kept=false" >> "$GITHUB_OUTPUT"
-              rm -f .github/workflows/quality.yml \
-                .github/workflows/codeql.yml \
-                .github/workflows/ai-code-review.yml
-              case "${{ inputs.release_tool }}" in
-                "release-please") rm -f .github/workflows/release-please.yml release-please-config.json .release-please-manifest.json ;;
-                *) rm -f .github/workflows/git-cliff-release.yml cliff.toml ;;
-              esac
-              echo "⏭️ All workflows removed (workflows=none)" >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            *)
-              VALID_NAMES="quality codeql ai-code-review release"
-              KEEP_LIST=""
-              QUALITY_KEPT=false
-              IFS=',' read -ra NAMES <<< "$WORKFLOWS_INPUT"
-              for name in "${NAMES[@]}"; do
-                name=$(echo "$name" | xargs)
-                case "$name" in
-                  quality) KEEP_LIST="$KEEP_LIST $name"; QUALITY_KEPT=true ;;
-                  codeql|ai-code-review|release) KEEP_LIST="$KEEP_LIST $name" ;;
-                  *) echo "⚠️ Unknown workflow name: $name (ignored)" >> "$GITHUB_STEP_SUMMARY" ;;
-                esac
-              done
-
-              if [ -z "$KEEP_LIST" ]; then
-                echo "::error::All supplied workflow names are invalid. Valid names: $VALID_NAMES"
-                exit 1
-              fi
-
-              for file in .github/workflows/*.yml; do
-                filename=$(basename "$file")
-                keep=false
-                case "$filename" in
-                  commit-policy.yml) keep=true ;;
-                  quality.yml) echo "$KEEP_LIST" | grep -qw quality && keep=true ;;
-                  codeql.yml) echo "$KEEP_LIST" | grep -qw codeql && keep=true ;;
-                  ai-code-review.yml) echo "$KEEP_LIST" | grep -qw ai-code-review && keep=true ;;
-                  release-please.yml|git-cliff-release.yml)
-                    echo "$KEEP_LIST" | grep -qw release && keep=true
-                    ;;
-                esac
-                if [ "$keep" = false ]; then
-                  rm -f "$file"
-                fi
-              done
-              if ! echo "$KEEP_LIST" | grep -qw "release"; then
-                case "${{ inputs.release_tool }}" in
-                  "release-please") rm -f release-please-config.json .release-please-manifest.json ;;
-                  *) rm -f cliff.toml ;;
-                esac
-              fi
-              echo "✅ Selected workflows:$KEEP_LIST" >> "$GITHUB_STEP_SUMMARY"
-              echo "quality_kept=$QUALITY_KEPT" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
+      - name: Bind E2E maintenance workflows to their Environment
+        if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner' && inputs.workflows != 'none'
+        env:
+          WORKFLOWS_INPUT: ${{ inputs.workflows }}
+          E2E_COPILOT_REVIEWER_LOGIN: copilot-pull-request-reviewer[bot]
+        run: |
+          bash scripts/select-generated-workflows.sh bind-e2e new-repo "$WORKFLOWS_INPUT" \
+            "${{ inputs.release_tool }}"
 
       - name: Configure Release Please for selected languages
         uses: ./.github/actions/configure-release-tool
@@ -1033,6 +989,116 @@ jobs:
               ;;
           esac
           echo "- ✅ Makefile (run 'make quality' locally)" >> "$GITHUB_STEP_SUMMARY"
+
+  configure-e2e-maintenance-credentials:
+    name: Configure E2E maintenance credentials
+    if: needs.terraform-create-repository.result == 'success' && needs.terraform-create-repository.outputs.provisioner_profile == 'e2e-provisioner'
+    needs: terraform-create-repository
+    runs-on: ubuntu-latest
+    environment: e2e-maintenance
+    env:
+      GH_HOST: ${{ inputs.github_host || 'github.com' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Resolve E2E provisioner token in consuming job
+        id: provisioner-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ needs.terraform-create-repository.outputs.owner }}
+          permission_profile: repository-setup
+          repositories: ${{ inputs.repo_name }}
+      - name: Configure E2E maintenance Writer credentials
+        uses: ./.github/actions/configure-provisioner-credentials
+        env:
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+        with:
+          repository: ${{ needs.terraform-create-repository.outputs.owner }}/${{ inputs.repo_name }}
+          target_owner: ${{ needs.terraform-create-repository.outputs.owner }}
+          repository_name: ${{ inputs.repo_name }}
+          github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
+          profile: e2e-maintenance-writer
+          environment: e2e-maintenance
+          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_SLUG }}
+          gh_token: ${{ steps.provisioner-token.outputs.token }}
+      - name: Configure E2E maintenance Reviewer credentials
+        uses: ./.github/actions/configure-provisioner-credentials
+        env:
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}
+        with:
+          repository: ${{ needs.terraform-create-repository.outputs.owner }}/${{ inputs.repo_name }}
+          target_owner: ${{ needs.terraform-create-repository.outputs.owner }}
+          repository_name: ${{ inputs.repo_name }}
+          github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
+          profile: e2e-maintenance-reviewer
+          environment: e2e-maintenance
+          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_SLUG }}
+          gh_token: ${{ steps.provisioner-token.outputs.token }}
+
+  configure-production-maintenance-credentials:
+    name: Configure production maintenance credentials
+    if: needs.terraform-create-repository.result == 'success' && needs.terraform-create-repository.outputs.provisioner_profile == 'production-provisioner'
+    needs: terraform-create-repository
+    runs-on: ubuntu-latest
+    environment: production-maintenance
+    env:
+      GH_HOST: ${{ inputs.github_host || 'github.com' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Resolve production provisioner token in consuming job
+        id: provisioner-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ needs.terraform-create-repository.outputs.owner }}
+          permission_profile: repository-setup
+          repositories: ${{ inputs.repo_name }}
+      - name: Configure production maintenance Writer credentials
+        uses: ./.github/actions/configure-provisioner-credentials
+        env:
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+        with:
+          repository: ${{ needs.terraform-create-repository.outputs.owner }}/${{ inputs.repo_name }}
+          target_owner: ${{ needs.terraform-create-repository.outputs.owner }}
+          repository_name: ${{ inputs.repo_name }}
+          github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
+          profile: production-maintenance-writer
+          environment: production-maintenance
+          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+          gh_token: ${{ steps.provisioner-token.outputs.token }}
+      - name: Configure production maintenance Reviewer credentials
+        uses: ./.github/actions/configure-provisioner-credentials
+        env:
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}
+        with:
+          repository: ${{ needs.terraform-create-repository.outputs.owner }}/${{ inputs.repo_name }}
+          target_owner: ${{ needs.terraform-create-repository.outputs.owner }}
+          repository_name: ${{ inputs.repo_name }}
+          github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
+          profile: production-maintenance-reviewer
+          environment: production-maintenance
+          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG }}
+          gh_token: ${{ steps.provisioner-token.outputs.token }}
 
   cleanup-approval:
     name: Await Cleanup Approval

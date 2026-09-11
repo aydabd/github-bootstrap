@@ -2,6 +2,7 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/../.." && pwd)"
 validator="$script_dir/validate-maintenance-pr.sh"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -50,5 +51,14 @@ for mutation in fork closed draft author release-label base; do
         exit 1
     fi
 done
+
+template_validator="$repo_root/templates/.github/scripts/validate-maintenance-pr.sh"
+sed 's/acme-maintenance-writer\[bot\]/github-actions[bot]/' \
+    "$tmp_dir/writer-release.json" > "$tmp_dir/github-actions-release.json"
+if FULL_REPOSITORY=acme/project WRITER_APP_SLUG=acme-maintenance-writer \
+    "$template_validator" "$tmp_dir/github-actions-release.json"; then
+    echo "template validator accepted github-actions release PR" >&2
+    exit 1
+fi
 
 echo "Maintenance PR contract passed."

@@ -16,6 +16,7 @@ payload for auditability.
 | **E2E Repository Bootstrap Provisioner**        | Creation and setup of disposable E2E repositories plus the scoped E2E workflow dispatch. Install only on the disposable E2E owner.                                                                      | E2E provisioner App private key, held in the protected `e2e-testing` Environment.                                          | Production repositories, maintenance PR review/merge, workflow approval, and ruleset bypass.                                      |
 | **Repository Maintenance Writer**               | Creates verified maintenance commits and opens or updates maintenance pull requests in explicitly selected repositories.                                                                                | Production Writer App private key, held in the production maintenance environment.                                         | E2E administration, workflow approval, review, auto-merge, and ruleset bypass.                                                    |
 | **Repository Maintenance Reviewer**             | Approves eligible workflow runs, completes the automation review/merge orchestration, and enables auto-merge after all policy gates pass. Install only on explicitly selected maintenance repositories. | Production Reviewer App private key, held in the production maintenance environment and kept separate from the Writer key. | E2E administration, commit creation, arbitrary repository administration, and ruleset bypass.                                     |
+| **E2E Maintenance Fixture**                     | Acts as the disposable E2E fixture user when opening a human-controlled PR, then persists only its rotated App refresh token. Install only in the disposable E2E owner.                                 | E2E fixture App private key, client secret, and refresh token, held in the protected `e2e-maintenance` Environment.        | Production repositories, maintenance approval/merge, repository administration, and workflow approval.                            |
 
 The operator runbook for installing these Apps in another owner and running the
 maintenance pipeline is [`maintenance-operations.md`](maintenance-operations.md).
@@ -36,6 +37,7 @@ default permissions are the complete requested contract:
 | Repository Bootstrap Provisioner | `administration: write`, `actions: write`, `contents: write`, `issues: write`, `metadata: read`, `secrets: write`, `workflows: write` |
 | Repository Maintenance Writer    | `contents: write`, `pull_requests: write`, `metadata: read`                                                                           |
 | Repository Maintenance Reviewer  | `actions: write`, `pull_requests: write`, `metadata: read`                                                                            |
+| E2E Maintenance Fixture          | `contents: write`, `pull_requests: write`, `secrets: write`                                                                           |
 
 Permissions are not shared between roles for convenience. GitHub's
 `administration: write` permission includes repository deletion capability;
