@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.4.0](https://github.com/aydabd/github-bootstrap/compare/v2.3.1...v2.4.0) (2026-09-11)
+
+
+### Features
+
+* isolate E2E maintenance automation ([#212](https://github.com/aydabd/github-bootstrap/issues/212)) ([7272676](https://github.com/aydabd/github-bootstrap/commit/7272676ae9513a85bb9745fb0d13640669bc2e65))
+
+
+### Bug Fixes
+
+* harden E2E maintenance automation ([7272676](https://github.com/aydabd/github-bootstrap/commit/7272676ae9513a85bb9745fb0d13640669bc2e65))
+
 ## [2.3.1](https://github.com/aydabd/github-bootstrap/compare/v2.3.0...v2.3.1) (2026-09-09)
 
 
