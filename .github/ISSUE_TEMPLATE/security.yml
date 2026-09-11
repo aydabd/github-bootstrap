@@ -1,0 +1,36 @@
+name: Security hardening
+description: Planned security, privacy, supply-chain, or production-readiness work.
+title: "[SECURITY] "
+labels: [security]
+body:
+  - type: markdown
+    attributes:
+      value: Do not disclose a vulnerability publicly. Use SECURITY.md.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: State what is being hardened or verified and why now.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Record live configuration, code path, or test evidence.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and risk
+      description: List included work, threats, boundaries, and non-goals.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Acceptance and verification
+      description: Map each security requirement to a test or redacted observation.
+    validations:
+      required: true

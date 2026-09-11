@@ -83,7 +83,7 @@ grep -q 'coderabbit-dependabot-review.yml' "$repo_root/README.md"
 for creation_workflow in \
     "$repo_root/.github/workflows/create-repository.yml" \
     "$repo_root/.github/workflows/terraform-create-repository.yml"; do
-    grep -q 'cp AGENTS.md new-repo/' "$creation_workflow"
+    grep -q 'cp templates/AGENTS.md new-repo/AGENTS.md' "$creation_workflow"
     grep -q 'cp WORKTREES.md new-repo/' "$creation_workflow"
     grep -qF "tr -d '[:space:]'" "$creation_workflow"
     grep -q 'DELIVERY_MODE.*CENTRAL_REPOSITORY.*CENTRAL_REF' "$creation_workflow"
@@ -92,7 +92,7 @@ for creation_workflow in \
     grep -q '^      require_cleanup_approval:' "$creation_workflow"
     grep -q '^      optional_features:' "$creation_workflow"
     grep -q 'OWNER/REPOSITORY@REF' "$creation_workflow"
-    grep -q "OPTIONAL_FEATURES=\"\${{ inputs.optional_features || 'none' }}\"" "$creation_workflow"
+    grep -q "OPTIONAL_FEATURES=\"\${{ inputs.optional_features || 'github-planning' }}\"" "$creation_workflow"
     grep -q 'maintenance' "$creation_workflow"
     grep -q 'e2e-maintenance' "$creation_workflow"
     grep -q 'scripts/select-generated-workflows.sh' "$creation_workflow"

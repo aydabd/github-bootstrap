@@ -1,0 +1,33 @@
+name: Epic
+description: A parent initiative containing independently deliverable stories or tasks.
+title: "[EPIC] "
+labels: [type:epic]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: State the problem, outcome, and why this epic matters now.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Record live evidence confirming the problem and scope.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and ordered work
+      description: List independent child issues and dependencies.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance and verification
+      description: Map outcomes to observable evidence and exact commands.
+    validations:
+      required: true

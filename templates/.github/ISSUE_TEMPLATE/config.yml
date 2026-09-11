@@ -1,6 +1,8 @@
----
 blank_issues_enabled: false
 contact_links:
-  - name: Documentation
-    url: https://github.com/ORG/REPO#readme
-    about: Check the README before opening an issue
+  - name: Security vulnerability
+    url: https://github.com/OWNER/REPOSITORY/security/advisories/new
+    about: Report vulnerabilities privately instead of opening a public issue.
+  - name: Roadmap and priority
+    url: https://github.com/OWNER/REPOSITORY/projects
+    about: Project fields and views are the live source of truth for priority and readiness.

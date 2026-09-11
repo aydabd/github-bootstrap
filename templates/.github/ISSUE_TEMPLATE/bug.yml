@@ -1,0 +1,38 @@
+name: Bug
+description: A shipped behavior is incorrect or a required check is failing.
+title: "[BUG] "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the incorrect behavior in plain language.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Include the failing command, report query, logs, or observed API result. Redact secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Acceptance and verification
+      description: State the smallest observable fix and exact test command.
+    validations:
+      required: true
+  - type: input
+    id: parent
+    attributes:
+      label: Parent issue
+      description: Use #123 when this Bug belongs to a Story or Epic.

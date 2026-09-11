@@ -17,6 +17,18 @@ applyTo: "**"
 
 Read `WORKTREES.md` before parallel work, branch changes, or stack operations.
 
+Read `.github/skills/agent-operating-loop/SKILL.md` before every session,
+issue, bug investigation, review, merge, parallel-work batch, and handoff.
+Superpowers is a required plugin for the lifecycle; missing capabilities must
+fail closed with exact installation instructions.
+
+GitHub Issues are the work contract and the live GitHub Project is the source
+of truth for priority, readiness, release, risk, effort, area, and
+parent/child relationships. The machine-readable contract is
+`.github/config/agent-workflow.json`. Use JSON evidence for selection, test
+results, verification, and handoffs. Do not create local planning or
+specification files for ordinary implementation work.
+
 ## Golden Rules
 
 1. **Simplicity** — simplest working solution wins.

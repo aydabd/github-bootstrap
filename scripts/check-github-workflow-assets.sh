@@ -16,13 +16,16 @@ required_assets=(
     ".github/skills/tracker-views/SKILL.md"
     ".github/skills/backlog-breakdown/SKILL.md"
     ".github/skills/roadmap-prioritization/SKILL.md"
+    ".github/skills/agent-operating-loop/SKILL.md"
+    ".github/skills/test-log-triage/SKILL.md"
     ".github/agents/roadmap-prioritizer.agent.md"
     ".github/pull_request_template.md"
     ".github/ISSUE_TEMPLATE/config.yml"
-    ".github/ISSUE_TEMPLATE/bug_report.md"
-    ".github/ISSUE_TEMPLATE/feature_request.md"
-    ".github/ISSUE_TEMPLATE/task.md"
-    ".github/ISSUE_TEMPLATE/planning.md"
+    ".github/ISSUE_TEMPLATE/epic.yml"
+    ".github/ISSUE_TEMPLATE/story.yml"
+    ".github/ISSUE_TEMPLATE/task.yml"
+    ".github/ISSUE_TEMPLATE/bug.yml"
+    ".github/ISSUE_TEMPLATE/security.yml"
 )
 
 errors=0
@@ -86,6 +89,12 @@ fi
 template_profile="$ROOT_DIR/templates/.github/config/bootstrap-profile.json"
 if [ ! -s "$template_profile" ]; then
     echo "MISSING_OR_EMPTY: $template_profile" >&2
+    errors=$((errors + 1))
+fi
+
+agent_workflow="$ROOT_DIR/templates/.github/config/agent-workflow.json"
+if ! jq -e '.schema_version == 1 and .required_plugins.superpowers.required == true' "$agent_workflow" > /dev/null 2>&1; then
+    echo "MISSING_OR_INVALID: $agent_workflow" >&2
     errors=$((errors + 1))
 fi
 

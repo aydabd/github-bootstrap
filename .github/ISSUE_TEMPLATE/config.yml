@@ -1,5 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
     url: https://github.com/aydabd/github-bootstrap/security/advisories/new
     about: Report a vulnerability privately instead of opening a public issue.
+  - name: Roadmap and priority
+    url: https://github.com/users/aydabd/projects
+    about: Use the live GitHub Project as the source of truth for readiness and priority.
