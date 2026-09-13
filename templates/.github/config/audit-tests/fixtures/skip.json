@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "record_type": "agent_work_audit",
+  "result": "SKIP",
+  "repository": "example/audit-fixture",
+  "subject": {
+    "issue": 218,
+    "pull_request": 220,
+    "base_sha": "1111111111111111111111111111111111111111",
+    "head_sha": "2222222222222222222222222222222222222222"
+  },
+  "provenance": {
+    "agent": {
+      "name": "synthetic-agent",
+      "role": "implementation",
+      "cli_version": "1.0.0",
+      "cli_assurance": "LOCALLY_OBSERVED",
+      "definition_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "definition_assurance": "LOCALLY_OBSERVED"
+    },
+    "model": {
+      "requested": "synthetic-model",
+      "observed": null,
+      "reasoning_effort": "medium",
+      "assurance": "SELF_DECLARED"
+    },
+    "plugins": [
+      {
+        "name": "superpowers",
+        "source": "openai-curated-remote/superpowers",
+        "version": "6.3.0",
+        "content_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "assurance": "LOCALLY_OBSERVED"
+      }
+    ],
+    "skills": [
+      {
+        "name": "brainstorming",
+        "plugin": "superpowers",
+        "version": null,
+        "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "assurance": "LOCALLY_OBSERVED"
+      },
+      {
+        "name": "dispatching-parallel-agents",
+        "plugin": "superpowers",
+        "version": null,
+        "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "assurance": "LOCALLY_OBSERVED"
+      },
+      {
+        "name": "finishing-a-development-branch",
+        "plugin": "superpowers",
+        "version": null,
+        "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "assurance": "LOCALLY_OBSERVED"
+      },
+      {
+        "name": "receiving-code-review",
+        "plugin": "superpowers",
+        "version": null,
+        "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "assurance": "LOCALLY_OBSERVED"
+      },
+      {
+        "name": "requesting-code-review",
+        "plugin": "superpowers",
+        "version": null,
+        "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "assurance": "LOCALLY_OBSERVED"
+      },
+      {
+        "name": "systematic-debugging",
+        "plugin": "superpowers",
+        "version": null,
+        "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "assurance": "LOCALLY_OBSERVED"
+      },
+      {
+        "name": "test-driven-development",
+        "plugin": "superpowers",
+        "version": null,
+        "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "assurance": "LOCALLY_OBSERVED"
+      },
+      {
+        "name": "using-git-worktrees",
+        "plugin": "superpowers",
+        "version": null,
+        "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "assurance": "LOCALLY_OBSERVED"
+      },
+      {
+        "name": "using-superpowers",
+        "plugin": "superpowers",
+        "version": null,
+        "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "assurance": "LOCALLY_OBSERVED"
+      },
+      {
+        "name": "verification-before-completion",
+        "plugin": "superpowers",
+        "version": null,
+        "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "assurance": "LOCALLY_OBSERVED"
+      },
+      {
+        "name": "writing-plans",
+        "plugin": "superpowers",
+        "version": null,
+        "content_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+        "assurance": "LOCALLY_OBSERVED"
+      }
+    ]
+  },
+  "events": [
+    {
+      "sequence": 1,
+      "type": "SESSION_STARTED",
+      "bypass_id": null,
+      "result": "PASS",
+      "reason_code": "NONE",
+      "evidence": []
+    }
+  ],
+  "bypasses": [],
+  "verification": {
+    "signed_off": null,
+    "commit_signature_verified": null,
+    "required_checks": "SKIP",
+    "unexpected_skips": 0,
+    "controls": [
+      {
+        "control": "OPTIONAL_DIAGNOSTICS",
+        "result": "SKIP",
+        "reason_code": "NOT_APPLICABLE"
+      }
+    ]
+  },
+  "privacy": {
+    "classification": "NON_SENSITIVE",
+    "redaction_version": 1,
+    "contains_prompt": false,
+    "contains_credentials": false,
+    "contains_personal_data": false
+  },
+  "integrity": {
+    "canonicalization": "RFC8785",
+    "sha256": "54ebe699eeb1921aed2cf30e2134d5eb11399a5722d88df2d532df90c793b3cc"
+  },
+  "summary": {
+    "passed": 0,
+    "failed": 0,
+    "skipped": 1,
+    "approved_bypasses": 0
+  }
+}
