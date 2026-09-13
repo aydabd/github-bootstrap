@@ -3,18 +3,21 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/../.." && pwd)"
+python_bin="$repo_root/.venv/bin/python"
 generated_root="$(mktemp -d)"
 trap 'rm -rf "$generated_root"' EXIT
 mkdir -p "$generated_root/.github"
 cp -R "$repo_root/templates/.github/config" "$generated_root/.github/config"
+[ -x "$python_bin" ] || {
+    printf '{"schema_version":1,"result":"FAIL","error_code":"AUDIT_TEST_TOOL_UNAVAILABLE"}\n'
+    exit 1
+}
 
-result="$(uv run --with jsonschema==4.25.1 --with rfc8785==0.1.4 \
-    "$repo_root/templates/.github/config/audit-tests/test_provenance_collector.py")" || {
+result="$("$python_bin" "$repo_root/templates/.github/config/audit-tests/test_provenance_collector.py")" || {
     printf '%s\n' "$result"
     exit 1
 }
-generated_result="$(uv run --with jsonschema==4.25.1 --with rfc8785==0.1.4 \
-    "$generated_root/.github/config/audit-tests/test_provenance_collector.py")" || {
+generated_result="$("$python_bin" "$generated_root/.github/config/audit-tests/test_provenance_collector.py")" || {
     printf '%s\n' "$generated_result"
     exit 1
 }
