@@ -111,6 +111,1803 @@
     "security_labels": ["security", "privacy", "production-readiness"],
     "parallelization": "requires dependency and file-overlap review"
   },
+  "audit": {
+    "schema_version": 1,
+    "phase": 1,
+    "record_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$comment": "Extract audit.record_schema as its own schema resource. $defs and properties are authoritative enums and ordered field definitions. Cross-record and trusted-source checks are declared in audit.semantic_rules; JSON Schema alone cannot establish provenance or privacy.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_type",
+        "result",
+        "repository",
+        "subject",
+        "provenance",
+        "events",
+        "bypasses",
+        "verification",
+        "privacy",
+        "integrity",
+        "summary"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "record_type": {
+          "const": "agent_work_audit"
+        },
+        "result": {
+          "$ref": "#/$defs/result"
+        },
+        "repository": {
+          "type": "string",
+          "maxLength": 201,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9][A-Za-z0-9._-]{0,99}$"
+        },
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["issue", "pull_request", "base_sha", "head_sha"],
+          "properties": {
+            "issue": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "pull_request": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "base_sha": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/sha"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "head_sha": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/sha"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["agent", "model", "plugins", "skills"],
+          "properties": {
+            "agent": {
+              "$ref": "#/$defs/agent"
+            },
+            "model": {
+              "$ref": "#/$defs/model"
+            },
+            "plugins": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/plugin"
+              },
+              "maxItems": 1
+            },
+            "skills": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/skill"
+              },
+              "maxItems": 11
+            }
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/event"
+          },
+          "maxItems": 1000
+        },
+        "bypasses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/bypass"
+          },
+          "maxItems": 1000
+        },
+        "verification": {
+          "$ref": "#/$defs/verification"
+        },
+        "privacy": {
+          "$ref": "#/$defs/privacy"
+        },
+        "integrity": {
+          "$ref": "#/$defs/integrity"
+        },
+        "summary": {
+          "$ref": "#/$defs/summary"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "result": {
+                "not": {
+                  "const": "FAIL"
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "plugins": {
+                    "minItems": 1,
+                    "items": {
+                      "properties": {
+                        "version": {
+                          "$ref": "#/$defs/version"
+                        },
+                        "content_sha256": {
+                          "$ref": "#/$defs/digest"
+                        },
+                        "assurance": {
+                          "not": {
+                            "const": "UNAVAILABLE"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "skills": {
+                    "minItems": 11,
+                    "items": {
+                      "properties": {
+                        "content_sha256": {
+                          "$ref": "#/$defs/digest"
+                        },
+                        "assurance": {
+                          "not": {
+                            "const": "UNAVAILABLE"
+                          }
+                        }
+                      }
+                    },
+                    "allOf": [
+                      {
+                        "contains": {
+                          "properties": {
+                            "name": {
+                              "const": "using-superpowers"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "name": {
+                              "const": "brainstorming"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "name": {
+                              "const": "writing-plans"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "name": {
+                              "const": "using-git-worktrees"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "name": {
+                              "const": "test-driven-development"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "name": {
+                              "const": "systematic-debugging"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "name": {
+                              "const": "dispatching-parallel-agents"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "name": {
+                              "const": "requesting-code-review"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "name": {
+                              "const": "receiving-code-review"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "name": {
+                              "const": "verification-before-completion"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "name": {
+                              "const": "finishing-a-development-branch"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "result": {
+                "const": "PASS"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "verification": {
+                "properties": {
+                  "signed_off": {
+                    "const": true
+                  },
+                  "commit_signature_verified": {
+                    "const": true
+                  },
+                  "required_checks": {
+                    "const": "PASS"
+                  },
+                  "unexpected_skips": {
+                    "const": 0
+                  },
+                  "controls": {
+                    "allOf": [
+                      {
+                        "contains": {
+                          "properties": {
+                            "control": {
+                              "const": "AUDIT_PRIVACY"
+                            },
+                            "result": {
+                              "const": "PASS"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "control": {
+                              "const": "AUDIT_SCHEMA"
+                            },
+                            "result": {
+                              "const": "PASS"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "control": {
+                              "const": "AUDIT_INTEGRITY"
+                            },
+                            "result": {
+                              "const": "PASS"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "control": {
+                              "const": "PROVENANCE_SCHEMA"
+                            },
+                            "result": {
+                              "const": "PASS"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "control": {
+                              "const": "SUPERPOWERS"
+                            },
+                            "result": {
+                              "const": "PASS"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "control": {
+                              "const": "COMMIT_SIGNATURE"
+                            },
+                            "result": {
+                              "const": "PASS"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "control": {
+                              "const": "PRIVILEGED_WORKFLOW_TRUST"
+                            },
+                            "result": {
+                              "const": "PASS"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "control": {
+                              "const": "SIGNED_OFF"
+                            },
+                            "result": {
+                              "const": "PASS"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "control": {
+                              "const": "REQUIRED_CHECKS"
+                            },
+                            "result": {
+                              "const": "PASS"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      },
+                      {
+                        "contains": {
+                          "properties": {
+                            "control": {
+                              "const": "REVIEW_RESOLUTION"
+                            },
+                            "result": {
+                              "const": "PASS"
+                            }
+                          }
+                        },
+                        "minContains": 1,
+                        "maxContains": 1
+                      }
+                    ],
+                    "items": {
+                      "properties": {
+                        "result": {
+                          "not": {
+                            "const": "FAIL"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "summary": {
+                "properties": {
+                  "failed": {
+                    "const": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "result": {
+                "const": "SKIP"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "verification": {
+                "properties": {
+                  "required_checks": {
+                    "const": "SKIP"
+                  },
+                  "unexpected_skips": {
+                    "const": 0
+                  },
+                  "controls": {
+                    "items": {
+                      "properties": {
+                        "control": {
+                          "const": "OPTIONAL_DIAGNOSTICS"
+                        },
+                        "result": {
+                          "const": "SKIP"
+                        },
+                        "reason_code": {
+                          "const": "NOT_APPLICABLE"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "summary": {
+                "properties": {
+                  "passed": {
+                    "const": 0
+                  },
+                  "failed": {
+                    "const": 0
+                  },
+                  "skipped": {
+                    "minimum": 1
+                  },
+                  "approved_bypasses": {
+                    "const": 0
+                  }
+                }
+              },
+              "bypasses": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ],
+      "$defs": {
+        "assurance": {
+          "type": "string",
+          "enum": [
+            "PROVIDER_ATTESTED",
+            "GITHUB_VERIFIED",
+            "LOCALLY_OBSERVED",
+            "SELF_DECLARED",
+            "UNAVAILABLE"
+          ]
+        },
+        "result": {
+          "type": "string",
+          "enum": ["PASS", "FAIL", "SKIP"]
+        },
+        "identifier": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "version": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[a-z0-9-]+)?$"
+        },
+        "sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "skill_name": {
+          "type": "string",
+          "enum": [
+            "using-superpowers",
+            "brainstorming",
+            "writing-plans",
+            "using-git-worktrees",
+            "test-driven-development",
+            "systematic-debugging",
+            "dispatching-parallel-agents",
+            "requesting-code-review",
+            "receiving-code-review",
+            "verification-before-completion",
+            "finishing-a-development-branch"
+          ]
+        },
+        "event_type": {
+          "type": "string",
+          "enum": [
+            "SESSION_STARTED",
+            "PREREQUISITES_VERIFIED",
+            "ISSUE_SELECTED",
+            "DESIGN_APPROVED",
+            "PLAN_APPROVED",
+            "WORKTREE_VERIFIED",
+            "TEST_RED_OBSERVED",
+            "IMPLEMENTATION_CHANGED",
+            "TEST_GREEN_OBSERVED",
+            "REVIEW_COMPLETED",
+            "BYPASS_REQUESTED",
+            "BYPASS_APPROVED",
+            "BYPASS_DENIED",
+            "BYPASS_EXPIRED",
+            "BYPASS_EXERCISED",
+            "COMMIT_VERIFIED",
+            "CI_COMPLETED",
+            "PR_MERGED",
+            "WORKTREE_CLEANED",
+            "PROCESS_REFINEMENT_RECORDED"
+          ]
+        },
+        "bypass_state": {
+          "type": "string",
+          "enum": ["REQUESTED", "APPROVED", "DENIED", "EXPIRED", "EXERCISED"]
+        },
+        "control_id": {
+          "type": "string",
+          "enum": [
+            "AUDIT_INTEGRITY",
+            "AUDIT_PRIVACY",
+            "AUDIT_SCHEMA",
+            "COMMIT_SIGNATURE",
+            "OPTIONAL_DIAGNOSTICS",
+            "PRIVILEGED_WORKFLOW_TRUST",
+            "PROVENANCE_SCHEMA",
+            "REQUIRED_CHECKS",
+            "REVIEW_RESOLUTION",
+            "SIGNED_OFF",
+            "SUPERPOWERS"
+          ]
+        },
+        "reason_code": {
+          "type": "string",
+          "enum": [
+            "NONE",
+            "APPROVED_BYPASS",
+            "NOT_APPLICABLE",
+            "MISSING_EVIDENCE",
+            "INVALID_EVIDENCE",
+            "CONTROL_FAILED",
+            "HUMAN_EXCEPTION",
+            "EXPIRED",
+            "DENIED",
+            "DEPENDENCY_OUTAGE"
+          ]
+        },
+        "agent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "role",
+            "cli_version",
+            "cli_assurance",
+            "definition_sha256",
+            "definition_assurance"
+          ],
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/identifier"
+            },
+            "role": {
+              "type": "string",
+              "enum": ["implementation", "review", "verification", "coordination"]
+            },
+            "cli_version": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/version"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "cli_assurance": {
+              "$ref": "#/$defs/assurance"
+            },
+            "definition_sha256": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/digest"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "definition_assurance": {
+              "$ref": "#/$defs/assurance"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "cli_version": {
+                    "type": "null"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "cli_assurance": {
+                    "const": "UNAVAILABLE"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "cli_assurance": {
+                    "not": {
+                      "const": "UNAVAILABLE"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "definition_sha256": {
+                    "type": "null"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "definition_assurance": {
+                    "const": "UNAVAILABLE"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "definition_assurance": {
+                    "not": {
+                      "const": "UNAVAILABLE"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "model": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["requested", "observed", "reasoning_effort", "assurance"],
+          "properties": {
+            "requested": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/model_identifier"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "observed": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/model_identifier"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reasoning_effort": {
+              "type": ["string", "null"],
+              "enum": ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra", null]
+            },
+            "assurance": {
+              "type": "string",
+              "enum": ["PROVIDER_ATTESTED", "SELF_DECLARED", "UNAVAILABLE"]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "assurance": {
+                    "const": "SELF_DECLARED"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "requested": {
+                    "$ref": "#/$defs/model_identifier"
+                  },
+                  "observed": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "assurance": {
+                    "const": "PROVIDER_ATTESTED"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "requested": {
+                    "$ref": "#/$defs/model_identifier"
+                  },
+                  "observed": {
+                    "$ref": "#/$defs/model_identifier"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "assurance": {
+                    "const": "UNAVAILABLE"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "requested": {
+                    "type": "null"
+                  },
+                  "observed": {
+                    "type": "null"
+                  },
+                  "reasoning_effort": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "plugin": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "source", "version", "content_sha256", "assurance"],
+          "properties": {
+            "name": {
+              "const": "superpowers"
+            },
+            "source": {
+              "const": "openai-curated-remote/superpowers"
+            },
+            "version": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/version"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "content_sha256": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/digest"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "assurance": {
+              "$ref": "#/$defs/assurance"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "version": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "content_sha256": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                ]
+              },
+              "then": {
+                "properties": {
+                  "assurance": {
+                    "const": "UNAVAILABLE"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "skill": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "plugin", "version", "content_sha256", "assurance"],
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/skill_name"
+            },
+            "plugin": {
+              "const": "superpowers"
+            },
+            "version": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/version"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "content_sha256": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/digest"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "assurance": {
+              "$ref": "#/$defs/assurance"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "content_sha256": {
+                    "type": "null"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "assurance": {
+                    "const": "UNAVAILABLE"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "id", "sha", "attempt", "assurance"],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "ISSUE",
+                "PULL_REQUEST",
+                "COMMIT",
+                "CHECK_RUN",
+                "WORKFLOW_RUN",
+                "PROJECT",
+                "SANITIZED_ARTIFACT"
+              ]
+            },
+            "id": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sha": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/sha"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "attempt": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "assurance": {
+              "$ref": "#/$defs/assurance"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "enum": ["ISSUE", "PULL_REQUEST", "PROJECT"]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "sha": {
+                    "type": "null"
+                  },
+                  "attempt": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "COMMIT"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "id": {
+                    "type": "null"
+                  },
+                  "sha": {
+                    "$ref": "#/$defs/sha"
+                  },
+                  "attempt": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "enum": ["CHECK_RUN", "SANITIZED_ARTIFACT"]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "sha": {
+                    "$ref": "#/$defs/sha"
+                  },
+                  "attempt": {
+                    "type": "null"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "WORKFLOW_RUN"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "sha": {
+                    "$ref": "#/$defs/sha"
+                  },
+                  "attempt": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "event": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sequence", "type", "bypass_id", "result", "reason_code", "evidence"],
+          "properties": {
+            "sequence": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "type": {
+              "$ref": "#/$defs/event_type"
+            },
+            "bypass_id": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "result": {
+              "$ref": "#/$defs/result"
+            },
+            "reason_code": {
+              "$ref": "#/$defs/reason_code"
+            },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidence"
+              },
+              "maxItems": 32
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "BYPASS_REQUESTED",
+                      "BYPASS_APPROVED",
+                      "BYPASS_DENIED",
+                      "BYPASS_EXPIRED",
+                      "BYPASS_EXERCISED"
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "bypass_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "bypass_id": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "bypass": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "control",
+            "state",
+            "reason_code",
+            "requesting_human_id",
+            "approving_human_id",
+            "issue",
+            "sha",
+            "requested_at",
+            "expires_at",
+            "compensating_controls",
+            "approval_reference"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "control": {
+              "type": "string",
+              "enum": ["REQUIRED_CHECKS", "REVIEW_RESOLUTION"]
+            },
+            "state": {
+              "$ref": "#/$defs/bypass_state"
+            },
+            "reason_code": {
+              "type": "string",
+              "enum": ["DEPENDENCY_OUTAGE"]
+            },
+            "requesting_human_id": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "approving_human_id": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "issue": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "sha": {
+              "$ref": "#/$defs/sha"
+            },
+            "requested_at": {
+              "$ref": "#/$defs/timestamp"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/timestamp"
+            },
+            "compensating_controls": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/control_id"
+              },
+              "maxItems": 1000,
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "approval_reference": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/evidence"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "type": "string",
+                    "enum": ["APPROVED", "EXERCISED"]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "approving_human_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "approval_reference": {
+                    "$ref": "#/$defs/evidence"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "check": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["control", "result", "reason_code"],
+          "properties": {
+            "control": {
+              "$ref": "#/$defs/control_id"
+            },
+            "result": {
+              "$ref": "#/$defs/result"
+            },
+            "reason_code": {
+              "$ref": "#/$defs/reason_code"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "result": {
+                    "const": "SKIP"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "reason_code": {
+                    "const": "NOT_APPLICABLE"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "result": {
+                    "const": "PASS"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "reason_code": {
+                    "type": "string",
+                    "enum": ["NONE", "HUMAN_EXCEPTION"]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "verification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "signed_off",
+            "commit_signature_verified",
+            "required_checks",
+            "unexpected_skips",
+            "controls"
+          ],
+          "properties": {
+            "signed_off": {
+              "type": ["boolean", "null"]
+            },
+            "commit_signature_verified": {
+              "type": ["boolean", "null"]
+            },
+            "required_checks": {
+              "$ref": "#/$defs/result"
+            },
+            "unexpected_skips": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "controls": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/check"
+              },
+              "maxItems": 1000,
+              "minItems": 1
+            }
+          }
+        },
+        "privacy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "classification",
+            "redaction_version",
+            "contains_prompt",
+            "contains_credentials",
+            "contains_personal_data"
+          ],
+          "properties": {
+            "classification": {
+              "const": "NON_SENSITIVE"
+            },
+            "redaction_version": {
+              "const": 1
+            },
+            "contains_prompt": {
+              "const": false
+            },
+            "contains_credentials": {
+              "const": false
+            },
+            "contains_personal_data": {
+              "const": false
+            }
+          }
+        },
+        "integrity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["canonicalization", "sha256"],
+          "properties": {
+            "canonicalization": {
+              "const": "RFC8785"
+            },
+            "sha256": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["passed", "failed", "skipped", "approved_bypasses"],
+          "properties": {
+            "passed": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "failed": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "skipped": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "approved_bypasses": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "model_identifier": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z][a-z0-9.-]*$"
+        }
+      }
+    },
+    "serialization": {
+      "encoding": "UTF-8",
+      "document_count": 1,
+      "object_order": "record_schema properties insertion order, recursively resolving local $ref",
+      "whitespace": "compact separators with one trailing LF",
+      "duplicate_keys": "FAIL",
+      "non_finite_numbers": "FAIL",
+      "unknown_fields": "FAIL",
+      "arrays": [
+        {
+          "path": ["provenance", "plugins"],
+          "keys": ["name"]
+        },
+        {
+          "path": ["provenance", "skills"],
+          "keys": ["name"]
+        },
+        {
+          "path": ["events"],
+          "keys": ["sequence"]
+        },
+        {
+          "path": ["bypasses"],
+          "keys": ["id"]
+        },
+        {
+          "path": ["verification", "controls"],
+          "keys": ["control"]
+        }
+      ],
+      "nested_arrays": {
+        "evidence": {
+          "order": ["kind", "id", "sha", "attempt"],
+          "nulls": "FIRST",
+          "unique": true
+        },
+        "compensating_controls": {
+          "order": "ASCII_ASCENDING",
+          "unique": true
+        }
+      },
+      "event_sequence": "CONTIGUOUS_FROM_ONE",
+      "integrity": {
+        "canonicalization": "RFC8785",
+        "algorithm": "SHA256",
+        "excluded_pointer": "/integrity/sha256",
+        "input": "Entire sanitized record, removing only the digest property; arrays remain in policy order; hash UTF-8 RFC8785 bytes without trailing LF.",
+        "verification": "Recompute and compare against a trusted separately retained expected digest. Reject mismatches. An unkeyed digest does not authenticate an author and is not evidence against an actor able to replace both record and expected digest.",
+        "runtime_phase": 2
+      }
+    },
+    "provenance": {
+      "agent": {
+        "name": "Allowlisted agent identifier from approved launcher configuration.",
+        "cli_version": "Version only from the selected CLI; never include command output.",
+        "definition_sha256": "Hash only public approved agent definition content.",
+        "assurance": "Assign separately to CLI version and agent definition; local observation is not provider attestation."
+      },
+      "model": {
+        "default_assurance": "SELF_DECLARED",
+        "provider_attested_requirement": "Provider-authenticated metadata must attest requested identity, observed identity and every non-null reasoning configuration value. Otherwise record the entire model block as SELF_DECLARED and observed as null.",
+        "unavailable": "All values null and UNAVAILABLE. Never infer the observed model from an agent declaration.",
+        "reasoning_content_allowed": false
+      },
+      "superpowers": {
+        "required": true,
+        "source_manifest_pointer": "/required_plugins/superpowers",
+        "required_metadata": ["name", "source", "version", "content_sha256", "assurance"],
+        "missing_result": "FAIL",
+        "fallback_allowed": false,
+        "reimplementation_allowed": false,
+        "installation": "Install openai-curated-remote/superpowers through the external plugin manager; verify its version, approved public content digest, and every skill in required_plugins.superpowers.skills before continuing.",
+        "content_sha256": "Hash a deterministic inventory of the approved public installed plugin files: for each regular file, use its package-relative POSIX path and SHA256 of its original bytes; sort by ASCII path and hash RFC8785 of the array of {path,sha256} entries. Include plugin manifest and skill resources. Reject symlinks escaping the package, unreadable files or an unknown package scope. Never include credentials, local configuration, caches or session data, and never emit inventory paths."
+      },
+      "skills": {
+        "required_names_pointer": "/required_plugins/superpowers/skills",
+        "required_metadata": ["name", "plugin", "content_sha256", "assurance"],
+        "version": "Use the skill's declared version; if not versioned independently, use null. Plugin version remains mandatory.",
+        "content_sha256": "Hash the approved public SKILL.md bytes actually loaded; include every required skill, even when its lifecycle gate is not exercised."
+      },
+      "unavailable": "Use null with UNAVAILABLE rather than fabricated values. Missing required Superpowers metadata forces FAIL even for optional queries.",
+      "assurance_definitions": {
+        "PROVIDER_ATTESTED": "Authenticated provider evidence for exactly the attested fields; never an agent claim.",
+        "GITHUB_VERIFIED": "Independently retrieved GitHub evidence; does not attest a model or reasoning configuration.",
+        "LOCALLY_OBSERVED": "Directly observed local allowed metadata; not independently authenticated.",
+        "SELF_DECLARED": "Agent or caller statement without independent attestation.",
+        "UNAVAILABLE": "No usable evidence; value is null, or required collection is absent."
+      }
+    },
+    "controls": {
+      "AUDIT_INTEGRITY": {
+        "mandatory": true,
+        "human_exception_eligible": false
+      },
+      "AUDIT_PRIVACY": {
+        "mandatory": true,
+        "human_exception_eligible": false
+      },
+      "AUDIT_SCHEMA": {
+        "mandatory": true,
+        "human_exception_eligible": false
+      },
+      "COMMIT_SIGNATURE": {
+        "mandatory": true,
+        "human_exception_eligible": false
+      },
+      "OPTIONAL_DIAGNOSTICS": {
+        "mandatory": false,
+        "human_exception_eligible": false
+      },
+      "PRIVILEGED_WORKFLOW_TRUST": {
+        "mandatory": true,
+        "human_exception_eligible": false
+      },
+      "PROVENANCE_SCHEMA": {
+        "mandatory": true,
+        "human_exception_eligible": false
+      },
+      "REQUIRED_CHECKS": {
+        "mandatory": true,
+        "human_exception_eligible": true
+      },
+      "REVIEW_RESOLUTION": {
+        "mandatory": true,
+        "human_exception_eligible": true
+      },
+      "SIGNED_OFF": {
+        "mandatory": true,
+        "human_exception_eligible": false
+      },
+      "SUPERPOWERS": {
+        "mandatory": true,
+        "human_exception_eligible": false
+      }
+    },
+    "outcomes": {
+      "result_values_pointer": "/audit/record_schema/$defs/result/enum",
+      "control_results": {
+        "mandatory": {
+          "PASS": "PASS",
+          "FAIL": "FAIL",
+          "SKIP": "FAIL"
+        },
+        "optional": {
+          "PASS": "PASS",
+          "FAIL": "FAIL",
+          "SKIP": "SKIP"
+        }
+      },
+      "precedence": ["FAIL", "PASS", "SKIP"],
+      "empty_checks": "FAIL",
+      "exit_codes": {
+        "PASS": 0,
+        "FAIL": 1,
+        "SKIP": 0
+      },
+      "optional_skip": "Only explicitly inapplicable OPTIONAL_DIAGNOSTICS with NOT_APPLICABLE may yield overall SKIP. Prerequisite metadata remains required.",
+      "scope": "PASS is a complete audit and includes every mandatory control exactly once. SKIP is an optional-only query, not lifecycle completion.",
+      "invalid_input": "FAIL with fixed reason code, never rejected input, exception text, raw logs, or fallback.",
+      "summary": "Count literal control PASS/FAIL/SKIP results. Mandatory SKIP increments skipped and makes overall FAIL; do not relabel it as a failed control. approved_bypasses counts APPROVED and EXERCISED records.",
+      "failure_record": "A sanitized FAIL record may have missing plugin/skill arrays or explicit unavailable metadata. Invalid or sensitive values are never echoed. If no safe record can be constructed, emit the required fixed failure artifact.",
+      "signature": "signed_off checks the trailer's presence separately from commit_signature_verified. A Signed-off-by trailer never proves a cryptographic signature."
+    },
+    "privacy": {
+      "mode": "STRICT_ALLOWLIST",
+      "allowed_categories": [
+        "repository identifiers",
+        "issue and pull request numbers",
+        "public commit SHAs",
+        "check and workflow run identifiers and attempts",
+        "approved version and enum metadata",
+        "approved public definition digests",
+        "sanitized record digests",
+        "counts",
+        "bypass expiry timestamps",
+        "required human approval numeric GitHub identities"
+      ],
+      "forbidden_fields": [
+        "prompt",
+        "prompts",
+        "model_response",
+        "model_responses",
+        "reasoning",
+        "reasoning_summary",
+        "chain_of_thought",
+        "token",
+        "tokens",
+        "cookie",
+        "cookies",
+        "authorization",
+        "authorization_headers",
+        "private_key",
+        "secrets",
+        "environment",
+        "environment_values",
+        "ip_address",
+        "home_path",
+        "email",
+        "provider_response_id",
+        "raw_log",
+        "raw_logs",
+        "prompt_hash",
+        "secret_hash",
+        "command_output"
+      ],
+      "value_rules": [
+        "Accept metadata only from the specific allowlisted source for its field; schema-compatible strings are not automatically safe.",
+        "Do not read credentials, environment values, prompts, responses, reasoning content or raw GitHub logs.",
+        "Reject unsafe input before serialization; never include rejected values in errors, reports or hashes.",
+        "No arbitrary strings, URLs, file paths, log fragments or user-supplied diagnostic text.",
+        "Human identities are numeric GitHub user IDs solely for the two required exception participants; no names, login strings or emails.",
+        "Hashes may cover only approved public agent/plugin/skill definitions and sanitized audit JSON; never hash prompts, secrets or other prohibited input."
+      ],
+      "redaction_version": 1,
+      "redaction": "Reject and emit a fixed reason code; do not mask or hash sensitive values as a substitute for allowlisting.",
+      "raw_evidence_retention": "DELETE_AFTER_VALIDATION_INCLUDING_FAILURE",
+      "raw_evidence_persistence_allowed": false,
+      "sanitized_ci_retention_days": 30,
+      "cleanup": "Phase 2 must delete any transient local evidence on success, rejection, failure and interruption; cleanup must be idempotent and failure must fail the command.",
+      "retention": "Phase 2/3 producers must set artifact retention explicitly to sanitized_ci_retention_days; do not upload raw evidence. Phase 1 fixtures are synthetic contract assets, not retained session evidence."
+    },
+    "bypasses": {
+      "states_pointer": "/audit/record_schema/$defs/bypass_state/enum",
+      "transitions": {
+        "REQUESTED": ["APPROVED", "DENIED", "EXPIRED"],
+        "APPROVED": ["EXPIRED", "EXERCISED"],
+        "DENIED": [],
+        "EXPIRED": [],
+        "EXERCISED": []
+      },
+      "initial_state": "REQUESTED",
+      "maximum_validity_seconds": 86400,
+      "sha_binding": "ONE_EXACT_COMMIT",
+      "approval": "Two distinct independently verified human GitHub identities. Approval must use a protected GitHub mechanism where available; no self-approval or agent approval.",
+      "eligibility": "Only explicitly human_exception_eligible controls; required controls remain mandatory. An eligible approved exception is recorded as PASS with HUMAN_EXCEPTION and must link to an EXERCISED bypass for that exact control and subject.head_sha.",
+      "invalid_states_result": "FAIL",
+      "visible_warning_code": "APPROVED_BYPASS",
+      "event_mapping": {
+        "REQUESTED": "BYPASS_REQUESTED",
+        "APPROVED": "BYPASS_APPROVED",
+        "DENIED": "BYPASS_DENIED",
+        "EXPIRED": "BYPASS_EXPIRED",
+        "EXERCISED": "BYPASS_EXERCISED"
+      },
+      "enforcement_phase": 4
+    },
+    "semantic_rules": [
+      {
+        "id": "ORDERING",
+        "rule": "Validate declared order for every object and array, reject duplicate keys and identities, and require contiguous event sequence numbers."
+      },
+      {
+        "id": "RESULT_AGGREGATION",
+        "rule": "Apply outcomes to verification.controls, require every mandatory control for PASS, and verify exact summary counts. Any failed precondition also forces FAIL."
+      },
+      {
+        "id": "REQUIRED_PROVENANCE",
+        "rule": "Require the external plugin, version and public content digest and every required skill's digest; no fallback. Apply field-specific assurance; verify evidence independently in its designated phase."
+      },
+      {
+        "id": "PRIVACY_SOURCE",
+        "rule": "Schema is structural validation, not a secret detector. Apply privacy source allowlisting and value rejection before hashing or output; privacy flags are results of that check, not trusted declarations."
+      },
+      {
+        "id": "EVENT_REFERENCES",
+        "rule": "Reference field requirements are the conditional schemas in record_schema.$defs.evidence. IDs are public numeric GitHub database IDs (including Project IDs), not opaque GraphQL node IDs. SANITIZED_ARTIFACT identifies a GitHub artifact and its bound commit SHA. Sort nested references by kind, id, sha, attempt with null first."
+      },
+      {
+        "id": "BYPASS_BINDING",
+        "rule": "Validate allowed transitions, distinct human participants, expiry after request and at most 86400 seconds later, exact head SHA, eligible control, approval evidence, compensating checks and matching lifecycle events. REQUESTED, DENIED, EXPIRED or unverifiable bypasses cannot justify PASS. Each BYPASS_* event carries bypass_id referencing exactly one bypasses[].id; non-bypass events carry null. Check each bypass's events independently in sequence order."
+      },
+      {
+        "id": "BYPASS_VISIBILITY",
+        "rule": "Count APPROVED and EXERCISED bypasses and surface APPROVED_BYPASS as a fixed visible warning; HUMAN_EXCEPTION requires a verified EXERCISED bypass for the same control."
+      },
+      {
+        "id": "INTEGRITY",
+        "rule": "Apply serialization.integrity to the complete sanitized record, including event order, so modifications, insertion, deletion and reordering change the expected digest."
+      }
+    ],
+    "artifacts": {
+      "audit": {
+        "name": "agent-work-audit.json",
+        "schema_pointer": "/audit/record_schema"
+      },
+      "contract_evidence": {
+        "name": "agent-audit-contract.json",
+        "format": "Deterministic JSON with fixed check identifiers and PASS/FAIL counts; contains synthetic-test outcomes only."
+      },
+      "safe_failure": {
+        "name": "agent-work-audit.json",
+        "document": {
+          "schema_version": 1,
+          "record_type": "agent_work_audit_error",
+          "result": "FAIL",
+          "error_code": "UNSAFE_OR_INVALID_AUDIT"
+        },
+        "exit_code": 1
+      }
+    },
+    "phase_boundaries": {
+      "1": "Policy, schema and synthetic contract tests only.",
+      "2": "Local provenance, safe serialization, integrity and transient-evidence cleanup.",
+      "3": "Independent GitHub evidence verification and required CI check.",
+      "4": "Protected bypass approvals, enforcement, expiry and alerts.",
+      "5": "Comparable cohorts, raw metrics and quality scoring."
+    }
+  },
   "evidence": {
     "format": "json",
     "secrets_allowed": false,
