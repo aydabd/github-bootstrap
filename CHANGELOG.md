@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/aydabd/github-bootstrap/compare/v2.5.0...v2.6.0) (2026-09-13)
+
+
+### Features
+
+* add deterministic agent audit policy ([#220](https://github.com/aydabd/github-bootstrap/issues/220)) ([2c71a33](https://github.com/aydabd/github-bootstrap/commit/2c71a3348089b7dc6a81e5c10477cd69f326134c))
+
 ## [2.5.0](https://github.com/aydabd/github-bootstrap/compare/v2.4.0...v2.5.0) (2026-09-11)
 
 
