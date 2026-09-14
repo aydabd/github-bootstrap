@@ -1,0 +1,17 @@
+{
+  "name": "Bootstrap E2E Provisioner",
+  "url": "https://github.com",
+  "public": false,
+  "default_events": [],
+  "default_permissions": {
+    "actions": "write",
+    "administration": "write",
+    "contents": "write",
+    "environments": "write",
+    "issues": "write",
+    "metadata": "read",
+    "secrets": "write",
+    "actions_variables": "write",
+    "workflows": "write"
+  }
+}

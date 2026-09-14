@@ -6,7 +6,7 @@ repo_root="$(cd "$script_dir/../.." && pwd)"
 validator="$script_dir/validate-maintenance-merge.sh"
 workflow="$repo_root/.github/workflows/merge-maintenance-pr.yml"
 resolver="$repo_root/.github/actions/resolve-gh-token/action.yml"
-manifest="$repo_root/docs/github-app-manifests/repository-maintenance-reviewer.json"
+manifest="$repo_root/docs/github-app-manifests/bootstrap-reviewer.json"
 
 assert_contains() {
     local needle="$1"
@@ -117,7 +117,7 @@ assert_contains 'commit_id="$HEAD_SHA"' "$workflow"
 assert_contains 'current_head_sha' "$workflow"
 # shellcheck disable=SC2016  # literal workflow substring, not shell to expand
 assert_contains 'current_head_sha" != "$HEAD_SHA"' "$workflow"
-assert_contains "BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY" "$workflow"
+assert_contains "BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY" "$workflow"
 assert_contains "permission_profile: maintenance-review" "$workflow"
 assert_contains "inputs.permission_profile == 'maintenance-review'" "$resolver"
 assert_contains "maintenance-review" "$resolver"

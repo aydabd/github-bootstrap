@@ -55,8 +55,8 @@ grep -Fq "refresh_token_secret: \${{ env.PROVISIONER_REFRESH_TOKEN_NAME }}" "$re
     echo "generated repository creation must use its selected refresh-token secret" >&2
     exit 1
 }
-grep -Fq 'environment: e2e-testing' "$workflow" || {
-    echo "generated repository E2E must run in the e2e-testing environment" >&2
+grep -Fq 'environment: e2e' "$workflow" || {
+    echo "generated repository E2E must run in the e2e environment" >&2
     exit 1
 }
 

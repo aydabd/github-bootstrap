@@ -28,7 +28,7 @@ EOF
 # The production-root validator retains its existing bot behavior. The template
 # maintenance path must validate Copilot evidence for eligible bot PRs.
 cat > "$tmp_dir/bot-pr.json" << 'EOF'
-{"number":9,"head":{"sha":"current-sha"},"user":{"login":"repository-maintenance-writer[bot]"},"requested_reviewers":[{"login":"copilot-pull-request-reviewer[bot]"}]}
+{"number":9,"head":{"sha":"current-sha"},"user":{"login":"bootstrap-writer[bot]"},"requested_reviewers":[{"login":"copilot-pull-request-reviewer[bot]"}]}
 EOF
 "$validator" "$tmp_dir/bot-pr.json" "$tmp_dir/empty-reviews.json" "$tmp_dir/threads.json" "copilot-pull-request-reviewer[bot]"
 

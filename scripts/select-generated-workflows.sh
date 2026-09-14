@@ -138,7 +138,7 @@ select_workflows() {
 }
 
 bind_e2e() {
-    local file substitutions release_path production_name e2e_name profile field
+    local file substitutions release_path production_name e2e_name field
     local copilot_login="${E2E_COPILOT_REVIEWER_LOGIN:-}"
     [ -n "$copilot_login" ] || {
         echo "E2E Copilot reviewer login is required for E2E workflow binding" >&2
@@ -146,9 +146,6 @@ bind_e2e() {
     }
     local release_files=("$(release_file)")
     normalize_workflows
-    if has_workflow all || [ "${#NORMALIZED_WORKFLOWS[@]}" -eq 0 ]; then
-        release_files=(release-please.yml git-cliff-release.yml)
-    fi
     if has_workflow all || [ "${#NORMALIZED_WORKFLOWS[@]}" -eq 0 ] ||
         has_workflow maintenance; then
         for file in "${maintenance_automation_files[@]}" "${release_files[@]}"; do
@@ -157,15 +154,15 @@ bind_e2e() {
                 echo "expected maintenance workflow is missing: $file" >&2
                 exit 1
             }
-            substitutions="$(sed -n 's/^    environment: production-maintenance$/    environment: e2e-maintenance/p' "$file")"
+            substitutions="$(sed -n 's/^    environment: production$/    environment: e2e/p' "$file")"
             if [ -n "$substitutions" ]; then
-                sed -i.bak 's/^    environment: production-maintenance$/    environment: e2e-maintenance/' "$file"
+                sed -i.bak 's/^    environment: production$/    environment: e2e/' "$file"
             else
                 release_path="/${file##*/}"
                 case "$release_path" in
                     /release-please.yml | /git-cliff-release.yml)
                         sed -i.bak '/^    runs-on:/a\
-    environment: e2e-maintenance
+    environment: e2e
 ' "$file"
                         ;;
                     *)
@@ -174,19 +171,21 @@ bind_e2e() {
                         ;;
                 esac
             fi
-            sed -i.bak '/^    environment: e2e-maintenance$/a\
+            sed -i.bak '/^    environment: e2e$/a\
     env:\
         MAINTENANCE_IDENTITY_MODE: e2e-disposable\
-        MAINTENANCE_FIXTURE_LOGIN: e2e-maintenance-user\
+        MAINTENANCE_FIXTURE_LOGIN: e2e-user\
         MAINTENANCE_COPILOT_REVIEWER_LOGIN: '"$copilot_login"'\
 ' "$file"
             rm -f "$file.bak"
             sed -i.bak 's|COPILOT_REVIEWER_LOGIN: ${{ vars.BOOTSTRAP_COPILOT_REVIEWER_LOGIN }}|COPILOT_REVIEWER_LOGIN: ${{ env.MAINTENANCE_COPILOT_REVIEWER_LOGIN }}|' "$file"
             rm -f "$file.bak"
-            for profile in e2e-maintenance-writer e2e-maintenance-reviewer; do
+            for profile_pair in 'e2e-writer:production-writer' 'e2e-reviewer:production-reviewer'; do
+                e2e_profile="${profile_pair%%:*}"
+                production_profile="${profile_pair##*:}"
                 for field in client_id_variable app_slug_variable private_key_secret; do
-                    e2e_name="$(bash "$profile_loader" "$profile" "$field")"
-                    production_name="${e2e_name/BOOTSTRAP_E2E_/BOOTSTRAP_}"
+                    e2e_name="$(bash "$profile_loader" "$e2e_profile" "$field")"
+                    production_name="$(bash "$profile_loader" "$production_profile" "$field")"
                     sed -i.bak "s/${production_name}/${e2e_name}/g" "$file"
                     rm -f "$file.bak"
                 done

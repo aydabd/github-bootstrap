@@ -135,7 +135,7 @@ jobs:
   create-test-repo:
     name: Create Test Repository
     runs-on: ubuntu-latest
-    environment: e2e-testing
+    environment: e2e
     outputs:
       test_repo_name: ${{ steps.generate-name.outputs.repo_name }}
       central_repo_name: ${{ steps.generate-name.outputs.central_repo_name }}
@@ -187,7 +187,7 @@ jobs:
           app_client_secret: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}
           app_user_refresh_token: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}
           refresh_token_secret: BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN
-          refresh_token_secret_environment: e2e-testing
+          refresh_token_secret_environment: e2e
           app_owner: ${{ inputs.app_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: repository-creation
@@ -982,7 +982,7 @@ jobs:
     name: Cleanup Test Repository
     needs: create-test-repo
     runs-on: ubuntu-latest
-    environment: e2e-testing
+    environment: e2e
     if: >-
       ${{ always() &&
       (github.event.inputs.cleanup_after_test == 'true' ||
@@ -1005,7 +1005,7 @@ jobs:
           app_client_secret: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}
           app_user_refresh_token: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}
           refresh_token_secret: BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN
-          refresh_token_secret_environment: e2e-testing
+          refresh_token_secret_environment: e2e
           app_owner: ${{ inputs.app_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: repository-cleanup

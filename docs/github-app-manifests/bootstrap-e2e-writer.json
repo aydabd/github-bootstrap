@@ -1,16 +1,12 @@
 {
-  "name": "Repository Bootstrap Provisioner",
+  "name": "Bootstrap E2E Writer",
   "url": "https://github.com",
   "public": false,
   "default_events": [],
   "default_permissions": {
-    "actions": "write",
-    "administration": "write",
     "contents": "write",
-    "environments": "write",
     "issues": "write",
-    "metadata": "read",
-    "secrets": "write",
+    "pull_requests": "write",
     "workflows": "write"
   }
 }

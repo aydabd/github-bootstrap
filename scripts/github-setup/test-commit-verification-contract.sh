@@ -13,11 +13,11 @@ resolver="$script_dir/../../.github/actions/resolve-gh-token/action.yml"
 
 for required_text in \
     "uses: ./.github/actions/resolve-gh-token" \
-    "environment: production-maintenance" \
+    "environment: production" \
     "permission_profile: weekly-tooling" \
-    "BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY" \
-    "BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID" \
-    "BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG" \
+    "BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY" \
+    "BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID" \
+    "BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG" \
     "[ \"\$APP_SLUG\" = \"\$EXPECTED_APP_SLUG\" ]" \
     "APP_SLUG: \${{ steps.resolve-token.outputs.app_slug }}" \
     "signoff_name=\"\$GITHUB_ACTOR\"" \

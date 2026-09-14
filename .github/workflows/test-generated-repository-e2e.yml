@@ -57,7 +57,7 @@ jobs:
     name: ${{ matrix.creation_workflow }} / ${{ matrix.delivery }} / ${{ matrix.provider }} @ ${{ inputs.head_sha || inputs.target_ref || 'main' }}
     runs-on: ubuntu-24.04
     if: inputs.maintenance_lifecycle != true
-    environment: e2e-testing
+    environment: e2e
     strategy:
       fail-fast: false
       # Personal App refresh tokens are single-use and are rotated by each
@@ -408,7 +408,7 @@ jobs:
     name: Generated Maintenance Lifecycle
     if: inputs.maintenance_lifecycle == true
     runs-on: ubuntu-24.04
-    environment: e2e-maintenance
+    environment: e2e
     outputs:
       cleanup_armed: ${{ steps.arm-cleanup.outputs.cleanup_armed }}
     permissions:
@@ -515,9 +515,9 @@ jobs:
         id: writer-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          # Credential profile: e2e-maintenance-writer; target Environment: e2e-maintenance.
-          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID }}
-          app_private_key: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+          # Credential profile: e2e-writer; target Environment: e2e.
+          client_id: ${{ vars.BOOTSTRAP_E2E_WRITER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY }}
           refresh_token_secret: ""
           app_owner: ${{ github.repository_owner }}
           target_owner: ${{ github.repository_owner }}
@@ -528,9 +528,9 @@ jobs:
         id: reviewer-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          # Credential profile: e2e-maintenance-reviewer; target Environment: e2e-maintenance.
-          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_CLIENT_ID }}
-          app_private_key: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}
+          # Credential profile: e2e-reviewer; target Environment: e2e.
+          client_id: ${{ vars.BOOTSTRAP_E2E_REVIEWER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY }}
           refresh_token_secret: ""
           app_owner: ${{ github.repository_owner }}
           target_owner: ${{ github.repository_owner }}
@@ -541,16 +541,16 @@ jobs:
         id: fixture-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          # Credential profile: e2e-maintenance-fixture; target Environment: e2e-maintenance.
-          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_ID }}
-          app_private_key: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_PRIVATE_KEY }}
-          app_client_secret: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_SECRET }}
-          app_user_refresh_token: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_USER_REFRESH_TOKEN }}
-          refresh_token_secret: BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_USER_REFRESH_TOKEN
-          refresh_token_secret_environment: e2e-maintenance
+          # Credential profile: e2e-fixture; target Environment: e2e.
+          client_id: ${{ vars.BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_PRIVATE_KEY }}
+          app_client_secret: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_SECRET }}
+          app_user_refresh_token: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN }}
+          refresh_token_secret: BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN
+          refresh_token_secret_environment: e2e
           app_owner: ${{ github.repository_owner }}
           target_owner: ${{ github.repository_owner }}
-          permission_profile: e2e-maintenance-fixture
+          permission_profile: e2e-fixture
           repositories: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
 
       - name: Create and verify maintenance lifecycle
@@ -564,10 +564,10 @@ jobs:
           APP_OWNER: ${{ inputs.app_owner }}
           REPOSITORY: ${{ github.repository }}
           REPO_NAME: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
-          WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_SLUG }}
-          REVIEWER_APP_SLUG: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_SLUG }}
+          WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_E2E_WRITER_APP_SLUG }}
+          REVIEWER_APP_SLUG: ${{ vars.BOOTSTRAP_E2E_REVIEWER_APP_SLUG }}
           MAINTENANCE_IDENTITY_MODE: e2e-disposable
-          MAINTENANCE_FIXTURE_LOGIN: e2e-maintenance-user
+          MAINTENANCE_FIXTURE_LOGIN: e2e-user
           MAINTENANCE_COPILOT_REVIEWER_LOGIN: copilot-pull-request-reviewer[bot]
         shell: bash
         run: |
@@ -649,7 +649,7 @@ jobs:
             return 1
           }
           main_sha="$(writer_gh api "/repos/$OWNER/$REPO_NAME/git/ref/heads/main" --jq '.object.sha')"
-          branch="e2e-maintenance-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          branch="e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           author_gh api --method POST "/repos/$OWNER/$REPO_NAME/git/refs" \
             -f "ref=refs/heads/$branch" -f "sha=$main_sha" >/dev/null
           marker="maintenance-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
@@ -812,7 +812,7 @@ jobs:
       inputs.maintenance_lifecycle == true
     needs: generated-maintenance-lifecycle
     runs-on: ubuntu-24.04
-    environment: e2e-testing
+    environment: e2e
     permissions:
       contents: read
     steps:

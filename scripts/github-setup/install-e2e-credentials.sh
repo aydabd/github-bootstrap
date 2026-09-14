@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1091
+# Temporary #215 compatibility boundary. New callers must use
+# manage-app-setup.sh; remove this entry point after #215 cutover.
 set -euo pipefail
 umask 077
 
@@ -9,7 +11,7 @@ source "$script_dir/gh-common.sh"
 
 usage() {
     cat >&2 << 'EOF'
-Usage: install-e2e-maintenance-credentials.sh OWNER/github-bootstrap WRITER_DIR REVIEWER_DIR FIXTURE_DIR
+Usage: install-e2e-credentials.sh OWNER/github-bootstrap WRITER_DIR REVIEWER_DIR FIXTURE_DIR
 EOF
     exit 2
 }
@@ -20,7 +22,7 @@ writer_dir="$2"
 reviewer_dir="$3"
 fixture_dir="$4"
 [ -n "${GH_TOKEN:-}" ] || {
-    echo "GH_TOKEN must be set before installing E2E maintenance credentials" >&2
+    echo "GH_TOKEN must be set before installing E2E credentials" >&2
     exit 1
 }
 require_command gh
@@ -31,13 +33,22 @@ owner_pattern='[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?'
     exit 1
 }
 
+file_mode() {
+    local path="$1" mode
+    mode="$(stat -f '%Lp' "$path" 2> /dev/null || true)"
+    if ! printf '%s\n' "$mode" | grep -Eq '^[0-7]{3,4}$'; then
+        mode="$(stat -c '%a' "$path")"
+    fi
+    printf '%s\n' "$mode"
+}
+
 require_protected_file() {
     local path="$1" label="$2" mode
     if [ ! -f "$path" ] || [ -L "$path" ]; then
         echo "$label must be a regular file: $path" >&2
         exit 1
     fi
-    mode="$(stat -f '%Lp' "$path" 2> /dev/null || stat -c '%a' "$path")"
+    mode="$(file_mode "$path")"
     [ "$mode" = 600 ] || {
         echo "$label must have mode 600: $path" >&2
         exit 1
@@ -51,7 +62,7 @@ require_credential_dir() {
         exit 1
     fi
     local mode
-    mode="$(stat -f '%Lp' "$dir" 2> /dev/null || stat -c '%a' "$dir")"
+    mode="$(file_mode "$dir")"
     [ "$mode" = 700 ] || {
         echo "$role credential directory must have mode 700: $dir" >&2
         exit 1
@@ -78,16 +89,16 @@ for credential_file in "$writer_dir/app-client-id" "$writer_dir/app-slug" \
 done
 
 GH_TOKEN="$GH_TOKEN" bash "$script_dir/install-app-secrets.sh" \
-    "$repo" e2e-maintenance-writer \
+    "$repo" e2e-writer \
     "$writer_dir/app-client-id" "$writer_dir/app-slug" \
     "$writer_dir/app-private-key.pem"
 GH_TOKEN="$GH_TOKEN" bash "$script_dir/install-app-secrets.sh" \
-    "$repo" e2e-maintenance-reviewer \
+    "$repo" e2e-reviewer \
     "$reviewer_dir/app-client-id" "$reviewer_dir/app-slug" \
     "$reviewer_dir/app-private-key.pem"
 GH_TOKEN="$GH_TOKEN" bash "$script_dir/install-app-secrets.sh" \
-    "$repo" e2e-maintenance-fixture \
+    "$repo" e2e-fixture \
     "$fixture_dir/app-client-id" "$fixture_dir/app-slug" \
     "$fixture_dir/app-private-key.pem" "$fixture_dir/app-client-secret" \
     "$fixture_dir/app-user-refresh-token"
-printf 'Installed E2E maintenance Writer, Reviewer, and fixture App credentials for %s\n' "$repo"
+printf 'Installed E2E Writer, Reviewer, and fixture App credentials for %s\n' "$repo"

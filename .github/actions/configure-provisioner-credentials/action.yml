@@ -94,10 +94,10 @@ runs:
         profile_loader="$GITHUB_ACTION_PATH/../../../scripts/github-setup/app-credential-profile.sh"
         [ -x "$profile_loader" ] || { echo "::error::Credential profile loader is unavailable" >&2; exit 1; }
         case "$PROFILE_INPUT" in
-          production-maintenance-writer|e2e-maintenance-writer)
+          production-writer|e2e-writer)
             maintenance_role="Writer"
             ;;
-          production-maintenance-reviewer|e2e-maintenance-reviewer)
+          production-reviewer|e2e-reviewer)
             maintenance_role="Reviewer"
             ;;
           *) echo "::error::Unsupported maintenance profile '$PROFILE_INPUT'" >&2; exit 1 ;;
@@ -124,6 +124,8 @@ runs:
           echo "::error::Maintenance App installation token was not created for $PROFILE_INPUT" >&2
           exit 1
         }
+        GH_TOKEN="$GH_TOKEN_INPUT" gh api --method PUT \
+          "/repos/$REPOSITORY_INPUT/environments/$ENVIRONMENT_INPUT" > /dev/null
         installation_repositories="$(mktemp)"
         trap 'rm -f "$installation_repositories"' EXIT
         GH_TOKEN="$MAINTENANCE_TOKEN_INPUT" gh api --paginate --slurp /installation/repositories > "$installation_repositories" || {

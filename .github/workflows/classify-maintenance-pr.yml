@@ -14,7 +14,7 @@ jobs:
     name: Classify trusted automation PR
     if: github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-24.04
-    environment: production-maintenance
+    environment: production
     permissions:
       contents: read
       issues: write
@@ -40,9 +40,9 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID }}
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID }}
           refresh_token_secret: ""
-          app_private_key: ${{ secrets.BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+          app_private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY }}
           app_owner: ${{ github.repository_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: maintenance-labeling
@@ -52,7 +52,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
-          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}
         shell: bash
         run: |
           set -euo pipefail
@@ -74,7 +74,7 @@ jobs:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           FULL_REPOSITORY: ${{ github.repository }}
-          WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+          WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}
         shell: bash
         run: |
           set -euo pipefail

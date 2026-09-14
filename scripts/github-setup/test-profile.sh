@@ -94,7 +94,7 @@ for creation_workflow in \
     grep -q 'OWNER/REPOSITORY@REF' "$creation_workflow"
     grep -q "OPTIONAL_FEATURES=\"\${{ inputs.optional_features || 'github-planning' }}\"" "$creation_workflow"
     grep -q 'maintenance' "$creation_workflow"
-    grep -q 'e2e-maintenance' "$creation_workflow"
+    grep -q 'e2e' "$creation_workflow"
     grep -q 'scripts/select-generated-workflows.sh' "$creation_workflow"
     grep -q 'select new-repo' "$creation_workflow"
     grep -q 'bind-e2e new-repo' "$creation_workflow"
@@ -103,8 +103,8 @@ for creation_workflow in \
         exit 1
     fi
 done
-grep -q 'production-maintenance' "$workflow_helper"
-grep -q 'e2e-maintenance' "$workflow_helper"
+grep -q 'production' "$workflow_helper"
+grep -q 'e2e' "$workflow_helper"
 maintenance_templates=(
     approve-automation-workflows.yml
     classify-maintenance-pr.yml
@@ -114,15 +114,15 @@ maintenance_templates=(
 )
 for maintenance_workflow in "${maintenance_templates[@]}"; do
     template_workflow="$repo_root/templates/.github/workflows/$maintenance_workflow"
-    grep -q '^    environment: production-maintenance$' "$template_workflow"
+    grep -q '^    environment: production$' "$template_workflow"
 done
 for production_reference in \
-    'BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID' \
-    'BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY' \
-    'BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG' \
-    'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID' \
-    'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY' \
-    'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG'; do
+    'BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID' \
+    'BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY' \
+    'BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG' \
+    'BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID' \
+    'BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY' \
+    'BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG'; do
     template_reference_count="$({ grep -Roh "$production_reference" \
         "$repo_root/templates/.github/workflows" || true; } | wc -l | tr -d ' ')"
     [ "$template_reference_count" -gt 0 ] || {
@@ -132,9 +132,10 @@ for production_reference in \
 done
 for production_workflow in classify-maintenance-pr.yml maintenance-safety.yml \
     approve-automation-workflows.yml merge-maintenance-pr.yml release-please.yml; do
-    grep -q 'environment: production-maintenance' \
+    grep -q 'environment: production' \
         "$repo_root/templates/.github/workflows/$production_workflow"
-    if grep -q 'e2e-maintenance' "$repo_root/templates/.github/workflows/$production_workflow"; then
+    if grep -Eq 'BOOTSTRAP_E2E_(WRITER|REVIEWER|FIXTURE|PROVISIONER)_|e2e-(writer|reviewer|fixture|provisioner)' \
+        "$repo_root/templates/.github/workflows/$production_workflow"; then
         echo "production maintenance workflow must not contain E2E maintenance identity: $production_workflow" >&2
         exit 1
     fi
@@ -173,19 +174,19 @@ for retained in commit-policy.yml quality.yml codeql.yml test-quality-providers.
 done
 for maintenance_workflow in "${maintenance_templates[@]}" release-please.yml; do
     generated_workflow="$standard_fixture/.github/workflows/$maintenance_workflow"
-    grep -q 'environment: production-maintenance' "$generated_workflow"
+    grep -q 'environment: production' "$generated_workflow"
     for production_reference in \
-        BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID \
-        BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY \
-        BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG \
-        BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID \
-        BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY \
-        BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG; do
+        BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID \
+        BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY \
+        BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG \
+        BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID \
+        BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY \
+        BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG; do
         if grep -q "$production_reference" "$repo_root/templates/.github/workflows/$maintenance_workflow"; then
             grep -q "$production_reference" "$generated_workflow"
         fi
     done
-    if grep -Eq 'BOOTSTRAP_E2E_MAINTENANCE_|e2e-maintenance(-writer|-reviewer|-fixture)?' \
+    if grep -Eq 'BOOTSTRAP_E2E_(WRITER|REVIEWER|FIXTURE|PROVISIONER)_|e2e-(writer|reviewer|fixture|provisioner)' \
         "$generated_workflow"; then
         echo "production generated workflow retained E2E maintenance material: $maintenance_workflow" >&2
         exit 1
@@ -196,17 +197,17 @@ E2E_COPILOT_REVIEWER_LOGIN='copilot-pull-request-reviewer[bot]' \
     "$workflow_helper" bind-e2e "$standard_fixture" ' quality, maintenance ' release-please
 for maintenance_workflow in "${e2e_maintenance_workflows[@]}"; do
     generated_workflow="$standard_fixture/.github/workflows/$maintenance_workflow"
-    if ! grep -qx '    environment: e2e-maintenance' "$generated_workflow"; then
+    if ! grep -qx '    environment: e2e' "$generated_workflow"; then
         echo "E2E maintenance workflow is missing its E2E Environment: $maintenance_workflow" >&2
         exit 1
     fi
     for e2e_reference in \
-        'BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID' \
-        'BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY' \
-        'BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_SLUG' \
-        'BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_CLIENT_ID' \
-        'BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY' \
-        'BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_SLUG'; do
+        'BOOTSTRAP_E2E_WRITER_APP_CLIENT_ID' \
+        'BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY' \
+        'BOOTSTRAP_E2E_WRITER_APP_SLUG' \
+        'BOOTSTRAP_E2E_REVIEWER_APP_CLIENT_ID' \
+        'BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY' \
+        'BOOTSTRAP_E2E_REVIEWER_APP_SLUG'; do
         production_reference="${e2e_reference/BOOTSTRAP_E2E_/BOOTSTRAP_}"
         if grep -q "$production_reference" \
             "$repo_root/templates/.github/workflows/$maintenance_workflow"; then
@@ -217,12 +218,12 @@ for maintenance_workflow in "${e2e_maintenance_workflows[@]}"; do
         fi
     done
     for production_reference in \
-        'BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID' \
-        'BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY' \
-        'BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG' \
-        'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID' \
-        'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY' \
-        'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG'; do
+        'BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID' \
+        'BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY' \
+        'BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG' \
+        'BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID' \
+        'BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY' \
+        'BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG'; do
         grep -Fq "$production_reference" "$generated_workflow" && {
             echo "E2E maintenance workflow retained production credential reference $production_reference: $maintenance_workflow" >&2
             exit 1
@@ -251,19 +252,19 @@ for maintenance_workflow in classify-maintenance-pr.yml maintenance-safety.yml \
     if [ "$maintenance_workflow" = release-please.yml ]; then
         : > "$binding_fixture/.github/workflows/$maintenance_workflow"
     else
-        printf '    environment: production-maintenance\n' > \
+        printf '    environment: production\n' > \
             "$binding_fixture/.github/workflows/$maintenance_workflow"
     fi
 done
 E2E_COPILOT_REVIEWER_LOGIN='copilot-pull-request-reviewer[bot]' \
     "$workflow_helper" bind-e2e "$binding_fixture" maintenance release-please
-grep -qx '    environment: e2e-maintenance' \
+grep -qx '    environment: e2e' \
     "$binding_fixture/.github/workflows/maintenance-safety.yml"
-printf '    environment: production-maintenance\n' > \
+printf '    environment: production\n' > \
     "$binding_fixture/.github/workflows/maintenance-safety.yml"
 for maintenance_workflow in classify-maintenance-pr.yml maintenance-safety.yml \
     approve-automation-workflows.yml merge-maintenance-pr.yml release-please.yml; do
-    printf '    environment: production-maintenance\n' > \
+    printf '    environment: production\n' > \
         "$binding_fixture/.github/workflows/$maintenance_workflow"
 done
 printf '    environment: unexpected-environment\n' > \

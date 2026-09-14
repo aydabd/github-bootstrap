@@ -38,6 +38,7 @@ cat > "$fake_bin/gh" << 'EOF'
 set -euo pipefail
 printf '%s\t%s\n' "${GH_TOKEN:-}" "$*" >> "$GH_CALLS"
 case "$*" in
+    *"/environments/"*) : ;;
     *"/installation/repositories"*)
         if [ "${GH_TOKEN:-}" = provisioner-token ] || [ "${MAINTENANCE_ACCESS:-yes}" = yes ]; then
             printf '%s\n' '[{"repositories":[{"full_name":"acme/generated"}]}]'
@@ -81,7 +82,7 @@ run_action() {
 }
 
 failures=0
-if ! run_action production-maintenance-writer production-maintenance yes; then
+if ! run_action production-writer production yes; then
     echo "production maintenance profile was rejected by the action" >&2
     failures=$((failures + 1))
 fi
@@ -90,7 +91,7 @@ if ! grep -Fq $'maintenance-token\tapi --paginate --slurp /installation/reposito
     failures=$((failures + 1))
 fi
 
-if run_action e2e-maintenance-writer e2e-maintenance no; then
+if run_action e2e-writer e2e no; then
     echo "maintenance installation access denial was not enforced" >&2
     failures=$((failures + 1))
 fi

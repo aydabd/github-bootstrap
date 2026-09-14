@@ -16,7 +16,7 @@ jobs:
   release-please:
     name: Release Please
     runs-on: ubuntu-latest
-    environment: production-maintenance
+    environment: production
     permissions:
       contents: read
       pull-requests: read
@@ -26,15 +26,15 @@ jobs:
         id: resolve-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client-id: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID }}
-          private-key: ${{ secrets.BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
 
       - name: Verify resolved App identity
         env:
           APP_SLUG: ${{ steps.resolve-token.outputs.app-slug }}
-          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}
         shell: bash
         run: |
           set -euo pipefail

@@ -1,5 +1,5 @@
 {
-  "name": "Maintenance Fixture E2E",
+  "name": "Bootstrap E2E Fixture",
   "url": "https://github.com",
   "public": false,
   "default_events": [],
