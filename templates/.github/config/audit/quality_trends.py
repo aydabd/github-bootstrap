@@ -86,7 +86,7 @@ def _component_scores(item):
     compliance = 100 - min(100, 25 * (not evidence["provenance_complete"] or not evidence["signature_verified"]) + 10 * evidence["unexpected_skips"] + 25 * evidence["unauthorized_bypasses"] + 25 * evidence["required_checks_failed"])
     correctness = max(0, 100 - 25 * (evidence["regressions"] + evidence["reverts"] + evidence["reopened"]))
     review = max(0, 100 - 20 * evidence["stale_approvals"] - 20 * evidence["unresolved_threads"] - 10 * max(0, evidence["actionable_findings"] - evidence["actionable_resolved"]))
-    delivery = max(0, 100 - 10 * evidence["pushes_after_first_ci"] - 15 * evidence["repeated_ci_failures"])
+    delivery = max(0, 100 - min(100, evidence["hours_to_merge"]) - 10 * evidence["pushes_after_first_ci"] - 15 * evidence["repeated_ci_failures"])
     process = 100 if evidence["process_refinement_recorded"] else 0
     return {"compliance": compliance, "correctness": correctness, "review_quality": review, "delivery_efficiency": delivery, "process_improvement": process}
 
