@@ -151,7 +151,7 @@ install_command() {
 }
 
 rotate_command() {
-    local role="$1" file
+    local role="$1" file owner client_id_file refresh_file access_file next_refresh_file rotate_log
     check_profile "$role" || emit_failure "$role" profile-schema INVALID_PROFILE "use a supported credential profile"
     case "$role" in
         production-provisioner | e2e-provisioner) ;;
@@ -165,8 +165,23 @@ rotate_command() {
         ghr_*) ;;
         *) emit_failure "$role" rotate INVALID_REFRESH_TOKEN "refresh token must use the ghr_ prefix" ;;
     esac
-    echo "rotate is not implemented" >&2
-    return 1
+    client_id_file="$APP_CREDENTIAL_DIR/app-client-id"
+    refresh_file="$APP_CREDENTIAL_DIR/app-refresh-token"
+    access_file="$APP_CREDENTIAL_DIR/app-access-token"
+    next_refresh_file="$APP_CREDENTIAL_DIR/app-refresh-token.next"
+    owner="${repository%%/*}"
+    rotate_log="$(mktemp)"
+    if ! APP_CLIENT_SECRET_FILE="$APP_CREDENTIAL_DIR/app-client-secret" \
+        "$script_dir/github-app-user-token.sh" refresh \
+        "$(tr -d '\r\n' < "$client_id_file")" "$refresh_file" "$owner" \
+        "$access_file" "$next_refresh_file" > "$rotate_log" 2>&1; then
+        rm -f "$rotate_log" "$access_file" "$next_refresh_file"
+        emit_failure "$role" rotate ROTATION_FAILED "refresh and owner verification failed"
+    fi
+    mv "$next_refresh_file" "$refresh_file"
+    rm -f "$rotate_log"
+    jq -cn --arg repository "$repository" --arg role "$role" \
+        '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"rotate",evidence:"replacement token verified and installed atomically"}],summary:{passed:1,failed:0,skipped:0}}'
 }
 
 command_name="${1:-}"
