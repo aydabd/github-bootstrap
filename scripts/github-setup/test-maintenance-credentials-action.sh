@@ -38,6 +38,7 @@ cat > "$fake_bin/gh" << 'EOF'
 set -euo pipefail
 printf '%s\t%s\n' "${GH_TOKEN:-}" "$*" >> "$GH_CALLS"
 case "$*" in
+    *"/environments/"*) : ;;
     *"/installation/repositories"*)
         if [ "${GH_TOKEN:-}" = provisioner-token ] || [ "${MAINTENANCE_ACCESS:-yes}" = yes ]; then
             printf '%s\n' '[{"repositories":[{"full_name":"acme/generated"}]}]'

@@ -375,6 +375,7 @@ cat > "$preflight_bin/gh" << 'EOF'
 set -euo pipefail
 printf '%s\t%s\t%s\n' "${GH_TOKEN:-}" "${GITHUB_API_URL:-}" "$*" >> "${CALLER_GH_CALLS:?}"
 case "$*" in
+    *"/environments/"*) : ;;
     *"/installation/repositories"*) printf '%s\n' '[{"repositories":[]}]' ;;
     *) exit 1 ;;
 esac
