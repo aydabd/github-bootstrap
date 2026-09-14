@@ -146,9 +146,6 @@ bind_e2e() {
     }
     local release_files=("$(release_file)")
     normalize_workflows
-    if has_workflow all || [ "${#NORMALIZED_WORKFLOWS[@]}" -eq 0 ]; then
-        release_files=(release-please.yml git-cliff-release.yml)
-    fi
     if has_workflow all || [ "${#NORMALIZED_WORKFLOWS[@]}" -eq 0 ] ||
         has_workflow maintenance; then
         for file in "${maintenance_automation_files[@]}" "${release_files[@]}"; do
