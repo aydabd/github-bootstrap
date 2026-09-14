@@ -31,7 +31,7 @@ fi
 
 set +e
 install_output="$(GITHUB_REPOSITORY=aydabd/github-bootstrap \
-    APP_CREDENTIAL_DIR=/private/tmp/github-bootstrap-missing-credentials \
+    APP_CREDENTIAL_DIR=/private/tmp \
     "$orchestrator" install e2e-provisioner 2> /dev/null)"
 install_status="$?"
 set -e

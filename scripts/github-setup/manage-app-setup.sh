@@ -119,6 +119,19 @@ install_command() {
     if [ ! -d "${APP_CREDENTIAL_DIR:-}" ]; then
         emit_failure "$role" credentials MISSING_CREDENTIALS "provide a protected credential directory"
     fi
+    case "$role" in
+        production-provisioner | e2e-provisioner)
+            local credential_file
+            for credential_file in app-client-id app-private-key.pem app-client-secret app-refresh-token; do
+                if [ ! -f "$APP_CREDENTIAL_DIR/$credential_file" ]; then
+                    emit_failure "$role" credentials MISSING_CREDENTIALS "provide all protected credential files"
+                fi
+            done
+            ;;
+        *)
+            emit_failure "$role" install UNSUPPORTED_ROLE "installer support is not available for this role"
+            ;;
+    esac
     echo "install is not implemented" >&2
     return 1
 }
