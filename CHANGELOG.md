@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.1](https://github.com/aydabd/github-bootstrap/compare/v2.10.0...v2.10.1) (2026-09-14)
+
+
+### Bug Fixes
+
+* harden quality trend scoring ([#236](https://github.com/aydabd/github-bootstrap/issues/236)) ([2813ffa](https://github.com/aydabd/github-bootstrap/commit/2813ffa306e1ee559ceb338c3357f7df5f43cd83))
+
 ## [2.10.0](https://github.com/aydabd/github-bootstrap/compare/v2.9.1...v2.10.0) (2026-09-14)
 
 
