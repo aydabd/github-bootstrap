@@ -146,8 +146,6 @@ install_command() {
             emit_failure "$role" install UNSUPPORTED_ROLE "installer support is not available for this role"
             ;;
     esac
-    echo "install is not implemented" >&2
-    return 1
 }
 
 rotate_command() {
