@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC1091,SC2218
+# Temporary #215 compatibility boundary. New callers must use
+# manage-app-setup.sh; remove this entry point after #215 cutover.
 set -euo pipefail
 umask 077
 
@@ -40,13 +42,22 @@ owner_pattern='[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?'
     exit 1
 }
 require_file "$client_id_file" "client ID file"
+file_mode() {
+    local path="$1" mode
+    mode="$(stat -f '%Lp' "$path" 2> /dev/null || true)"
+    if ! printf '%s\n' "$mode" | grep -Eq '^[0-7]{3,4}$'; then
+        mode="$(stat -c '%a' "$path")"
+    fi
+    printf '%s\n' "$mode"
+}
+
 require_protected_file() {
     local path="$1" label="$2" mode
     if [ ! -f "$path" ] || [ -L "$path" ]; then
         echo "$label must be a regular file: $path" >&2
         exit 1
     fi
-    mode="$(stat -f '%Lp' "$path" 2> /dev/null || stat -c '%a' "$path")"
+    mode="$(file_mode "$path")"
     [ "$mode" = 600 ] || {
         echo "$label must have mode 600: $path" >&2
         exit 1

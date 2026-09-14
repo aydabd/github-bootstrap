@@ -54,7 +54,7 @@ if grep -Fq "\`head_sha\`, \`client_id\` (Provisioner), and \`app_owner\`" docs/
 fi
 legacy_prefix='BOOTSTRAP_'
 legacy_profile='PROVISIONER_APP_'
-if rg -n "${legacy_prefix}${legacy_profile}(CLIENT_ID|PRIVATE_KEY|CLIENT_SECRET|USER_REFRESH_TOKEN)" \
+if grep -ERn "${legacy_prefix}${legacy_profile}(CLIENT_ID|PRIVATE_KEY|CLIENT_SECRET|USER_REFRESH_TOKEN)" \
     "${audit_paths[@]}"; then
     echo "operational files must not use shared provisioner credential names" >&2
     exit 1

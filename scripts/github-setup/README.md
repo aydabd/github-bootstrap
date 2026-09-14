@@ -15,14 +15,17 @@ have access to administer the target repository.
 
 ## Scripts
 
-| Script                        | Purpose                       |
-| ----------------------------- | ----------------------------- |
-| `setup-labels.sh`             | Labels                        |
-| `setup-security-settings.sh`  | Security settings             |
-| `setup-repo-settings.sh`      | Repository settings           |
-| `setup-ruleset.sh`            | Repository rulesets           |
-| `validate-profile.sh`         | Bootstrap profile validation  |
-| `test-local-setup-scripts.sh` | Test-only live E2E assertions |
+| Script                                   | Purpose                                                   |
+| ---------------------------------------- | --------------------------------------------------------- |
+| `setup-labels.sh`                        | Labels                                                    |
+| `setup-security-settings.sh`             | Security settings                                         |
+| `setup-repo-settings.sh`                 | Repository settings                                       |
+| `setup-ruleset.sh`                       | Repository rulesets                                       |
+| `validate-profile.sh`                    | Bootstrap profile validation                              |
+| `test-local-setup-scripts.sh`            | Test-only live E2E assertions                             |
+| `manage-app-setup.sh`                    | Deterministic App check/install/rotate/cleanup dispatcher |
+| `install-app-secrets.sh`                 | Temporary #215 compatibility installer boundary           |
+| `install-e2e-maintenance-credentials.sh` | Temporary #215 E2E maintenance compatibility wrapper      |
 
 Each script's `--help` output is the source of truth for options, defaults, and
 examples. Update the script help when behavior changes instead of duplicating
@@ -32,6 +35,11 @@ Shared helpers live in `gh-common.sh`. Keep only cross-script concerns there,
 such as required input checks, file checks, GitHub API endpoint construction,
 JSON key reads, URL encoding, and known GitHub plan or feature limitation
 detection.
+
+`manage-app-setup.sh` is the canonical interface for new callers. The two
+installer scripts remain temporary compatibility boundaries for #215 and must
+be removed after #215 switches to the dispatcher; they must not gain new
+independent credential or cleanup behavior.
 
 ## Bootstrap profiles
 

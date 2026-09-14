@@ -130,6 +130,23 @@ scripts/github-setup/install-app-secrets.sh OWNER/github-bootstrap production-pr
   "$credential_dir/app-client-secret" "$credential_dir/app-refresh-token"
 ```
 
+New automation should use the deterministic dispatcher. It reads the canonical
+profile metadata, emits the same JSON contract for every command, and keeps
+installation, rotation, and cleanup role-scoped:
+
+```bash
+scripts/github-setup/manage-app-setup.sh check
+APP_CREDENTIAL_DIR="$credential_dir" \
+  scripts/github-setup/manage-app-setup.sh install production-provisioner
+APP_CREDENTIAL_DIR="$credential_dir" \
+  scripts/github-setup/manage-app-setup.sh rotate production-provisioner
+APP_CREDENTIAL_ROLE=production-provisioner APP_CREDENTIAL_DIR="$credential_dir" \
+  scripts/github-setup/manage-app-setup.sh cleanup
+```
+
+The lower-level installer scripts remain temporary compatibility boundaries for
+Issue #215 and are removable once that consumer is cut over to the dispatcher.
+
 ### Provisioner App profiles and E2E setup
 
 Create two separate Repository Bootstrap Provisioner Apps: one for real repository creation and

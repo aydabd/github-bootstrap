@@ -10,7 +10,7 @@ manifest="$script_dir/app-credential-profiles.json"
     exit 1
 }
 
-jq -e 'keys == [
+jq -e '.role_order == [
     "e2e-maintenance-fixture",
     "e2e-maintenance-reviewer",
     "e2e-maintenance-writer",
@@ -20,6 +20,17 @@ jq -e 'keys == [
     "production-provisioner"
 ]' "$manifest" > /dev/null || {
     echo "credential profile manifest must contain exactly the seven supported profiles" >&2
+    exit 1
+}
+
+jq -e '.schema_version == 1 and .repository_owner == "aydabd" and
+    ([.role_order[] | .] | length) == 7 and
+    ([.profile_metadata[] | select(.owner == "aydabd" and .visibility == "private" and
+        .installation_scope == "repository" and .api_method == "POST" and
+        (.api_endpoint | endswith("/conversions")) and (.permissions | type == "array") and
+        (.events | type == "array") and (.rotation | type == "string") and
+        (.cleanup == "exact-role-directory"))] | length) == 7' "$manifest" > /dev/null || {
+    echo "profile metadata must define deterministic install and cleanup policy" >&2
     exit 1
 }
 

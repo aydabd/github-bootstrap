@@ -15,7 +15,7 @@ fi
 
 profile="$1"
 
-if ! jq -e --arg profile "$profile" 'has($profile)' "$manifest" > /dev/null; then
+if ! jq -e --arg profile "$profile" '.role_order | index($profile) != null' "$manifest" > /dev/null; then
     echo "unknown credential profile: $profile" >&2
     exit 1
 fi
@@ -60,10 +60,14 @@ if [ "$#" -eq 1 ]; then
 fi
 
 field="$2"
-if ! jq -e --arg profile "$profile" --arg field "$field" '.[$profile] | has($field)' "$manifest" > /dev/null; then
+if ! jq -e --arg profile "$profile" --arg field "$field" \
+    '((.[$profile] | has($field)) or (.profile_metadata[$profile] | has($field)))' \
+    "$manifest" > /dev/null; then
     echo "unknown credential profile field: $field" >&2
     exit 1
 fi
 
 jq -er --arg profile "$profile" --arg field "$field" \
-    '.[$profile][$field] | select(type == "string" and length > 0)' "$manifest"
+    'if .[$profile] | has($field) then .[$profile][$field]
+        elif .profile_metadata[$profile] | has($field) then .profile_metadata[$profile][$field]
+        else empty end' "$manifest"

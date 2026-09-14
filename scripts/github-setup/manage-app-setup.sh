@@ -4,6 +4,7 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 profile_file="$script_dir/app-credential-profiles.json"
+profile_loader="$script_dir/app-credential-profile.sh"
 
 usage() {
     echo "Usage: manage-app-setup.sh check" >&2
@@ -41,15 +42,7 @@ check_profile() {
 }
 
 manifest_for_role() {
-    case "$1" in
-        production-provisioner | e2e-provisioner) echo repository-bootstrap-provisioner ;;
-        e2e-maintenance-fixture) echo maintenance-fixture-e2e ;;
-        e2e-maintenance-writer) echo repository-maintenance-writer-e2e ;;
-        e2e-maintenance-reviewer) echo repository-maintenance-reviewer-e2e ;;
-        production-maintenance-writer) echo repository-maintenance-writer ;;
-        production-maintenance-reviewer) echo repository-maintenance-reviewer ;;
-        *) return 1 ;;
-    esac
+    "$profile_loader" "$1" manifest
 }
 
 check_manifest() {
@@ -66,14 +59,17 @@ check_isolation() {
         .["production-maintenance-reviewer"].environment != .["e2e-maintenance-reviewer"].environment and
         .["production-provisioner"].refresh_token_secret != .["e2e-provisioner"].refresh_token_secret and
         .["production-maintenance-writer"].private_key_secret != .["e2e-maintenance-writer"].private_key_secret and
-        .["production-maintenance-reviewer"].private_key_secret != .["e2e-maintenance-reviewer"].private_key_secret
+        .["production-maintenance-reviewer"].private_key_secret != .["e2e-maintenance-reviewer"].private_key_secret and
+        ([.profile_metadata[] | select(.owner != "aydabd" or .visibility != "private" or
+            .installation_scope != "repository" or .api_method != "POST" or
+            (.events | type != "array"))] | length) == 0
     ' "$profile_file" > /dev/null
 }
 
 check_command() {
     local expected_roles='["e2e-maintenance-fixture","e2e-maintenance-reviewer","e2e-maintenance-writer","e2e-provisioner","production-maintenance-reviewer","production-maintenance-writer","production-provisioner"]'
     local checks='[]' role result overall="PASS"
-    jq -e --argjson expected "$expected_roles" 'keys == $expected' "$profile_file" > /dev/null || overall="FAIL"
+    jq -e --argjson expected "$expected_roles" '.role_order == $expected' "$profile_file" > /dev/null || overall="FAIL"
     while IFS= read -r role; do
         if check_profile "$role"; then
             result="PASS"
@@ -91,7 +87,7 @@ check_command() {
         fi
         checks="$(jq -c --arg result "$result" --arg role "$role" \
             '. + [{result:$result,role:$role,check:"manifest",evidence:"role manifest exists and has a name"}]' <<< "$checks")"
-    done < <(jq -r 'keys[]' "$profile_file")
+    done < <(jq -r '.role_order[]' "$profile_file")
     if check_isolation; then
         result="PASS"
     else
@@ -115,7 +111,10 @@ emit_failure() {
 
 install_command() {
     local role="$1"
-    check_profile "$role" || emit_failure "$role" profile-schema INVALID_PROFILE "use a supported credential profile"
+    if ! check_profile "$role"; then
+        emit_failure "$role" profile-schema INVALID_PROFILE "use a supported credential profile"
+        return 1
+    fi
     if [ ! -d "${APP_CREDENTIAL_DIR:-}" ]; then
         emit_failure "$role" credentials MISSING_CREDENTIALS "provide a protected credential directory"
     fi
@@ -142,6 +141,45 @@ install_command() {
                 '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"install",evidence:"protected installer completed"}],summary:{passed:1,failed:0,skipped:0}}'
             return 0
             ;;
+        e2e-maintenance-writer | e2e-maintenance-reviewer | production-maintenance-writer | production-maintenance-reviewer)
+            for credential_file in app-client-id app-slug app-private-key.pem; do
+                if [ ! -f "$APP_CREDENTIAL_DIR/$credential_file" ]; then
+                    emit_failure "$role" credentials MISSING_CREDENTIALS "provide all protected credential files"
+                fi
+            done
+            installer_log="$(mktemp)"
+            if ! GH_TOKEN="${GH_TOKEN:-}" "$script_dir/install-app-secrets.sh" \
+                "$repository" "$role" "$APP_CREDENTIAL_DIR/app-client-id" \
+                "$APP_CREDENTIAL_DIR/app-slug" "$APP_CREDENTIAL_DIR/app-private-key.pem" \
+                > "$installer_log" 2>&1; then
+                rm -f "$installer_log"
+                emit_failure "$role" install INSTALL_FAILED "inspect protected installer diagnostics"
+            fi
+            rm -f "$installer_log"
+            jq -cn --arg repository "$repository" --arg role "$role" \
+                '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"install",evidence:"protected installer completed"}],summary:{passed:1,failed:0,skipped:0}}'
+            return 0
+            ;;
+        e2e-maintenance-fixture)
+            for credential_file in app-client-id app-slug app-private-key.pem app-client-secret app-refresh-token; do
+                if [ ! -f "$APP_CREDENTIAL_DIR/$credential_file" ]; then
+                    emit_failure "$role" credentials MISSING_CREDENTIALS "provide all protected credential files"
+                fi
+            done
+            installer_log="$(mktemp)"
+            if ! GH_TOKEN="${GH_TOKEN:-}" "$script_dir/install-app-secrets.sh" \
+                "$repository" "$role" "$APP_CREDENTIAL_DIR/app-client-id" \
+                "$APP_CREDENTIAL_DIR/app-slug" "$APP_CREDENTIAL_DIR/app-private-key.pem" \
+                "$APP_CREDENTIAL_DIR/app-client-secret" "$APP_CREDENTIAL_DIR/app-refresh-token" \
+                > "$installer_log" 2>&1; then
+                rm -f "$installer_log"
+                emit_failure "$role" install INSTALL_FAILED "inspect protected installer diagnostics"
+            fi
+            rm -f "$installer_log"
+            jq -cn --arg repository "$repository" --arg role "$role" \
+                '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"install",evidence:"protected installer completed"}],summary:{passed:1,failed:0,skipped:0}}'
+            return 0
+            ;;
         *)
             emit_failure "$role" install UNSUPPORTED_ROLE "installer support is not available for this role"
             ;;
@@ -150,12 +188,21 @@ install_command() {
 
 rotate_command() {
     local role="$1" file owner client_id_file refresh_file access_file next_refresh_file rotate_log
-    check_profile "$role" || emit_failure "$role" profile-schema INVALID_PROFILE "use a supported credential profile"
+    if ! check_profile "$role"; then
+        emit_failure "$role" profile-schema INVALID_PROFILE "use a supported credential profile"
+        return 1
+    fi
     case "$role" in
         production-provisioner | e2e-provisioner) ;;
-        *) emit_failure "$role" rotate UNSUPPORTED_ROLE "rotation support is limited to provisioner profiles" ;;
+        e2e-maintenance-writer | e2e-maintenance-reviewer | production-maintenance-writer | production-maintenance-reviewer)
+            install_command "$role"
+            return
+            ;;
+        *) emit_failure "$role" rotate UNSUPPORTED_ROLE "use a supported credential profile" ;;
     esac
-    [ -d "${APP_CREDENTIAL_DIR:-}" ] || emit_failure "$role" credentials MISSING_CREDENTIALS "provide a protected credential directory"
+    if [ ! -d "${APP_CREDENTIAL_DIR:-}" ]; then
+        emit_failure "$role" credentials MISSING_CREDENTIALS "provide a protected credential directory"
+    fi
     for file in app-client-id app-client-secret app-refresh-token; do
         [ -f "$APP_CREDENTIAL_DIR/$file" ] || emit_failure "$role" credentials MISSING_CREDENTIALS "provide all protected rotation files"
     done
@@ -177,6 +224,7 @@ rotate_command() {
         emit_failure "$role" rotate ROTATION_FAILED "refresh and owner verification failed"
     fi
     mv "$next_refresh_file" "$refresh_file"
+    rm -f "$access_file"
     rm -f "$rotate_log"
     jq -cn --arg repository "$repository" --arg role "$role" \
         '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"rotate",evidence:"replacement token verified and installed atomically"}],summary:{passed:1,failed:0,skipped:0}}'
@@ -188,13 +236,14 @@ cleanup_command() {
         production-provisioner | e2e-provisioner | e2e-maintenance-fixture | e2e-maintenance-writer | e2e-maintenance-reviewer | production-maintenance-writer | production-maintenance-reviewer) ;;
         *) emit_failure "$role" cleanup INVALID_ROLE "set APP_CREDENTIAL_ROLE to a supported profile" ;;
     esac
-    [ -n "${APP_CREDENTIAL_DIR:-}" ] && [ -d "$APP_CREDENTIAL_DIR" ] ||
+    if [ -z "${APP_CREDENTIAL_DIR:-}" ] || [ ! -d "$APP_CREDENTIAL_DIR" ]; then
         emit_failure "$role" cleanup MISSING_CREDENTIALS "provide the credential directory to clean"
+    fi
     case "$APP_CREDENTIAL_DIR" in
         */github-bootstrap/"$role") ;;
         *) emit_failure "$role" cleanup INVALID_CREDENTIAL_PATH "use the exact github-bootstrap role directory" ;;
     esac
-    for file in app-manifest-code app-client-id app-client-secret app-private-key.pem app-refresh-token app-refresh-token.next app-access-token; do
+    for file in app-manifest-code app-client-id app-slug app-client-secret app-private-key.pem app-refresh-token app-refresh-token.next app-access-token; do
         rm -f "$APP_CREDENTIAL_DIR/$file"
     done
     rmdir "$APP_CREDENTIAL_DIR" 2> /dev/null || true

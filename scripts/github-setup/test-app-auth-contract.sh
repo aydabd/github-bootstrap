@@ -507,7 +507,7 @@ assert_contains "app_user_refresh_token: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_
 assert_contains "app_client_secret: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}" "$repo_root/.github/workflows/test-repository-creation.yml"
 assert_contains "repositories: \${{ needs.create-test-repo.outputs.cleanup_repositories }}" "$repo_root/.github/workflows/test-repository-creation.yml"
 
-if rg -n 'APP_CLIENT_SECRET|app_client_secret|APP_USER_REFRESH_TOKEN|app_user_refresh_token' \
+if grep -ERn 'APP_CLIENT_SECRET|app_client_secret|APP_USER_REFRESH_TOKEN|app_user_refresh_token' \
     "$repo_root/templates/.github"; then
     echo "generated repositories must not contain provisioner client-secret or refresh-token material" >&2
     exit 1
