@@ -94,10 +94,10 @@ runs:
         profile_loader="$GITHUB_ACTION_PATH/../../../scripts/github-setup/app-credential-profile.sh"
         [ -x "$profile_loader" ] || { echo "::error::Credential profile loader is unavailable" >&2; exit 1; }
         case "$PROFILE_INPUT" in
-          production-maintenance-writer|e2e-maintenance-writer)
+          production-writer|e2e-writer)
             maintenance_role="Writer"
             ;;
-          production-maintenance-reviewer|e2e-maintenance-reviewer)
+          production-reviewer|e2e-reviewer)
             maintenance_role="Reviewer"
             ;;
           *) echo "::error::Unsupported maintenance profile '$PROFILE_INPUT'" >&2; exit 1 ;;

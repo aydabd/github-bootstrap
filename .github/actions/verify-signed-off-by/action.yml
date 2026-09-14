@@ -29,7 +29,7 @@ runs:
           "/repos/$REPOSITORY/pulls/$PR_NUMBER/commits?per_page=100" \
           > "$commits_file"
         missing_commits="$(jq -r '
-          ["github-actions[bot]", "repository-maintenance-writer[bot]", "dependabot[bot]"] as $trusted_bots
+          ["github-actions[bot]", "bootstrap-writer[bot]", "dependabot[bot]"] as $trusted_bots
           | flatten[]
           | (.author.login? // "") as $login
           | select(

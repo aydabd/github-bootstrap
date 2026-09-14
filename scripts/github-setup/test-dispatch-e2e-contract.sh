@@ -4,23 +4,23 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-workflow="$script_dir/../../.github/workflows/dispatch-maintenance-e2e.yml"
+workflow="$script_dir/../../.github/workflows/dispatch-e2e.yml"
 
 [ -f "$workflow" ] || {
-    echo "dispatch-maintenance-e2e workflow is missing: $workflow" >&2
+    echo "dispatch-e2e workflow is missing: $workflow" >&2
     exit 1
 }
 
 assert_contains() {
     grep -Fq -- "$1" "$workflow" || {
-        echo "dispatch-maintenance-e2e workflow is missing expected substring: $1" >&2
+        echo "dispatch-e2e workflow is missing expected substring: $1" >&2
         exit 1
     }
 }
 
 assert_absent() {
     if grep -Fq -- "$1" "$workflow"; then
-        echo "dispatch-maintenance-e2e workflow must not contain: $1" >&2
+        echo "dispatch-e2e workflow must not contain: $1" >&2
         exit 1
     fi
 }
@@ -39,11 +39,14 @@ assert_contains "github.event.pull_request.base.ref == 'main'"
 
 # The dispatch endpoint needs actions:write, which only the Reviewer App's
 # workflow-approval profile carries; the default token stays read-only.
-assert_contains "environment: production-maintenance"
+assert_contains "name: Dispatch E2E"
+assert_contains "environment: e2e"
 assert_contains "permission_profile: workflow-approval"
-assert_contains "BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY"
-assert_contains "BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG"
-assert_contains "Resolved App is not the configured maintenance Reviewer"
+assert_contains "BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY"
+assert_contains "BOOTSTRAP_E2E_REVIEWER_APP_SLUG"
+assert_contains "Resolved App is not the configured E2E Reviewer"
+assert_absent "environment: production"
+assert_absent "BOOTSTRAP_PRODUCTION_REVIEWER_APP_"
 assert_absent "actions: write"
 
 # Dispatch Test Generated Repository E2E against the PR head branch so the run's
@@ -52,7 +55,7 @@ assert_absent "actions: write"
 assert_contains "gh workflow run test-generated-repository-e2e.yml"
 assert_contains '--ref "$head_ref"'
 assert_contains '-f head_sha="$head_sha"'
-assert_contains '-f client_id="$PROVISIONER_APP_CLIENT_ID"'
+assert_contains '-f client_id="$PROVISIONER_APP_CLIENT_ID"' # repository-creation dispatch still accepts the provisioner client ID
 assert_contains '-f app_owner="$E2E_APP_OWNER"'
 assert_contains '-f delivery=embedded'
 assert_contains 'gh workflow run test-repository-creation.yml'
@@ -67,11 +70,11 @@ assert_contains '[[ "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]]'
 # per-PR concurrency group serializes attempts, and the run-count check is the
 # second guard.
 assert_contains "concurrency:"
-assert_contains "group: dispatch-maintenance-e2e-\${{ github.event.pull_request.number }}"
+assert_contains "group: dispatch-e2e-\${{ github.event.pull_request.number }}"
 assert_contains 'runs?head_sha=$head_sha&per_page=1'
 assert_contains ".total_count"
 assert_contains 'wait_for_workflow_run()'
 assert_contains 'label failed'
 assert_contains '[ "$status" = completed ]'
 
-echo "Dispatch maintenance E2E contract passed."
+echo "Dispatch E2E contract passed."

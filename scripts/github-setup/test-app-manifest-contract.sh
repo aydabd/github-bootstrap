@@ -20,14 +20,14 @@ grep -Fq 'chmod 600' "$helper"
 grep -Fq 'private key' "$helper"
 grep -Fq "jq -j '.client_id'" "$helper"
 grep -Fq "jq -j '.client_secret'" "$helper"
-manifest_url="$("$helper" url repository-bootstrap-provisioner $'https://example.test/callback\nsecond')"
+manifest_url="$("$helper" url bootstrap-provisioner $'https://example.test/callback\nsecond')"
 MANIFEST_URL="$manifest_url" python3 - << 'PY'
 import json
 import os
 import urllib.parse
 
 manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MANIFEST_URL"]).query)["manifest"][0])
-assert manifest["name"] == "Repository Bootstrap Provisioner"
+assert manifest["name"] == "Bootstrap Provisioner"
 assert manifest["redirect_url"] == "https://example.test/callback\nsecond"
 assert manifest["default_permissions"] == {
     "actions": "write",
@@ -41,14 +41,14 @@ assert manifest["default_permissions"] == {
 }
 PY
 
-writer_manifest_url="$($helper url repository-maintenance-writer 'https://example.test/callback')"
+writer_manifest_url="$($helper url bootstrap-writer 'https://example.test/callback')"
 MANIFEST_URL="$writer_manifest_url" python3 - << 'PY'
 import json
 import os
 import urllib.parse
 
 manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MANIFEST_URL"]).query)["manifest"][0])
-assert manifest["name"] == "Repository Maintenance Writer"
+assert manifest["name"] == "Bootstrap Writer"
 assert manifest["redirect_url"] == "https://example.test/callback"
 assert manifest["default_permissions"] == {
     "contents": "write",
@@ -59,14 +59,14 @@ assert manifest["default_permissions"] == {
 }
 PY
 
-e2e_writer_manifest_url="$($helper url repository-maintenance-writer-e2e 'https://example.test/callback')"
+e2e_writer_manifest_url="$($helper url bootstrap-e2e-writer 'https://example.test/callback')"
 MANIFEST_URL="$e2e_writer_manifest_url" python3 - << 'PY'
 import json
 import os
 import urllib.parse
 
 manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MANIFEST_URL"]).query)["manifest"][0])
-assert manifest["name"] == "Repository Maintenance Writer E2E"
+assert manifest["name"] == "Bootstrap E2E Writer"
 assert manifest["redirect_url"] == "https://example.test/callback"
 assert manifest["default_permissions"] == {
     "contents": "write",
@@ -76,14 +76,14 @@ assert manifest["default_permissions"] == {
 }
 PY
 
-e2e_reviewer_manifest_url="$($helper url repository-maintenance-reviewer-e2e 'https://example.test/callback')"
+e2e_reviewer_manifest_url="$($helper url bootstrap-e2e-reviewer 'https://example.test/callback')"
 MANIFEST_URL="$e2e_reviewer_manifest_url" python3 - << 'PY'
 import json
 import os
 import urllib.parse
 
 manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MANIFEST_URL"]).query)["manifest"][0])
-assert manifest["name"] == "Repository Maintenance Reviewer E2E"
+assert manifest["name"] == "Bootstrap E2E Reviewer"
 assert manifest["redirect_url"] == "https://example.test/callback"
 assert manifest["default_permissions"] == {
     "actions": "write",
@@ -110,7 +110,7 @@ file_mode() {
 }
 
 start_output="$tmp_dir/start-output"
-GITHUB_APP_MANIFEST_TEST_MODE=1 "$helper" start repository-maintenance-writer "$tmp_dir/credentials" > "$start_output" &
+GITHUB_APP_MANIFEST_TEST_MODE=1 "$helper" start bootstrap-writer "$tmp_dir/credentials" > "$start_output" &
 start_pid=$!
 for _ in $(seq 1 50); do
     if grep -Eq '^http://127\.0\.0\.1:[0-9]+/$' "$start_output" 2> /dev/null; then
@@ -132,7 +132,7 @@ assert '<form method="post" action="https://github.com/settings/apps/new?state='
 assert '<input type="text" name="manifest" id="manifest">' in html
 assert '<input type="submit" value="Continue to GitHub">' in html
 assert 'JSON.stringify({' in html
-assert 'Repository Maintenance Writer' in html
+assert 'Bootstrap Writer' in html
 PY
 state="$(
     START_HTML="$start_html" python3 - << 'PY'
@@ -170,8 +170,8 @@ expected = {
             "organization_administration": "write",
         },
     },
-    "repository-bootstrap-provisioner.json": {
-        "name": "Repository Bootstrap Provisioner",
+    "bootstrap-provisioner.json": {
+        "name": "Bootstrap Provisioner",
         "default_permissions": {
             "actions": "write",
             "administration": "write",
@@ -183,8 +183,21 @@ expected = {
             "workflows": "write",
         },
     },
-    "repository-maintenance-writer.json": {
-        "name": "Repository Maintenance Writer",
+    "bootstrap-e2e-provisioner.json": {
+        "name": "Bootstrap E2E Provisioner",
+        "default_permissions": {
+            "actions": "write",
+            "administration": "write",
+            "contents": "write",
+            "environments": "write",
+            "issues": "write",
+            "metadata": "read",
+            "secrets": "write",
+            "workflows": "write",
+        },
+    },
+    "bootstrap-writer.json": {
+        "name": "Bootstrap Writer",
         "default_permissions": {
             "contents": "write",
             "issues": "write",
@@ -193,16 +206,16 @@ expected = {
             "workflows": "write",
         },
     },
-    "repository-maintenance-reviewer.json": {
-        "name": "Repository Maintenance Reviewer",
+    "bootstrap-reviewer.json": {
+        "name": "Bootstrap Reviewer",
         "default_permissions": {
             "actions": "write",
             "metadata": "read",
             "pull_requests": "write",
         },
     },
-    "repository-maintenance-writer-e2e.json": {
-        "name": "Repository Maintenance Writer E2E",
+    "bootstrap-e2e-writer.json": {
+        "name": "Bootstrap E2E Writer",
         "default_permissions": {
             "contents": "write",
             "issues": "write",
@@ -210,15 +223,15 @@ expected = {
             "workflows": "write",
         },
     },
-    "repository-maintenance-reviewer-e2e.json": {
-        "name": "Repository Maintenance Reviewer E2E",
+    "bootstrap-e2e-reviewer.json": {
+        "name": "Bootstrap E2E Reviewer",
         "default_permissions": {
             "actions": "write",
             "pull_requests": "write",
         },
     },
-    "maintenance-fixture-e2e.json": {
-        "name": "Maintenance Fixture E2E",
+    "bootstrap-e2e-fixture.json": {
+        "name": "Bootstrap E2E Fixture",
         "default_permissions": {
             "contents": "write",
             "pull_requests": "write",
@@ -237,9 +250,10 @@ for filename, contract in expected.items():
     assert "bypass_actors" not in payload
     assert "deletion" not in payload["default_permissions"]
     if filename in {
-        "repository-bootstrap-provisioner.json",
-        "repository-maintenance-writer.json",
-        "repository-maintenance-writer-e2e.json",
+        "bootstrap-provisioner.json",
+        "bootstrap-e2e-provisioner.json",
+        "bootstrap-writer.json",
+        "bootstrap-e2e-writer.json",
     }:
         assert payload["default_permissions"]["workflows"] == "write"
     else:
@@ -248,9 +262,9 @@ PY
 
 for required_text in \
     "Bootstrap E2E Admin" \
-    "Repository Bootstrap Provisioner" \
-    "Repository Maintenance Writer" \
-    "Repository Maintenance Reviewer" \
+    "Bootstrap Provisioner" \
+    "Bootstrap Writer" \
+    "Bootstrap Reviewer" \
     "No App is a ruleset bypass actor" \
     "\`administration: write\` permission includes repository deletion capability" \
     "must never delete arbitrary or" \
@@ -262,6 +276,6 @@ for required_text in \
         exit 1
     }
 done
-grep -Fq "Repository Maintenance Reviewer  | \`actions: write\`, \`pull_requests: write\`, \`metadata: read\`" "$trust_boundary_doc"
+grep -Fq "Bootstrap Reviewer  | \`actions: write\`, \`pull_requests: write\`, \`metadata: read\`" "$trust_boundary_doc"
 
 echo "GitHub App Manifest contract checks passed."

@@ -59,24 +59,24 @@ App installed exclusively in the disposable E2E owner; the workflow still valida
 owner, generated name, and marker topic before archiving.
 
 The weekly maintenance workflow requires the non-secret
-`BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` variable. It creates the commit through
+`BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG` variable. It creates the commit through
 the Git database API using the authenticated Maintenance Writer App token and
 includes a Signed-off-by trailer in the commit message; it does not create a
 local commit, persist a token in Git configuration, or accept a custom signing
 key. The workflow rejects any resulting commit that GitHub does not report as
 `verified` with reason `valid`.
 
-Configure these values in the protected `production-maintenance` GitHub
-Environment: `BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID` and
-`BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` as variables, and
-`BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY` as a secret. The credential names are stable
+Configure these values in the protected `production` GitHub
+Environment: `BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID` and
+`BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG` as variables, and
+`BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY` as a secret. The credential names are stable
 across deployment Environments; Environment scope and protection rules define
 which deployment may use them.
 
 The workflow approval workflow uses separate Reviewer App credentials in the
-same protected Environment: `BOOTSTRAP_REVIEWER_APP_CLIENT_ID` and
-`BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG` as variables, and
-`BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY` as a secret. The Reviewer App has no
+same protected Environment: `BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID` and
+`BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG` as variables, and
+`BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY` as a secret. The Reviewer App has no
 ruleset bypass authority.
 
 Creation installation tokens intentionally omit a repository list because the target repository

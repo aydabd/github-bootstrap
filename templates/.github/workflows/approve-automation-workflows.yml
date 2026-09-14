@@ -18,7 +18,7 @@ jobs:
   approve:
     if: github.event.workflow_run.conclusion == 'action_required'
     runs-on: ubuntu-latest
-    environment: production-maintenance
+    environment: production
     permissions:
       actions: read
       contents: read
@@ -44,9 +44,9 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID }}
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID }}
           refresh_token_secret: ""
-          app_private_key: ${{ secrets.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}
+          app_private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY }}
           app_owner: ${{ github.repository_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: workflow-approval
@@ -55,7 +55,7 @@ jobs:
       - name: Verify resolved Reviewer App identity
         env:
           APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
-          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG }}
+          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG }}
         shell: bash
         run: |
           set -euo pipefail
@@ -68,7 +68,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           OWNER: ${{ github.repository_owner }}
           REPOSITORY: ${{ github.event.repository.name }}
-          WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+          WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}
           COPILOT_REVIEWER_LOGIN: ${{ vars.BOOTSTRAP_COPILOT_REVIEWER_LOGIN }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           VALIDATOR: .github/scripts/validate-workflow-approval.sh

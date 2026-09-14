@@ -46,7 +46,7 @@ jobs:
   test-local-setup-scripts:
     name: Test Local Setup Scripts
     runs-on: ubuntu-latest
-    environment: e2e-testing
+    environment: e2e
     permissions:
       contents: read
     outputs:
@@ -163,7 +163,7 @@ jobs:
     name: Cleanup Test Repository
     needs: test-local-setup-scripts
     runs-on: ubuntu-latest
-    environment: e2e-testing
+    environment: e2e
     permissions:
       contents: read
     if: >-

@@ -23,7 +23,7 @@ done
 grep -Fq 'production-provisioner' "${documentation_files[@]}"
 grep -Fq 'e2e-provisioner' "${documentation_files[@]}"
 grep -Fq 'production-provisioning' "${documentation_files[@]}"
-grep -Fq 'e2e-testing' "${documentation_files[@]}"
+grep -Fq 'e2e' "${documentation_files[@]}"
 grep -Fq 'BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID' "${documentation_files[@]}"
 grep -Fq 'BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY' "${documentation_files[@]}"
 grep -Fq 'BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET' "${documentation_files[@]}"
@@ -42,7 +42,7 @@ if grep -Eq '^      client_id:' examples/launcher-actions.yml examples/launcher-
     echo "launcher examples must not pass undeclared client_id inputs" >&2
     exit 1
 fi
-grep -Fq "of no-op: \`BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID\` unset in the \`e2e-testing\`" docs/maintenance-operations.md
+grep -Fq "of no-op: \`BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID\` unset in the \`e2e\`" docs/maintenance-operations.md
 grep -Fq "with \`head_sha=<PR head>\` and \`app_owner=<owner>\`." docs/maintenance-operations.md
 if grep -Fq "\`client_id=<Provisioner client ID>\`" docs/maintenance-operations.md; then
     echo "manual E2E dispatch must not document the removed client_id input" >&2

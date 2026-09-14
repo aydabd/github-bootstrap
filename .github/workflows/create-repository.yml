@@ -267,13 +267,13 @@ on:
         required: false
       BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN:
         required: false
-      BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY:
+      BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY:
         required: false
-      BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY:
+      BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY:
         required: false
-      BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY:
+      BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY:
         required: false
-      BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY:
+      BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY:
         required: false
 
 permissions: {} # Jobs opt into only the repository and Actions access they require.
@@ -312,7 +312,7 @@ jobs:
             e2e-provisioner)
               {
                 echo "profile=$PROVISIONER_PROFILE"
-                echo "environment=e2e-testing"
+                echo "environment=e2e"
                 echo "client_id_variable=BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID"
                 echo "private_key_secret=BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY"
                 echo "client_secret_secret=BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET"
@@ -947,12 +947,12 @@ jobs:
               ;;
           esac
 
-  configure-e2e-maintenance-credentials:
+  configure-e2e-credentials:
     name: Configure E2E maintenance credentials
     if: needs.create-repository.result == 'success' && needs.create-repository.outputs.provisioner_profile == 'e2e-provisioner'
     needs: create-repository
     runs-on: ubuntu-latest
-    environment: e2e-maintenance
+    environment: e2e
     env:
       GH_HOST: ${{ inputs.github_host || 'github.com' }}
     permissions:
@@ -976,38 +976,38 @@ jobs:
       - name: Configure E2E maintenance Writer credentials
         uses: ./.github/actions/configure-provisioner-credentials
         env:
-          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY }}
         with:
           repository: ${{ needs.create-repository.outputs.owner }}/${{ inputs.repo_name }}
           target_owner: ${{ needs.create-repository.outputs.owner }}
           repository_name: ${{ inputs.repo_name }}
           github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
-          profile: e2e-maintenance-writer
-          environment: e2e-maintenance
-          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID }}
-          app_slug: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_SLUG }}
+          profile: e2e-writer
+          environment: e2e
+          client_id: ${{ vars.BOOTSTRAP_E2E_WRITER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_E2E_WRITER_APP_SLUG }}
           gh_token: ${{ steps.provisioner-token.outputs.token }}
       - name: Configure E2E maintenance Reviewer credentials
         uses: ./.github/actions/configure-provisioner-credentials
         env:
-          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY }}
         with:
           repository: ${{ needs.create-repository.outputs.owner }}/${{ inputs.repo_name }}
           target_owner: ${{ needs.create-repository.outputs.owner }}
           repository_name: ${{ inputs.repo_name }}
           github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
-          profile: e2e-maintenance-reviewer
-          environment: e2e-maintenance
-          client_id: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_CLIENT_ID }}
-          app_slug: ${{ vars.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_SLUG }}
+          profile: e2e-reviewer
+          environment: e2e
+          client_id: ${{ vars.BOOTSTRAP_E2E_REVIEWER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_E2E_REVIEWER_APP_SLUG }}
           gh_token: ${{ steps.provisioner-token.outputs.token }}
 
-  configure-production-maintenance-credentials:
+  configure-production-credentials:
     name: Configure production maintenance credentials
     if: needs.create-repository.result == 'success' && needs.create-repository.outputs.provisioner_profile == 'production-provisioner'
     needs: create-repository
     runs-on: ubuntu-latest
-    environment: production-maintenance
+    environment: production
     env:
       GH_HOST: ${{ inputs.github_host || 'github.com' }}
     permissions:
@@ -1031,30 +1031,30 @@ jobs:
       - name: Configure production maintenance Writer credentials
         uses: ./.github/actions/configure-provisioner-credentials
         env:
-          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY }}
         with:
           repository: ${{ needs.create-repository.outputs.owner }}/${{ inputs.repo_name }}
           target_owner: ${{ needs.create-repository.outputs.owner }}
           repository_name: ${{ inputs.repo_name }}
           github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
-          profile: production-maintenance-writer
-          environment: production-maintenance
-          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID }}
-          app_slug: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}
+          profile: production-writer
+          environment: production
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}
           gh_token: ${{ steps.provisioner-token.outputs.token }}
       - name: Configure production maintenance Reviewer credentials
         uses: ./.github/actions/configure-provisioner-credentials
         env:
-          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY }}
         with:
           repository: ${{ needs.create-repository.outputs.owner }}/${{ inputs.repo_name }}
           target_owner: ${{ needs.create-repository.outputs.owner }}
           repository_name: ${{ inputs.repo_name }}
           github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
-          profile: production-maintenance-reviewer
-          environment: production-maintenance
-          client_id: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID }}
-          app_slug: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG }}
+          profile: production-reviewer
+          environment: production
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG }}
           gh_token: ${{ steps.provisioner-token.outputs.token }}
 
   cleanup-approval:

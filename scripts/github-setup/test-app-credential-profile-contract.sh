@@ -11,12 +11,12 @@ manifest="$script_dir/app-credential-profiles.json"
 }
 
 jq -e '.role_order == [
-    "e2e-maintenance-fixture",
-    "e2e-maintenance-reviewer",
-    "e2e-maintenance-writer",
+    "e2e-fixture",
+    "e2e-reviewer",
+    "e2e-writer",
     "e2e-provisioner",
-    "production-maintenance-reviewer",
-    "production-maintenance-writer",
+    "production-reviewer",
+    "production-writer",
     "production-provisioner"
 ]' "$manifest" > /dev/null || {
     echo "credential profile manifest must contain exactly the seven supported profiles" >&2
@@ -36,11 +36,11 @@ jq -e '.schema_version == 1 and .repository_owner == "aydabd" and
 
 production_profile="$(bash "$helper" production-provisioner)"
 e2e_profile="$(bash "$helper" e2e-provisioner)"
-e2e_writer_profile="$(bash "$helper" e2e-maintenance-writer)"
-e2e_reviewer_profile="$(bash "$helper" e2e-maintenance-reviewer)"
-e2e_fixture_profile="$(bash "$helper" e2e-maintenance-fixture)"
-production_writer_profile="$(bash "$helper" production-maintenance-writer)"
-production_reviewer_profile="$(bash "$helper" production-maintenance-reviewer)"
+e2e_writer_profile="$(bash "$helper" e2e-writer)"
+e2e_reviewer_profile="$(bash "$helper" e2e-reviewer)"
+e2e_fixture_profile="$(bash "$helper" e2e-fixture)"
+production_writer_profile="$(bash "$helper" production-writer)"
+production_reviewer_profile="$(bash "$helper" production-reviewer)"
 
 for maintenance_profile in e2e_writer_profile e2e_reviewer_profile \
     production_writer_profile production_reviewer_profile; do
@@ -59,12 +59,12 @@ jq -e 'keys == [
     "private_key_secret",
     "refresh_token_secret"
 ]' <<< "$e2e_fixture_profile" > /dev/null
-[ "$(jq -r '.client_id_variable' <<< "$e2e_fixture_profile")" = BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_ID ]
-[ "$(jq -r '.app_slug_variable' <<< "$e2e_fixture_profile")" = BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_SLUG ]
-[ "$(jq -r '.private_key_secret' <<< "$e2e_fixture_profile")" = BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_PRIVATE_KEY ]
-[ "$(jq -r '.client_secret_secret' <<< "$e2e_fixture_profile")" = BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_SECRET ]
-[ "$(jq -r '.refresh_token_secret' <<< "$e2e_fixture_profile")" = BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_USER_REFRESH_TOKEN ]
-[ "$(jq -r '.environment' <<< "$e2e_fixture_profile")" = e2e-maintenance ]
+[ "$(jq -r '.client_id_variable' <<< "$e2e_fixture_profile")" = BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_ID ]
+[ "$(jq -r '.app_slug_variable' <<< "$e2e_fixture_profile")" = BOOTSTRAP_E2E_FIXTURE_APP_SLUG ]
+[ "$(jq -r '.private_key_secret' <<< "$e2e_fixture_profile")" = BOOTSTRAP_E2E_FIXTURE_APP_PRIVATE_KEY ]
+[ "$(jq -r '.client_secret_secret' <<< "$e2e_fixture_profile")" = BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_SECRET ]
+[ "$(jq -r '.refresh_token_secret' <<< "$e2e_fixture_profile")" = BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN ]
+[ "$(jq -r '.environment' <<< "$e2e_fixture_profile")" = e2e ]
 
 [ "$(jq -r '.client_id_variable' <<< "$production_profile")" = BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID ]
 [ "$(jq -r '.private_key_secret' <<< "$production_profile")" = BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY ]
@@ -76,29 +76,29 @@ jq -e 'keys == [
 [ "$(jq -r '.private_key_secret' <<< "$e2e_profile")" = BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY ]
 [ "$(jq -r '.client_secret_secret' <<< "$e2e_profile")" = BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET ]
 [ "$(jq -r '.refresh_token_secret' <<< "$e2e_profile")" = BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN ]
-[ "$(jq -r '.environment' <<< "$e2e_profile")" = e2e-testing ]
+[ "$(jq -r '.environment' <<< "$e2e_profile")" = e2e ]
 
 [ "$(jq -r '.environment' <<< "$production_profile")" != "$(jq -r '.environment' <<< "$e2e_profile")" ]
 [ "$(jq -r '.refresh_token_secret' <<< "$production_profile")" != "$(jq -r '.refresh_token_secret' <<< "$e2e_profile")" ]
 [ "$(bash "$helper" production-provisioner environment)" = production-provisioning ]
 
-[ "$(jq -r '.client_id_variable' <<< "$e2e_writer_profile")" = BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID ]
-[ "$(jq -r '.app_slug_variable' <<< "$e2e_writer_profile")" = BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_SLUG ]
-[ "$(jq -r '.private_key_secret' <<< "$e2e_writer_profile")" = BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY ]
-[ "$(jq -r '.environment' <<< "$e2e_writer_profile")" = e2e-maintenance ]
-[ "$(jq -r '.client_id_variable' <<< "$e2e_reviewer_profile")" = BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_CLIENT_ID ]
-[ "$(jq -r '.app_slug_variable' <<< "$e2e_reviewer_profile")" = BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_SLUG ]
-[ "$(jq -r '.private_key_secret' <<< "$e2e_reviewer_profile")" = BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY ]
-[ "$(jq -r '.environment' <<< "$e2e_reviewer_profile")" = e2e-maintenance ]
+[ "$(jq -r '.client_id_variable' <<< "$e2e_writer_profile")" = BOOTSTRAP_E2E_WRITER_APP_CLIENT_ID ]
+[ "$(jq -r '.app_slug_variable' <<< "$e2e_writer_profile")" = BOOTSTRAP_E2E_WRITER_APP_SLUG ]
+[ "$(jq -r '.private_key_secret' <<< "$e2e_writer_profile")" = BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY ]
+[ "$(jq -r '.environment' <<< "$e2e_writer_profile")" = e2e ]
+[ "$(jq -r '.client_id_variable' <<< "$e2e_reviewer_profile")" = BOOTSTRAP_E2E_REVIEWER_APP_CLIENT_ID ]
+[ "$(jq -r '.app_slug_variable' <<< "$e2e_reviewer_profile")" = BOOTSTRAP_E2E_REVIEWER_APP_SLUG ]
+[ "$(jq -r '.private_key_secret' <<< "$e2e_reviewer_profile")" = BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY ]
+[ "$(jq -r '.environment' <<< "$e2e_reviewer_profile")" = e2e ]
 
-[ "$(jq -r '.client_id_variable' <<< "$production_writer_profile")" = BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID ]
-[ "$(jq -r '.app_slug_variable' <<< "$production_writer_profile")" = BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG ]
-[ "$(jq -r '.private_key_secret' <<< "$production_writer_profile")" = BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY ]
-[ "$(jq -r '.environment' <<< "$production_writer_profile")" = production-maintenance ]
-[ "$(jq -r '.client_id_variable' <<< "$production_reviewer_profile")" = BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID ]
-[ "$(jq -r '.app_slug_variable' <<< "$production_reviewer_profile")" = BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG ]
-[ "$(jq -r '.private_key_secret' <<< "$production_reviewer_profile")" = BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY ]
-[ "$(jq -r '.environment' <<< "$production_reviewer_profile")" = production-maintenance ]
+[ "$(jq -r '.client_id_variable' <<< "$production_writer_profile")" = BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID ]
+[ "$(jq -r '.app_slug_variable' <<< "$production_writer_profile")" = BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG ]
+[ "$(jq -r '.private_key_secret' <<< "$production_writer_profile")" = BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY ]
+[ "$(jq -r '.environment' <<< "$production_writer_profile")" = production ]
+[ "$(jq -r '.client_id_variable' <<< "$production_reviewer_profile")" = BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID ]
+[ "$(jq -r '.app_slug_variable' <<< "$production_reviewer_profile")" = BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG ]
+[ "$(jq -r '.private_key_secret' <<< "$production_reviewer_profile")" = BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY ]
+[ "$(jq -r '.environment' <<< "$production_reviewer_profile")" = production ]
 
 [ "$(jq -r '.environment' <<< "$production_writer_profile")" != "$(jq -r '.environment' <<< "$e2e_writer_profile")" ]
 [ "$(jq -r '.environment' <<< "$production_reviewer_profile")" != "$(jq -r '.environment' <<< "$e2e_reviewer_profile")" ]
@@ -114,16 +114,16 @@ jq -e 'keys == [
 [ "$(jq -r '.client_id_variable' <<< "$e2e_writer_profile")" != "$(jq -r '.client_id_variable' <<< "$production_profile")" ]
 [ "$(jq -r '.private_key_secret' <<< "$e2e_reviewer_profile")" != "$(jq -r '.private_key_secret' <<< "$production_profile")" ]
 
-writer_manifest="$script_dir/../../docs/github-app-manifests/repository-maintenance-writer-e2e.json"
-reviewer_manifest="$script_dir/../../docs/github-app-manifests/repository-maintenance-reviewer-e2e.json"
-jq -e '.name == "Repository Maintenance Writer E2E" and
+writer_manifest="$script_dir/../../docs/github-app-manifests/bootstrap-e2e-writer.json"
+reviewer_manifest="$script_dir/../../docs/github-app-manifests/bootstrap-e2e-reviewer.json"
+jq -e '.name == "Bootstrap E2E Writer" and
     .default_permissions == {
         "contents": "write",
         "issues": "write",
         "pull_requests": "write",
         "workflows": "write"
     }' "$writer_manifest" > /dev/null
-jq -e '.name == "Repository Maintenance Reviewer E2E" and
+jq -e '.name == "Bootstrap E2E Reviewer" and
     .default_permissions == {
         "actions": "write",
         "pull_requests": "write"

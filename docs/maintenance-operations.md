@@ -33,10 +33,10 @@ Use the profile names exactly as written there:
 
 | Profile                    | Environment               | Non-secret variables                                                                              | Secrets                                                                                                                                                                |
 | -------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `e2e-maintenance-writer`   | `e2e-maintenance`         | `BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID`, `BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_SLUG`     | `BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY`                                                                                                                     |
-| `e2e-maintenance-reviewer` | `e2e-maintenance`         | `BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_CLIENT_ID`, `BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_SLUG` | `BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY`                                                                                                                   |
-| `e2e-maintenance-fixture`  | `e2e-maintenance`         | `BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_ID`, `BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_SLUG`   | `BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_PRIVATE_KEY`, `BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_SECRET`, `BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_USER_REFRESH_TOKEN` |
-| `e2e-provisioner`          | `e2e-testing`             | `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID`                                                         | `BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY`, `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET`, `BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN`                         |
+| `e2e-writer`   | `e2e`         | `BOOTSTRAP_E2E_WRITER_APP_CLIENT_ID`, `BOOTSTRAP_E2E_WRITER_APP_SLUG`     | `BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY`                                                                                                                     |
+| `e2e-reviewer` | `e2e`         | `BOOTSTRAP_E2E_REVIEWER_APP_CLIENT_ID`, `BOOTSTRAP_E2E_REVIEWER_APP_SLUG` | `BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY`                                                                                                                   |
+| `e2e-fixture`  | `e2e`         | `BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_ID`, `BOOTSTRAP_E2E_FIXTURE_APP_SLUG`   | `BOOTSTRAP_E2E_FIXTURE_APP_PRIVATE_KEY`, `BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_SECRET`, `BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN` |
+| `e2e-provisioner`          | `e2e`             | `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID`                                                         | `BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY`, `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET`, `BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN`                         |
 | `production-provisioner`   | `production-provisioning` | `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID`                                                  | `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY`, `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET`, `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN`    |
 
 The E2E Writer and Reviewer Apps, and the E2E provisioner/lifecycle Apps, must
@@ -62,32 +62,32 @@ rotating `ghr_...` refresh token at runtime and never stores the resulting
 Writer and Reviewer App credentials are still the identities used for
 maintenance classification, approval, auto-merge, and release operations.
 
-The fixture account's exact GitHub login is `e2e-maintenance-user`. Generated
+The fixture account's exact GitHub login is `e2e-user`. Generated
 maintenance workflows bind `MAINTENANCE_IDENTITY_MODE=e2e-disposable`,
-`MAINTENANCE_FIXTURE_LOGIN=e2e-maintenance-user`, and
+`MAINTENANCE_FIXTURE_LOGIN=e2e-user`, and
 `MAINTENANCE_COPILOT_REVIEWER_LOGIN=copilot-pull-request-reviewer[bot]`.
 Production workflows leave this mode unset and therefore accept only their
 configured automation bot identities; the fixture login is never a production
 fallback.
 
 Configure the E2E Writer and Reviewer Apps from the checked-in
-[`repository-maintenance-writer-e2e.json`](github-app-manifests/repository-maintenance-writer-e2e.json)
+[`bootstrap-e2e-writer.json`](github-app-manifests/bootstrap-e2e-writer.json)
 and
-[`repository-maintenance-reviewer-e2e.json`](github-app-manifests/repository-maintenance-reviewer-e2e.json)
+[`bootstrap-e2e-reviewer.json`](github-app-manifests/bootstrap-e2e-reviewer.json)
 manifests. The manifest helper's supported E2E role arguments are
-`repository-maintenance-writer-e2e` and `repository-maintenance-reviewer-e2e`;
+`bootstrap-e2e-writer` and `bootstrap-e2e-reviewer`;
 the production role arguments remain separate. Configure the fixture App from
-[`maintenance-fixture-e2e.json`](github-app-manifests/maintenance-fixture-e2e.json)
-and authorize it as `e2e-maintenance-user`. Store its client ID and slug as
+[`bootstrap-e2e-fixture.json`](github-app-manifests/bootstrap-e2e-fixture.json)
+and authorize it as `e2e-user`. Store its client ID and slug as
 variables, and its private key, client secret, and refresh token as secrets in
-the source `OWNER/github-bootstrap` repository's `e2e-maintenance` Environment.
+the source `OWNER/github-bootstrap` repository's `e2e` Environment.
 Store the Writer and Reviewer client IDs and slugs as variables and their
 private keys as secrets in the source
-`OWNER/github-bootstrap` repository's `e2e-maintenance` Environment. The creation
+`OWNER/github-bootstrap` repository's `e2e` Environment. The creation
 workflow provisions those credentials into each generated repository's matching
 Environment. The E2E workflow resolves installation tokens at runtime; it never
 accepts a token or private key as an input.
-It must never use production-maintenance credentials.
+It must never use production credentials.
 
 The scenario polls each transition with bounded limits and prints only safe
 diagnostics (stage, state, and workflow or pull-request URL). It marks the
@@ -99,7 +99,7 @@ To troubleshoot a run, inspect the stage URL in its summary, then check the
 generated PR's labels and required checks. Do not copy private keys or token
 values into issue comments, workflow inputs, or logs. Re-run the focused
 scenario after correcting the E2E Environment or App installation; production
-repositories and the `production-maintenance` Environment are out of scope.
+repositories and the `production` Environment are out of scope.
 
 ## 1. Credential vocabulary
 
@@ -111,7 +111,7 @@ A GitHub App has four distinct identifiers. They are not interchangeable:
 | **Client ID**         | `BOOTSTRAP_*_APP_CLIENT_ID`                                                                                     | No — repository or Environment **variable** | Identifies the App to `actions/create-github-app-token`. Pairs with the private key to mint an installation token.                                    |
 | **Installation ID**   | resolved at runtime                                                                                             | No                                          | Identifies one installation of the App in one account. Never stored; `create-github-app-token` resolves it from `owner` + `repositories`.             |
 | **Private key (PEM)** | `BOOTSTRAP_*_APP_PRIVATE_KEY`                                                                                   | Yes — repository or Environment **secret**  | GitHub-generated signing key. Mints installation tokens. Rotate on any suspected exposure.                                                            |
-| **App slug**          | `BOOTSTRAP_*_APP_SLUG`, `BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG`                                               | No — variable                               | URL name of the App. Used to assert the resolved token belongs to the expected App and to recognise `"<slug>[bot]"` as the commit/PR author.          |
+| **App slug**          | `BOOTSTRAP_*_APP_SLUG`, `BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG`                                               | No — variable                               | URL name of the App. Used to assert the resolved token belongs to the expected App and to recognise `"<slug>[bot]"` as the commit/PR author.          |
 | **App refresh token** | `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN` or `BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN` | Yes — secret (`ghr_` prefix)                | Personal-account creation only. Exchanged at runtime and rotated back into the same profile's Environment secret. Never accepted as a workflow input. |
 | **Client secret**     | `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET` or `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET`           | Yes — secret                                | Used with the profile's refresh token to mint a short-lived user access token. Never printed or passed to a generated repository.                     |
 
@@ -124,10 +124,10 @@ Environment.
 
 | App role                                        | Manifest                                                                                              | Environment                                                                   | Credential names                                                                                                                                                                                                                                                      | Permission profiles                                                                       |
 | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **Production Repository Bootstrap Provisioner** | [`repository-bootstrap-provisioner.json`](github-app-manifests/repository-bootstrap-provisioner.json) | `production-provisioning`                                                     | `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID` (var), `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY` (secret), `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET` (secret), `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN` (secret, personal only) | `production-provisioner`: `repository-creation`, `repository-setup`, `repository-cleanup` |
-| **E2E Repository Bootstrap Provisioner**        | [`repository-bootstrap-provisioner.json`](github-app-manifests/repository-bootstrap-provisioner.json) | `e2e-testing`                                                                 | `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` (var), `BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY` (secret), `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET` (secret), `BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN` (secret, personal only)                             | `e2e-provisioner`: repository creation, setup, cleanup, and E2E dispatch                  |
-| **Repository Maintenance Writer**               | [`repository-maintenance-writer.json`](github-app-manifests/repository-maintenance-writer.json)       | `production-maintenance`                                                      | `BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID` (var), `BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` (var), `BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY` (secret)                                                                                                            | `weekly-tooling`, `release-please`, `maintenance-labeling`, `maintenance-merge`           |
-| **Repository Maintenance Reviewer**             | [`repository-maintenance-reviewer.json`](github-app-manifests/repository-maintenance-reviewer.json)   | `production-maintenance`                                                      | `BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID` (var), `BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG` (var), `BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY` (secret)                                                                                                      | `workflow-approval`, `maintenance-review`                                                 |
+| **Production Bootstrap Provisioner** | [`bootstrap-provisioner.json`](github-app-manifests/bootstrap-provisioner.json) | `production-provisioning`                                                     | `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID` (var), `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY` (secret), `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_SECRET` (secret), `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_USER_REFRESH_TOKEN` (secret, personal only) | `production-provisioner`: `repository-creation`, `repository-setup`, `repository-cleanup` |
+| **E2E Bootstrap Provisioner**        | [`bootstrap-e2e-provisioner.json`](github-app-manifests/bootstrap-e2e-provisioner.json) | `e2e`                                                                 | `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` (var), `BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY` (secret), `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET` (secret), `BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN` (secret, personal only)                             | `e2e-provisioner`: repository creation, setup, cleanup, and E2E dispatch                  |
+| **Bootstrap Writer**               | [`bootstrap-writer.json`](github-app-manifests/bootstrap-writer.json)       | `production`                                                      | `BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID` (var), `BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG` (var), `BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY` (secret)                                                                                                            | `weekly-tooling`, `release-please`, `maintenance-labeling`, `maintenance-merge`           |
+| **Bootstrap Reviewer**             | [`bootstrap-reviewer.json`](github-app-manifests/bootstrap-reviewer.json)   | `production`                                                      | `BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID` (var), `BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG` (var), `BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY` (secret)                                                                                                      | `workflow-approval`, `maintenance-review`                                                 |
 | **Bootstrap E2E Admin**                         | [`bootstrap-e2e-admin.json`](github-app-manifests/bootstrap-e2e-admin.json)                           | `e2e-cleanup` (scheduled deletion); test-generated E2E reads it at repo scope | `BOOTSTRAP_E2E_APP_CLIENT_ID` (var), `BOOTSTRAP_E2E_APP_OWNER` (var), `BOOTSTRAP_E2E_APP_PRIVATE_KEY` (secret), `BOOTSTRAP_E2E_ALLOWED_OWNERS` (var), `BOOTSTRAP_E2E_CENTRAL_REPOSITORY` (var)                                                                        | `e2e-lifecycle`                                                                           |
 
 Rules that must hold in any owner:
@@ -162,10 +162,10 @@ For each role you need:
      "$credential_dir/app-manifest-code" "$credential_dir"
    ```
 
-   `<role>` is one of `repository-bootstrap-provisioner`,
-   `repository-maintenance-writer`, `repository-maintenance-reviewer`,
-   `repository-maintenance-writer-e2e`, `repository-maintenance-reviewer-e2e`,
-   `maintenance-fixture-e2e`,
+   `<role>` is one of `bootstrap-provisioner`,
+   `bootstrap-writer`, `bootstrap-reviewer`,
+   `bootstrap-e2e-writer`, `bootstrap-e2e-reviewer`,
+   `bootstrap-e2e-fixture`,
    `bootstrap-e2e-admin`. Conversion writes the client ID, client secret, and
    private key under a `0700` directory with `0600` files, outside the checkout.
 
@@ -180,7 +180,7 @@ For each role you need:
    user-token flow and `scripts/github-setup/install-app-secrets.sh` (see the
    root [`README.md`](../README.md) "Personal account" section).
 
-4. **Configure the Environment protection rules.** `production-maintenance`
+4. **Configure the Environment protection rules.** `production`
    should require the reviewers appropriate for merge-capable automation.
 
 5. **Set repository/Environment variables the workflows read:**
@@ -198,14 +198,14 @@ Run these non-secret commands from the repository checkout. They use the
 checked-in manifests and keep conversion output outside the checkout:
 
 ```bash
-credential_dir="$HOME/.local/state/github-bootstrap/e2e-maintenance-writer"
-scripts/github-setup/github-app-manifest.sh start repository-maintenance-writer-e2e "$credential_dir"
+credential_dir="$HOME/.local/state/github-bootstrap/e2e-writer"
+scripts/github-setup/github-app-manifest.sh start bootstrap-e2e-writer "$credential_dir"
 # Open the printed local URL, approve the App, and let the callback finish.
 scripts/github-setup/github-app-manifest.sh convert-file \
   "$credential_dir/app-manifest-code" "$credential_dir"
 
-credential_dir="$HOME/.local/state/github-bootstrap/e2e-maintenance-reviewer"
-scripts/github-setup/github-app-manifest.sh start repository-maintenance-reviewer-e2e "$credential_dir"
+credential_dir="$HOME/.local/state/github-bootstrap/e2e-reviewer"
+scripts/github-setup/github-app-manifest.sh start bootstrap-e2e-reviewer "$credential_dir"
 # Open the printed local URL, approve the App, and let the callback finish.
 scripts/github-setup/github-app-manifest.sh convert-file \
   "$credential_dir/app-manifest-code" "$credential_dir"
@@ -221,10 +221,10 @@ repositories invisible to the App. Never install an E2E App in a production
 owner, and never install a production App in the disposable E2E owner.
 The single command below installs both maintenance Apps and the fixture App
 into the source bootstrap repository's `OWNER/github-bootstrap`
-`e2e-maintenance` Environment. It must not be run against an already-generated
+`e2e` Environment. It must not be run against an already-generated
 repository. The creation workflow copies/provisions only the Writer and
 Reviewer App credentials into each generated repository's matching
-`e2e-maintenance` Environment; the fixture App credentials remain source-only.
+`e2e` Environment; the fixture App credentials remain source-only.
 Conversion writes `app-client-id`, `app-private-key.pem`, and
 `app-client-secret` with protected local permissions and does not print their
 contents. The maintenance installer needs the client ID, App slug, and private
@@ -234,9 +234,9 @@ key files:
  # GH_TOKEN must already be set to an authorized operator token; do not print it.
 repo="OWNER/github-bootstrap"
 
-writer_dir="$HOME/.local/state/github-bootstrap/e2e-maintenance-writer"
-reviewer_dir="$HOME/.local/state/github-bootstrap/e2e-maintenance-reviewer"
-fixture_dir="$HOME/.local/state/github-bootstrap/e2e-maintenance-fixture"
+writer_dir="$HOME/.local/state/github-bootstrap/e2e-writer"
+reviewer_dir="$HOME/.local/state/github-bootstrap/e2e-reviewer"
+fixture_dir="$HOME/.local/state/github-bootstrap/e2e-fixture"
 ```
 
 The manifest conversion does not produce an App slug file. After an operator
@@ -274,13 +274,13 @@ chmod 600 "$fixture_dir/app-client-secret" "$fixture_dir/app-user-refresh-token"
 ```
 
 Now invoke the installer. It validates the protected local files and source
-repository scope, then writes the fixed `e2e-maintenance` variables and secrets
+repository scope, then writes the fixed `e2e` variables and secrets
 idempotently. App-installation access is validated by the runtime,
 App-authenticated provisioning action; a missing installation prints an
 App-specific remediation URL without printing credential values.
 
 ```bash
-scripts/github-setup/install-e2e-maintenance-credentials.sh \
+scripts/github-setup/install-e2e-credentials.sh \
   "$repo" "$writer_dir" "$reviewer_dir" "$fixture_dir"
 ```
 
@@ -288,7 +288,7 @@ scripts/github-setup/install-e2e-maintenance-credentials.sh \
 
 Verify both App installations before dispatching an E2E creation run: install
 both E2E maintenance Apps account-wide, configure the
-source `e2e-maintenance` Environment, create the protected fixture App files,
+source `e2e` Environment, create the protected fixture App files,
 and run the installer above. For an already generated repository, an
 installation token can confirm account-wide visibility without exposing a
 credential value:
@@ -304,9 +304,9 @@ GH_TOKEN="$MAINTENANCE_REVIEWER_INSTALLATION_TOKEN" \
 
 Each response must include the target repository before continuing. Then run
 the focused workflow dispatch in section 8 and confirm that the generated
-repository has its matching `e2e-maintenance` Environment. For production
+repository has its matching `e2e` Environment. For production
 creation, use the same sequence with the production Writer and Reviewer
-installation tokens and confirm the matching `production-maintenance`
+installation tokens and confirm the matching `production`
 Environment. A missing installation must stop the create workflow; do not
 retry with credentials from the other owner or Environment.
 
@@ -353,8 +353,8 @@ if ! writer_private_key="$(read_multiline_secret \
   exit 1
 fi
 printf '%s' "$writer_private_key" | gh secret set \
-  BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY \
-  --repo OWNER/github-bootstrap --env e2e-maintenance
+  BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY \
+  --repo OWNER/github-bootstrap --env e2e
 unset writer_private_key
 
 if ! reviewer_private_key="$(read_multiline_secret \
@@ -362,8 +362,8 @@ if ! reviewer_private_key="$(read_multiline_secret \
   exit 1
 fi
 printf '%s' "$reviewer_private_key" | gh secret set \
-  BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY \
-  --repo OWNER/github-bootstrap --env e2e-maintenance
+  BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY \
+  --repo OWNER/github-bootstrap --env e2e
 unset reviewer_private_key
 
 if ! e2e_client_secret="$(read_multiline_secret \
@@ -372,7 +372,7 @@ if ! e2e_client_secret="$(read_multiline_secret \
 fi
 printf '%s' "$e2e_client_secret" | gh secret set \
   BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET \
-  --repo OWNER/github-bootstrap --env e2e-testing
+  --repo OWNER/github-bootstrap --env e2e
 unset e2e_client_secret
 ```
 
@@ -391,7 +391,7 @@ unset production_client_secret
 ```
 
 The E2E maintenance Apps do not use client-secret or refresh-token secrets.
-The canonical `e2e-maintenance` profiles contain only the client ID, slug, and
+The canonical `e2e` profiles contain only the client ID, slug, and
 private key listed above. Client secrets and refresh tokens belong only to the
 `e2e-provisioner` or `production-provisioner` profiles and their respective
 Environments.
@@ -407,7 +407,7 @@ then confirm its slug and client ID variables before rerunning verification.
 For provisioner profiles, rerun `install-app-secrets.sh` with the same profile
 and its newly generated local files. Personal-account runs rotate the refresh
 token back into the same profile's Environment; never copy it between
-`e2e-testing` and `production-provisioning`. Delete obsolete Environment
+`e2e` and `production-provisioning`. Delete obsolete Environment
 variables/secrets through GitHub's operator-controlled settings after the new
 installation is verified. Do not print values while checking or deleting them.
 
@@ -423,7 +423,7 @@ bot opens PR ─▶ Classify ─▶ labels: automation: maintenance + automation
                     ├─▶ required checks run at the PR head: Quality, Commit policy,
                     │        Test Quality Providers, CodeQL Security Scan
                     │
-                    ├─▶ if automation: breaking ─▶ Dispatch Maintenance E2E (Reviewer App)
+                    ├─▶ if automation: breaking ─▶ Dispatch E2E (E2E Reviewer App)
                     │        └─▶ Test Generated Repository E2E @ PR head SHA  (Provisioner + E2E Admin)
                     │
                     ├─▶ Copilot review gate: completed review, no unresolved threads
@@ -448,13 +448,13 @@ Labels:
 | `automation: blocked`     | Unknown risk or a failed gate — auto-merge is withheld.           |
 | `dependencies`            | Dependabot-sourced update.                                        |
 
-`Dispatch Maintenance E2E` (`.github/workflows/dispatch-maintenance-e2e.yml`)
+`Dispatch E2E` (`.github/workflows/dispatch-e2e.yml`)
 is what makes a breaking PR hands-off: on `labeled`/`synchronize` it checks the
 PR carries `automation: maintenance` + `automation: breaking`, resolves a
 Reviewer App token (`workflow-approval`),
 and dispatches `Test Generated Repository E2E` against the PR head branch with
 `head_sha` and `app_owner`. The workflow derives the E2E client ID from
-`BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` in the `e2e-testing` Environment. It
+`BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` in the `e2e` Environment. It
 skips if a run for that exact head SHA already exists. `validate-maintenance-safety.sh`
 then requires a successful E2E run whose `head_sha` equals the PR head.
 
@@ -471,7 +471,7 @@ then requires a successful E2E run whose `head_sha` equals the PR head.
   immediate cleanup.
 - `pull_request_target` workflows (Classify, Maintenance safety, Dispatch
   Maintenance E2E, Merge) check out **`main`**, never the PR head, and
-  `dispatch-maintenance-e2e.yml` additionally requires
+  `dispatch-e2e.yml` additionally requires
   `head.repo.full_name == github.repository`. A fork PR therefore cannot make
   the automation run fork code or dispatch a credentialed E2E run. Fork PRs are
   not eligible maintenance PRs and are ignored by the chain.
@@ -488,8 +488,8 @@ earlier one is satisfied.
 
 - Confirm `Approve Eligible Automation Workflows` ran on the triggering run's
   completion. Check its logs for a resolved-App-identity mismatch (wrong
-  `BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG` or client ID) or a resolve-token
-  failure (missing/rotated `BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY`, App not
+  `BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG` or client ID) or a resolve-token
+  failure (missing/rotated `BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY`, App not
   installed on the repo).
 - The PR must be authored by `dependabot[bot]`, `release-please[bot]`,
   `github-actions[bot]` with `autorelease: pending`, or `"<writer-slug>[bot]"`,
@@ -524,15 +524,15 @@ earlier one is satisfied.
 - The PR must have **both** `automation: maintenance` and `automation:
 breaking`. Classification adds `breaking` only when the release major version
   increases or the tooling metadata marks a high/breaking/unknown risk.
-- Check `Dispatch Maintenance E2E` fired on the `labeled` event. Common causes
-  of no-op: `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` unset in the `e2e-testing`
+- Check `Dispatch E2E` fired on the `labeled` event. Common causes
+  of no-op: `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` unset in the `e2e`
   Environment, Reviewer token resolve
   failed, or the head is a fork.
 - Verify a `Test Generated Repository E2E` run exists whose `head_sha` matches
   the PR head. A run against `main` (wrong `--ref`) will not satisfy the gate.
 - Manual fallback: run `Test Generated Repository E2E` via `workflow_dispatch`
   with `head_sha=<PR head>` and `app_owner=<owner>`. The workflow reads
-  `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` from the `e2e-testing` Environment;
+  `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` from the `e2e` Environment;
   it is not a dispatch input.
 
 ### Copilot review gate blocking
@@ -591,7 +591,7 @@ dispatch the focused scenario with non-secret inputs only:
 
 ```bash
 repository="OWNER/github-bootstrap"
-ref="feat/e2e-maintenance-apps"
+ref="feat/e2e-apps"
 owner="DISPOSABLE_E2E_OWNER"
 head_sha="$(git rev-parse "$ref")"
 
@@ -603,14 +603,14 @@ gh workflow run test-generated-repository-e2e.yml --repo "$repository" --ref "$r
 ```
 
 The workflow reads `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` from
-`e2e-testing`; `head_sha`, `app_owner`, and other dispatch fields are not secret
+`e2e`; `head_sha`, `app_owner`, and other dispatch fields are not secret
 transport. The creation workflow copies/provisions the
 `BOOTSTRAP_E2E_MAINTENANCE_*` credentials from the source
-`OWNER/github-bootstrap` `e2e-maintenance` Environment into each generated
+`OWNER/github-bootstrap` `e2e` Environment into each generated
 repository's matching Environment. The installer above is therefore run
 against the source bootstrap repository, never directly against an already-
 generated repository.
-The E2E path must not read or fall back to `production-maintenance`.
+The E2E path must not read or fall back to `production`.
 
 Live verification remains pending and operator-controlled; this documentation
 cleanup does not dispatch the workflow or automate approval.

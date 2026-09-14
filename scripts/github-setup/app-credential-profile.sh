@@ -26,13 +26,13 @@ if ! jq -e --arg profile "$profile" '.[$profile] | type == "object"' "$manifest"
 fi
 
 case "$profile" in
-    e2e-maintenance-writer | e2e-maintenance-reviewer)
+    e2e-writer | e2e-reviewer)
         required_fields='["app_slug_variable", "client_id_variable", "environment", "private_key_secret"]'
         ;;
-    production-maintenance-writer | production-maintenance-reviewer)
+    production-writer | production-reviewer)
         required_fields='["app_slug_variable", "client_id_variable", "environment", "private_key_secret"]'
         ;;
-    e2e-maintenance-fixture)
+    e2e-fixture)
         required_fields='["app_slug_variable", "client_id_variable", "client_secret_secret", "environment", "private_key_secret", "refresh_token_secret"]'
         ;;
     e2e-provisioner | production-provisioner)

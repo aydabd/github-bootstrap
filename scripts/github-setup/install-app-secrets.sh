@@ -13,7 +13,7 @@ usage() {
     cat >&2 << 'EOF'
 Usage: install-app-secrets.sh REPOSITORY PROFILE CLIENT_ID_FILE PRIVATE_KEY_FILE CLIENT_SECRET_FILE REFRESH_TOKEN_FILE
     install-app-secrets.sh REPOSITORY E2E_MAINTENANCE_PROFILE CLIENT_ID_FILE APP_SLUG_FILE PRIVATE_KEY_FILE
-    install-app-secrets.sh REPOSITORY e2e-maintenance-fixture CLIENT_ID_FILE APP_SLUG_FILE PRIVATE_KEY_FILE CLIENT_SECRET_FILE REFRESH_TOKEN_FILE
+    install-app-secrets.sh REPOSITORY e2e-fixture CLIENT_ID_FILE APP_SLUG_FILE PRIVATE_KEY_FILE CLIENT_SECRET_FILE REFRESH_TOKEN_FILE
 
 Installs the GitHub App client ID as an environment variable and the
 GitHub-generated private key, App client secret, and ghr_-prefixed App refresh
@@ -66,7 +66,7 @@ require_protected_file() {
 require_protected_file "$client_id_file" "client ID file"
 if [ "$#" -eq 5 ]; then
     case "$profile" in
-        e2e-maintenance-writer | e2e-maintenance-reviewer | e2e-maintenance-fixture) ;;
+        e2e-writer | e2e-reviewer | e2e-fixture) ;;
         *)
             echo "five-file installation requires an E2E maintenance profile" >&2
             exit 1
@@ -112,7 +112,7 @@ if [ "$#" -eq 5 ]; then
     exit 0
 fi
 if [ "$#" -eq 7 ]; then
-    [ "$profile" = e2e-maintenance-fixture ] || {
+    [ "$profile" = e2e-fixture ] || {
         echo "seven-file installation requires the E2E maintenance fixture profile" >&2
         exit 1
     }

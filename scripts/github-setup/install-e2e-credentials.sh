@@ -11,7 +11,7 @@ source "$script_dir/gh-common.sh"
 
 usage() {
     cat >&2 << 'EOF'
-Usage: install-e2e-maintenance-credentials.sh OWNER/github-bootstrap WRITER_DIR REVIEWER_DIR FIXTURE_DIR
+Usage: install-e2e-credentials.sh OWNER/github-bootstrap WRITER_DIR REVIEWER_DIR FIXTURE_DIR
 EOF
     exit 2
 }
@@ -22,7 +22,7 @@ writer_dir="$2"
 reviewer_dir="$3"
 fixture_dir="$4"
 [ -n "${GH_TOKEN:-}" ] || {
-    echo "GH_TOKEN must be set before installing E2E maintenance credentials" >&2
+    echo "GH_TOKEN must be set before installing E2E credentials" >&2
     exit 1
 }
 require_command gh
@@ -89,16 +89,16 @@ for credential_file in "$writer_dir/app-client-id" "$writer_dir/app-slug" \
 done
 
 GH_TOKEN="$GH_TOKEN" bash "$script_dir/install-app-secrets.sh" \
-    "$repo" e2e-maintenance-writer \
+    "$repo" e2e-writer \
     "$writer_dir/app-client-id" "$writer_dir/app-slug" \
     "$writer_dir/app-private-key.pem"
 GH_TOKEN="$GH_TOKEN" bash "$script_dir/install-app-secrets.sh" \
-    "$repo" e2e-maintenance-reviewer \
+    "$repo" e2e-reviewer \
     "$reviewer_dir/app-client-id" "$reviewer_dir/app-slug" \
     "$reviewer_dir/app-private-key.pem"
 GH_TOKEN="$GH_TOKEN" bash "$script_dir/install-app-secrets.sh" \
-    "$repo" e2e-maintenance-fixture \
+    "$repo" e2e-fixture \
     "$fixture_dir/app-client-id" "$fixture_dir/app-slug" \
     "$fixture_dir/app-private-key.pem" "$fixture_dir/app-client-secret" \
     "$fixture_dir/app-user-refresh-token"
-printf 'Installed E2E maintenance Writer, Reviewer, and fixture App credentials for %s\n' "$repo"
+printf 'Installed E2E Writer, Reviewer, and fixture App credentials for %s\n' "$repo"

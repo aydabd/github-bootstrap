@@ -1,4 +1,4 @@
-name: Dispatch Maintenance E2E
+name: Dispatch E2E
 
 # Major/breaking maintenance PRs carry the "automation: breaking" label, and
 # validate-maintenance-safety.sh then requires a passing generated-repository
@@ -19,12 +19,12 @@ permissions:
 # Serialize dispatch attempts per PR so a labeled+synchronize race cannot both
 # pass the "already dispatched?" check and start duplicate E2E runs.
 concurrency:
-  group: dispatch-maintenance-e2e-${{ github.event.pull_request.number }}
+  group: dispatch-e2e-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
   dispatch:
-    name: Generated-repository E2E for breaking maintenance PRs
+    name: Generated-repository E2E for breaking PRs
     if: >-
       github.event.pull_request.state == 'open' &&
       github.event.pull_request.base.ref == 'main' &&
@@ -32,7 +32,7 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'automation: maintenance') &&
       contains(github.event.pull_request.labels.*.name, 'automation: breaking')
     runs-on: ubuntu-24.04
-    environment: production-maintenance
+    environment: e2e
     permissions:
       contents: read
       pull-requests: read
@@ -55,9 +55,9 @@ jobs:
         id: resolve-token
         uses: ./.github/actions/resolve-gh-token
         with:
-          client_id: ${{ vars.BOOTSTRAP_REVIEWER_APP_CLIENT_ID }}
+          client_id: ${{ vars.BOOTSTRAP_E2E_REVIEWER_APP_CLIENT_ID }}
           refresh_token_secret: ""
-          app_private_key: ${{ secrets.BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY }}
           app_owner: ${{ github.repository_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: workflow-approval
@@ -66,13 +66,13 @@ jobs:
       - name: Verify resolved Reviewer App identity
         env:
           APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
-          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG }}
+          EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_E2E_REVIEWER_APP_SLUG }}
         shell: bash
         run: |
           set -euo pipefail
           [ -n "$APP_SLUG" ] || { echo "Reviewer App slug was not resolved" >&2; exit 1; }
-          [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected maintenance Reviewer App slug is not configured" >&2; exit 1; }
-          [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured maintenance Reviewer" >&2; exit 1; }
+          [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected E2E Reviewer App slug is not configured" >&2; exit 1; }
+          [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured E2E Reviewer" >&2; exit 1; }
 
       - name: Dispatch generated-repository E2E against the PR head
         env:
@@ -134,7 +134,6 @@ jobs:
           if [ "${existing:-0}" -eq 0 ]; then
             gh workflow run test-generated-repository-e2e.yml --repo "$REPOSITORY" --ref "$head_ref" \
               -f head_sha="$head_sha" \
-              -f client_id="$PROVISIONER_APP_CLIENT_ID" \
               -f app_owner="$E2E_APP_OWNER" \
               -f delivery=embedded
           fi

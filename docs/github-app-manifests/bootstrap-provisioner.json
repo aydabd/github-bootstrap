@@ -1,0 +1,16 @@
+{
+  "name": "Bootstrap Provisioner",
+  "url": "https://github.com",
+  "public": false,
+  "default_events": [],
+  "default_permissions": {
+    "actions": "write",
+    "administration": "write",
+    "contents": "write",
+    "environments": "write",
+    "issues": "write",
+    "metadata": "read",
+    "secrets": "write",
+    "workflows": "write"
+  }
+}

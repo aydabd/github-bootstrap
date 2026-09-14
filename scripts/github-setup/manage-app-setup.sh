@@ -23,10 +23,10 @@ check_profile() {
         production-provisioner | e2e-provisioner)
             required_keys='["client_id_variable","client_secret_secret","environment","private_key_secret","refresh_token_secret"]'
             ;;
-        e2e-maintenance-fixture)
+        e2e-fixture)
             required_keys='["app_slug_variable","client_id_variable","client_secret_secret","environment","private_key_secret","refresh_token_secret"]'
             ;;
-        e2e-maintenance-writer | e2e-maintenance-reviewer | production-maintenance-writer | production-maintenance-reviewer)
+        e2e-writer | e2e-reviewer | production-writer | production-reviewer)
             required_keys='["app_slug_variable","client_id_variable","environment","private_key_secret"]'
             ;;
         *)
@@ -55,11 +55,11 @@ check_manifest() {
 check_isolation() {
     jq -e '
         .["production-provisioner"].environment != .["e2e-provisioner"].environment and
-        .["production-maintenance-writer"].environment != .["e2e-maintenance-writer"].environment and
-        .["production-maintenance-reviewer"].environment != .["e2e-maintenance-reviewer"].environment and
+        .["production-writer"].environment != .["e2e-writer"].environment and
+        .["production-reviewer"].environment != .["e2e-reviewer"].environment and
         .["production-provisioner"].refresh_token_secret != .["e2e-provisioner"].refresh_token_secret and
-        .["production-maintenance-writer"].private_key_secret != .["e2e-maintenance-writer"].private_key_secret and
-        .["production-maintenance-reviewer"].private_key_secret != .["e2e-maintenance-reviewer"].private_key_secret and
+        .["production-writer"].private_key_secret != .["e2e-writer"].private_key_secret and
+        .["production-reviewer"].private_key_secret != .["e2e-reviewer"].private_key_secret and
         ([.profile_metadata[] | select(.owner != "aydabd" or .visibility != "private" or
             .installation_scope != "repository" or .api_method != "POST" or
             (.events | type != "array"))] | length) == 0
@@ -67,7 +67,7 @@ check_isolation() {
 }
 
 check_command() {
-    local expected_roles='["e2e-maintenance-fixture","e2e-maintenance-reviewer","e2e-maintenance-writer","e2e-provisioner","production-maintenance-reviewer","production-maintenance-writer","production-provisioner"]'
+    local expected_roles='["e2e-fixture","e2e-reviewer","e2e-writer","e2e-provisioner","production-reviewer","production-writer","production-provisioner"]'
     local checks='[]' role result overall="PASS"
     jq -e --argjson expected "$expected_roles" '.role_order == $expected' "$profile_file" > /dev/null || overall="FAIL"
     while IFS= read -r role; do
@@ -141,7 +141,7 @@ install_command() {
                 '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"install",evidence:"protected installer completed"}],summary:{passed:1,failed:0,skipped:0}}'
             return 0
             ;;
-        e2e-maintenance-writer | e2e-maintenance-reviewer | production-maintenance-writer | production-maintenance-reviewer)
+        e2e-writer | e2e-reviewer | production-writer | production-reviewer)
             for credential_file in app-client-id app-slug app-private-key.pem; do
                 if [ ! -f "$APP_CREDENTIAL_DIR/$credential_file" ]; then
                     emit_failure "$role" credentials MISSING_CREDENTIALS "provide all protected credential files"
@@ -160,7 +160,7 @@ install_command() {
                 '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"install",evidence:"protected installer completed"}],summary:{passed:1,failed:0,skipped:0}}'
             return 0
             ;;
-        e2e-maintenance-fixture)
+        e2e-fixture)
             for credential_file in app-client-id app-slug app-private-key.pem app-client-secret app-refresh-token; do
                 if [ ! -f "$APP_CREDENTIAL_DIR/$credential_file" ]; then
                     emit_failure "$role" credentials MISSING_CREDENTIALS "provide all protected credential files"
@@ -194,7 +194,7 @@ rotate_command() {
     fi
     case "$role" in
         production-provisioner | e2e-provisioner) ;;
-        e2e-maintenance-writer | e2e-maintenance-reviewer | production-maintenance-writer | production-maintenance-reviewer)
+        e2e-writer | e2e-reviewer | production-writer | production-reviewer)
             install_command "$role"
             return
             ;;
@@ -233,7 +233,7 @@ rotate_command() {
 cleanup_command() {
     local role="${APP_CREDENTIAL_ROLE:-}" file
     case "$role" in
-        production-provisioner | e2e-provisioner | e2e-maintenance-fixture | e2e-maintenance-writer | e2e-maintenance-reviewer | production-maintenance-writer | production-maintenance-reviewer) ;;
+        production-provisioner | e2e-provisioner | e2e-fixture | e2e-writer | e2e-reviewer | production-writer | production-reviewer) ;;
         *) emit_failure "$role" cleanup INVALID_ROLE "set APP_CREDENTIAL_ROLE to a supported profile" ;;
     esac
     if [ -z "${APP_CREDENTIAL_DIR:-}" ] || [ ! -d "$APP_CREDENTIAL_DIR" ]; then

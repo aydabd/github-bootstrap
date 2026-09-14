@@ -16,7 +16,7 @@ jq -e 'flatten | length > 0' "$commits_file" > /dev/null
 # Conventional Commits body rules even though their headlines are compliant. The
 # signed-off-by check exempts the same identities.
 jq -jr '
-    ["github-actions[bot]", "repository-maintenance-writer[bot]", "dependabot[bot]"] as $trusted_bots
+    ["github-actions[bot]", "bootstrap-writer[bot]", "dependabot[bot]"] as $trusted_bots
     | flatten[]
     | (.author.login? // "") as $login
     | select($trusted_bots | index($login) | not)

@@ -25,7 +25,7 @@ have access to administer the target repository.
 | `test-local-setup-scripts.sh`            | Test-only live E2E assertions                             |
 | `manage-app-setup.sh`                    | Deterministic App check/install/rotate/cleanup dispatcher |
 | `install-app-secrets.sh`                 | Temporary #215 compatibility installer boundary           |
-| `install-e2e-maintenance-credentials.sh` | Temporary #215 E2E maintenance compatibility wrapper      |
+| `install-e2e-credentials.sh` | Temporary #215 E2E maintenance compatibility wrapper      |
 
 Each script's `--help` output is the source of truth for options, defaults, and
 examples. Update the script help when behavior changes instead of duplicating

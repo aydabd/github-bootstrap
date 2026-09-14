@@ -52,9 +52,9 @@ for caller_job in create-public create-private; do
         in_job { print }
     ' "$workflow")"
     printf '%s\n' "$caller_block" | grep -Fq \
-        "BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY: \${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}"
+        "BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY: \${{ secrets.BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY }}"
     printf '%s\n' "$caller_block" | grep -Fq \
-        "BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY: \${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}"
+        "BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY: \${{ secrets.BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY }}"
 done
 
 echo "Personal App E2E contract checks passed."

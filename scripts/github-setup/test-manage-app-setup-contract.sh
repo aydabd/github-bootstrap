@@ -86,34 +86,34 @@ printf '%s\n' '{"access_token":"ghu_fixture_access","refresh_token":"ghr_fixture
 EOF
 chmod 700 "$fake_bin/curl"
 
-credentials="$fixture_root/github-bootstrap/e2e-maintenance-writer"
+credentials="$fixture_root/github-bootstrap/e2e-writer"
 mkdir -p "$credentials"
 chmod 700 "$credentials"
 printf '123456\n' > "$credentials/app-client-id"
-printf 'repository-maintenance-writer-e2e\n' > "$credentials/app-slug"
+printf 'bootstrap-e2e-writer\n' > "$credentials/app-slug"
 printf '%s\n' '-----BEGIN PRIVATE KEY-----' 'fixture-key' '-----END PRIVATE KEY-----' > \
     "$credentials/app-private-key.pem"
 chmod 600 "$credentials"/*
 
 export FAKE_GH_LOG="$fixture_root/gh.log"
 PATH="$fake_bin:$PATH" GH_TOKEN=fixture-token GITHUB_REPOSITORY=aydabd/github-bootstrap \
-    APP_CREDENTIAL_DIR="$credentials" "$orchestrator" install e2e-maintenance-writer \
+    APP_CREDENTIAL_DIR="$credentials" "$orchestrator" install e2e-writer \
     > "$fixture_root/install.json"
 jq -e '
     .result == "PASS" and
     .checks[0].check == "install" and
     .summary == {passed: 1, failed: 0, skipped: 0}
 ' "$fixture_root/install.json" > /dev/null
-grep -Fq 'variable set BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID --repo aydabd/github-bootstrap --env e2e-maintenance --body 123456' "$FAKE_GH_LOG"
-grep -Fq 'variable set BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_SLUG --repo aydabd/github-bootstrap --env e2e-maintenance --body repository-maintenance-writer-e2e' "$FAKE_GH_LOG"
-grep -Fq 'secret set BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY --repo aydabd/github-bootstrap --env e2e-maintenance' "$FAKE_GH_LOG"
-if grep -Eiq 'fixture-token|BEGIN PRIVATE KEY|123456|repository-maintenance-writer-e2e' "$fixture_root/install.json"; then
+grep -Fq 'variable set BOOTSTRAP_E2E_WRITER_APP_CLIENT_ID --repo aydabd/github-bootstrap --env e2e --body 123456' "$FAKE_GH_LOG"
+grep -Fq 'variable set BOOTSTRAP_E2E_WRITER_APP_SLUG --repo aydabd/github-bootstrap --env e2e --body bootstrap-e2e-writer' "$FAKE_GH_LOG"
+grep -Fq 'secret set BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY --repo aydabd/github-bootstrap --env e2e' "$FAKE_GH_LOG"
+if grep -Eiq 'fixture-token|BEGIN PRIVATE KEY|123456|bootstrap-e2e-writer' "$fixture_root/install.json"; then
     echo "install output leaked credential-like material" >&2
     exit 1
 fi
 
 PATH="$fake_bin:$PATH" GITHUB_REPOSITORY=aydabd/github-bootstrap \
-    APP_CREDENTIAL_ROLE=e2e-maintenance-writer APP_CREDENTIAL_DIR="$credentials" \
+    APP_CREDENTIAL_ROLE=e2e-writer APP_CREDENTIAL_DIR="$credentials" \
     "$orchestrator" cleanup > "$fixture_root/cleanup.json"
 jq -e '.result == "PASS" and .checks[0].check == "cleanup"' "$fixture_root/cleanup.json" > /dev/null
 [ ! -e "$credentials" ]

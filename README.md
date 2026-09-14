@@ -76,7 +76,7 @@ checked-in manifest:
 
 ```bash
 credential_dir="$HOME/.local/state/github-bootstrap/maintenance-writer"
-scripts/github-setup/github-app-manifest.sh start repository-maintenance-writer "$credential_dir"
+scripts/github-setup/github-app-manifest.sh start bootstrap-writer "$credential_dir"
 # After GitHub redirects to the local callback:
 scripts/github-setup/github-app-manifest.sh convert-file \
   "$credential_dir/app-manifest-code" "$credential_dir"
@@ -85,10 +85,10 @@ scripts/github-setup/github-app-manifest.sh convert-file \
 Open the printed URL, click Continue to GitHub, approve the App creation, and
 install it only on the maintenance repositories. The callback validates the
 one-time state and stores the conversion code in a protected local file. In
-the `production-maintenance` GitHub Environment, set
-`BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID` and
-`BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG` as variables and
-`BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY` as a secret. The weekly workflow is explicitly
+the `production` GitHub Environment, set
+`BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID` and
+`BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG` as variables and
+`BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY` as a secret. The weekly workflow is explicitly
 bound to that Environment. Use separate Environments for other deployments;
 the credential names remain stable while Environment scope and protection
 rules control access.
@@ -102,15 +102,15 @@ manifests and the exact profile names in
 The Apps belong only in the disposable owner listed in
 `BOOTSTRAP_E2E_ALLOWED_OWNERS`; their client IDs and slugs are variables and
 their private keys are installed into the source `OWNER/github-bootstrap`
-repository's `e2e-maintenance` Environment, then copied/provisioned by the
-creation workflow into each generated repository's `e2e-maintenance` Environment.
+repository's `e2e` Environment, then copied/provisioned by the
+creation workflow into each generated repository's `e2e` Environment.
 Production maintenance remains bound to
-`production-maintenance` and its separate App credentials.
+`production` and its separate App credentials.
 
 For E2E maintenance, use the runbook's single
-`install-e2e-maintenance-credentials.sh` command. It validates protected local
-credential files and stores `BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_TOKEN` only in
-the source `e2e-maintenance` Environment; the fixture token is never copied to
+`install-e2e-credentials.sh` command. It validates protected local
+credential files and stores `BOOTSTRAP_E2E_FIXTURE_TOKEN` only in
+the source `e2e` Environment; the fixture token is never copied to
 generated repositories.
 
 The operator runbook has copy-pasteable manifest, installation, rotation,
@@ -149,9 +149,9 @@ Issue #215 and are removable once that consumer is cut over to the dispatcher.
 
 ### Provisioner App profiles and E2E setup
 
-Create two separate Repository Bootstrap Provisioner Apps: one for real repository creation and
+Create two separate Bootstrap Provisioner Apps: one for real repository creation and
 one for disposable E2E runs. The production App uses the `production-provisioning` Environment;
-the E2E App uses the `e2e-testing` Environment. Keep their private keys, client secrets, client
+the E2E App uses the `e2e` Environment. Keep their private keys, client secrets, client
 IDs, and refresh tokens separate. The lifecycle App (`bootstrap-e2e-admin`) is a separate App and
 must not be used as a provisioner.
 
@@ -163,7 +163,7 @@ generates the private key during conversion; do not generate one locally:
 
 ```bash
 credential_dir="$HOME/.local/state/github-bootstrap/e2e-provisioner"
-scripts/github-setup/github-app-manifest.sh start repository-bootstrap-provisioner "$credential_dir"
+scripts/github-setup/github-app-manifest.sh start bootstrap-provisioner "$credential_dir"
 # Open the printed URL, approve the App, and let the local callback capture the code.
 scripts/github-setup/github-app-manifest.sh convert-file \
   "$credential_dir/app-manifest-code" "$credential_dir"
@@ -189,7 +189,7 @@ scripts/github-setup/install-app-secrets.sh OWNER/github-bootstrap e2e-provision
   "$credential_dir/app-refresh-token"
 ```
 
-The installer sets `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` in the `e2e-testing` Environment and installs
+The installer sets `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID` in the `e2e` Environment and installs
 `BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY`, `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET`, and
 `BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN` there. Each personal run exchanges
 and persists the rotated refresh token using the App's `Environments: write` permission. It never accepts
@@ -202,10 +202,10 @@ After the disposable E2E, remove the repository configuration and revoke or rota
 credentials. This deletes the stored values without exposing them:
 
 ```bash
-gh secret delete BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY --repo OWNER/github-bootstrap --env e2e-testing
-gh secret delete BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET --repo OWNER/github-bootstrap --env e2e-testing
-gh secret delete BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN --repo OWNER/github-bootstrap --env e2e-testing
-gh variable delete BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID --repo OWNER/github-bootstrap --env e2e-testing
+gh secret delete BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY --repo OWNER/github-bootstrap --env e2e
+gh secret delete BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET --repo OWNER/github-bootstrap --env e2e
+gh secret delete BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN --repo OWNER/github-bootstrap --env e2e
+gh variable delete BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID --repo OWNER/github-bootstrap --env e2e
 ```
 
 Also revoke the App user authorization and delete or rotate the App private key in GitHub if the

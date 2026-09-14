@@ -131,7 +131,7 @@ assert_contains "permission_profile == 'release-please'" "$resolver"
 assert_contains "permission_profile: release-please" "$release_workflow"
 assert_contains "uses: ./.github/actions/resolve-gh-token" "$release_workflow"
 assert_contains "token: \${{ steps.resolve-token.outputs.token }}" "$release_workflow"
-assert_contains "environment: production-maintenance" "$release_workflow"
+assert_contains "environment: production" "$release_workflow"
 assert_not_contains "\${{ secrets.GITHUB_TOKEN }}" "$release_workflow"
 assert_contains "Verify Maintenance Writer installation access" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_contains "/installation/repositories" "$repo_root/.github/workflows/weekly-tooling-updates.yml"
@@ -176,8 +176,8 @@ done
 
 template_release_workflow="$repo_root/templates/.github/workflows/release-please.yml"
 assert_contains "actions/create-github-app-token" "$template_release_workflow"
-assert_contains "client-id: \${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID }}" "$template_release_workflow"
-assert_contains "private-key: \${{ secrets.BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}" "$template_release_workflow"
+assert_contains "client-id: \${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID }}" "$template_release_workflow"
+assert_contains "private-key: \${{ secrets.BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY }}" "$template_release_workflow"
 assert_contains "token: \${{ steps.resolve-token.outputs.token }}" "$template_release_workflow"
 assert_contains "APP_SLUG: \${{ steps.resolve-token.outputs.app-slug }}" "$template_release_workflow"
 assert_contains "EXPECTED_APP_SLUG" "$template_release_workflow"
@@ -193,15 +193,19 @@ maintenance_workflows=(
 )
 for workflow in "${maintenance_workflows[@]}"; do
     workflow_path="$repo_root/templates/.github/workflows/$workflow"
-    assert_contains "environment: production-maintenance" "$workflow_path"
-    assert_not_contains "BOOTSTRAP_REVIEWER_APP_CLIENT_ID" "$workflow_path"
-    assert_not_contains "BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY" "$workflow_path"
+    assert_contains "environment: production" "$workflow_path"
     assert_not_contains "secrets.GITHUB_TOKEN" "$workflow_path"
+done
+
+for reviewer_workflow in approve-automation-workflows.yml merge-maintenance-pr.yml; do
+    reviewer_path="$repo_root/templates/.github/workflows/$reviewer_workflow"
+    assert_contains "BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID" "$reviewer_path"
+    assert_contains "BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY" "$reviewer_path"
 done
 
 template_classifier="$repo_root/templates/.github/workflows/classify-maintenance-pr.yml"
 # shellcheck disable=SC2016 # Literal GitHub Actions expression in contract text.
-assert_contains 'WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_MAINTENANCE_WRITER_APP_SLUG }}' \
+assert_contains 'WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}' \
     "$template_classifier"
 assert_not_contains 'github-actions[bot]' \
     "$repo_root/templates/.github/scripts/validate-maintenance-pr.sh"
@@ -284,22 +288,22 @@ for caller_job in create-public create-private; do
         in_job { print }
     ' "$repo_root/.github/workflows/test-personal-app-e2e.yml")"
     printf '%s\n' "$caller_block" | grep -Fq \
-        "BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY: \${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY }}"
+        "BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY: \${{ secrets.BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY }}"
     printf '%s\n' "$caller_block" | grep -Fq \
-        "BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY: \${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY }}"
+        "BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY: \${{ secrets.BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY }}"
 done
 
 assert_contains "needs: validate-provisioner" "$repo_root/.github/workflows/create-repository.yml"
 assert_contains "needs: validate-provisioner" "$repo_root/.github/workflows/terraform-create-repository.yml"
-assert_not_contains "environment: \${{ inputs.provisioner_profile == 'e2e-provisioner' && 'e2e-testing' || 'production-provisioning' }}" "$repo_root/.github/workflows/create-repository.yml"
-assert_not_contains "environment: \${{ inputs.provisioner_profile == 'e2e-provisioner' && 'e2e-testing' || 'production-provisioning' }}" "$repo_root/.github/workflows/terraform-create-repository.yml"
+assert_not_contains "environment: \${{ inputs.provisioner_profile == 'e2e-provisioner' && 'e2e' || 'production-provisioning' }}" "$repo_root/.github/workflows/create-repository.yml"
+assert_not_contains "environment: \${{ inputs.provisioner_profile == 'e2e-provisioner' && 'e2e' || 'production-provisioning' }}" "$repo_root/.github/workflows/terraform-create-repository.yml"
 
 credentials_action="$repo_root/.github/actions/configure-provisioner-credentials/action.yml"
 assert_contains "profile:" "$credentials_action"
 assert_contains "repository:" "$credentials_action"
 assert_contains "app_slug:" "$credentials_action"
-assert_contains "e2e-maintenance-writer" "$credentials_action"
-assert_contains "e2e-maintenance-reviewer" "$credentials_action"
+assert_contains "e2e-writer" "$credentials_action"
+assert_contains "e2e-reviewer" "$credentials_action"
 assert_contains "app_slug_variable" "$credentials_action"
 assert_contains "private_key_secret" "$credentials_action"
 assert_contains "--env \"\$ENVIRONMENT_INPUT\"" "$credentials_action"
@@ -310,8 +314,8 @@ assert_contains 'Missing GitHub token for maintenance credential writes' "$crede
 assert_contains "GH_TOKEN=\"\$GH_TOKEN_INPUT\" gh variable set" "$credentials_action"
 assert_contains "GH_TOKEN=\"\$GH_TOKEN_INPUT\" gh secret set" "$credentials_action"
 assert_not_contains "--body \"\$APP_PRIVATE_KEY_INPUT\"" "$credentials_action"
-assert_contains "production-maintenance-writer" "$credentials_action"
-assert_contains "production-maintenance-reviewer" "$credentials_action"
+assert_contains "production-writer" "$credentials_action"
+assert_contains "production-reviewer" "$credentials_action"
 assert_contains "installation (\$PROFILE_INPUT) cannot see \$REPOSITORY_INPUT" "$credentials_action"
 assert_contains "Profile-specific maintenance installation preflight failed" "$credentials_action"
 assert_contains "/installation/repositories" "$credentials_action"
@@ -320,7 +324,7 @@ assert_contains "MAINTENANCE_TOKEN_INPUT" "$credentials_action"
 assert_contains "actions/create-github-app-token" "$credentials_action"
 assert_contains "target_owner" "$credentials_action"
 assert_contains "repository_name" "$credentials_action"
-assert_not_contains "Maintenance credentials must target e2e-maintenance" "$credentials_action"
+assert_not_contains "Maintenance credentials must target e2e" "$credentials_action"
 
 token_guard_line="$(grep -nF "if [ -z \"\$GH_TOKEN_INPUT\" ]; then" "$credentials_action" | head -n1 | cut -d: -f1)"
 first_write_line="$(grep -nF "GH_TOKEN=\"\$GH_TOKEN_INPUT\" gh variable set" "$credentials_action" | head -n1 | cut -d: -f1)"
@@ -333,21 +337,21 @@ for workflow in create-repository.yml terraform-create-repository.yml; do
     workflow_path="$repo_root/.github/workflows/$workflow"
     assert_not_contains "provisioner_token: \${{ steps.resolve-token.outputs.token }}" "$workflow_path"
     assert_not_contains 'outputs.provisioner_token' "$workflow_path"
-    assert_contains "BOOTSTRAP_MAINTENANCE_WRITER_APP_PRIVATE_KEY" "$workflow_path"
-    assert_contains "BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY" "$workflow_path"
-    assert_contains "profile: production-maintenance-writer" "$workflow_path"
-    assert_contains "profile: production-maintenance-reviewer" "$workflow_path"
+    assert_contains "BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY" "$workflow_path"
+    assert_contains "BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY" "$workflow_path"
+    assert_contains "profile: production-writer" "$workflow_path"
+    assert_contains "profile: production-reviewer" "$workflow_path"
     assert_contains "Profile-specific maintenance installation preflight failed" "$credentials_action"
     assert_contains "cannot see \$REPOSITORY_INPUT" "$credentials_action"
     assert_contains "[ -n \"\$MAINTENANCE_TOKEN_INPUT\" ]" "$credentials_action"
     assert_contains "GH_TOKEN=\"\$GH_TOKEN_INPUT\" gh variable set \"\$client_id_variable\" --repo \"\$REPOSITORY_INPUT\" --env \"\$ENVIRONMENT_INPUT\"" "$credentials_action"
     assert_contains "gh secret set \"\$private_key_secret\"" "$credentials_action"
     assert_contains "--env \"\$ENVIRONMENT_INPUT\"" "$credentials_action"
-    assert_contains "environment: production-maintenance" "$workflow_path"
-    assert_contains "environment: e2e-maintenance" "$workflow_path"
+    assert_contains "environment: production" "$workflow_path"
+    assert_contains "environment: e2e" "$workflow_path"
     assert_contains "if: needs.validate-provisioner.outputs.profile == 'production-provisioner'" "$workflow_path"
     assert_contains "if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner'" "$workflow_path"
-    for maintenance_job in configure-e2e-maintenance-credentials configure-production-maintenance-credentials; do
+    for maintenance_job in configure-e2e-credentials configure-production-credentials; do
         grep -Fq "  $maintenance_job:" "$workflow_path"
     done
     grep -Fq 'id: provisioner-token' "$workflow_path"
@@ -356,10 +360,10 @@ for workflow in create-repository.yml terraform-create-repository.yml; do
     grep -Fq 'app_private_key: ${{ secrets.BOOTSTRAP_' "$workflow_path"
     assert_not_contains 'needs.create-repository.outputs.provisioner_token' "$workflow_path"
     assert_not_contains 'needs.terraform-create-repository.outputs.provisioner_token' "$workflow_path"
-    assert_not_contains 'refresh_token_secret_environment: e2e-testing' "$workflow_path"
+    assert_not_contains 'refresh_token_secret_environment: e2e' "$workflow_path"
     assert_not_contains 'refresh_token_secret_environment: production-provisioning' "$workflow_path"
-    grep -Fq 'environment: e2e-maintenance' "$workflow_path"
-    grep -Fq 'environment: production-maintenance' "$workflow_path"
+    grep -Fq 'environment: e2e' "$workflow_path"
+    grep -Fq 'environment: production' "$workflow_path"
     grep -Fq "GH_HOST: \${{ inputs.github_host || 'github.com' }}" "$workflow_path"
 done
 
@@ -382,7 +386,7 @@ run_caller_preflight_fixture() {
     local maintenance_token_fixture="$6" expected_condition="$7"
     local workflow_name="${workflow_path##*/}" caller_fixture caller_block
     caller_fixture="$preflight_tmp/$fixture_name-caller.sh"
-    caller_block="$(workflow_job_block configure-e2e-maintenance-credentials "$workflow_path")"
+    caller_block="$(workflow_job_block configure-e2e-credentials "$workflow_path")"
     caller_profile="$(printf '%s\n' "$caller_block" | sed -n 's/^          profile: //p' | head -n1)"
     caller_environment="$(printf '%s\n' "$caller_block" | sed -n 's/^          environment: //p' | head -n1)"
     caller_key_reference="$(printf '%s\n' "$caller_block" | sed -n 's/.*secrets\.\([^ }]*\).*/\1/p' | head -n1)"
@@ -443,16 +447,16 @@ rm -rf "$preflight_tmp"
 
 for workflow in create-repository.yml terraform-create-repository.yml; do
     workflow_path="$repo_root/.github/workflows/$workflow"
-    assert_contains "e2e-maintenance-writer" "$workflow_path"
-    assert_contains "e2e-maintenance-reviewer" "$workflow_path"
-    assert_contains "e2e-maintenance" "$workflow_path"
-    assert_contains "production-maintenance" "$workflow_path"
-    assert_contains "BOOTSTRAP_MAINTENANCE_WRITER_APP_CLIENT_ID" "$workflow_path"
-    assert_contains "BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID" "$workflow_path"
+    assert_contains "e2e-writer" "$workflow_path"
+    assert_contains "e2e-reviewer" "$workflow_path"
+    assert_contains "e2e" "$workflow_path"
+    assert_contains "production" "$workflow_path"
+    assert_contains "BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID" "$workflow_path"
+    assert_contains "BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID" "$workflow_path"
 done
 
-assert_contains "e2e-maintenance-writer" "$repo_root/scripts/github-setup/install-app-secrets.sh"
-assert_contains "e2e-maintenance-reviewer" "$repo_root/scripts/github-setup/install-app-secrets.sh"
+assert_contains "e2e-writer" "$repo_root/scripts/github-setup/install-app-secrets.sh"
+assert_contains "e2e-reviewer" "$repo_root/scripts/github-setup/install-app-secrets.sh"
 assert_contains "app_slug_file" "$repo_root/scripts/github-setup/install-app-secrets.sh"
 
 for workflow in "$repo_root"/.github/workflows/*.yml; do
@@ -465,7 +469,7 @@ for workflow in "$repo_root"/.github/workflows/*.yml; do
     }
 done
 
-for workflow in approve-automation-workflows.yml classify-maintenance-pr.yml cleanup-archived-e2e.yml delete-repo.yml dispatch-maintenance-e2e.yml merge-maintenance-pr.yml release-please.yml setup-existing-repository.yml test-local-setup-scripts.yml weekly-tooling-updates.yml; do
+for workflow in approve-automation-workflows.yml classify-maintenance-pr.yml cleanup-archived-e2e.yml delete-repo.yml dispatch-e2e.yml merge-maintenance-pr.yml release-please.yml setup-existing-repository.yml test-local-setup-scripts.yml weekly-tooling-updates.yml; do
     workflow_path="$repo_root/.github/workflows/$workflow"
     assert_contains 'refresh_token_secret: ""' "$workflow_path"
 done
@@ -493,7 +497,7 @@ assert_contains "target_owner: \${{ steps.target.outputs.owner }}" "$repo_root/.
 assert_contains "repositories: \${{ steps.target.outputs.repository }}" "$repo_root/.github/workflows/delete-repo.yml"
 assert_contains "bash ./scripts/github-setup/validate-app-auth.sh" "$resolver"
 assert_contains "repositories: \${{ inputs.repo_name }}" "$repo_root/.github/workflows/setup-existing-repository.yml"
-assert_contains "environment: e2e-testing" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
+assert_contains "environment: e2e" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_contains "repositories: \${{ github.event.repository.name }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_contains "permission_profile: e2e-dispatch" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_not_line '^      client_id:' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
@@ -539,8 +543,8 @@ approval_workflow="$repo_root/.github/workflows/approve-automation-workflows.yml
 assert_contains "workflow_run:" "$approval_workflow"
 assert_contains "conclusion == 'action_required'" "$approval_workflow"
 assert_contains "permission_profile: workflow-approval" "$approval_workflow"
-assert_contains "BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY" "$approval_workflow"
-assert_contains "BOOTSTRAP_MAINTENANCE_REVIEWER_APP_SLUG" "$approval_workflow"
+assert_contains "BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY" "$approval_workflow"
+assert_contains "BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG" "$approval_workflow"
 assert_contains 'Resolved App is not the configured maintenance Reviewer' "$approval_workflow"
 assert_contains "actions: read" "$approval_workflow"
 assert_contains "pull-requests: read" "$approval_workflow"

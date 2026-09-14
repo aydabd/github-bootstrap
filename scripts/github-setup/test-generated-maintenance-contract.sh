@@ -36,21 +36,21 @@ assert_contains 'workflows=quality,maintenance' "$workflow"
 assert_contains 'workflows=quality,codeql,maintenance' "$workflow"
 assert_contains 'automation: maintenance' "$workflow"
 assert_contains 'automation: validating' "$workflow"
-assert_contains 'e2e-maintenance' "$workflow"
-assert_contains 'e2e-maintenance-writer' "$workflow"
-assert_contains 'e2e-maintenance-reviewer' "$workflow"
-assert_contains 'e2e-maintenance-fixture' "$workflow"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_ID' "$workflow"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_PRIVATE_KEY' "$workflow"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_SECRET' "$workflow"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_USER_REFRESH_TOKEN' "$workflow"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID' "$workflow"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_CLIENT_ID' "$workflow"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY' "$workflow"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY' "$workflow"
+assert_contains 'e2e' "$workflow"
+assert_contains 'e2e-writer' "$workflow"
+assert_contains 'e2e-reviewer' "$workflow"
+assert_contains 'e2e-fixture' "$workflow"
+assert_contains 'BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_ID' "$workflow"
+assert_contains 'BOOTSTRAP_E2E_FIXTURE_APP_PRIVATE_KEY' "$workflow"
+assert_contains 'BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_SECRET' "$workflow"
+assert_contains 'BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN' "$workflow"
+assert_contains 'BOOTSTRAP_E2E_WRITER_APP_CLIENT_ID' "$workflow"
+assert_contains 'BOOTSTRAP_E2E_REVIEWER_APP_CLIENT_ID' "$workflow"
+assert_contains 'BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY' "$workflow"
+assert_contains 'BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY' "$workflow"
 assert_contains 'MAINTENANCE_IDENTITY_MODE' "$workflow"
 assert_contains 'MAINTENANCE_FIXTURE_LOGIN' "$workflow"
-assert_contains 'e2e-maintenance-user' "$workflow"
+assert_contains 'e2e-user' "$workflow"
 assert_contains 'MAINTENANCE_COPILOT_REVIEWER_LOGIN' "$workflow"
 assert_contains 'reviewers[]=$MAINTENANCE_COPILOT_REVIEWER_LOGIN' "$workflow"
 assert_contains '.login == $login' "$workflow"
@@ -109,11 +109,11 @@ done
 
 for creation_workflow in create-repository.yml terraform-create-repository.yml; do
     creation_path="$repo_root/.github/workflows/$creation_workflow"
-    assert_contains 'configure-e2e-maintenance-credentials' "$creation_path"
-    assert_contains 'environment: production-maintenance' "$creation_path"
-    assert_contains 'environment: e2e-maintenance' "$creation_path"
-    assert_contains 'configure-e2e-maintenance-credentials' "$creation_path"
-    assert_contains 'configure-production-maintenance-credentials' "$creation_path"
+    assert_contains 'configure-e2e-credentials' "$creation_path"
+    assert_contains 'environment: production' "$creation_path"
+    assert_contains 'environment: e2e' "$creation_path"
+    assert_contains 'configure-e2e-credentials' "$creation_path"
+    assert_contains 'configure-production-credentials' "$creation_path"
 done
 assert_contains 'tags?per_page=100' "$workflow"
 assert_contains 'names[]=bootstrap-e2e' "$workflow"
@@ -125,23 +125,21 @@ for limit in 'seq 1 60' 'seq 1 90' 'seq 1 120'; do
     assert_contains "$limit" "$workflow"
 done
 
-assert_not_contains 'BOOTSTRAP_MAINTENANCE_WRITER_APP_' "$workflow"
-assert_not_contains 'BOOTSTRAP_REVIEWER_APP_' "$workflow"
-assert_contains 'app_client_secret: ${{ secrets.BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_SECRET }}' "$workflow"
-assert_not_contains 'production-maintenance' "$workflow"
-assert_not_contains 'production-maintenance-writer' "$workflow"
-assert_not_contains 'production-maintenance-reviewer' "$workflow"
-assert_not_contains 'BOOTSTRAP_MAINTENANCE_FIXTURE_TOKEN' "$workflow"
-assert_not_contains 'BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_TOKEN' "$workflow"
+assert_not_contains 'BOOTSTRAP_PRODUCTION_WRITER_APP_' "$workflow"
+assert_not_contains 'BOOTSTRAP_PRODUCTION_REVIEWER_APP_' "$workflow"
+assert_contains 'app_client_secret: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_SECRET }}' "$workflow"
+assert_not_contains 'environment: production' "$workflow"
+assert_not_contains 'BOOTSTRAP_PRODUCTION_' "$workflow"
+assert_not_contains 'production-writer' "$workflow"
+assert_not_contains 'production-reviewer' "$workflow"
+assert_not_contains 'BOOTSTRAP_E2E_FIXTURE_TOKEN' "$workflow"
 assert_contains 'PR_AUTHOR_USER_TOKEN: ${{ steps.fixture-token.outputs.token }}' "$workflow"
 assert_not_contains 'PR_AUTHOR_TOKEN:' "$workflow"
-setup_script="$repo_root/scripts/github-setup/install-e2e-maintenance-credentials.sh"
-assert_contains 'install-e2e-maintenance-credentials.sh' "$runbook"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_USER_REFRESH_TOKEN' "$runbook"
-assert_contains 'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_CLIENT_ID' "$runbook"
-assert_contains 'BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY' "$runbook"
-assert_not_contains 'BOOTSTRAP_REVIEWER_APP_CLIENT_ID' "$runbook"
-assert_not_contains 'missing/rotated `BOOTSTRAP_REVIEWER_APP_PRIVATE_KEY`' "$runbook"
+setup_script="$repo_root/scripts/github-setup/install-e2e-credentials.sh"
+assert_contains 'install-e2e-credentials.sh' "$runbook"
+assert_contains 'BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN' "$runbook"
+assert_contains 'BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID' "$runbook"
+assert_contains 'BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY' "$runbook"
 if [ ! -x "$setup_script" ]; then
     echo "missing executable E2E maintenance setup script" >&2
     exit 1
@@ -177,17 +175,17 @@ chmod 700 "$setup_tmp_dir/writer" "$setup_tmp_dir/reviewer" "$setup_tmp_dir/fixt
 GH_TOKEN=contract-token SETUP_GH_CALLS="$setup_calls" PATH="$setup_tmp_dir/bin:$PATH" \
     bash "$setup_script" acme/github-bootstrap "$setup_tmp_dir/writer" \
     "$setup_tmp_dir/reviewer" "$setup_tmp_dir/fixture" > "$setup_tmp_dir/output"
-assert_contains 'e2e-maintenance' "$setup_calls"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_CLIENT_ID' "$setup_calls"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_SLUG' "$setup_calls"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_WRITER_APP_PRIVATE_KEY' "$setup_calls"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_CLIENT_ID' "$setup_calls"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_SLUG' "$setup_calls"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY' "$setup_calls"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_ID' "$setup_calls"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_PRIVATE_KEY' "$setup_calls"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_CLIENT_SECRET' "$setup_calls"
-assert_contains 'BOOTSTRAP_E2E_MAINTENANCE_FIXTURE_APP_USER_REFRESH_TOKEN' "$setup_calls"
+assert_contains 'e2e' "$setup_calls"
+assert_contains 'BOOTSTRAP_E2E_WRITER_APP_CLIENT_ID' "$setup_calls"
+assert_contains 'BOOTSTRAP_E2E_WRITER_APP_SLUG' "$setup_calls"
+assert_contains 'BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY' "$setup_calls"
+assert_contains 'BOOTSTRAP_E2E_REVIEWER_APP_CLIENT_ID' "$setup_calls"
+assert_contains 'BOOTSTRAP_E2E_REVIEWER_APP_SLUG' "$setup_calls"
+assert_contains 'BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY' "$setup_calls"
+assert_contains 'BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_ID' "$setup_calls"
+assert_contains 'BOOTSTRAP_E2E_FIXTURE_APP_PRIVATE_KEY' "$setup_calls"
+assert_contains 'BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_SECRET' "$setup_calls"
+assert_contains 'BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN' "$setup_calls"
 if grep -Fq '/repos/acme/github-bootstrap/installation' "$setup_calls"; then
     echo "source setup must not claim App installation validation with operator credentials" >&2
     exit 1
@@ -218,21 +216,21 @@ grep -Fq 'mode 600' "$setup_tmp_dir/protection-error"
 chmod 600 "$setup_tmp_dir/fixture/app-user-refresh-token"
 
 fixture_setup_line="$(grep -n 'After creating and authorizing the fixture App' "$runbook" | cut -d: -f1)"
-installer_line="$(grep -n 'install-e2e-maintenance-credentials.sh' "$runbook" | tail -n 1 | cut -d: -f1)"
+installer_line="$(grep -n 'install-e2e-credentials.sh' "$runbook" | tail -n 1 | cut -d: -f1)"
 [ "$fixture_setup_line" -lt "$installer_line" ] || {
     echo "runbook must create fixture credentials before invoking the installer" >&2
     exit 1
 }
 
 assert_contains 'E2E maintenance setup' "$runbook"
-assert_contains 'never use production-maintenance credentials' "$runbook"
+assert_contains 'never use production credentials' "$runbook"
 assert_contains 'install each maintenance App account-wide' "$runbook"
 assert_contains 'Manual preflight sequence' "$runbook"
 assert_contains 'gh api --paginate --slurp /installation/repositories' "$runbook"
 assert_contains 'Verify both App installations' "$runbook"
 assert_contains 'archived' "$runbook"
-assert_contains 'repository-maintenance-writer-e2e' "$runbook"
-assert_contains 'repository-maintenance-reviewer-e2e' "$runbook"
+assert_contains 'bootstrap-e2e-writer' "$runbook"
+assert_contains 'bootstrap-e2e-reviewer' "$runbook"
 assert_contains 'reads until EOF' "$runbook"
 assert_contains 'stty echo < /dev/tty' "$runbook"
 assert_contains 'printf '\''%s'\'' "$writer_private_key" | gh secret set' "$runbook"
@@ -258,7 +256,7 @@ assert_contains 'COPILOT_REVIEWER_LOGIN: ${{ env.MAINTENANCE_COPILOT_REVIEWER_LO
     "$generated_dir/.github/workflows/approve-automation-workflows.yml"
 
 cat > "$tmp_dir/bot-pr.json" << 'EOF'
-{"user":{"login":"repository-maintenance-writer[bot]"},"head":{"sha":"current-sha"}}
+{"user":{"login":"bootstrap-writer[bot]"},"head":{"sha":"current-sha"}}
 EOF
 cat > "$tmp_dir/copilot-review.json" << 'EOF'
 [{"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","commit_id":"current-sha"}]
@@ -268,14 +266,14 @@ cat > "$tmp_dir/resolved-threads.json" << 'EOF'
 [{"author_login":"copilot-pull-request-reviewer[bot]","isResolved":true}]
 EOF
 cat > "$tmp_dir/human-pr.json" << 'EOF'
-{"state":"open","draft":false,"base":{"ref":"main","repo":{"full_name":"acme/project"}},"head":{"sha":"current-sha","repo":{"full_name":"acme/project"}},"user":{"login":"e2e-maintenance-user"},"labels":[{"name":"automation: maintenance"},{"name":"automation: validating"}],"auto_merge":{"merge_method":"SQUASH","enabled_by":{"login":"writer[bot]"}}}
+{"state":"open","draft":false,"base":{"ref":"main","repo":{"full_name":"acme/project"}},"head":{"sha":"current-sha","repo":{"full_name":"acme/project"}},"user":{"login":"e2e-user"},"labels":[{"name":"automation: maintenance"},{"name":"automation: validating"}],"auto_merge":{"merge_method":"SQUASH","enabled_by":{"login":"writer[bot]"}}}
 EOF
 if FULL_REPOSITORY=acme/project "$classifier" "$tmp_dir/human-pr.json"; then
     echo "production classifier accepted the human E2E fixture" >&2
     exit 1
 fi
 MAINTENANCE_IDENTITY_MODE=e2e-disposable \
-    MAINTENANCE_FIXTURE_LOGIN=e2e-maintenance-user \
+    MAINTENANCE_FIXTURE_LOGIN=e2e-user \
     FULL_REPOSITORY=acme/project "$classifier" "$tmp_dir/human-pr.json"
 
 cat > "$tmp_dir/human-reviews.json" << 'EOF'
@@ -291,13 +289,13 @@ cat > "$tmp_dir/labels.json" << 'EOF'
 [{"name":"automation: maintenance"},{"name":"automation: validating"}]
 EOF
 MAINTENANCE_IDENTITY_MODE=e2e-disposable \
-    MAINTENANCE_FIXTURE_LOGIN=e2e-maintenance-user \
+    MAINTENANCE_FIXTURE_LOGIN=e2e-user \
     MAINTENANCE_COPILOT_REVIEWER_LOGIN='copilot-pull-request-reviewer[bot]' \
     FULL_REPOSITORY=acme/project bash "$merge_validator" "$tmp_dir/human-pr.json" \
     "$tmp_dir/checks.json" "$tmp_dir/human-reviews.json" "$tmp_dir/labels.json" \
     acme/project current-sha writer reviewer true
 if MAINTENANCE_IDENTITY_MODE=e2e-disposable \
-    MAINTENANCE_FIXTURE_LOGIN=e2e-maintenance-user \
+    MAINTENANCE_FIXTURE_LOGIN=e2e-user \
     MAINTENANCE_COPILOT_REVIEWER_LOGIN='copilot-pull-request-reviewer[bot]' \
     FULL_REPOSITORY=acme/project bash "$merge_validator" "$tmp_dir/human-pr.json" \
     "$tmp_dir/checks.json" "$tmp_dir/human-reviewer-only.json" "$tmp_dir/labels.json" \
