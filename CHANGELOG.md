@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.1](https://github.com/aydabd/github-bootstrap/compare/v2.9.0...v2.9.1) (2026-09-14)
+
+
+### Bug Fixes
+
+* enforce repository skill resolution ([#232](https://github.com/aydabd/github-bootstrap/issues/232)) ([4a666e3](https://github.com/aydabd/github-bootstrap/commit/4a666e3805d2b9d29b598129526b9878471760ee))
+
 ## [2.9.0](https://github.com/aydabd/github-bootstrap/compare/v2.8.0...v2.9.0) (2026-09-14)
 
 
