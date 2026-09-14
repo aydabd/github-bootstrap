@@ -63,7 +63,9 @@ if find "$repo_root/.github/ISSUE_TEMPLATE" -maxdepth 1 -type f -name '*.md' | g
     fail "root issue templates still contain markdown files"
 fi
 
-for instructions in "$repo_root/AGENTS.md" "$repo_root/templates/AGENTS.md" "$repo_root/templates/.github/skills/agent-operating-loop/SKILL.md"; do
+for instructions in "$repo_root/AGENTS.md" "$repo_root/templates/AGENTS.md" "$repo_root/.github/skills/agent-operating-loop/SKILL.md" "$repo_root/templates/.github/skills/agent-operating-loop/SKILL.md"; do
+    [ -f "$instructions" ] ||
+        fail "skill guidance file is missing: $instructions"
     grep -Fq 'repository skill catalog' "$instructions" ||
         fail "skill resolution source order is missing from $instructions"
     grep -Fq 'external Superpowers plugin' "$instructions" ||
