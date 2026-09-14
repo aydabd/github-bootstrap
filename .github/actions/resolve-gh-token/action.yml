@@ -136,7 +136,7 @@ runs:
         owner: ${{ inputs.app_owner }}
         repositories: ${{ inputs.repositories }}
         permission-administration: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'repository-cleanup' || inputs.permission_profile == 'e2e-dispatch' || inputs.permission_profile == 'e2e-lifecycle') && 'write' || '' }}
-        permission-actions: ${{ (inputs.permission_profile == 'workflow-approval' || inputs.permission_profile == 'e2e-dispatch') && 'write' || '' }}
+        permission-actions: ${{ (inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'workflow-approval' || inputs.permission_profile == 'e2e-dispatch') && 'write' || '' }}
         permission-contents: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'e2e-dispatch' || inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'release-please' || inputs.permission_profile == 'maintenance-merge') && 'write' || '' }}
         permission-issues: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-labeling' || inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'e2e-dispatch') && 'write' || '' }}
         permission-organization-administration: ${{ inputs.permission_profile == 'repository-creation' && 'write' || '' }}
