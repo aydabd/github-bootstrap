@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.0](https://github.com/aydabd/github-bootstrap/compare/v2.9.1...v2.10.0) (2026-09-14)
+
+
+### Features
+
+* add deterministic audit quality trends ([#233](https://github.com/aydabd/github-bootstrap/issues/233)) ([ee06448](https://github.com/aydabd/github-bootstrap/commit/ee0644897044285bcbd77aaab84665335b5eb5f4))
+
 ## [2.9.1](https://github.com/aydabd/github-bootstrap/compare/v2.9.0...v2.9.1) (2026-09-14)
 
 
