@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.0](https://github.com/aydabd/github-bootstrap/compare/v2.8.0...v2.9.0) (2026-09-14)
+
+
+### Features
+
+* add audit bypass governance ([#229](https://github.com/aydabd/github-bootstrap/issues/229)) ([3e7a558](https://github.com/aydabd/github-bootstrap/commit/3e7a5586f09eea29f629f192c2df9580aea68b22))
+
 ## [2.8.0](https://github.com/aydabd/github-bootstrap/compare/v2.7.0...v2.8.0) (2026-09-14)
 
 
