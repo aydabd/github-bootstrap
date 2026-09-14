@@ -34,7 +34,8 @@ if [[ "$platform" == osx-* ]]; then
     lock_command+=(--virtual-package-spec conda-lock-virtual-packages.yml)
 fi
 set +e
-"${lock_command[@]}" --lockfile "$lock_file" --strip-auth
+UV_HTTP_TIMEOUT="${UV_HTTP_TIMEOUT:-120}" UV_HTTP_RETRIES="${UV_HTTP_RETRIES:-5}" \
+    "${lock_command[@]}" --lockfile "$lock_file" --strip-auth
 lock_rc=$?
 set -e
 

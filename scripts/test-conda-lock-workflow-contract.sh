@@ -5,7 +5,10 @@ workflow="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.github/workflows/con
 grep -Fq 'ubuntu-24.04' "$workflow"
 grep -Fq 'macos-26-intel' "$workflow"
 grep -Fq 'macos-26' "$workflow"
-grep -Fq 'conda-lock==4.0.2' "$(dirname "$workflow")/../../scripts/generate-conda-lock.sh"
+lock_script="$(dirname "$workflow")/../../scripts/generate-conda-lock.sh"
+grep -Fq 'conda-lock==4.0.2' "$lock_script"
+grep -Fq 'UV_HTTP_TIMEOUT' "$lock_script"
+grep -Fq 'UV_HTTP_RETRIES' "$lock_script"
 if grep -Eq 'macos-1[0-9]|macos-latest' "$workflow"; then
     echo "workflow uses an older or floating macOS runner" >&2
     exit 1
