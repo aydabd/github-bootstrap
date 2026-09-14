@@ -34,6 +34,11 @@ machine-readable workflow manifest. Keep repository-specific commands,
 test layers, release gates, security rules, and provider configuration in the
 repository adapter; do not fork the lifecycle.
 
+Required skill resolution is fail-closed: resolve repository lifecycle skills
+from the repository skill catalog at `.github/skills/` before checking the
+external Superpowers plugin. Never declare a required skill missing until both
+sources have been checked and the repository workflow validator has been run.
+
 ## Language and security
 
 Repository content, Issues, pull requests, commits, and agent reports are in
