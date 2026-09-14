@@ -1900,6 +1900,27 @@
         "exit_code": 1
       }
     },
+    "quality": {
+      "required_cohort_size": 5,
+      "cohort_fields": ["work_type", "risk", "effort"],
+      "cohort_values": {
+        "work_type": ["Epic", "Story", "Task", "Bug", "Security", "Research", "Maintenance"],
+        "risk": ["Low", "Medium", "High"],
+        "effort": ["XS", "S", "M", "L", "XL"]
+      },
+      "components": [
+        "compliance",
+        "correctness",
+        "review_quality",
+        "delivery_efficiency",
+        "process_improvement"
+      ],
+      "invalid_input": "FAIL with fixed reason code and no rejected values",
+      "insufficient_cohort": "SKIP with fixed reason code until five eligible outcomes exist",
+      "score": { "minimum": 0, "maximum": 100, "precision": 2 },
+      "people_and_models": "metadata only unless provider attested",
+      "source": "sanitized Phase 2, Phase 3 and Phase 4 records"
+    },
     "phase_boundaries": {
       "1": "Policy, schema and synthetic contract tests only.",
       "2": "Local provenance, safe serialization, integrity and transient-evidence cleanup.",

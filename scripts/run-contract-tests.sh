@@ -26,6 +26,7 @@ contract_tests=(
     "$script_dir/github-setup/test-agent-provenance-contract.sh"
     "$script_dir/github-setup/test-agent-github-verifier-contract.sh"
     "$script_dir/github-setup/test-agent-bypass-governance-contract.sh"
+    "$script_dir/github-setup/test-agent-quality-trends-contract.sh"
     "$script_dir/github-setup/test-select-next-work-contract.sh"
     "$script_dir/github-setup/test-verify-agent-project-contract.sh"
     "$script_dir/github-setup/test-app-manifest-contract.sh"
