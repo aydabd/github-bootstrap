@@ -721,8 +721,6 @@ jobs:
       - name: Remove unselected workflows
         id: filter-workflows
         run: |
-          cd new-repo
-
           OPTIONAL_FEATURES="${{ inputs.optional_features || 'github-planning' }}"
           case "$OPTIONAL_FEATURES" in
             ""|"none")
