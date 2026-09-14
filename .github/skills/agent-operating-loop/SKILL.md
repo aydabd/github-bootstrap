@@ -18,3 +18,11 @@ Use the declared Superpowers gates for discovery, brainstorming, planning,
 worktree isolation, TDD, debugging, parallel work, review, verification, and
 cleanup. Emit selection, test, and handoff evidence as deterministic JSON.
 Do not create local planning/specification files for ordinary implementation.
+
+## Skill resolution
+
+Resolve repository lifecycle skills from the repository skill catalog at
+`.github/skills/` before checking the external Superpowers plugin. Never
+declare a required skill missing until both sources have been checked and the
+repository workflow validator has been run. This applies to the bootstrap
+repository and generated repositories.

@@ -17,6 +17,14 @@ the selected skill can be loaded. If it is unavailable, stop with `FAIL` and
 report the exact plugin/source/install action. Never silently substitute an
 ad-hoc workflow.
 
+## Skill resolution
+
+Resolve repository lifecycle skills from the repository skill catalog at
+`.github/skills/` before checking the external Superpowers plugin. Never
+declare a required skill missing until both sources have been checked and the
+repository workflow validator has been run. This applies to the bootstrap
+repository and generated repositories.
+
 ## Lifecycle gates
 
 | Gate                  | Required skill                                    | Evidence                                   |

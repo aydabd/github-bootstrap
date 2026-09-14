@@ -13,6 +13,11 @@ Edit those canonical files instead of copying their contents into `CLAUDE.md`,
 Copilot instructions, or provider-specific agent files. Read the relevant
 `.github/skills/` skill before performing a covered workflow.
 
+Required skill resolution is fail-closed: resolve repository lifecycle skills
+from the repository skill catalog at `.github/skills/` before checking the
+external Superpowers plugin. Never declare a required skill missing until both
+sources have been checked and the repository workflow validator has been run.
+
 ## Agent operating loop
 
 For every session, issue, review, merge, or handoff, read and follow
