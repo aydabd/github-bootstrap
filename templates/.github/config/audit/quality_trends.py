@@ -14,13 +14,6 @@ FORBIDDEN = {
     "secrets", "environment", "environment_values", "ip_address", "home_path",
     "email", "provider_response_id", "raw_log", "raw_logs", "command_output",
 }
-EVIDENCE_FIELDS = {
-    "provenance_complete", "signature_verified", "unexpected_skips",
-    "unauthorized_bypasses", "required_checks_failed", "regressions", "reverts",
-    "reopened", "actionable_findings", "actionable_resolved", "stale_approvals",
-    "unresolved_threads", "hours_to_merge", "pushes_after_first_ci",
-    "repeated_ci_failures", "process_refinement_recorded",
-}
 
 
 def _failure(code):
@@ -70,7 +63,7 @@ def _valid_outcome(item, quality):
     if any(not isinstance(cohort[field], str) or cohort[field] not in quality["cohort_values"][field] for field in quality["cohort_fields"]):
         return False
     evidence = item["evidence"]
-    if not isinstance(evidence, dict) or set(evidence) != EVIDENCE_FIELDS:
+    if not isinstance(evidence, dict) or list(evidence) != quality["evidence_fields"]:
         return False
     for field, value in evidence.items():
         if field == "provenance_complete" or field == "signature_verified" or field == "process_refinement_recorded":
