@@ -15,6 +15,8 @@ printf '%s' "$output" | jq -e '
     .result == "PASS" and
     .repository == "aydabd/github-bootstrap" and
     (.checks | length) > 0 and
+    ([.checks[] | select(.check == "manifest") ] | length) == 7 and
+    (all(.checks[] | select(.check == "manifest"); .result == "PASS")) and
     (.summary.passed == (.checks | map(select(.result == "PASS")) | length)) and
     (.summary.failed == 0) and
     (.summary.skipped == 0)

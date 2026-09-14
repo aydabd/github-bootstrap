@@ -39,6 +39,25 @@ check_profile() {
     ' "$profile_file" > /dev/null
 }
 
+manifest_for_role() {
+    case "$1" in
+        production-provisioner | e2e-provisioner) echo repository-bootstrap-provisioner ;;
+        e2e-maintenance-fixture) echo maintenance-fixture-e2e ;;
+        e2e-maintenance-writer) echo repository-maintenance-writer-e2e ;;
+        e2e-maintenance-reviewer) echo repository-maintenance-reviewer-e2e ;;
+        production-maintenance-writer) echo repository-maintenance-writer ;;
+        production-maintenance-reviewer) echo repository-maintenance-reviewer ;;
+        *) return 1 ;;
+    esac
+}
+
+check_manifest() {
+    local role="$1" manifest_name
+    manifest_name="$(manifest_for_role "$role")" || return 1
+    jq -e '.name | type == "string" and length > 0' \
+        "$script_dir/../../docs/github-app-manifests/$manifest_name.json" > /dev/null
+}
+
 check_command() {
     local expected_roles='["e2e-maintenance-fixture","e2e-maintenance-reviewer","e2e-maintenance-writer","e2e-provisioner","production-maintenance-reviewer","production-maintenance-writer","production-provisioner"]'
     local checks='[]' role result overall="PASS"
@@ -52,6 +71,14 @@ check_command() {
         fi
         checks="$(jq -c --arg result "$result" --arg role "$role" \
             '. + [{result:$result,role:$role,check:"profile-schema",evidence:"required profile fields validated"}]' <<< "$checks")"
+        if check_manifest "$role"; then
+            result="PASS"
+        else
+            result="FAIL"
+            overall="FAIL"
+        fi
+        checks="$(jq -c --arg result "$result" --arg role "$role" \
+            '. + [{result:$result,role:$role,check:"manifest",evidence:"role manifest exists and has a name"}]' <<< "$checks")"
     done < <(jq -r 'keys[]' "$profile_file")
     jq -cn --arg result "$overall" --arg repository "$repository" --argjson checks "$checks" \
         '{schema_version:1,result:$result,repository:$repository,checks:$checks,summary:{passed:($checks|map(select(.result=="PASS"))|length),failed:($checks|map(select(.result=="FAIL"))|length),skipped:($checks|map(select(.result=="SKIP"))|length)}}'
