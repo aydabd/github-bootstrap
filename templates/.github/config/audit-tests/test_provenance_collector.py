@@ -63,6 +63,12 @@ class ProvenanceCollectorTests(unittest.TestCase):
         ])
         self.assertEqual(first["provenance"]["model"]["observed"], None)
         self.assertEqual(first["provenance"]["model"]["assurance"], "SELF_DECLARED")
+        self.assertEqual(first["result"], "FAIL")
+        self.assertEqual(first["verification"]["required_checks"], "FAIL")
+        self.assertEqual(
+            next(item for item in first["verification"]["controls"] if item["control"] == "REQUIRED_CHECKS"),
+            {"control": "REQUIRED_CHECKS", "result": "FAIL", "reason_code": "MISSING_EVIDENCE"},
+        )
         self.assertRegex(first["integrity"]["sha256"], r"^[0-9a-f]{64}$")
 
     def test_provider_attestation_is_rejected_without_authenticated_source(self):
@@ -105,6 +111,18 @@ class ProvenanceCollectorTests(unittest.TestCase):
         self.assertEqual(record["result"], "FAIL")
         self.assertEqual(record["provenance"]["plugins"], [])
         self.assertEqual(record["summary"]["failed"], 1)
+        self.assertEqual(
+            next(item for item in record["verification"]["controls"] if item["control"] == "SUPERPOWERS"),
+            {"control": "SUPERPOWERS", "result": "FAIL", "reason_code": "MISSING_EVIDENCE"},
+        )
+
+    def test_failure_documents_preserve_missing_and_invalid_evidence(self):
+        collector = load_collector()
+        policy = json.loads((HERE.parent / "agent-workflow.json").read_text())["audit"]
+        missing = collector._failure_document(policy, "AUDIT_SUPERPOWERS_MISSING")
+        unreadable = collector._failure_document(policy, "AUDIT_PROVENANCE_UNREADABLE")
+        self.assertEqual(missing["verification"]["controls"][-1]["reason_code"], "MISSING_EVIDENCE")
+        self.assertEqual(unreadable["verification"]["controls"][-1]["reason_code"], "INVALID_EVIDENCE")
 
     def test_skill_outside_plugin_is_rejected(self):
         collector = load_collector()

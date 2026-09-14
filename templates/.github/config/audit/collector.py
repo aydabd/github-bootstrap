@@ -149,7 +149,13 @@ def _record(data, policy, provenance, result, control_result, reason):
     for control in ("AUDIT_INTEGRITY", "AUDIT_PRIVACY", "AUDIT_SCHEMA", "PROVENANCE_SCHEMA", "SUPERPOWERS"):
         controls.append({"control": control, "result": "PASS", "reason_code": "NONE"})
     if result == "FAIL":
-        controls[-1] = {"control": "SUPERPOWERS", "result": control_result, "reason_code": reason}
+        if reason == "NONE":
+            controls.append({"control": "REQUIRED_CHECKS", "result": "FAIL", "reason_code": "MISSING_EVIDENCE"})
+        else:
+            controls[-1] = {"control": "SUPERPOWERS", "result": control_result, "reason_code": reason}
+    passed = sum(item["result"] == "PASS" for item in controls)
+    failed = sum(item["result"] == "FAIL" for item in controls)
+    skipped = sum(item["result"] == "SKIP" for item in controls)
     record = {
         "schema_version": 1,
         "record_type": "agent_work_audit",
@@ -168,7 +174,7 @@ def _record(data, policy, provenance, result, control_result, reason):
             "contains_prompt": False, "contains_credentials": False, "contains_personal_data": False,
         },
         "integrity": {"canonicalization": "RFC8785", "sha256": None},
-        "summary": {"passed": 0 if result == "FAIL" else len(controls), "failed": 1 if result == "FAIL" else 0, "skipped": 0, "approved_bypasses": 0},
+        "summary": {"passed": passed, "failed": failed, "skipped": skipped, "approved_bypasses": 0},
     }
     return record
 
@@ -258,7 +264,11 @@ def _failure_document(policy, code):
         "model": {"requested": None, "observed": None, "reasoning_effort": None, "assurance": "UNAVAILABLE"},
         "plugins": [], "skills": [],
     }
-    return _finalize(_record(data, policy, provenance, "FAIL", "FAIL", code if code in {"MISSING_EVIDENCE", "INVALID_EVIDENCE"} else "INVALID_EVIDENCE"), policy)
+    reason = {
+        "AUDIT_SUPERPOWERS_MISSING": "MISSING_EVIDENCE",
+        "AUDIT_PROVENANCE_UNREADABLE": "INVALID_EVIDENCE",
+    }.get(code, code if code in {"MISSING_EVIDENCE", "INVALID_EVIDENCE"} else "INVALID_EVIDENCE")
+    return _finalize(_record(data, policy, provenance, "FAIL", "FAIL", reason), policy)
 
 
 def main(argv=None):
