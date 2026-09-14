@@ -15,17 +15,17 @@ have access to administer the target repository.
 
 ## Scripts
 
-| Script                                   | Purpose                                                   |
-| ---------------------------------------- | --------------------------------------------------------- |
-| `setup-labels.sh`                        | Labels                                                    |
-| `setup-security-settings.sh`             | Security settings                                         |
-| `setup-repo-settings.sh`                 | Repository settings                                       |
-| `setup-ruleset.sh`                       | Repository rulesets                                       |
-| `validate-profile.sh`                    | Bootstrap profile validation                              |
-| `test-local-setup-scripts.sh`            | Test-only live E2E assertions                             |
-| `manage-app-setup.sh`                    | Deterministic App check/install/rotate/cleanup dispatcher |
-| `install-app-secrets.sh`                 | Temporary #215 compatibility installer boundary           |
-| `install-e2e-credentials.sh` | Temporary #215 E2E maintenance compatibility wrapper      |
+| Script                        | Purpose                                                   |
+| ----------------------------- | --------------------------------------------------------- |
+| `setup-labels.sh`             | Labels                                                    |
+| `setup-security-settings.sh`  | Security settings                                         |
+| `setup-repo-settings.sh`      | Repository settings                                       |
+| `setup-ruleset.sh`            | Repository rulesets                                       |
+| `validate-profile.sh`         | Bootstrap profile validation                              |
+| `test-local-setup-scripts.sh` | Test-only live E2E assertions                             |
+| `manage-app-setup.sh`         | Deterministic App check/install/rotate/cleanup dispatcher |
+| `install-app-secrets.sh`      | Temporary #215 compatibility installer boundary           |
+| `install-e2e-credentials.sh`  | Temporary #215 E2E maintenance compatibility wrapper      |
 
 Each script's `--help` output is the source of truth for options, defaults, and
 examples. Update the script help when behavior changes instead of duplicating
