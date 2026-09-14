@@ -21,9 +21,13 @@ on:
         required: true
         type: string
 
+permissions: {} # Jobs opt into only the repository access they require.
+
 jobs:
   delete-repo:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # Required by actions/checkout for the bootstrap workflow.
     environment: production-provisioning
     steps:
       - name: Dry-run check

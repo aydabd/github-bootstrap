@@ -62,6 +62,8 @@ permissions:
 jobs:
   setup-labels-and-security:
     uses: ./.github/workflows/setup-existing-repository.yml
+    permissions:
+      contents: read # Required by the reusable workflow's repository checkout.
     with:
       repo_owner: ${{ inputs.repo_owner }}
       repo_name: ${{ inputs.repo_name }}

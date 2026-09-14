@@ -276,10 +276,13 @@ on:
       BOOTSTRAP_MAINTENANCE_REVIEWER_APP_PRIVATE_KEY:
         required: false
 
+permissions: {} # Jobs opt into only the repository and Actions access they require.
+
 jobs:
   validate-provisioner:
     name: Validate Provisioner Profile
     runs-on: ubuntu-latest
+    permissions: {} # Profile validation uses inputs only; no GITHUB_TOKEN access is needed.
     outputs:
       profile: ${{ steps.profile.outputs.profile }}
       environment: ${{ steps.profile.outputs.environment }}
@@ -338,7 +341,6 @@ jobs:
       provisioner_profile: ${{ needs.validate-provisioner.outputs.profile }}
     permissions:
       contents: read
-      actions: write
 
     steps:
       - name: Resolve bootstrap repository
