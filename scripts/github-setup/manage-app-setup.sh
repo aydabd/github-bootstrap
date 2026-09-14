@@ -150,6 +150,25 @@ install_command() {
     return 1
 }
 
+rotate_command() {
+    local role="$1" file
+    check_profile "$role" || emit_failure "$role" profile-schema INVALID_PROFILE "use a supported credential profile"
+    case "$role" in
+        production-provisioner | e2e-provisioner) ;;
+        *) emit_failure "$role" rotate UNSUPPORTED_ROLE "rotation support is limited to provisioner profiles" ;;
+    esac
+    [ -d "${APP_CREDENTIAL_DIR:-}" ] || emit_failure "$role" credentials MISSING_CREDENTIALS "provide a protected credential directory"
+    for file in app-client-id app-client-secret app-refresh-token; do
+        [ -f "$APP_CREDENTIAL_DIR/$file" ] || emit_failure "$role" credentials MISSING_CREDENTIALS "provide all protected rotation files"
+    done
+    case "$(tr -d '\r\n' < "$APP_CREDENTIAL_DIR/app-refresh-token")" in
+        ghr_*) ;;
+        *) emit_failure "$role" rotate INVALID_REFRESH_TOKEN "refresh token must use the ghr_ prefix" ;;
+    esac
+    echo "rotate is not implemented" >&2
+    return 1
+}
+
 command_name="${1:-}"
 case "$command_name" in
     check)
@@ -162,8 +181,7 @@ case "$command_name" in
         ;;
     rotate)
         [ "$#" -eq 2 ] || usage
-        echo "rotate is not implemented" >&2
-        exit 1
+        rotate_command "$2"
         ;;
     cleanup)
         [ "$#" -eq 1 ] || usage
