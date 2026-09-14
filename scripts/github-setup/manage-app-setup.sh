@@ -184,6 +184,26 @@ rotate_command() {
         '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"rotate",evidence:"replacement token verified and installed atomically"}],summary:{passed:1,failed:0,skipped:0}}'
 }
 
+cleanup_command() {
+    local role="${APP_CREDENTIAL_ROLE:-}" file
+    case "$role" in
+        production-provisioner | e2e-provisioner | e2e-maintenance-fixture | e2e-maintenance-writer | e2e-maintenance-reviewer | production-maintenance-writer | production-maintenance-reviewer) ;;
+        *) emit_failure "$role" cleanup INVALID_ROLE "set APP_CREDENTIAL_ROLE to a supported profile" ;;
+    esac
+    [ -n "${APP_CREDENTIAL_DIR:-}" ] && [ -d "$APP_CREDENTIAL_DIR" ] ||
+        emit_failure "$role" cleanup MISSING_CREDENTIALS "provide the credential directory to clean"
+    case "$APP_CREDENTIAL_DIR" in
+        */github-bootstrap/"$role") ;;
+        *) emit_failure "$role" cleanup INVALID_CREDENTIAL_PATH "use the exact github-bootstrap role directory" ;;
+    esac
+    for file in app-manifest-code app-client-id app-client-secret app-private-key.pem app-refresh-token app-refresh-token.next app-access-token; do
+        rm -f "$APP_CREDENTIAL_DIR/$file"
+    done
+    rmdir "$APP_CREDENTIAL_DIR" 2> /dev/null || true
+    jq -cn --arg repository "$repository" --arg role "$role" \
+        '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"cleanup",evidence:"validated credential files removed"}],summary:{passed:1,failed:0,skipped:0}}'
+}
+
 command_name="${1:-}"
 case "$command_name" in
     check)
@@ -200,8 +220,7 @@ case "$command_name" in
         ;;
     cleanup)
         [ "$#" -eq 1 ] || usage
-        echo "cleanup is not implemented" >&2
-        exit 1
+        cleanup_command
         ;;
     *)
         usage
