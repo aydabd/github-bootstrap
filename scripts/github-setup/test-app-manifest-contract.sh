@@ -37,6 +37,7 @@ assert manifest["default_permissions"] == {
     "issues": "write",
     "metadata": "read",
     "secrets": "write",
+    "variables": "write",
     "workflows": "write",
 }
 PY
@@ -181,6 +182,7 @@ expected = {
             "issues": "write",
             "metadata": "read",
             "secrets": "write",
+            "variables": "write",
             "workflows": "write",
         },
     },
@@ -194,6 +196,7 @@ expected = {
             "issues": "write",
             "metadata": "read",
             "secrets": "write",
+            "variables": "write",
             "workflows": "write",
         },
     },
