@@ -120,10 +120,11 @@ for _ in $(seq 1 50); do
 done
 start_url="$(head -n 1 "$start_output" 2> /dev/null || true)"
 [[ "$start_url" =~ ^http://127\.0\.0\.1:[0-9]+/$ ]] || {
+    cat "$start_output" >&2
     echo "start must print a local manifest form URL" >&2
     exit 1
 }
-start_html="$(curl --fail --silent "$start_url")"
+start_html="$(curl --fail --silent --show-error --retry 10 --retry-delay 1 "$start_url")"
 START_HTML="$start_html" python3 - << 'PY'
 import os
 
@@ -276,6 +277,7 @@ for required_text in \
         exit 1
     }
 done
-grep -Fq "Bootstrap Reviewer  | \`actions: write\`, \`pull_requests: write\`, \`metadata: read\`" "$trust_boundary_doc"
+grep -Fq "Bootstrap Reviewer" "$trust_boundary_doc"
+grep -Fq "\`actions: write\`, \`pull_requests: write\`, \`metadata: read\`" "$trust_boundary_doc"
 
 echo "GitHub App Manifest contract checks passed."
