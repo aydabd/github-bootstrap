@@ -87,6 +87,34 @@ class QualityTrendsTests(unittest.TestCase):
         self.assertEqual(list(result["components"]), ["correctness"])
         self.assertEqual(result["score"], result["components"]["correctness"])
 
+    def test_penalties_are_monotonic_and_merge_time_affects_delivery(self):
+        quality = load_quality()
+        manifest = quality.policy(HERE.parent / "agent-workflow.json")
+        history = [outcome(index, f"2026-09-{index:02d}T12:00:00Z") for index in range(1, 6)]
+
+        def evaluate_current(current):
+            request_data = request(history)
+            request_data["current"] = current
+            return quality.evaluate(request_data, manifest)
+
+        fast = evaluate_current(outcome(218, "2026-09-14T12:00:00Z", score=1))
+        slow = evaluate_current(outcome(219, "2026-09-14T12:00:00Z", score=80))
+        self.assertGreater(fast["components"]["delivery_efficiency"], slow["components"]["delivery_efficiency"])
+
+        penalties = {
+            "compliance": {"unexpected_skips": 1},
+            "correctness": {"regressions": 1},
+            "review_quality": {"unresolved_threads": 1},
+            "delivery_efficiency": {"repeated_ci_failures": 1},
+            "process_improvement": {"process_refinement_recorded": False},
+        }
+        baseline = evaluate_current(outcome(220, "2026-09-14T12:00:00Z"))
+        for component, changes in penalties.items():
+            current = outcome(221, "2026-09-14T12:00:00Z")
+            current["evidence"].update(changes)
+            penalized = evaluate_current(current)
+            self.assertLess(penalized["components"][component], baseline["components"][component])
+
     def test_usage_failure_includes_schema_version(self):
         quality = load_quality()
         output = io.StringIO()
@@ -106,6 +134,14 @@ class QualityTrendsTests(unittest.TestCase):
         history[1]["evidence"].pop("signature_verified")
         result = quality.evaluate(request(history), quality.policy(HERE.parent / "agent-workflow.json"))
         self.assertEqual(result, {"schema_version": 1, "result": "FAIL", "error_code": "QUALITY_EVIDENCE_INVALID"})
+
+    def test_unavailable_evidence_fails_closed_without_echoing_input(self):
+        quality = load_quality()
+        history = [outcome(index, f"2026-09-{index:02d}T12:00:00Z") for index in range(1, 6)]
+        history[0]["evidence"]["hours_to_merge"] = None
+        result = quality.evaluate(request(history), quality.policy(HERE.parent / "agent-workflow.json"))
+        self.assertEqual(result, {"schema_version": 1, "result": "FAIL", "error_code": "QUALITY_EVIDENCE_INVALID"})
+        self.assertNotIn("None", json.dumps(result))
 
     def test_forbidden_input_is_rejected_without_echoing_value(self):
         quality = load_quality()
