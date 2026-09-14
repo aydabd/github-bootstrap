@@ -59,6 +59,17 @@ check_manifest() {
         "$script_dir/../../docs/github-app-manifests/$manifest_name.json" > /dev/null
 }
 
+check_isolation() {
+    jq -e '
+        .["production-provisioner"].environment != .["e2e-provisioner"].environment and
+        .["production-maintenance-writer"].environment != .["e2e-maintenance-writer"].environment and
+        .["production-maintenance-reviewer"].environment != .["e2e-maintenance-reviewer"].environment and
+        .["production-provisioner"].refresh_token_secret != .["e2e-provisioner"].refresh_token_secret and
+        .["production-maintenance-writer"].private_key_secret != .["e2e-maintenance-writer"].private_key_secret and
+        .["production-maintenance-reviewer"].private_key_secret != .["e2e-maintenance-reviewer"].private_key_secret
+    ' "$profile_file" > /dev/null
+}
+
 check_command() {
     local expected_roles='["e2e-maintenance-fixture","e2e-maintenance-reviewer","e2e-maintenance-writer","e2e-provisioner","production-maintenance-reviewer","production-maintenance-writer","production-provisioner"]'
     local checks='[]' role result overall="PASS"
@@ -81,6 +92,14 @@ check_command() {
         checks="$(jq -c --arg result "$result" --arg role "$role" \
             '. + [{result:$result,role:$role,check:"manifest",evidence:"role manifest exists and has a name"}]' <<< "$checks")"
     done < <(jq -r 'keys[]' "$profile_file")
+    if check_isolation; then
+        result="PASS"
+    else
+        result="FAIL"
+        overall="FAIL"
+    fi
+    checks="$(jq -c --arg result "$result" \
+        '. + [{result:$result,role:"global",check:"production-e2e-isolation",evidence:"environments and credential names are distinct"}]' <<< "$checks")"
     jq -cn --arg result "$overall" --arg repository "$repository" --argjson checks "$checks" \
         '{schema_version:1,result:$result,repository:$repository,checks:$checks,summary:{passed:($checks|map(select(.result=="PASS"))|length),failed:($checks|map(select(.result=="FAIL"))|length),skipped:($checks|map(select(.result=="SKIP"))|length)}}'
     [ "$overall" = PASS ]
