@@ -1,9 +1,12 @@
 """TDD contract for Phase 5 quality trends."""
 
 import importlib.util
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from copy import deepcopy
 from pathlib import Path
 
 
@@ -67,6 +70,29 @@ class QualityTrendsTests(unittest.TestCase):
         self.assertEqual(result["raw"]["compliance"]["outcomes"], 5)
         self.assertGreaterEqual(result["score"], 0)
         self.assertLessEqual(result["score"], 100)
+
+    def test_pass_reports_full_eligible_cohort_before_selection(self):
+        quality = load_quality()
+        history = [outcome(index, f"2026-09-{index:02d}T12:00:00Z") for index in range(1, 7)]
+        result = quality.evaluate(request(history), quality.policy(HERE.parent / "agent-workflow.json"))
+        self.assertEqual(result["cohort"], {"eligible_count": 6, "required_count": 5})
+        self.assertEqual(result["raw"]["compliance"]["outcomes"], 5)
+
+    def test_component_output_names_follow_manifest_policy(self):
+        quality = load_quality()
+        manifest_policy = quality.policy(HERE.parent / "agent-workflow.json")
+        custom_policy = deepcopy(manifest_policy)
+        custom_policy["components"] = ["correctness"]
+        result = quality.evaluate(request([outcome(index, f"2026-09-{index:02d}T12:00:00Z") for index in range(1, 6)]), custom_policy)
+        self.assertEqual(list(result["components"]), ["correctness"])
+        self.assertEqual(result["score"], result["components"]["correctness"])
+
+    def test_usage_failure_includes_schema_version(self):
+        quality = load_quality()
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.assertEqual(quality.main([]), 1)
+        self.assertEqual(json.loads(output.getvalue()), {"schema_version": 1, "result": "FAIL", "error_code": "AUDIT_USAGE"})
 
     def test_insufficient_cohort_does_not_publish_trend(self):
         quality = load_quality()

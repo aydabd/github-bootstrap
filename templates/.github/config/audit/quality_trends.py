@@ -121,19 +121,19 @@ def evaluate(data, quality):
     if len(cohort) < required:
         return {"schema_version": 1, "result": "SKIP", "reason_code": "INSUFFICIENT_COHORT", "cohort": {"eligible_count": len(cohort), "required_count": required}}
     selected = cohort[:required]
-    component_names = ["compliance", "correctness", "review_quality", "delivery_efficiency", "process_improvement"]
+    component_names = quality["components"]
     current_components = _component_scores(current)
     cohort_components = [_component_scores(item) for item in selected]
     components = {name: current_components[name] for name in component_names}
     score = round(sum(components.values()) / len(components), 2)
     cohort_average = round(sum(sum(scores.values()) / len(scores) for scores in cohort_components) / len(cohort_components), 2)
-    return {"schema_version": 1, "result": "PASS", "cohort": {"eligible_count": len(selected), "required_count": required}, "raw": _raw(selected), "components": components, "score": score, "trend": {"cohort_average": cohort_average, "delta": round(score - cohort_average, 2)}}
+    return {"schema_version": 1, "result": "PASS", "cohort": {"eligible_count": len(cohort), "required_count": required}, "raw": _raw(selected), "components": components, "score": score, "trend": {"cohort_average": cohort_average, "delta": round(score - cohort_average, 2)}}
 
 
 def main(argv=None):
     args = list(sys.argv[1:] if argv is None else argv)
     if len(args) != 4 or args[0] != "--input" or args[2] != "--manifest":
-        print('{"result":"FAIL","error_code":"AUDIT_USAGE"}')
+        print('{"schema_version":1,"result":"FAIL","error_code":"AUDIT_USAGE"}')
         return 1
     try:
         with open(args[1], encoding="utf-8") as source:
