@@ -122,11 +122,25 @@ install_command() {
     case "$role" in
         production-provisioner | e2e-provisioner)
             local credential_file
+            local installer_log
             for credential_file in app-client-id app-private-key.pem app-client-secret app-refresh-token; do
                 if [ ! -f "$APP_CREDENTIAL_DIR/$credential_file" ]; then
                     emit_failure "$role" credentials MISSING_CREDENTIALS "provide all protected credential files"
                 fi
             done
+            installer_log="$(mktemp)"
+            if ! GH_TOKEN="${GH_TOKEN:-}" "$script_dir/install-app-secrets.sh" \
+                "$repository" "$role" "$APP_CREDENTIAL_DIR/app-client-id" \
+                "$APP_CREDENTIAL_DIR/app-private-key.pem" \
+                "$APP_CREDENTIAL_DIR/app-client-secret" \
+                "$APP_CREDENTIAL_DIR/app-refresh-token" > "$installer_log" 2>&1; then
+                rm -f "$installer_log"
+                emit_failure "$role" install INSTALL_FAILED "inspect protected installer diagnostics"
+            fi
+            rm -f "$installer_log"
+            jq -cn --arg repository "$repository" --arg role "$role" \
+                '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"install",evidence:"protected installer completed"}],summary:{passed:1,failed:0,skipped:0}}'
+            return 0
             ;;
         *)
             emit_failure "$role" install UNSUPPORTED_ROLE "installer support is not available for this role"
