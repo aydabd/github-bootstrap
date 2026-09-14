@@ -13,8 +13,14 @@ cp -R "$repo_root/templates/.github/config" "$generated_root/.github/config"
     printf '{"schema_version":1,"result":"FAIL","error_code":"AUDIT_TEST_TOOL_UNAVAILABLE"}\n'
     exit 1
 }
-result="$("$python_bin" "$repo_root/templates/.github/config/audit-tests/test_bypass_governance.py")"
-generated_result="$("$python_bin" "$generated_root/.github/config/audit-tests/test_bypass_governance.py")"
+result="$($python_bin "$repo_root/templates/.github/config/audit-tests/test_bypass_governance.py")" || {
+    printf '{"schema_version":1,"result":"FAIL","error_code":"AUDIT_GOVERNANCE_TEST_FAILED"}\n'
+    exit 1
+}
+generated_result="$($python_bin "$generated_root/.github/config/audit-tests/test_bypass_governance.py")" || {
+    printf '{"schema_version":1,"result":"FAIL","error_code":"AUDIT_GOVERNANCE_TEST_FAILED"}\n'
+    exit 1
+}
 [ "$result" = "$generated_result" ] || {
     printf '{"schema_version":1,"result":"FAIL","error_code":"AUDIT_TEMPLATE_PARITY"}\n'
     exit 1

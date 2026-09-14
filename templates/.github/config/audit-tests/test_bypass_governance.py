@@ -90,6 +90,26 @@ class BypassGovernanceTests(unittest.TestCase):
         self.assertEqual(output.getvalue(), '{"result":"FAIL","error_code":"BYPASS_INPUT_INVALID"}\n')
         self.assertNotIn("SECRET", output.getvalue())
 
+    def test_boolean_evidence_id_is_rejected(self):
+        governance = load_governance()
+        record = {"repository": "aydabd/repository", "subject": {"issue": 218, "pull_request": 227, "base_sha": "b" * 40, "head_sha": "a" * 40}, "bypasses": [bypass()], "events": events(["REQUESTED", "APPROVED", "EXERCISED"])}
+        record["bypasses"][0]["approval_reference"]["id"] = True
+        result = governance.evaluate(record, policy())
+        self.assertEqual(result, {"result": "FAIL", "error_code": "BYPASS_BINDING_INVALID"})
+
+    def test_unhashable_control_is_a_binding_failure(self):
+        governance = load_governance()
+        record = {"repository": "aydabd/repository", "subject": {"issue": 218, "pull_request": 227, "base_sha": "b" * 40, "head_sha": "a" * 40}, "bypasses": [bypass()], "events": events(["REQUESTED", "APPROVED", "EXERCISED"])}
+        record["bypasses"][0]["control"] = []
+        result = governance.evaluate(record, policy())
+        self.assertEqual(result, {"result": "FAIL", "error_code": "BYPASS_BINDING_INVALID"})
+
+    def test_approved_bypass_can_expire_with_complete_transition(self):
+        governance = load_governance()
+        record = {"repository": "aydabd/repository", "subject": {"issue": 218, "pull_request": 227, "base_sha": "b" * 40, "head_sha": "a" * 40}, "bypasses": [bypass(state="EXPIRED", expires="2026-09-14T13:00:00Z")], "events": events(["REQUESTED", "APPROVED", "EXPIRED"])}
+        result = governance.evaluate(record, policy(), datetime(2026, 9, 15, tzinfo=timezone.utc))
+        self.assertEqual(result, {"result": "FAIL", "error_code": "BYPASS_EXPIRED"})
+
 
 if __name__ == "__main__":
     unittest.main()

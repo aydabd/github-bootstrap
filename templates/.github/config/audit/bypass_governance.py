@@ -24,14 +24,19 @@ def _timestamp(value):
 
 
 def _reference_valid(reference, sha):
-    return isinstance(reference, dict) and reference.get("kind") in {"CHECK_RUN", "WORKFLOW_RUN", "SANITIZED_ARTIFACT"} and isinstance(reference.get("id"), int) and reference.get("id") > 0 and reference.get("sha") == sha and reference.get("assurance") == "GITHUB_VERIFIED"
+    return isinstance(reference, dict) and reference.get("kind") in {"CHECK_RUN", "WORKFLOW_RUN", "SANITIZED_ARTIFACT"} and not isinstance(reference.get("id"), bool) and isinstance(reference.get("id"), int) and reference.get("id") > 0 and reference.get("sha") == sha and reference.get("assurance") == "GITHUB_VERIFIED"
 
 
 def _binding_valid(item, record, policy):
     subject = record.get("subject", {})
-    if item.get("control") not in policy["controls"] or not policy["controls"][item["control"]]["human_exception_eligible"]:
+    control = item.get("control")
+    if not isinstance(control, str) or control not in policy["controls"] or not policy["controls"][control]["human_exception_eligible"]:
         return False
-    if item.get("issue") != subject.get("issue") or item.get("sha") != subject.get("head_sha") or not SHA.fullmatch(item.get("sha", "")):
+    bypass_id = item.get("id")
+    item_sha = item.get("sha")
+    if isinstance(bypass_id, bool) or not isinstance(bypass_id, int) or bypass_id < 1:
+        return False
+    if item.get("issue") != subject.get("issue") or item_sha != subject.get("head_sha") or not isinstance(item_sha, str) or not SHA.fullmatch(item_sha):
         return False
     requester = item.get("requesting_human_id")
     approver = item.get("approving_human_id")
@@ -41,9 +46,10 @@ def _binding_valid(item, record, policy):
     expires = _timestamp(item.get("expires_at"))
     if requested is None or expires is None or expires <= requested or expires > requested + timedelta(seconds=policy["bypasses"]["maximum_validity_seconds"]):
         return False
-    if not isinstance(item.get("compensating_controls"), list) or not item["compensating_controls"] or len(set(item["compensating_controls"])) != len(item["compensating_controls"]):
+    controls = item.get("compensating_controls")
+    if not isinstance(controls, list) or not controls or not all(isinstance(control, str) for control in controls) or len(set(controls)) != len(controls):
         return False
-    if any(control not in policy["controls"] for control in item["compensating_controls"]):
+    if any(control not in policy["controls"] for control in controls):
         return False
     if item.get("state") in {"APPROVED", "EXERCISED"} and not _reference_valid(item.get("approval_reference"), item["sha"]):
         return False
@@ -51,9 +57,9 @@ def _binding_valid(item, record, policy):
 
 
 def _events_valid(item, events):
-    expected = {"REQUESTED": ["REQUESTED"], "APPROVED": ["REQUESTED", "APPROVED"], "EXERCISED": ["REQUESTED", "APPROVED", "EXERCISED"], "DENIED": ["REQUESTED", "DENIED"], "EXPIRED": ["REQUESTED", "EXPIRED"]}.get(item.get("state"))
+    expected = {"REQUESTED": [["REQUESTED"]], "APPROVED": [["REQUESTED", "APPROVED"]], "EXERCISED": [["REQUESTED", "APPROVED", "EXERCISED"]], "DENIED": [["REQUESTED", "DENIED"]], "EXPIRED": [["REQUESTED", "EXPIRED"], ["REQUESTED", "APPROVED", "EXPIRED"]]}.get(item.get("state"), [])
     actual = [event.get("type", "").removeprefix("BYPASS_") for event in sorted(events, key=lambda event: event.get("sequence", 0)) if event.get("bypass_id") == item.get("id")]
-    return expected == actual
+    return actual in expected
 
 
 def _validate_item(item, record, policy, now):
@@ -64,8 +70,10 @@ def _validate_item(item, record, policy, now):
         return "BYPASS_TRANSITION_INVALID"
     if item["state"] == "EXPIRED" and now < _timestamp(item["expires_at"]):
         return "BYPASS_TRANSITION_INVALID"
-    if item["state"] not in {"APPROVED", "EXERCISED"}:
-        return "BYPASS_TRANSITION_INVALID"
+    if item["state"] == "EXPIRED":
+        return "BYPASS_EXPIRED"
+    if item["state"] in {"REQUESTED", "DENIED"}:
+        return "BYPASS_NOT_APPROVED"
     return None
 
 
