@@ -11,6 +11,7 @@ contract_tests=(
     "$script_dir/test-conda-lock-workflow-contract.sh"
     "$script_dir/test-mise-lock-contract.sh"
     "$script_dir/test-action-lint-contract.sh"
+    "$script_dir/test-workflow-permissions-contract.sh"
     "$script_dir/test-quality-contract.sh"
     "$script_dir/test-workflow-asset-sync-contract.sh"
     "$script_dir/test-precommit-sha-pins-contract.sh"
