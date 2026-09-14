@@ -1900,6 +1900,45 @@
         "exit_code": 1
       }
     },
+    "quality": {
+      "required_cohort_size": 5,
+      "cohort_fields": ["work_type", "risk", "effort"],
+      "cohort_values": {
+        "work_type": ["Epic", "Story", "Task", "Bug", "Security", "Research", "Maintenance"],
+        "risk": ["Low", "Medium", "High"],
+        "effort": ["XS", "S", "M", "L", "XL"]
+      },
+      "components": [
+        "compliance",
+        "correctness",
+        "review_quality",
+        "delivery_efficiency",
+        "process_improvement"
+      ],
+      "evidence_fields": [
+        "provenance_complete",
+        "signature_verified",
+        "unexpected_skips",
+        "unauthorized_bypasses",
+        "required_checks_failed",
+        "regressions",
+        "reverts",
+        "reopened",
+        "actionable_findings",
+        "actionable_resolved",
+        "stale_approvals",
+        "unresolved_threads",
+        "hours_to_merge",
+        "pushes_after_first_ci",
+        "repeated_ci_failures",
+        "process_refinement_recorded"
+      ],
+      "invalid_input": "FAIL with fixed reason code and no rejected values",
+      "insufficient_cohort": "SKIP with fixed reason code until five eligible outcomes exist",
+      "score": { "minimum": 0, "maximum": 100, "precision": 2 },
+      "people_and_models": "metadata only unless provider attested",
+      "source": "sanitized Phase 2, Phase 3 and Phase 4 records"
+    },
     "phase_boundaries": {
       "1": "Policy, schema and synthetic contract tests only.",
       "2": "Local provenance, safe serialization, integrity and transient-evidence cleanup.",
