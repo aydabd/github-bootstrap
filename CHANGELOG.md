@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.7.0](https://github.com/aydabd/github-bootstrap/compare/v2.6.0...v2.7.0) (2026-09-14)
+
+
+### Features
+
+* add local provenance collector ([#222](https://github.com/aydabd/github-bootstrap/issues/222)) ([b104af9](https://github.com/aydabd/github-bootstrap/commit/b104af99c3bb1b255643bcf955bd675085766def))
+
+
+### Bug Fixes
+
+* scope workflow token permissions ([#225](https://github.com/aydabd/github-bootstrap/issues/225)) ([2086e1a](https://github.com/aydabd/github-bootstrap/commit/2086e1a538edc37ab5a6eb6593c582d29052ff18))
+
 ## [2.6.0](https://github.com/aydabd/github-bootstrap/compare/v2.5.0...v2.6.0) (2026-09-13)
 
 
