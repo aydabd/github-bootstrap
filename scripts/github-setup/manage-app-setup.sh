@@ -85,15 +85,37 @@ check_command() {
     [ "$overall" = PASS ]
 }
 
+emit_failure() {
+    local role="$1" check="$2" error_code="$3" remediation="$4"
+    jq -cn --arg repository "$repository" --arg role "$role" --arg check "$check" \
+        --arg error_code "$error_code" --arg remediation "$remediation" \
+        '{schema_version:1,result:"FAIL",repository:$repository,checks:[{result:"FAIL",role:$role,check:$check,error_code:$error_code,remediation:$remediation}],summary:{passed:0,failed:1,skipped:0}}'
+    return 1
+}
+
+install_command() {
+    local role="$1"
+    check_profile "$role" || emit_failure "$role" profile-schema INVALID_PROFILE "use a supported credential profile"
+    if [ ! -d "${APP_CREDENTIAL_DIR:-}" ]; then
+        emit_failure "$role" credentials MISSING_CREDENTIALS "provide a protected credential directory"
+    fi
+    echo "install is not implemented" >&2
+    return 1
+}
+
 command_name="${1:-}"
 case "$command_name" in
     check)
         [ "$#" -eq 1 ] || usage
         check_command
         ;;
-    install | rotate)
+    install)
         [ "$#" -eq 2 ] || usage
-        echo "${command_name} is not implemented" >&2
+        install_command "$2"
+        ;;
+    rotate)
+        [ "$#" -eq 2 ] || usage
+        echo "rotate is not implemented" >&2
         exit 1
         ;;
     cleanup)
