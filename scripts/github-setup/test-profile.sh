@@ -43,6 +43,10 @@ if grep -Eq '^  (push|pull_request|workflow_dispatch):' "$repo_root/templates/ce
 fi
 grep -q '{{CENTRAL_REPOSITORY}}/.github/workflows/quality.yml@{{CENTRAL_REF}}' "$repo_root/templates/.github/workflows/centralized-quality.yml"
 grep -qF "name: quality (\${{ matrix['environment-manager'] }})" "$repo_root/.github/workflows/test-quality-providers.yml"
+if grep -Fq "tools/go.mod" "$repo_root/templates/.github/workflows/test-quality-providers.yml"; then
+    echo "templated test-quality-providers.yml must not reference the bootstrap repository's own tools/go.mod: generated repositories do not have a tools/ directory" >&2
+    exit 1
+fi
 grep -q '^  workflow_dispatch:' "$repo_root/.github/workflows/coderabbit-dependabot-review.yml"
 grep -q '^  workflow_dispatch:' "$repo_root/templates/.github/workflows/coderabbit-dependabot-review.yml"
 if grep -q '^  pull_request_target:' "$repo_root/.github/workflows/coderabbit-dependabot-review.yml"; then
@@ -98,6 +102,27 @@ for creation_workflow in \
     grep -q 'scripts/select-generated-workflows.sh' "$creation_workflow"
     grep -q 'select new-repo' "$creation_workflow"
     grep -q 'bind-e2e new-repo' "$creation_workflow"
+    if awk '/name: Remove unselected workflows/,/select-generated-workflows.sh select new-repo/' \
+        "$creation_workflow" | grep -q 'cd new-repo'; then
+        echo "Remove unselected workflows step must not cd into new-repo before calling the repo-root-relative select-generated-workflows.sh script: $creation_workflow" >&2
+        exit 1
+    fi
+    grep -qF "group: provisioner-token-\${{ inputs.provisioner_profile || 'production-provisioner' }}" "$creation_workflow"
+    if ! awk '/^jobs:/{exit} /^concurrency:/{found=1} END{exit !found}' "$creation_workflow"; then
+        echo "provisioner-token concurrency must be a workflow-level group, not job-level: $creation_workflow" >&2
+        exit 1
+    fi
+    grep -qF "cancel-in-progress: false" "$creation_workflow"
+    if ! awk '/name: Wait for repository initialization/{f=1} f && /name: Clone new repository/{exit} f && /name: Configure E2E maintenance Writer credentials before push/{found=1} END{exit !found}' \
+        "$creation_workflow"; then
+        echo "E2E Writer credentials must be provisioned between repository creation and the initial push: $creation_workflow" >&2
+        exit 1
+    fi
+    if ! awk '/name: Wait for repository initialization/{f=1} f && /name: Clone new repository/{exit} f && /name: Configure E2E maintenance Reviewer credentials before push/{found=1} END{exit !found}' \
+        "$creation_workflow"; then
+        echo "E2E Reviewer credentials must be provisioned between repository creation and the initial push: $creation_workflow" >&2
+        exit 1
+    fi
     if grep -q 'KEEP_FILES=' "$creation_workflow"; then
         echo "workflow bundle mapping must live in the shared helper: $creation_workflow" >&2
         exit 1

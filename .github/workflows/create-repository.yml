@@ -278,6 +278,10 @@ on:
 
 permissions: {} # Jobs opt into only the repository and Actions access they require.
 
+concurrency:
+  group: provisioner-token-${{ inputs.provisioner_profile || 'production-provisioner' }}
+  cancel-in-progress: false
+
 jobs:
   validate-provisioner:
     name: Validate Provisioner Profile
@@ -613,7 +617,66 @@ jobs:
             echo "repo_created=true" >> "$GITHUB_OUTPUT"
 
       - name: Wait for repository initialization
-        run: sleep 5
+        env:
+          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          OWNER: ${{ steps.set-owner.outputs.owner }}
+          REPO_NAME: ${{ inputs.repo_name }}
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 30); do
+            default_branch="$(gh api "/repos/$OWNER/$REPO_NAME" --jq '.default_branch // empty' 2> /dev/null || true)"
+            if [ -n "$default_branch" ] && gh api "/repos/$OWNER/$REPO_NAME/git/refs/heads/$default_branch" > /dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Repository $OWNER/$REPO_NAME did not become initialized in time." >&2
+          exit 1
+
+      - name: Resolve E2E provisioner token for early credential provisioning
+        id: early-provisioner-token
+        if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner'
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ steps.set-owner.outputs.owner }}
+          permission_profile: repository-setup
+          repositories: ${{ inputs.repo_name }}
+
+      - name: Configure E2E maintenance Writer credentials before push
+        if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner'
+        uses: ./.github/actions/configure-provisioner-credentials
+        env:
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY }}
+        with:
+          repository: ${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}
+          target_owner: ${{ steps.set-owner.outputs.owner }}
+          repository_name: ${{ inputs.repo_name }}
+          github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
+          profile: e2e-writer
+          environment: e2e
+          client_id: ${{ vars.BOOTSTRAP_E2E_WRITER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_E2E_WRITER_APP_SLUG }}
+          gh_token: ${{ steps.early-provisioner-token.outputs.token }}
+
+      - name: Configure E2E maintenance Reviewer credentials before push
+        if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner'
+        uses: ./.github/actions/configure-provisioner-credentials
+        env:
+          APP_PRIVATE_KEY: ${{ secrets.BOOTSTRAP_E2E_REVIEWER_APP_PRIVATE_KEY }}
+        with:
+          repository: ${{ steps.set-owner.outputs.owner }}/${{ inputs.repo_name }}
+          target_owner: ${{ steps.set-owner.outputs.owner }}
+          repository_name: ${{ inputs.repo_name }}
+          github_api_url: ${{ inputs.github_host == 'github.com' && 'https://api.github.com' || format('https://{0}/api/v3', inputs.github_host) }}
+          profile: e2e-reviewer
+          environment: e2e
+          client_id: ${{ vars.BOOTSTRAP_E2E_REVIEWER_APP_CLIENT_ID }}
+          app_slug: ${{ vars.BOOTSTRAP_E2E_REVIEWER_APP_SLUG }}
+          gh_token: ${{ steps.early-provisioner-token.outputs.token }}
 
       - name: Clone new repository
         env:
@@ -699,12 +762,10 @@ jobs:
               -e "s|{{QUALITY_CAPABILITIES}}|$PROFILE_CAPABILITIES|g" \
               -e "s|{{ENV_MANAGER}}|${{ steps.validate-inputs.outputs.env_manager }}|g" \
               .github/workflows/centralized-quality.yml
-            jq \
-              --arg repository "$CENTRAL_REPOSITORY" \
-              --arg ref "$CENTRAL_REF" \
-              '.delivery_modes.centralized.repository = $repository | .delivery_modes.centralized.ref = $ref' \
-              .github/config/bootstrap-profile.json > .github/config/bootstrap-profile.json.tmp
-            mv .github/config/bootstrap-profile.json.tmp .github/config/bootstrap-profile.json
+            sed -i \
+              -e "s|{{CENTRAL_REPOSITORY}}|$CENTRAL_REPOSITORY|g" \
+              -e "s|{{CENTRAL_REF}}|$CENTRAL_REF|g" \
+              .github/config/bootstrap-profile.json
             rm -rf .github/actions/quality .github/workflows/quality.yml .github/workflows/quality-capability.yml
             mv .github/workflows/centralized-quality.yml .github/workflows/quality.yml
             echo "✅ Quality implementation centralized at $CENTRAL_REPOSITORY@$CENTRAL_REF" >> "$GITHUB_STEP_SUMMARY"
@@ -714,6 +775,10 @@ jobs:
               -e "s|{{ENV_MANAGER}}|${{ steps.validate-inputs.outputs.env_manager }}|g" \
               .github/workflows/quality.yml \
               .github/workflows/quality-capability.yml
+            sed -i \
+              -e "s|{{CENTRAL_REPOSITORY}}||g" \
+              -e "s|{{CENTRAL_REF}}||g" \
+              .github/config/bootstrap-profile.json
             rm -f .github/workflows/centralized-quality.yml
             echo "✅ Quality implementation embedded in generated repository" >> "$GITHUB_STEP_SUMMARY"
           fi

@@ -15,7 +15,7 @@ printf '%s' "$output" | jq -e '
     .result == "PASS" and
     .repository == "aydabd/github-bootstrap" and
     (.checks | length) > 0 and
-    ([.checks[] | select(.check == "manifest") ] | length) == 7 and
+    ([.checks[] | select(.check == "manifest") ] | length) == 8 and
     (all(.checks[] | select(.check == "manifest"); .result == "PASS")) and
     ([.checks[] | select(.check == "production-e2e-isolation") ] | length) == 1 and
     (all(.checks[] | select(.check == "production-e2e-isolation"); .result == "PASS")) and
@@ -109,6 +109,34 @@ grep -Fq 'variable set BOOTSTRAP_E2E_WRITER_APP_SLUG --repo aydabd/github-bootst
 grep -Fq 'secret set BOOTSTRAP_E2E_WRITER_APP_PRIVATE_KEY --repo aydabd/github-bootstrap --env e2e' "$FAKE_GH_LOG"
 if grep -Eiq 'fixture-token|BEGIN PRIVATE KEY|123456|bootstrap-e2e-writer' "$fixture_root/install.json"; then
     echo "install output leaked credential-like material" >&2
+    exit 1
+fi
+
+production_credentials="$fixture_root/github-bootstrap/production-writer"
+mkdir -p "$production_credentials"
+chmod 700 "$production_credentials"
+printf '654321\n' > "$production_credentials/app-client-id"
+printf 'bootstrap-writer\n' > "$production_credentials/app-slug"
+printf '%s\n' '-----BEGIN PRIVATE KEY-----' 'production-key' '-----END PRIVATE KEY-----' > \
+    "$production_credentials/app-private-key.pem"
+chmod 600 "$production_credentials"/*
+PATH="$fake_bin:$PATH" GH_TOKEN=fixture-token GITHUB_REPOSITORY=aydabd/github-bootstrap \
+    APP_CREDENTIAL_DIR="$production_credentials" "$orchestrator" install production-writer \
+    > "$fixture_root/production-install.json"
+[ "$(wc -l < "$fixture_root/production-install.json" | tr -d ' ')" -eq 1 ] || {
+    echo "production install must emit exactly one JSON result" >&2
+    exit 1
+}
+jq -e '
+    .result == "PASS" and
+    .checks[0].check == "install" and
+    .summary == {passed: 1, failed: 0, skipped: 0}
+' "$fixture_root/production-install.json" > /dev/null
+grep -Fq 'variable set BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID --repo aydabd/github-bootstrap --env production --body 654321' "$FAKE_GH_LOG"
+grep -Fq 'variable set BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG --repo aydabd/github-bootstrap --env production --body bootstrap-writer' "$FAKE_GH_LOG"
+grep -Fq 'secret set BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY --repo aydabd/github-bootstrap --env production' "$FAKE_GH_LOG"
+if grep -Eiq 'fixture-token|BEGIN PRIVATE KEY|654321|bootstrap-writer' "$fixture_root/production-install.json"; then
+    echo "production install output leaked credential-like material" >&2
     exit 1
 fi
 

@@ -118,10 +118,11 @@ printf '%s\\n' "\$*" >> "$gh_calls"
 exit 99
 EOF
 chmod +x "$test_tmp_dir/bin/gh"
-printf '123456789\\n' > "$test_tmp_dir/client-id"
-printf '%s\\n' '-----BEGIN PRIVATE KEY-----' 'key' '-----END PRIVATE KEY-----' > "$test_tmp_dir/private-key"
-printf 'client-secret\\n' > "$test_tmp_dir/client-secret"
-printf 'ghr_test-token\\n' > "$test_tmp_dir/refresh-token"
+printf '123456789\n' > "$test_tmp_dir/client-id"
+printf '%s\n' '-----BEGIN PRIVATE KEY-----' 'key' '-----END PRIVATE KEY-----' > "$test_tmp_dir/private-key"
+printf 'client-secret\n' > "$test_tmp_dir/client-secret"
+printf 'ghr_test-token\n' > "$test_tmp_dir/refresh-token"
+chmod 600 "$test_tmp_dir/client-id" "$test_tmp_dir/private-key" "$test_tmp_dir/client-secret" "$test_tmp_dir/refresh-token"
 if GH_TOKEN=contract-test-token PATH="$test_tmp_dir/bin:$PATH" "$helper" \
     octo/repo unknown-profile "$test_tmp_dir/client-id" "$test_tmp_dir/private-key" \
     "$test_tmp_dir/client-secret" "$test_tmp_dir/refresh-token" \
@@ -132,6 +133,29 @@ fi
 grep -Fq 'unknown credential profile: unknown-profile' "$test_tmp_dir/installer-error"
 if [ -s "$gh_calls" ]; then
     echo "unknown credential profile must be rejected before GitHub mutation" >&2
+    exit 1
+fi
+
+mkdir "$test_tmp_dir/success-bin"
+cat > "$test_tmp_dir/success-bin/gh" << EOF
+#!/usr/bin/env bash
+printf '%s\\n' "\$*" >> "$gh_calls"
+exit 0
+EOF
+chmod +x "$test_tmp_dir/success-bin/gh"
+
+: > "$gh_calls"
+if ! GH_TOKEN=contract-test-token PATH="$test_tmp_dir/success-bin:$PATH" "$helper" \
+    octo/repo e2e-admin "$test_tmp_dir/client-id" "$test_tmp_dir/private-key" \
+    2> "$test_tmp_dir/e2e-admin-error"; then
+    cat "$test_tmp_dir/e2e-admin-error" >&2
+    echo "four-file e2e-admin installation must succeed" >&2
+    exit 1
+fi
+grep -Fq 'variable set BOOTSTRAP_E2E_ADMIN_APP_CLIENT_ID --repo octo/repo --env e2e --body 123456789' "$gh_calls"
+grep -Fq 'secret set BOOTSTRAP_E2E_ADMIN_APP_PRIVATE_KEY --repo octo/repo --env e2e' "$gh_calls"
+if grep -q 'app_slug\|app-slug' "$gh_calls"; then
+    echo "e2e-admin installation must not set an App slug variable" >&2
     exit 1
 fi
 

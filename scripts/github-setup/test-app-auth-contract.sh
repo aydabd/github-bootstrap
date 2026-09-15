@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -89,6 +90,7 @@ assert_contains "Organization)" "$resolver"
 assert_contains "repository-creation|repository-cleanup|e2e-dispatch" "$resolver"
 assert_contains "e2e-dispatch" "$resolver"
 assert_contains "mode=app-user" "$resolver"
+assert_contains 'caller_owner="${GITHUB_REPOSITORY_OWNER:-${GITHUB_REPOSITORY%%/*}}"' "$resolver"
 assert_contains "owner: \${{ inputs.app_owner }}" "$resolver"
 assert_contains "permission-administration:" "$resolver"
 assert_contains "permission-contents:" "$resolver"
@@ -101,6 +103,8 @@ assert_contains "permission-pull-requests:" "$resolver"
 assert_contains "permission-actions:" "$resolver"
 assert_contains "inputs.permission_profile == 'repository-setup'" "$resolver"
 assert_contains "permission-environments:" "$resolver"
+assert_contains "inputs.permission_profile == 'repository-setup' && 'write'" "$resolver"
+assert_contains "permission-secrets:" "$resolver"
 assert_contains "inputs.permission_profile == 'repository-setup' && 'write'" "$resolver"
 assert_contains "workflow-approval" "$resolver"
 assert_contains "maintenance-review" "$resolver"
@@ -514,6 +518,13 @@ assert_contains "--field cleanup_on_failure=false" "$repo_root/.github/workflows
 assert_contains "app_user_refresh_token: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}" "$repo_root/.github/workflows/test-repository-creation.yml"
 assert_contains "app_client_secret: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}" "$repo_root/.github/workflows/test-repository-creation.yml"
 assert_contains "repositories: \${{ needs.create-test-repo.outputs.cleanup_repositories }}" "$repo_root/.github/workflows/test-repository-creation.yml"
+assert_contains "id: resolve-dispatch-token" "$repo_root/.github/workflows/test-repository-creation.yml"
+assert_contains "permission_profile: e2e-dispatch" "$repo_root/.github/workflows/test-repository-creation.yml"
+assert_contains "GH_TOKEN: \${{ steps.resolve-dispatch-token.outputs.token }}" "$repo_root/.github/workflows/test-repository-creation.yml"
+assert_contains "id: resolve-validation-token" "$repo_root/.github/workflows/test-repository-creation.yml"
+assert_contains "GH_TOKEN: \${{ steps.resolve-validation-token.outputs.token }}" "$repo_root/.github/workflows/test-repository-creation.yml"
+assert_contains "repositories: \${{ steps.generate-name.outputs.validation_repositories }}" "$repo_root/.github/workflows/test-repository-creation.yml"
+assert_not_contains "gh api /user --jq" "$repo_root/.github/workflows/test-repository-creation.yml"
 
 if grep -ERn 'APP_CLIENT_SECRET|app_client_secret|APP_USER_REFRESH_TOKEN|app_user_refresh_token' \
     "$repo_root/templates/.github"; then

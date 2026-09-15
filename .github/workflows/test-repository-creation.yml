@@ -171,9 +171,11 @@ jobs:
             CENTRAL_REPO_NAME="bootstrap-e2e-${TIMESTAMP}-system-centralized-central-workflows"
             echo "central_repo_name=${CENTRAL_REPO_NAME}" >> "$GITHUB_OUTPUT"
             echo "cleanup_repositories=${REPO_NAME},${CENTRAL_REPO_NAME}" >> "$GITHUB_OUTPUT"
+            echo "validation_repositories=${REPO_NAME},${CENTRAL_REPO_NAME}" >> "$GITHUB_OUTPUT"
           else
             REPO_NAME="test-${{ github.event.inputs.test_repo_name }}-${TIMESTAMP}"
             echo "cleanup_repositories=${REPO_NAME}" >> "$GITHUB_OUTPUT"
+            echo "validation_repositories=${REPO_NAME}" >> "$GITHUB_OUTPUT"
           fi
           echo "repo_name=${REPO_NAME}" >> "$GITHUB_OUTPUT"
           echo "Generated test repository name: ${REPO_NAME}"
@@ -383,10 +385,22 @@ jobs:
             --repository "$CENTRAL_REPO_NAME" \
             --seed-root templates/centralized-actions-workflows
 
+      - name: Resolve E2E dispatch token
+        id: resolve-dispatch-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ inputs.client_id }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: e2e-dispatch
+          repositories: ${{ github.event.repository.name }}
+
       - name: Trigger repository creation workflow
         id: trigger-workflow
         env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          GH_TOKEN: ${{ steps.resolve-dispatch-token.outputs.token }}
           TARGET_WORKFLOW: ${{ steps.validate-inputs.outputs.target_workflow }}
           TARGET_REF: ${{ steps.validate-inputs.outputs.target_ref }}
           REPO_NAME: ${{ steps.generate-name.outputs.repo_name }}
@@ -427,26 +441,22 @@ jobs:
             --field workflows="$WORKFLOWS" \
             --field delivery_mode="$DELIVERY_MODE" \
             --field central_repository="${CENTRAL_REPOSITORY}@${CENTRAL_REF}" \
+            --field app_owner="$REPO_OWNER" \
+            --field allowed_repo_owners="$REPO_OWNER" \
+            --field provisioner_profile="e2e-provisioner" \
             --field cleanup_on_failure="true"
-          DISPATCH_ACTOR=$(gh api /user --jq '.login')
-          if [ -z "$DISPATCH_ACTOR" ]; then
-            echo "::error::Failed to resolve dispatch actor from GH_TOKEN; cannot correlate workflow run"
-            exit 1
-          fi
           echo "workflow_triggered_at=$TRIGGERED_AT" >> "$GITHUB_OUTPUT"
-          echo "dispatch_actor=$DISPATCH_ACTOR" >> "$GITHUB_OUTPUT"
 
       - name: Monitor workflow execution
         env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          GH_TOKEN: ${{ steps.resolve-dispatch-token.outputs.token }}
           WORKFLOW_FILE: ${{ steps.validate-inputs.outputs.target_workflow }}
           TARGET_REF: ${{ steps.validate-inputs.outputs.target_ref }}
           REPOSITORY: ${{ github.repository }}
           TRIGGERED_AT: ${{ steps.trigger-workflow.outputs.workflow_triggered_at }}
-          DISPATCH_ACTOR: ${{ steps.trigger-workflow.outputs.dispatch_actor }}
         timeout-minutes: 10
         run: |
-          echo "⏳ Monitoring ${WORKFLOW_FILE} on ref ${TARGET_REF} (dispatch actor: ${DISPATCH_ACTOR})..."
+          echo "⏳ Monitoring ${WORKFLOW_FILE} on ref ${TARGET_REF}..."
 
           # Wait a moment for the workflow to be registered
           sleep 5
@@ -457,11 +467,10 @@ jobs:
             # This avoids relying on branch-only filtering so tag refs are supported.
             RUN_STATUS=$(gh api \
               "/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=20&event=workflow_dispatch" \
-              | jq -c --arg ref "$TARGET_REF" --arg since "$TRIGGERED_AT" --arg actor "$DISPATCH_ACTOR" '
+              | jq -c --arg ref "$TARGET_REF" --arg since "$TRIGGERED_AT" '
                   [.workflow_runs[]
                   | select(.head_branch == $ref)
                   | select(.created_at >= $since)
-                  | select(.actor.login == $actor)
                   | {status: .status, conclusion: .conclusion, html_url: .html_url}]
                   | first // {}')
 
@@ -499,10 +508,22 @@ jobs:
             fi
           done
 
+      - name: Resolve E2E validation token
+        id: resolve-validation-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ inputs.client_id }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: e2e-dispatch
+          repositories: ${{ steps.generate-name.outputs.validation_repositories }}
+
       - name: Verify repository was created
         id: verify-repo
         env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          GH_TOKEN: ${{ steps.resolve-validation-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
 
@@ -517,7 +538,7 @@ jobs:
 
       - name: Validate repository structure
         env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          GH_TOKEN: ${{ steps.resolve-validation-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
           ENV_MANAGER="${{ steps.validate-inputs.outputs.env_manager }}"
@@ -633,7 +654,7 @@ jobs:
 
       - name: Validate API parity for settings and rulesets
         env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          GH_TOKEN: ${{ steps.resolve-validation-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
           OWNER="${{ github.repository_owner }}"
@@ -738,7 +759,7 @@ jobs:
       - name: Validate centralized monorepo delivery
         if: steps.validate-inputs.outputs.preset == 'centralized-monorepo'
         env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          GH_TOKEN: ${{ steps.resolve-validation-token.outputs.token }}
           OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ steps.generate-name.outputs.repo_name }}
           CENTRAL_REPOSITORY: ${{ steps.seed-central.outputs.repository }}
@@ -792,7 +813,7 @@ jobs:
 
       - name: Validate agent kit structure
         env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          GH_TOKEN: ${{ steps.resolve-validation-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
           OWNER="${{ github.repository_owner }}"
@@ -862,7 +883,7 @@ jobs:
 
       - name: Check pre-commit configuration
         env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          GH_TOKEN: ${{ steps.resolve-validation-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
 
@@ -891,7 +912,7 @@ jobs:
 
       - name: Trigger quality workflow
         env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
+          GH_TOKEN: ${{ steps.resolve-validation-token.outputs.token }}
         run: |
           REPO_NAME="${{ steps.generate-name.outputs.repo_name }}"
           OWNER="${{ github.repository_owner }}"
@@ -902,11 +923,16 @@ jobs:
             for attempt in {1..60}; do
               run_json="$(gh api "/repos/${OWNER}/${REPO_NAME}/actions/workflows/quality.yml/runs?event=push&per_page=20" | jq -c --arg head_sha "$head_sha" '[.workflow_runs[] | select(.head_sha == $head_sha)] | first // {}')"
               if [ "$run_json" != "{}" ]; then
+                run_id="$(jq -r '.id' <<< "$run_json")"
                 run_status="$(jq -r '.status' <<< "$run_json")"
                 run_conclusion="$(jq -r '.conclusion // ""' <<< "$run_json")"
                 run_url="$(jq -r '.html_url' <<< "$run_json")"
                 if [ "$run_status" = "completed" ]; then
-                  [ "$run_conclusion" = "success" ] || { echo "quality workflow failed: $run_url" >&2; exit 1; }
+                  if [ "$run_conclusion" != "success" ]; then
+                    echo "quality workflow failed: $run_url" >&2
+                    gh run view "$run_id" --repo "${OWNER}/${REPO_NAME}" --log-failed || true
+                    exit 1
+                  fi
                   echo "✅ Consumer quality workflow passed: $run_url"
                   break
                 fi
@@ -928,7 +954,6 @@ jobs:
 
       - name: Write job summary
         env:
-          GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           PRESET: ${{ steps.validate-inputs.outputs.preset }}
           TARGET_WORKFLOW: ${{ steps.validate-inputs.outputs.target_workflow }}
           CLEANUP_AFTER_TEST: ${{ github.event.inputs.cleanup_after_test }}

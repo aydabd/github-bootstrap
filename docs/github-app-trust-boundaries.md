@@ -63,7 +63,7 @@ Store each App's GitHub-generated private key as a protected role-specific
 secret in the environment that owns that role. Use
 `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY` for the production Provisioner and
 `BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY` for the E2E Provisioner,
-`BOOTSTRAP_E2E_APP_PRIVATE_KEY` for the E2E Admin,
+`BOOTSTRAP_E2E_ADMIN_APP_PRIVATE_KEY` for the E2E Admin,
 `BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY` for the Writer, and
 `BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY` for the Reviewer.
 For the weekly Writer workflow, use the protected `production`

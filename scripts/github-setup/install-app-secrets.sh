@@ -12,6 +12,7 @@ source "$script_dir/gh-common.sh"
 usage() {
     cat >&2 << 'EOF'
 Usage: install-app-secrets.sh REPOSITORY PROFILE CLIENT_ID_FILE PRIVATE_KEY_FILE CLIENT_SECRET_FILE REFRESH_TOKEN_FILE
+    install-app-secrets.sh REPOSITORY e2e-admin CLIENT_ID_FILE PRIVATE_KEY_FILE
     install-app-secrets.sh REPOSITORY E2E_MAINTENANCE_PROFILE CLIENT_ID_FILE APP_SLUG_FILE PRIVATE_KEY_FILE
     install-app-secrets.sh REPOSITORY e2e-fixture CLIENT_ID_FILE APP_SLUG_FILE PRIVATE_KEY_FILE CLIENT_SECRET_FILE REFRESH_TOKEN_FILE
 
@@ -26,7 +27,7 @@ EOF
 repo="${1:-}"
 profile="${2:-}"
 client_id_file="${3:-}"
-[ "$#" -eq 5 ] || [ "$#" -eq 6 ] || [ "$#" -eq 7 ] || usage
+[ "$#" -eq 4 ] || [ "$#" -eq 5 ] || [ "$#" -eq 6 ] || [ "$#" -eq 7 ] || usage
 if [ -z "${GH_TOKEN:-}" ]; then
     echo "GH_TOKEN must be set before installing App secrets" >&2
     exit 1
@@ -64,11 +65,45 @@ require_protected_file() {
     }
 }
 require_protected_file "$client_id_file" "client ID file"
+if [ "$#" -eq 4 ]; then
+    [ "$profile" = e2e-admin ] || {
+        echo "four-file installation requires the e2e-admin profile" >&2
+        exit 1
+    }
+    private_key_file="${4:-}"
+    require_protected_file "$private_key_file" "private key file"
+    client_id="$(tr -d '\r\n' < "$client_id_file")"
+    [ -n "$client_id" ] || {
+        echo "client ID file is empty" >&2
+        exit 1
+    }
+    pem_first_line="$(sed -n '1p' "$private_key_file" | tr -d '\r')"
+    pem_last_line="$(sed '/^[[:space:]]*$/d' "$private_key_file" | tail -n 1 | tr -d '\r')"
+    if [[ "$pem_first_line" =~ ^-----BEGIN\ ([A-Z0-9]+\ )?PRIVATE\ KEY-----$ ]]; then
+        pem_label="${BASH_REMATCH[1]}"
+        expected_pem_end="-----END ${pem_label}PRIVATE KEY-----"
+    else
+        expected_pem_end=""
+    fi
+    if [ -z "$expected_pem_end" ] || [ "$pem_last_line" != "$expected_pem_end" ]; then
+        echo "private key file is not a PEM private key returned by GitHub" >&2
+        exit 1
+    fi
+    sanitized_private_key_file="$(mktemp)"
+    chmod 600 "$sanitized_private_key_file"
+    trap 'rm -f "$sanitized_private_key_file"' EXIT
+    tr -d '\r' < "$private_key_file" > "$sanitized_private_key_file"
+    printf '::add-mask::%s\n' "$client_id"
+    GH_TOKEN="$GH_TOKEN" gh variable set "$client_id_variable" --repo "$repo" --env "$environment" --body "$client_id"
+    GH_TOKEN="$GH_TOKEN" gh secret set "$private_key_secret" --repo "$repo" --env "$environment" < "$sanitized_private_key_file"
+    printf 'Installed E2E admin App credentials for %s\n' "$repo"
+    exit 0
+fi
 if [ "$#" -eq 5 ]; then
     case "$profile" in
-        e2e-writer | e2e-reviewer | e2e-fixture) ;;
+        e2e-writer | e2e-reviewer | e2e-fixture | production-writer | production-reviewer) ;;
         *)
-            echo "five-file installation requires an E2E maintenance profile" >&2
+            echo "five-file installation requires a maintenance profile" >&2
             exit 1
             ;;
     esac

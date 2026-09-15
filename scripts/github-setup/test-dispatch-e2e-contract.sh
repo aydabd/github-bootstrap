@@ -76,5 +76,8 @@ assert_contains ".total_count"
 assert_contains 'wait_for_workflow_run()'
 assert_contains 'label failed'
 assert_contains '[ "$status" = completed ]'
+assert_contains '--arg expected_sha "$expected_sha" \
+                --jq'
+assert_absent '--jq --arg expected_sha'
 
 echo "Dispatch E2E contract passed."

@@ -100,12 +100,14 @@ jobs:
             local run_id=""
             local status=""
             local conclusion=""
+            local runs_json=""
 
             for _ in $(seq 1 180); do
-              run_id="$(gh api \
-                "/repos/$REPOSITORY/actions/workflows/$workflow/runs?event=workflow_dispatch&per_page=100" \
-                --jq --arg expected_sha "$expected_sha" \
-                '[.workflow_runs[] | select(.head_sha == $expected_sha)] | sort_by(.created_at) | last.id // empty')"
+              runs_json="$(gh api \
+                "/repos/$REPOSITORY/actions/workflows/$workflow/runs?event=workflow_dispatch&per_page=100")"
+              run_id="$(jq -r --arg expected_sha "$expected_sha" \
+                '[.workflow_runs[] | select(.head_sha == $expected_sha)] | sort_by(.created_at) | last.id // empty' \
+                <<< "$runs_json")"
               if [ -n "$run_id" ]; then
                 status="$(gh run view "$run_id" --repo "$REPOSITORY" --json status --jq '.status')"
                 if [ "$status" = completed ]; then
