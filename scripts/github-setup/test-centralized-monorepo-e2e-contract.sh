@@ -14,6 +14,8 @@ grep -q 'CENTRAL_REPO_NAME' "$workflow"
 grep -q 'CENTRAL_REF' "$workflow"
 grep -q 'delivery_mode.*centralized' "$workflow"
 grep -q 'central_repository' "$workflow"
+# A bare "@" (both vars empty) makes gh read the field value as a filename.
+grep -q 'central_repository="\${CENTRAL_REPOSITORY:+\${CENTRAL_REPOSITORY}@\${CENTRAL_REF}}"' "$workflow"
 grep -q 'LANGUAGES="all"' "$workflow"
 grep -q 'workflow_call' "$workflow"
 grep -q 'quality.yml' "$workflow"
