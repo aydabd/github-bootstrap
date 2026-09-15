@@ -440,7 +440,7 @@ jobs:
             --field enable_codeowners="$ENABLE_CODEOWNERS" \
             --field workflows="$WORKFLOWS" \
             --field delivery_mode="$DELIVERY_MODE" \
-            --field central_repository="${CENTRAL_REPOSITORY}@${CENTRAL_REF}" \
+            --field central_repository="${CENTRAL_REPOSITORY:+${CENTRAL_REPOSITORY}@${CENTRAL_REF}}" \
             --field app_owner="$REPO_OWNER" \
             --field allowed_repo_owners="$REPO_OWNER" \
             --field provisioner_profile="e2e-provisioner" \
