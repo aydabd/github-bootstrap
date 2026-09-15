@@ -1,0 +1,24 @@
+---
+name: Configure Dependabot
+description: Remove Dependabot ecosystem entries the selected provider cannot satisfy.
+
+inputs:
+  env_manager:
+    description: Environment manager (micromamba, mise, system).
+    required: true
+  working_directory:
+    description: Working directory containing the generated repository to configure.
+    required: false
+    default: new-repo
+
+runs:
+  using: composite
+  steps:
+    - name: Configure Dependabot for selected provider
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        ENV_MANAGER: ${{ inputs.env_manager }}
+        GITHUB_WORKSPACE: ${{ github.workspace }}
+      run: |
+        python3 "$GITHUB_WORKSPACE/.github/scripts/configure-dependabot.py"
