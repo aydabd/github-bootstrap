@@ -610,4 +610,11 @@ if "$validator" --profile-file "$temp_file" --profile baseline --delivery-mode e
     exit 1
 fi
 
+while IFS= read -r ignored_pattern; do
+    grep -Fqx "$ignored_pattern" "$repo_root/templates/.prettierignore" || {
+        echo "templates/.prettierignore is missing a pattern this repository's own .prettierignore excludes: $ignored_pattern" >&2
+        exit 1
+    }
+done < <(grep -F 'conda-lock.yml' "$repo_root/.prettierignore")
+
 echo "bootstrap profile contract validated"
