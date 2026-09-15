@@ -144,6 +144,7 @@ repos:
         entry: yamllint
         args: [--config-file, .github/linters/.yaml-lint.yml]
         language: system
+        exclude: '(^|/)conda-lock\.yml$'
         types: [yaml]
 
       # ── Markdown: linting (markdownlint-cli) ──────────────────────────────
