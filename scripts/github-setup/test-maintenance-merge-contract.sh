@@ -66,6 +66,21 @@ if bash "$validator" "$tmp_dir/non-main-pr.json" "$tmp_dir/checks.json" "$tmp_di
     exit 1
 fi
 
+sed 's/maintenance-writer\[bot\]/dependabot[bot]/' "$tmp_dir/pr.json" > "$tmp_dir/dependabot-pr.json"
+MAINTENANCE_IDENTITY_MODE=e2e-disposable MAINTENANCE_FIXTURE_LOGIN=e2e-user \
+    MAINTENANCE_COPILOT_REVIEWER_LOGIN='copilot-pull-request-reviewer[bot]' \
+    bash "$validator" "$tmp_dir/dependabot-pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
+    "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"
+
+sed 's/maintenance-writer\[bot\]/e2e-user/' "$tmp_dir/pr.json" > "$tmp_dir/fixture-pr.json"
+if MAINTENANCE_IDENTITY_MODE=e2e-disposable MAINTENANCE_FIXTURE_LOGIN=e2e-user \
+    MAINTENANCE_COPILOT_REVIEWER_LOGIN='copilot-pull-request-reviewer[bot]' \
+    bash "$validator" "$tmp_dir/fixture-pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
+    "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"; then
+    echo "fixture PR merged without Copilot fixture review evidence" >&2
+    exit 1
+fi
+
 sed 's/"SUCCESS"/"PENDING"/' "$tmp_dir/checks.json" > "$tmp_dir/pending-checks.json"
 if bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/pending-checks.json" "$tmp_dir/reviews.json" \
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"; then
