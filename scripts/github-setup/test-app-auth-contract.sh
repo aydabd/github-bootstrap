@@ -222,6 +222,8 @@ for template_validator in validate-maintenance-merge.sh validate-workflow-approv
 done
 
 template_approval="$repo_root/templates/.github/workflows/approve-automation-workflows.yml"
+assert_not_contains './.github/actions/resolve-gh-token' "$template_approval"
+assert_contains 'permission-actions: write' "$template_approval"
 assert_contains 'validate-workflow-approval.sh' "$template_approval"
 assert_contains 'validate-copilot-review.sh' "$template_approval"
 assert_contains 'reviewThreads(first:100)' "$template_approval"
@@ -231,8 +233,14 @@ assert_contains 'gh api --method POST "/repos/$GITHUB_REPOSITORY/actions/runs/$R
     "$template_approval"
 
 template_merge="$repo_root/templates/.github/workflows/merge-maintenance-pr.yml"
-assert_contains 'permission_profile: maintenance-review' "$template_merge"
-assert_contains 'permission_profile: maintenance-merge' "$template_merge"
+# The templated workflow mints tokens directly via create-github-app-token
+# (resolve-gh-token is a bootstrap-repository-only action never templated
+# into generated repositories, so uses: ./.github/actions/resolve-gh-token
+# 100% fails there) with the same permissions resolve-gh-token's
+# maintenance-review/maintenance-merge profiles would have requested.
+assert_not_contains './.github/actions/resolve-gh-token' "$template_merge"
+assert_contains 'permission-pull-requests: write' "$template_merge"
+assert_contains 'permission-contents: write' "$template_merge"
 assert_contains 'validate_state true' "$template_merge"
 # shellcheck disable=SC2016 # Literal workflow command in contract text.
 assert_contains 'gh api --method POST "/repos/$REPOSITORY/pulls/$PR_NUMBER/reviews"' \

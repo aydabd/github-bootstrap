@@ -35,26 +35,21 @@ jobs:
           persist-credentials: false
           ref: main
           sparse-checkout: |
-            .github/actions/resolve-gh-token/action.yml
-            .github/scripts/gh-common.sh
-            .github/scripts/validate-app-auth.sh
             .github/scripts/validate-maintenance-merge.sh
 
       - name: Resolve Reviewer App token
         id: resolve-token
-        uses: ./.github/actions/resolve-gh-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID }}
-          refresh_token_secret: ""
-          app_private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY }}
-          app_owner: ${{ github.repository_owner }}
-          target_owner: ${{ github.repository_owner }}
-          permission_profile: maintenance-review
+          client-id: ${{ vars.BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          permission-pull-requests: write
 
       - name: Verify resolved Reviewer App identity
         env:
-          APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          APP_SLUG: ${{ steps.resolve-token.outputs.app-slug }}
           EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG }}
         shell: bash
         run: |
@@ -67,15 +62,14 @@ jobs:
       # does not carry; the Writer App does. The Reviewer still owns the approval.
       - name: Resolve Writer App merge token
         id: resolve-merge-token
-        uses: ./.github/actions/resolve-gh-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID }}
-          refresh_token_secret: ""
-          app_private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY }}
-          app_owner: ${{ github.repository_owner }}
-          target_owner: ${{ github.repository_owner }}
-          permission_profile: maintenance-merge
+          client-id: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Approve and enable squash auto-merge after fresh validation
         env:
@@ -86,7 +80,7 @@ jobs:
           TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}
-          REVIEWER_APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          REVIEWER_APP_SLUG: ${{ steps.resolve-token.outputs.app-slug }}
           REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
