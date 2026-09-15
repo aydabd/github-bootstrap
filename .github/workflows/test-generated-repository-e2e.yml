@@ -366,7 +366,7 @@ jobs:
           }
 
           QUALITY_DISPATCHED=false
-          for _ in $(seq 1 6); do
+          for _ in $(seq 1 30); do
             if gh api --method POST "/repos/$OWNER/$REPO_NAME/actions/workflows/quality.yml/dispatches" -f ref=main >/dev/null 2>&1; then
               QUALITY_DISPATCHED=true
               break
