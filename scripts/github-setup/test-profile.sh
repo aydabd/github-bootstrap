@@ -47,6 +47,17 @@ if grep -Fq "tools/go.mod" "$repo_root/templates/.github/workflows/test-quality-
     echo "templated test-quality-providers.yml must not reference the bootstrap repository's own tools/go.mod: generated repositories do not have a tools/ directory" >&2
     exit 1
 fi
+
+# GitHub's labels endpoint requires both issues:write and pull-requests:write
+# to label a pull request (issues:write alone 403s with "Resource not
+# accessible by integration"); the templated workflow mints its own token
+# directly instead of reusing resolve-gh-token's maintenance-labeling
+# profile (which already requests both), so it must match that profile.
+if grep -Fq 'permission-pull-requests: read' "$repo_root/templates/.github/workflows/classify-maintenance-pr.yml"; then
+    echo "templated classify-maintenance-pr.yml must request pull-requests write, not read: labeling a pull request needs both issues:write and pull-requests:write" >&2
+    exit 1
+fi
+grep -Fq 'permission-pull-requests: write' "$repo_root/templates/.github/workflows/classify-maintenance-pr.yml"
 grep -q '^  workflow_dispatch:' "$repo_root/.github/workflows/coderabbit-dependabot-review.yml"
 grep -q '^  workflow_dispatch:' "$repo_root/templates/.github/workflows/coderabbit-dependabot-review.yml"
 if grep -q '^  pull_request_target:' "$repo_root/.github/workflows/coderabbit-dependabot-review.yml"; then
