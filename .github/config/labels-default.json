@@ -49,6 +49,16 @@
       "name": "autorelease: pending",
       "color": "f9d0c4",
       "description": "Release automation pull request awaiting merge"
+    },
+    {
+      "name": "e2e: generated-repository",
+      "color": "1d76db",
+      "description": "Dispatch Test Generated Repository E2E for this PR head"
+    },
+    {
+      "name": "e2e: centralized-monorepo",
+      "color": "1d76db",
+      "description": "Dispatch the centralized monorepo E2E scenario for this PR head"
     }
   ]
 }
