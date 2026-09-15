@@ -617,4 +617,17 @@ while IFS= read -r ignored_pattern; do
     }
 done < <(grep -F 'conda-lock.yml' "$repo_root/.prettierignore")
 
+for precommit_config in \
+    "$repo_root/templates/languages/agnostic/pre-commit-snippets/base.tmpl" \
+    "$repo_root/templates/languages/agnostic/.pre-commit-config.yaml" \
+    "$repo_root/templates/languages/golang/.pre-commit-config.yaml" \
+    "$repo_root/templates/languages/java/.pre-commit-config.yaml" \
+    "$repo_root/templates/languages/python/.pre-commit-config.yaml" \
+    "$repo_root/templates/languages/typescript/.pre-commit-config.yaml"; do
+    awk '/id: yamllint/{f=1} f && /types: \[yaml\]/{print; exit} f' "$precommit_config" | grep -Fq "exclude: '(^|/)conda-lock\\.yml\$'" || {
+        echo "templated yamllint hook must exclude conda-lock.yml, matching this repository's own .pre-commit-config.yaml: $precommit_config" >&2
+        exit 1
+    }
+done
+
 echo "bootstrap profile contract validated"
