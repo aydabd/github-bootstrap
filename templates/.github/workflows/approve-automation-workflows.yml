@@ -34,27 +34,23 @@ jobs:
           ref: main
           persist-credentials: false
           sparse-checkout: |
-            .github/actions/resolve-gh-token/action.yml
-            .github/scripts/gh-common.sh
-            .github/scripts/validate-app-auth.sh
             .github/scripts/validate-workflow-approval.sh
             .github/scripts/validate-copilot-review.sh
 
       - name: Resolve Reviewer App token
         id: resolve-token
-        uses: ./.github/actions/resolve-gh-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID }}
-          refresh_token_secret: ""
-          app_private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY }}
-          app_owner: ${{ github.repository_owner }}
-          target_owner: ${{ github.repository_owner }}
-          permission_profile: workflow-approval
+          client-id: ${{ vars.BOOTSTRAP_PRODUCTION_REVIEWER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BOOTSTRAP_PRODUCTION_REVIEWER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          permission-actions: write
+          permission-pull-requests: read
 
       - name: Verify resolved Reviewer App identity
         env:
-          APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
+          APP_SLUG: ${{ steps.resolve-token.outputs.app-slug }}
           EXPECTED_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_REVIEWER_APP_SLUG }}
         shell: bash
         run: |
