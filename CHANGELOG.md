@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.2](https://github.com/aydabd/github-bootstrap/compare/v2.11.1...v2.11.2) (2026-09-15)
+
+
+### Bug Fixes
+
+* point cleanup-archived-e2e.yml at the e2e environment ([#245](https://github.com/aydabd/github-bootstrap/issues/245)) ([ab5f3ce](https://github.com/aydabd/github-bootstrap/commit/ab5f3ce875801fb0034e8cf7b8c559fb3557fdbb))
+
 ## [2.11.1](https://github.com/aydabd/github-bootstrap/compare/v2.11.0...v2.11.1) (2026-09-15)
 
 
