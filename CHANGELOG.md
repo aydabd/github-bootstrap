@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.11.1](https://github.com/aydabd/github-bootstrap/compare/v2.11.0...v2.11.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* exclude conda-lock.yml from generated repos' Prettier checks ([#241](https://github.com/aydabd/github-bootstrap/issues/241)) ([cfd85a9](https://github.com/aydabd/github-bootstrap/commit/cfd85a9594092035896c5d9ec6bc12d7a0140d20))
+* exclude conda-lock.yml from generated repos' yamllint checks ([#242](https://github.com/aydabd/github-bootstrap/issues/242)) ([3639b55](https://github.com/aydabd/github-bootstrap/commit/3639b551ea1293d6971448502e242f2220ad6b90))
+* extend quality.yml dispatch retry budget in generated-repository E2E ([#244](https://github.com/aydabd/github-bootstrap/issues/244)) ([766430d](https://github.com/aydabd/github-bootstrap/commit/766430d2175b5848ce61163a497b8b5c35137470))
+
 ## [2.11.0](https://github.com/aydabd/github-bootstrap/compare/v2.10.1...v2.11.0) (2026-09-15)
 
 
