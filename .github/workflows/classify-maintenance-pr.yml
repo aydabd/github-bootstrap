@@ -101,7 +101,7 @@ jobs:
             current_version="$(jq -r '."." // "0.0.0"' .release-please-manifest.json)"
             current_major="${current_version%%.*}"
             if [ -n "$new_major" ] && [ "$new_major" -gt "${current_major:-0}" ]; then
-              labels+=("automation: breaking")
+              labels+=("automation: breaking" "e2e: generated-repository")
               echo "Release $pr_title raises the major version from $current_version; marking as breaking."
             fi
           fi

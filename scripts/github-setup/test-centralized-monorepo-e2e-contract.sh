@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -17,7 +18,11 @@ grep -q 'LANGUAGES="all"' "$workflow"
 grep -q 'workflow_call' "$workflow"
 grep -q 'quality.yml' "$workflow"
 grep -Eq 'consumer.*quality|quality.*consumer' "$workflow"
+grep -q 'gh run view "\$run_id" --repo "\${OWNER}/\${REPO_NAME}" --log-failed' "$workflow"
 grep -q 'cleanup_after_test' "$workflow"
+grep -q 'app_owner=.*REPO_OWNER' "$workflow"
+grep -q 'allowed_repo_owners=.*REPO_OWNER' "$workflow"
+grep -q 'provisioner_profile="e2e-provisioner"' "$workflow"
 grep -Eq 'central.*repo|repo.*central' "$workflow"
 grep -q 'seed-centralized-e2e-repository.sh' "$workflow"
 grep -q 'central_repo_name' "$workflow"

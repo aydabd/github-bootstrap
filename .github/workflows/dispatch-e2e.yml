@@ -1,12 +1,10 @@
 name: Dispatch E2E
 
-# Major/breaking maintenance PRs carry the "automation: breaking" label, and
-# validate-maintenance-safety.sh then requires a passing generated-repository
-# E2E run for the exact PR head SHA before the PR can merge. That E2E workflow
-# is workflow_dispatch-only, so this workflow supplies the missing trigger:
-# whenever a maintenance PR is labelled breaking (or its head moves while the
-# label is present) it dispatches Test Generated Repository E2E against the PR
-# head branch with the credentialed E2E inputs, keeping the path hands-off.
+# "e2e: generated-repository" and "e2e: centralized-monorepo" each select one
+# scenario. Neither runs by default; a PR must carry the label(s) it needs.
+# With both present they run in sequence, never in parallel, since they share
+# the single-use e2e-provisioner App refresh token and concurrent runs racing
+# to resolve it fail non-deterministically.
 
 on:
   pull_request_target:
@@ -24,13 +22,13 @@ concurrency:
 
 jobs:
   dispatch:
-    name: Generated-repository E2E for breaking PRs
+    name: Labeled E2E dispatch
     if: >-
       github.event.pull_request.state == 'open' &&
       github.event.pull_request.base.ref == 'main' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(github.event.pull_request.labels.*.name, 'automation: maintenance') &&
-      contains(github.event.pull_request.labels.*.name, 'automation: breaking')
+      (contains(github.event.pull_request.labels.*.name, 'e2e: generated-repository') ||
+      contains(github.event.pull_request.labels.*.name, 'e2e: centralized-monorepo'))
     runs-on: ubuntu-24.04
     environment: e2e
     permissions:
@@ -81,6 +79,8 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PROVISIONER_APP_CLIENT_ID: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
           E2E_APP_OWNER: ${{ github.repository_owner }}
+          RUN_GENERATED_REPOSITORY: "${{ contains(github.event.pull_request.labels.*.name, 'e2e: generated-repository') }}"
+          RUN_CENTRALIZED_MONOREPO: "${{ contains(github.event.pull_request.labels.*.name, 'e2e: centralized-monorepo') }}"
         shell: bash
         run: |
           set -euo pipefail
@@ -100,12 +100,14 @@ jobs:
             local run_id=""
             local status=""
             local conclusion=""
+            local runs_json=""
 
             for _ in $(seq 1 180); do
-              run_id="$(gh api \
-                "/repos/$REPOSITORY/actions/workflows/$workflow/runs?event=workflow_dispatch&per_page=100" \
-                --jq --arg expected_sha "$expected_sha" \
-                '[.workflow_runs[] | select(.head_sha == $expected_sha)] | sort_by(.created_at) | last.id // empty')"
+              runs_json="$(gh api \
+                "/repos/$REPOSITORY/actions/workflows/$workflow/runs?event=workflow_dispatch&per_page=100")"
+              run_id="$(jq -r --arg expected_sha "$expected_sha" \
+                '[.workflow_runs[] | select(.head_sha == $expected_sha)] | sort_by(.created_at) | last.id // empty' \
+                <<< "$runs_json")"
               if [ -n "$run_id" ]; then
                 status="$(gh run view "$run_id" --repo "$REPOSITORY" --json status --jq '.status')"
                 if [ "$status" = completed ]; then
@@ -127,28 +129,36 @@ jobs:
 
           # A re-label or repeated synchronize must not stack duplicate runs.
           # Reuse an existing run for this exact head SHA and surface its final
-          # result through this pull_request_target check.
-          existing="$(gh api \
-            "/repos/$REPOSITORY/actions/workflows/test-generated-repository-e2e.yml/runs?head_sha=$head_sha&per_page=1" \
-            --jq '.total_count')"
-          if [ "${existing:-0}" -eq 0 ]; then
-            gh workflow run test-generated-repository-e2e.yml --repo "$REPOSITORY" --ref "$head_ref" \
-              -f head_sha="$head_sha" \
-              -f app_owner="$E2E_APP_OWNER" \
-              -f delivery=embedded
+          # result through this pull_request_target check. The two scenarios
+          # share the single-use e2e-provisioner refresh token, so when both
+          # labels are present the second dispatch waits for the first to
+          # finish rather than racing it.
+          if [ "$RUN_GENERATED_REPOSITORY" = "true" ]; then
+            existing="$(gh api \
+              "/repos/$REPOSITORY/actions/workflows/test-generated-repository-e2e.yml/runs?head_sha=$head_sha&per_page=1" \
+              --jq '.total_count')"
+            if [ "${existing:-0}" -eq 0 ]; then
+              gh workflow run test-generated-repository-e2e.yml --repo "$REPOSITORY" --ref "$head_ref" \
+                -f head_sha="$head_sha" \
+                -f app_owner="$E2E_APP_OWNER" \
+                -f delivery=embedded
+            fi
+
+            wait_for_workflow_run test-generated-repository-e2e.yml "$head_sha" "Generated repository E2E"
           fi
 
-          isolated_existing="$(gh api \
-            "/repos/$REPOSITORY/actions/workflows/test-repository-creation.yml/runs?head_sha=$head_sha&per_page=1" \
-            --jq '.total_count')"
-          if [ "${isolated_existing:-0}" -eq 0 ]; then
-            gh workflow run test-repository-creation.yml --repo "$REPOSITORY" --ref "$head_ref" \
-              -f preset=centralized-monorepo \
-              -f languages=all \
-              -f cleanup_after_test=true \
-              -f client_id="$PROVISIONER_APP_CLIENT_ID" \
-              -f app_owner="$E2E_APP_OWNER"
-          fi
+          if [ "$RUN_CENTRALIZED_MONOREPO" = "true" ]; then
+            isolated_existing="$(gh api \
+              "/repos/$REPOSITORY/actions/workflows/test-repository-creation.yml/runs?head_sha=$head_sha&per_page=1" \
+              --jq '.total_count')"
+            if [ "${isolated_existing:-0}" -eq 0 ]; then
+              gh workflow run test-repository-creation.yml --repo "$REPOSITORY" --ref "$head_ref" \
+                -f preset=centralized-monorepo \
+                -f languages=all \
+                -f cleanup_after_test=true \
+                -f client_id="$PROVISIONER_APP_CLIENT_ID" \
+                -f app_owner="$E2E_APP_OWNER"
+            fi
 
-          wait_for_workflow_run test-generated-repository-e2e.yml "$head_sha" "Generated repository E2E"
-          wait_for_workflow_run test-repository-creation.yml "$head_sha" "Centralized monorepo E2E"
+            wait_for_workflow_run test-repository-creation.yml "$head_sha" "Centralized monorepo E2E"
+          fi

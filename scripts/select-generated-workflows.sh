@@ -171,13 +171,19 @@ bind_e2e() {
                         ;;
                 esac
             fi
-            sed -i.bak '/^    environment: e2e$/a\
-    env:\
-        MAINTENANCE_IDENTITY_MODE: e2e-disposable\
-        MAINTENANCE_FIXTURE_LOGIN: e2e-user\
-        MAINTENANCE_COPILOT_REVIEWER_LOGIN: '"$copilot_login"'\
-' "$file"
-            rm -f "$file.bak"
+            temporary_file="${file}.tmp"
+            awk -v copilot_login="$copilot_login" '
+                {
+                    print
+                    if ($0 == "    environment: e2e") {
+                        print "    env:"
+                        print "      MAINTENANCE_IDENTITY_MODE: e2e-disposable"
+                        print "      MAINTENANCE_FIXTURE_LOGIN: e2e-user"
+                        print "      MAINTENANCE_COPILOT_REVIEWER_LOGIN: " copilot_login
+                    }
+                }
+            ' "$file" > "$temporary_file"
+            mv "$temporary_file" "$file"
             sed -i.bak 's|COPILOT_REVIEWER_LOGIN: ${{ vars.BOOTSTRAP_COPILOT_REVIEWER_LOGIN }}|COPILOT_REVIEWER_LOGIN: ${{ env.MAINTENANCE_COPILOT_REVIEWER_LOGIN }}|' "$file"
             rm -f "$file.bak"
             for profile_pair in 'e2e-writer:production-writer' 'e2e-reviewer:production-reviewer'; do

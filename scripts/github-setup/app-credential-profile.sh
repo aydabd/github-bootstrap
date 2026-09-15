@@ -26,6 +26,9 @@ if ! jq -e --arg profile "$profile" '.[$profile] | type == "object"' "$manifest"
 fi
 
 case "$profile" in
+    e2e-admin)
+        required_fields='["client_id_variable", "environment", "private_key_secret"]'
+        ;;
     e2e-writer | e2e-reviewer)
         required_fields='["app_slug_variable", "client_id_variable", "environment", "private_key_secret"]'
         ;;

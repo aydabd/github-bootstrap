@@ -51,14 +51,59 @@
       "description": "Release automation pull request awaiting merge"
     },
     {
-      "name": "e2e: generated-repository",
-      "color": "1d76db",
-      "description": "Dispatch Test Generated Repository E2E for this PR head"
+      "name": "docker",
+      "color": "0ea5e9",
+      "description": "Docker ecosystem dependency update"
     },
     {
-      "name": "e2e: centralized-monorepo",
-      "color": "1d76db",
-      "description": "Dispatch the centralized monorepo E2E scenario for this PR head"
+      "name": "dotnet",
+      "color": "512bd4",
+      "description": ".NET ecosystem dependency update"
+    },
+    {
+      "name": "go",
+      "color": "00add8",
+      "description": "Go ecosystem dependency update"
+    },
+    {
+      "name": "java",
+      "color": "b07219",
+      "description": "Java ecosystem dependency update"
+    },
+    {
+      "name": "kubernetes",
+      "color": "326ce5",
+      "description": "Kubernetes/Helm ecosystem dependency update"
+    },
+    {
+      "name": "nodejs",
+      "color": "3c873a",
+      "description": "Node.js ecosystem dependency update"
+    },
+    {
+      "name": "php",
+      "color": "777bb4",
+      "description": "PHP ecosystem dependency update"
+    },
+    {
+      "name": "python",
+      "color": "3776ab",
+      "description": "Python ecosystem dependency update"
+    },
+    {
+      "name": "ruby",
+      "color": "cc342d",
+      "description": "Ruby ecosystem dependency update"
+    },
+    {
+      "name": "rust",
+      "color": "dea584",
+      "description": "Rust ecosystem dependency update"
+    },
+    {
+      "name": "terraform",
+      "color": "5c4ee5",
+      "description": "Terraform ecosystem dependency update"
     }
   ]
 }

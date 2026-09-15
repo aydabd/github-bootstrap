@@ -29,6 +29,9 @@ check_profile() {
         e2e-writer | e2e-reviewer | production-writer | production-reviewer)
             required_keys='["app_slug_variable","client_id_variable","environment","private_key_secret"]'
             ;;
+        e2e-admin)
+            required_keys='["client_id_variable","environment","private_key_secret"]'
+            ;;
         *)
             return 1
             ;;
@@ -67,7 +70,7 @@ check_isolation() {
 }
 
 check_command() {
-    local expected_roles='["e2e-fixture","e2e-reviewer","e2e-writer","e2e-provisioner","production-reviewer","production-writer","production-provisioner"]'
+    local expected_roles='["e2e-admin","e2e-fixture","e2e-reviewer","e2e-writer","e2e-provisioner","production-reviewer","production-writer","production-provisioner"]'
     local checks='[]' role result overall="PASS"
     jq -e --argjson expected "$expected_roles" '.role_order == $expected' "$profile_file" > /dev/null || overall="FAIL"
     while IFS= read -r role; do
@@ -160,6 +163,25 @@ install_command() {
                 '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"install",evidence:"protected installer completed"}],summary:{passed:1,failed:0,skipped:0}}'
             return 0
             ;;
+        e2e-admin)
+            for credential_file in app-client-id app-private-key.pem; do
+                if [ ! -f "$APP_CREDENTIAL_DIR/$credential_file" ]; then
+                    emit_failure "$role" credentials MISSING_CREDENTIALS "provide all protected credential files"
+                fi
+            done
+            installer_log="$(mktemp)"
+            if ! GH_TOKEN="${GH_TOKEN:-}" "$script_dir/install-app-secrets.sh" \
+                "$repository" "$role" "$APP_CREDENTIAL_DIR/app-client-id" \
+                "$APP_CREDENTIAL_DIR/app-private-key.pem" \
+                > "$installer_log" 2>&1; then
+                rm -f "$installer_log"
+                emit_failure "$role" install INSTALL_FAILED "inspect protected installer diagnostics"
+            fi
+            rm -f "$installer_log"
+            jq -cn --arg repository "$repository" --arg role "$role" \
+                '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"install",evidence:"protected installer completed"}],summary:{passed:1,failed:0,skipped:0}}'
+            return 0
+            ;;
         e2e-fixture)
             for credential_file in app-client-id app-slug app-private-key.pem app-client-secret app-refresh-token; do
                 if [ ! -f "$APP_CREDENTIAL_DIR/$credential_file" ]; then
@@ -194,7 +216,7 @@ rotate_command() {
     fi
     case "$role" in
         production-provisioner | e2e-provisioner) ;;
-        e2e-writer | e2e-reviewer | production-writer | production-reviewer)
+        e2e-writer | e2e-reviewer | production-writer | production-reviewer | e2e-admin)
             install_command "$role"
             return
             ;;
@@ -233,7 +255,7 @@ rotate_command() {
 cleanup_command() {
     local role="${APP_CREDENTIAL_ROLE:-}" file
     case "$role" in
-        production-provisioner | e2e-provisioner | e2e-fixture | e2e-writer | e2e-reviewer | production-writer | production-reviewer) ;;
+        production-provisioner | e2e-provisioner | e2e-fixture | e2e-writer | e2e-reviewer | production-writer | production-reviewer | e2e-admin) ;;
         *) emit_failure "$role" cleanup INVALID_ROLE "set APP_CREDENTIAL_ROLE to a supported profile" ;;
     esac
     if [ -z "${APP_CREDENTIAL_DIR:-}" ] || [ ! -d "$APP_CREDENTIAL_DIR" ]; then

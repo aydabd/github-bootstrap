@@ -250,6 +250,11 @@ E2E_COPILOT_REVIEWER_LOGIN='copilot-pull-request-reviewer[bot]' \
     bash "$repo_root/scripts/select-generated-workflows.sh" bind-e2e "$generated_dir" maintenance
 assert_contains 'MAINTENANCE_COPILOT_REVIEWER_LOGIN: copilot-pull-request-reviewer[bot]' \
     "$generated_dir/.github/workflows/maintenance-safety.yml"
+if ! grep -Eq '^      MAINTENANCE_IDENTITY_MODE: e2e-disposable$' \
+    "$generated_dir/.github/workflows/maintenance-safety.yml"; then
+    echo "E2E maintenance environment variables have invalid YAML indentation" >&2
+    exit 1
+fi
 assert_contains 'COPILOT_REVIEWER_LOGIN: ${{ env.MAINTENANCE_COPILOT_REVIEWER_LOGIN }}' \
     "$generated_dir/.github/workflows/maintenance-safety.yml"
 assert_contains 'COPILOT_REVIEWER_LOGIN: ${{ env.MAINTENANCE_COPILOT_REVIEWER_LOGIN }}' \

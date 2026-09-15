@@ -43,6 +43,10 @@ if grep -Eq '^  (push|pull_request|workflow_dispatch):' "$repo_root/templates/ce
 fi
 grep -q '{{CENTRAL_REPOSITORY}}/.github/workflows/quality.yml@{{CENTRAL_REF}}' "$repo_root/templates/.github/workflows/centralized-quality.yml"
 grep -qF "name: quality (\${{ matrix['environment-manager'] }})" "$repo_root/.github/workflows/test-quality-providers.yml"
+if grep -Fq "tools/go.mod" "$repo_root/templates/.github/workflows/test-quality-providers.yml"; then
+    echo "templated test-quality-providers.yml must not reference the bootstrap repository's own tools/go.mod: generated repositories do not have a tools/ directory" >&2
+    exit 1
+fi
 grep -q '^  workflow_dispatch:' "$repo_root/.github/workflows/coderabbit-dependabot-review.yml"
 grep -q '^  workflow_dispatch:' "$repo_root/templates/.github/workflows/coderabbit-dependabot-review.yml"
 if grep -q '^  pull_request_target:' "$repo_root/.github/workflows/coderabbit-dependabot-review.yml"; then
@@ -80,9 +84,21 @@ for claude_workflow in \
     grep -q 'anthropic_organization_id:' "$claude_workflow"
 done
 grep -q 'coderabbit-dependabot-review.yml' "$repo_root/README.md"
+templated_labels_file="$repo_root/templates/.github/config/labels-default.json"
+[ -f "$templated_labels_file" ] || {
+    echo "missing templated labels file: $templated_labels_file" >&2
+    exit 1
+}
+while IFS= read -r dependabot_label; do
+    jq -e --arg name "$dependabot_label" '.labels[] | select(.name == $name)' "$templated_labels_file" > /dev/null || {
+        echo "templated labels file is missing a label dependabot.yml requires: $dependabot_label" >&2
+        exit 1
+    }
+done < <(grep -A2 '^    labels:' "$repo_root/templates/.github/dependabot.yml" | grep -o '"[^"]*"' | tr -d '"' | sort -u)
 for creation_workflow in \
     "$repo_root/.github/workflows/create-repository.yml" \
     "$repo_root/.github/workflows/terraform-create-repository.yml"; do
+    grep -q 'uses: ./.github/actions/apply-labels' "$creation_workflow"
     grep -q 'cp templates/AGENTS.md new-repo/AGENTS.md' "$creation_workflow"
     grep -q 'cp WORKTREES.md new-repo/' "$creation_workflow"
     grep -qF "tr -d '[:space:]'" "$creation_workflow"
@@ -98,6 +114,27 @@ for creation_workflow in \
     grep -q 'scripts/select-generated-workflows.sh' "$creation_workflow"
     grep -q 'select new-repo' "$creation_workflow"
     grep -q 'bind-e2e new-repo' "$creation_workflow"
+    if awk '/name: Remove unselected workflows/,/select-generated-workflows.sh select new-repo/' \
+        "$creation_workflow" | grep -q 'cd new-repo'; then
+        echo "Remove unselected workflows step must not cd into new-repo before calling the repo-root-relative select-generated-workflows.sh script: $creation_workflow" >&2
+        exit 1
+    fi
+    grep -qF "group: provisioner-token-\${{ inputs.provisioner_profile || 'production-provisioner' }}" "$creation_workflow"
+    if ! awk '/^jobs:/{exit} /^concurrency:/{found=1} END{exit !found}' "$creation_workflow"; then
+        echo "provisioner-token concurrency must be a workflow-level group, not job-level: $creation_workflow" >&2
+        exit 1
+    fi
+    grep -qF "cancel-in-progress: false" "$creation_workflow"
+    if ! awk '/name: Wait for repository initialization/{f=1} f && /name: Clone new repository/{exit} f && /name: Configure E2E maintenance Writer credentials before push/{found=1} END{exit !found}' \
+        "$creation_workflow"; then
+        echo "E2E Writer credentials must be provisioned between repository creation and the initial push: $creation_workflow" >&2
+        exit 1
+    fi
+    if ! awk '/name: Wait for repository initialization/{f=1} f && /name: Clone new repository/{exit} f && /name: Configure E2E maintenance Reviewer credentials before push/{found=1} END{exit !found}' \
+        "$creation_workflow"; then
+        echo "E2E Reviewer credentials must be provisioned between repository creation and the initial push: $creation_workflow" >&2
+        exit 1
+    fi
     if grep -q 'KEEP_FILES=' "$creation_workflow"; then
         echo "workflow bundle mapping must live in the shared helper: $creation_workflow" >&2
         exit 1

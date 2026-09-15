@@ -14,7 +14,7 @@ permissions explicitly so organization tokens do not inherit unused permissions.
 | Permission profile     | Explicit App permissions                                                                                              | Used for                                                                                                      |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `repository-creation`  | `organization-administration: write`, `administration: write`, `contents: write`, `issues: write`, `workflows: write` | Create and configure a repository; personal mode additionally uses App `secrets: write` for refresh rotation. |
-| `repository-setup`     | `administration: write`, `contents: write`, `issues: write`, `workflows: write`                                       | Configure an existing repository.                                                                             |
+| `repository-setup`     | `administration: write`, `contents: write`, `issues: write`, `secrets: write`, `workflows: write`                     | Configure an existing repository, including Environment variables and secrets.                                |
 | `e2e-dispatch`         | `administration: write`, `actions: write`, `contents: write`, `issues: write`                                         | Dispatch and observe repository-creation workflows for generated E2E scenarios.                               |
 | `repository-cleanup`   | `administration: write`                                                                                               | Delete a failed repository.                                                                                   |
 | `e2e-lifecycle`        | `administration: write`                                                                                               | Archive generated E2E repositories in the isolated E2E owner.                                                 |
@@ -33,7 +33,7 @@ permissions explicitly so organization tokens do not inherit unused permissions.
 | `pull-requests`               | write | Weekly tooling PR creation, updates, and auto-merge                        | Run the App-authenticated weekly tooling automation.                                                   |
 | `workflows`                   | write | Create refs containing workflow-file updates                               | Update action pins in workflow files through the Git database API.                                     |
 | `actions`                     | write | `POST /repos/{owner}/{repo}/actions/runs/{run_id}/approve`                 | Approve an eligible workflow run after all identity and freshness checks pass.                         |
-| `secrets`                     | write | `PUT /repos/{owner}/{repo}/actions/secrets/{secret_name}`                  | Persist the rotated personal App refresh token in the caller repository.                               |
+| `secrets`                     | write | `PUT /repos/{owner}/{repo}/actions/secrets/{secret_name}`                  | Persist generated repository Environment secrets and rotated personal App refresh tokens.              |
 
 `metadata: read` is automatically available for repository access. Members, security-events,
 and unrelated-owner permissions are not granted by this resolver. The `actions: write`

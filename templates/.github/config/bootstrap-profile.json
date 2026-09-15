@@ -36,8 +36,8 @@
     "centralized": {
       "requires_repository": true,
       "requires_ref": true,
-      "repository": "",
-      "ref": ""
+      "repository": "{{CENTRAL_REPOSITORY}}",
+      "ref": "{{CENTRAL_REF}}"
     }
   },
   "assets": [
