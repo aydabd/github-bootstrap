@@ -71,10 +71,10 @@ assert_contains '[[ "$head_sha" =~ ^[0-9a-fA-F]{40}$ ]]'
 # monorepo run is dispatched, not race it.
 wait_line="$(grep -n 'wait_for_workflow_run test-generated-repository-e2e.yml' "$workflow" | head -n1 | cut -d: -f1)"
 dispatch_line="$(grep -n 'gh workflow run test-repository-creation.yml' "$workflow" | head -n1 | cut -d: -f1)"
-[ -n "$wait_line" ] && [ -n "$dispatch_line" ] && [ "$wait_line" -lt "$dispatch_line" ] || {
+if [ -z "$wait_line" ] || [ -z "$dispatch_line" ] || [ "$wait_line" -ge "$dispatch_line" ]; then
     echo "test-repository-creation.yml must be dispatched only after test-generated-repository-e2e.yml completes" >&2
     exit 1
-}
+fi
 
 # A re-label or repeated synchronize must not stack duplicate E2E runs: a
 # per-PR concurrency group serializes attempts, and the run-count check is the
