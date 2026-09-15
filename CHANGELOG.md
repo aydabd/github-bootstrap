@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.5](https://github.com/aydabd/github-bootstrap/compare/v2.11.4...v2.11.5) (2026-09-15)
+
+
+### Bug Fixes
+
+* point apply-labels at the generated repository's own labels file ([#253](https://github.com/aydabd/github-bootstrap/issues/253)) ([4ae3a2b](https://github.com/aydabd/github-bootstrap/commit/4ae3a2b7119253c7bb1c3399a574b4bb93dd3f24))
+
 ## [2.11.4](https://github.com/aydabd/github-bootstrap/compare/v2.11.3...v2.11.4) (2026-09-15)
 
 
