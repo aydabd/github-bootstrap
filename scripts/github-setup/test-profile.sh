@@ -110,6 +110,7 @@ for creation_workflow in \
     "$repo_root/.github/workflows/create-repository.yml" \
     "$repo_root/.github/workflows/terraform-create-repository.yml"; do
     grep -q 'uses: ./.github/actions/apply-labels' "$creation_workflow"
+    grep -q 'label_file: new-repo/.github/config/labels-default.json' "$creation_workflow"
     grep -q 'cp templates/AGENTS.md new-repo/AGENTS.md' "$creation_workflow"
     grep -q 'cp WORKTREES.md new-repo/' "$creation_workflow"
     grep -qF "tr -d '[:space:]'" "$creation_workflow"
