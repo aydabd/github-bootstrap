@@ -782,6 +782,9 @@ jobs:
             rm -f .github/workflows/centralized-quality.yml
             echo "✅ Quality implementation embedded in generated repository" >> "$GITHUB_STEP_SUMMARY"
           fi
+          sed -i \
+            -e "s|{{ENV_MANAGER}}|${{ steps.validate-inputs.outputs.env_manager }}|g" \
+            .github/workflows/test-quality-providers.yml
 
       - name: Remove unselected workflows
         id: filter-workflows

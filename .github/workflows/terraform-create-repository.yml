@@ -810,6 +810,9 @@ jobs:
               .github/config/bootstrap-profile.json
             rm -f .github/workflows/centralized-quality.yml
           fi
+          sed -i \
+            -e "s|{{ENV_MANAGER}}|${{ steps.validate-inputs.outputs.env_manager }}|g" \
+            .github/workflows/test-quality-providers.yml
 
       - name: Configure CODEOWNERS
         env:

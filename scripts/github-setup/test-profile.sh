@@ -490,6 +490,20 @@ grep -q "ENV_MANAGER=\"\\\$ENVIRONMENT_MANAGER\" make install" \
     "$repo_root/templates/.github/workflows/quality-capability.yml"
 grep -q "ENV_MANAGER=\"\\\$ENVIRONMENT_MANAGER\" make install" \
     "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+
+# test-quality-providers.yml must be baked to the repository's own single
+# selected provider (mirroring quality.yml's {{ENV_MANAGER}} substitution)
+# instead of matrixing over providers/languages the repository was never
+# created with -- a repository only ever has one provider's config present.
+if grep -q "strategy:" "$repo_root/templates/.github/workflows/test-quality-providers.yml"; then
+    echo "templated test-quality-providers.yml must not matrix over providers the repository lacks config for" >&2
+    exit 1
+fi
+grep -q '{{ENV_MANAGER}}' "$repo_root/templates/.github/workflows/test-quality-providers.yml"
+for workflow in create-repository.yml terraform-create-repository.yml; do
+    grep -q '.github/workflows/test-quality-providers.yml' "$repo_root/.github/workflows/$workflow"
+done
+
 if grep -R -q 'package-ecosystem: "poetry"' "$repo_root/templates"; then
     echo "Dependabot templates must not use the unsupported poetry ecosystem" >&2
     exit 1
