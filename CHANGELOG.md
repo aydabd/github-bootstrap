@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.11.0](https://github.com/aydabd/github-bootstrap/compare/v2.10.1...v2.11.0) (2026-09-15)
+
+
+### Features
+
+* implement deterministic GitHub App setup orchestrator ([#238](https://github.com/aydabd/github-bootstrap/issues/238)) ([aaee6a9](https://github.com/aydabd/github-bootstrap/commit/aaee6a9387276fa9d58917e42b0355707d0bbe63))
+
+
+### Bug Fixes
+
+* complete centralized monorepo E2E dispatch ([#239](https://github.com/aydabd/github-bootstrap/issues/239)) ([c5ba9cf](https://github.com/aydabd/github-bootstrap/commit/c5ba9cf07ce46ccd3d30bca7125c46ed48a48c28))
+
 ## [2.10.1](https://github.com/aydabd/github-bootstrap/compare/v2.10.0...v2.10.1) (2026-09-14)
 
 
