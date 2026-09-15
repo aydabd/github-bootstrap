@@ -519,6 +519,50 @@ if grep -R -q 'package-ecosystem: "poetry"' "$repo_root/templates"; then
     echo "Dependabot templates must not use the unsupported poetry ecosystem" >&2
     exit 1
 fi
+
+# No template ever produces a Dockerfile, *.tf file, Chart.yaml, go.mod,
+# build.gradle, pom.xml, Cargo.toml, composer.json, Gemfile, or *.csproj, so
+# those Dependabot ecosystems always fail with dependency_file_not_found;
+# only github-actions and uv (root tooling, present in every repository) and
+# npm (present for mise/system providers) can ever find a manifest to update.
+dead_dependabot_ecosystems=(docker maven gradle cargo composer bundler nuget gomod terraform helm)
+for ecosystem in "${dead_dependabot_ecosystems[@]}"; do
+    if grep -Fq "package-ecosystem: \"$ecosystem\"" "$repo_root/templates/.github/dependabot.yml"; then
+        echo "templated dependabot.yml declares the '$ecosystem' ecosystem, which no template ever produces a manifest for" >&2
+        exit 1
+    fi
+done
+
+# npm has no manifest for micromamba-provisioned repositories (they use conda
+# packages, not a root package.json); confirm the fix removes that entry.
+configure_dependabot_action="$repo_root/.github/actions/configure-dependabot/action.yml"
+configure_dependabot_script="$repo_root/.github/scripts/configure-dependabot.py"
+[ -f "$configure_dependabot_action" ] || {
+    echo "missing configure-dependabot action: $configure_dependabot_action" >&2
+    exit 1
+}
+[ -f "$configure_dependabot_script" ] || {
+    echo "missing configure-dependabot script: $configure_dependabot_script" >&2
+    exit 1
+}
+for workflow in create-repository.yml terraform-create-repository.yml; do
+    grep -q './.github/actions/configure-dependabot' "$repo_root/.github/workflows/$workflow"
+done
+dependabot_test_dir="$(mktemp -d)"
+mkdir -p "$dependabot_test_dir/.github"
+cp "$repo_root/templates/.github/dependabot.yml" "$dependabot_test_dir/.github/dependabot.yml"
+(cd "$dependabot_test_dir" && ENV_MANAGER=micromamba python3 "$configure_dependabot_script")
+if grep -Fq 'package-ecosystem: "npm"' "$dependabot_test_dir/.github/dependabot.yml"; then
+    echo "configure-dependabot.py did not remove npm for env_manager=micromamba" >&2
+    exit 1
+fi
+cp "$repo_root/templates/.github/dependabot.yml" "$dependabot_test_dir/.github/dependabot.yml"
+(cd "$dependabot_test_dir" && ENV_MANAGER=mise python3 "$configure_dependabot_script")
+grep -Fq 'package-ecosystem: "npm"' "$dependabot_test_dir/.github/dependabot.yml" || {
+    echo "configure-dependabot.py incorrectly removed npm for env_manager=mise" >&2
+    exit 1
+}
+rm -rf "$dependabot_test_dir"
 if grep -q 'shellcheck' \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml" \
     "$repo_root/templates/.github/actions/quality/run-capability/action.yml" \

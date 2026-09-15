@@ -940,6 +940,11 @@ jobs:
         with:
           codeql_input_languages: ${{ steps.validate-inputs.outputs.codeql_languages }}
 
+      - name: Configure Dependabot for selected provider
+        uses: ./.github/actions/configure-dependabot
+        with:
+          env_manager: ${{ steps.validate-inputs.outputs.env_manager }}
+
       - name: Commit and push files
         id: push-files
         env:
