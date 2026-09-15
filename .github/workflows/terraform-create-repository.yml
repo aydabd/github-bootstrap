@@ -975,6 +975,7 @@ jobs:
           owner: ${{ steps.set-owner.outputs.owner }}
           repo_name: ${{ inputs.repo_name }}
           gh_token: ${{ steps.resolve-token.outputs.token }}
+          label_file: new-repo/.github/config/labels-default.json
 
       - name: Apply repository ruleset
         uses: ./.github/actions/apply-repository-ruleset
