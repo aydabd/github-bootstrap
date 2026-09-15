@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.11.4](https://github.com/aydabd/github-bootstrap/compare/v2.11.3...v2.11.4) (2026-09-15)
+
+
+### Bug Fixes
+
+* mint tokens directly in templated maintenance-merge/approval workflows ([#250](https://github.com/aydabd/github-bootstrap/issues/250)) ([db4b8f2](https://github.com/aydabd/github-bootstrap/commit/db4b8f22349407992e655e2260305688c5a06edd))
+* remove Dependabot ecosystems no template can ever satisfy ([#251](https://github.com/aydabd/github-bootstrap/issues/251)) ([0b1dd5b](https://github.com/aydabd/github-bootstrap/commit/0b1dd5bb4f447523e3ec54d47aeb06665a03c06f))
+
 ## [2.11.3](https://github.com/aydabd/github-bootstrap/compare/v2.11.2...v2.11.3) (2026-09-15)
 
 
