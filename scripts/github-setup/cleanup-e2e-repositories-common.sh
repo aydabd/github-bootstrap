@@ -17,7 +17,7 @@ cleanup_archived_e2e_repositories() {
 
     if [ -z "$repositories_endpoint" ] || [ -z "${E2E_GH_TOKEN:-}" ] ||
         [ -z "${ALLOWED_OWNERS:-}" ] || [ -z "${APP_OWNER:-}" ] ||
-        [ -z "${CENTRAL_REPOSITORY:-}" ] || [ -z "${BOOTSTRAP_REPOSITORY:-}" ] ||
+        [ -z "${BOOTSTRAP_REPOSITORY:-}" ] ||
         [ -z "$validator" ]; then
         echo "E2E cleanup configuration is incomplete" >&2
         return 1
@@ -50,15 +50,18 @@ cleanup_archived_e2e_repositories() {
         echo "E2E App owner is not present in the cleanup allowlist" >&2
         return 1
     }
-    [[ "$CENTRAL_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
-        echo "central workflow repository exclusion is missing or invalid" >&2
-        return 1
-    }
+    if [ -n "${CENTRAL_REPOSITORY:-}" ]; then
+        [[ "$CENTRAL_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
+            echo "central workflow repository exclusion is invalid" >&2
+            return 1
+        }
+    fi
 
     tmp_dir="$(mktemp -d)"
     trap 'rm -rf "$tmp_dir"' RETURN
 
-    exclusions="$BOOTSTRAP_REPOSITORY,$CENTRAL_REPOSITORY"
+    exclusions="$BOOTSTRAP_REPOSITORY"
+    [ -n "${CENTRAL_REPOSITORY:-}" ] && exclusions="$exclusions,$CENTRAL_REPOSITORY"
     now_epoch="$(date -u '+%s')"
     repositories_file="$tmp_dir/repositories.json"
     if ! GH_TOKEN="$E2E_GH_TOKEN" gh api --paginate --slurp \
