@@ -39,7 +39,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-issues: write
-          permission-pull-requests: read
+          permission-pull-requests: write
 
       - name: Verify Writer App installation
         env:
