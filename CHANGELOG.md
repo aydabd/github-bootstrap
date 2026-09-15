@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.6](https://github.com/aydabd/github-bootstrap/compare/v2.11.5...v2.11.6) (2026-09-15)
+
+
+### Bug Fixes
+
+* stop test-repository-creation.yml sending a bare "@" field value ([#255](https://github.com/aydabd/github-bootstrap/issues/255)) ([b5a6f06](https://github.com/aydabd/github-bootstrap/commit/b5a6f0630b408f28f1eaf0ae82a36342894925b7))
+
 ## [2.11.5](https://github.com/aydabd/github-bootstrap/compare/v2.11.4...v2.11.5) (2026-09-15)
 
 
