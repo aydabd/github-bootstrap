@@ -1,0 +1,109 @@
+{
+  "labels": [
+    {
+      "name": "automation",
+      "color": "0366d6",
+      "description": "Automated maintenance or generated changes"
+    },
+    {
+      "name": "automation: maintenance",
+      "color": "0366d6",
+      "description": "Automated maintenance update"
+    },
+    {
+      "name": "automation: breaking",
+      "color": "b60205",
+      "description": "Automated update with major or explicitly breaking risk"
+    },
+    {
+      "name": "automation: validating",
+      "color": "fbca04",
+      "description": "Automated update undergoing validation"
+    },
+    {
+      "name": "automation: blocked",
+      "color": "d73a4a",
+      "description": "Automated update blocked by a required policy or check"
+    },
+    {
+      "name": "bug",
+      "color": "d73a4a",
+      "description": "Something is not working as expected"
+    },
+    {
+      "name": "dependencies",
+      "color": "0366d6",
+      "description": "Dependency or tooling update"
+    },
+    {
+      "name": "security",
+      "color": "b60205",
+      "description": "Security-sensitive change or finding"
+    },
+    {
+      "name": "skip-ai-review",
+      "color": "ededed",
+      "description": "Skip automated AI review workflows for this pull request"
+    },
+    {
+      "name": "autorelease: pending",
+      "color": "f9d0c4",
+      "description": "Release automation pull request awaiting merge"
+    },
+    {
+      "name": "docker",
+      "color": "0ea5e9",
+      "description": "Docker ecosystem dependency update"
+    },
+    {
+      "name": "dotnet",
+      "color": "512bd4",
+      "description": ".NET ecosystem dependency update"
+    },
+    {
+      "name": "go",
+      "color": "00add8",
+      "description": "Go ecosystem dependency update"
+    },
+    {
+      "name": "java",
+      "color": "b07219",
+      "description": "Java ecosystem dependency update"
+    },
+    {
+      "name": "kubernetes",
+      "color": "326ce5",
+      "description": "Kubernetes/Helm ecosystem dependency update"
+    },
+    {
+      "name": "nodejs",
+      "color": "3c873a",
+      "description": "Node.js ecosystem dependency update"
+    },
+    {
+      "name": "php",
+      "color": "777bb4",
+      "description": "PHP ecosystem dependency update"
+    },
+    {
+      "name": "python",
+      "color": "3776ab",
+      "description": "Python ecosystem dependency update"
+    },
+    {
+      "name": "ruby",
+      "color": "cc342d",
+      "description": "Ruby ecosystem dependency update"
+    },
+    {
+      "name": "rust",
+      "color": "dea584",
+      "description": "Rust ecosystem dependency update"
+    },
+    {
+      "name": "terraform",
+      "color": "5c4ee5",
+      "description": "Terraform ecosystem dependency update"
+    }
+  ]
+}

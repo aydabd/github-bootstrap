@@ -961,6 +961,13 @@ jobs:
           enable_dependabot: ${{ inputs.enable_repo_settings }}
           gh_token: ${{ steps.resolve-token.outputs.token }}
 
+      - name: Apply repository labels
+        uses: ./.github/actions/apply-labels
+        with:
+          owner: ${{ steps.set-owner.outputs.owner }}
+          repo_name: ${{ inputs.repo_name }}
+          gh_token: ${{ steps.resolve-token.outputs.token }}
+
       - name: Apply repository ruleset
         uses: ./.github/actions/apply-repository-ruleset
         with:

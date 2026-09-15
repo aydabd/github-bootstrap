@@ -84,9 +84,21 @@ for claude_workflow in \
     grep -q 'anthropic_organization_id:' "$claude_workflow"
 done
 grep -q 'coderabbit-dependabot-review.yml' "$repo_root/README.md"
+templated_labels_file="$repo_root/templates/.github/config/labels-default.json"
+[ -f "$templated_labels_file" ] || {
+    echo "missing templated labels file: $templated_labels_file" >&2
+    exit 1
+}
+while IFS= read -r dependabot_label; do
+    jq -e --arg name "$dependabot_label" '.labels[] | select(.name == $name)' "$templated_labels_file" > /dev/null || {
+        echo "templated labels file is missing a label dependabot.yml requires: $dependabot_label" >&2
+        exit 1
+    }
+done < <(grep -A2 '^    labels:' "$repo_root/templates/.github/dependabot.yml" | grep -o '"[^"]*"' | tr -d '"' | sort -u)
 for creation_workflow in \
     "$repo_root/.github/workflows/create-repository.yml" \
     "$repo_root/.github/workflows/terraform-create-repository.yml"; do
+    grep -q 'uses: ./.github/actions/apply-labels' "$creation_workflow"
     grep -q 'cp templates/AGENTS.md new-repo/AGENTS.md' "$creation_workflow"
     grep -q 'cp WORKTREES.md new-repo/' "$creation_workflow"
     grep -qF "tr -d '[:space:]'" "$creation_workflow"
