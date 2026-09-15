@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.11.3](https://github.com/aydabd/github-bootstrap/compare/v2.11.2...v2.11.3) (2026-09-15)
+
+
+### Bug Fixes
+
+* bake test-quality-providers.yml to the repository's own provider ([#247](https://github.com/aydabd/github-bootstrap/issues/247)) ([e951e21](https://github.com/aydabd/github-bootstrap/commit/e951e21c4d2e09fec7ff0c2f98af47e6f7b4ccec))
+* request pull-requests write in templated classify-maintenance-pr.yml ([#248](https://github.com/aydabd/github-bootstrap/issues/248)) ([221f46d](https://github.com/aydabd/github-bootstrap/commit/221f46d516426e733dbb18404ec557eecf7659d3))
+
 ## [2.11.2](https://github.com/aydabd/github-bootstrap/compare/v2.11.1...v2.11.2) (2026-09-15)
 
 
