@@ -54,4 +54,33 @@ grep -Fq 'HTTP/[0-9.]+ 404' "$common_script"
 grep -Fq 'MIN_AGE_DAYS' "$common_script"
 grep -Fq 'min_age_days' "$common_script"
 
+# CENTRAL_REPOSITORY has no permanent value yet (the real central-workflows
+# repository does not exist until it is bootstrapped); the function must
+# still run with it unset instead of failing configuration validation.
+fake_bin_dir="$tmp_dir/bin"
+mkdir -p "$fake_bin_dir"
+cat > "$fake_bin_dir/gh" << 'EOF'
+#!/usr/bin/env bash
+if [ "$1" = "api" ] && [ "$2" = "--paginate" ] && [ "$3" = "--slurp" ]; then
+    echo "[[]]"
+    exit 0
+fi
+echo "unexpected gh invocation: $*" >&2
+exit 1
+EOF
+chmod +x "$fake_bin_dir/gh"
+
+(
+    # shellcheck disable=SC1090
+    source "$common_script"
+    PATH="$fake_bin_dir:$PATH"
+    E2E_GH_TOKEN=x ALLOWED_OWNERS=e2e-owner APP_OWNER=e2e-owner \
+        BOOTSTRAP_REPOSITORY=e2e-owner/github-bootstrap VALIDATOR="$validator" \
+        GITHUB_STEP_SUMMARY="$tmp_dir/summary" \
+        cleanup_archived_e2e_repositories "/users/e2e-owner/repos"
+) || {
+    echo "cleanup_archived_e2e_repositories failed with CENTRAL_REPOSITORY unset" >&2
+    exit 1
+}
+
 echo "E2E cleanup common contract passed."

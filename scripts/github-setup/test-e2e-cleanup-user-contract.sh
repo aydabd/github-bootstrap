@@ -17,6 +17,12 @@ grep -Fq 'BOOTSTRAP_E2E_CENTRAL_REPOSITORY' "$workflow"
 grep -Fq 'min_age_days:' "$workflow"
 grep -Fq "MIN_AGE_DAYS: \${{ inputs.min_age_days || '90' }}" "$workflow"
 
+# The e2e-admin credentials this workflow requests only exist in the "e2e"
+# environment; "e2e-cleanup" never had them, so every scheduled run failed.
+# Anchor to end-of-line so "environment: e2e-cleanup" or "e2e-anything" can
+# never satisfy this as a substring match.
+grep -Eq 'environment: e2e$' "$workflow"
+
 if grep -Eq 'owner_type=|repos_endpoint=|/orgs/|/users/|gh api --include --method DELETE' "$workflow"; then
     echo "user cleanup workflow contains owner-selection or cleanup implementation" >&2
     exit 1
