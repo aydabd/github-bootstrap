@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.0](https://github.com/aydabd/github-bootstrap/compare/v2.11.10...v2.12.0) (2026-09-16)
+
+
+### Features
+
+* make maintenance E2E validation capability-aware ([#266](https://github.com/aydabd/github-bootstrap/issues/266)) ([d731f09](https://github.com/aydabd/github-bootstrap/commit/d731f09edbf8ffd727689533cf10f5348e87f0ea))
+
 ## [2.11.10](https://github.com/aydabd/github-bootstrap/compare/v2.11.9...v2.11.10) (2026-09-16)
 
 
