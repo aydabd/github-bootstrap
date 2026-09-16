@@ -5,7 +5,7 @@ description: Configure and safely rotate the Provisioner GitHub App credentials 
 
 # GitHub App credential setup
 
-Use this skill when configuring the Repository Bootstrap Provisioner App or
+Use this skill when configuring the Bootstrap Provisioner App or
 debugging personal-account authentication.
 
 ## Choose the credential path
@@ -21,12 +21,14 @@ workflow-dispatch input. Do not use an installation token for `/user/repos`.
 
 ## Required configuration
 
-Set the client ID as the repository or Environment variable
-`BOOTSTRAP_PROVISIONER_APP_CLIENT_ID`. The bootstrap repository keeps the
-following values as protected secrets; do not configure them in a generated
-repository:
+Set the provisioner client ID in the bootstrap repository’s protected
+Environment. Production uses `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID`
+and E2E uses `BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID`. The bootstrap repository
+keeps the App private key as a protected secret; do not configure it in a
+generated repository:
 
-- `BOOTSTRAP_PROVISIONER_APP_PRIVATE_KEY`
+- `BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY` or
+  `BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY`
 
 The Provisioner App must have `Secrets: write` if personal runs will persist
 rotated refresh tokens. Limit the App installation to the caller repository

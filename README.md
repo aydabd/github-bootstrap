@@ -69,9 +69,9 @@ exists.
 
 **Note:** `internal` visibility is only available for repositories inside a GitHub Organization.
 
-### Production maintenance App setup
+### Production Bootstrap Writer App setup
 
-Create the separate Maintenance Writer App through GitHub's UI using the
+Create the separate Bootstrap Writer App through GitHub's UI using the
 checked-in manifest:
 
 ```bash

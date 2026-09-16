@@ -66,10 +66,10 @@ jobs:
         run: |
           set -euo pipefail
           [ -n "$APP_SLUG" ] || { echo "GitHub App slug was not resolved" >&2; exit 1; }
-          [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected maintenance Writer App slug is not configured" >&2; exit 1; }
-          [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured maintenance Writer" >&2; exit 1; }
+          [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected Bootstrap Writer App slug is not configured" >&2; exit 1; }
+          [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured Bootstrap Writer" >&2; exit 1; }
 
-      - name: Verify Maintenance Writer installation access
+      - name: Verify Bootstrap Writer installation access
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           TARGET_REPOSITORY: ${{ github.repository }}
@@ -83,21 +83,21 @@ jobs:
             '[.[] | .repositories[] | select(.full_name == $target) | {full_name}] | .[0] // empty' \
             "$installation_repositories")"
           [ -n "$target_access" ] || {
-            echo "Maintenance Writer installation cannot see $TARGET_REPOSITORY" >&2
+            echo "Bootstrap Writer installation cannot see $TARGET_REPOSITORY" >&2
             exit 1
           }
           printf '%s\n' "$target_access" >"$installation_repositories"
-          echo "Maintenance Writer repository access: $(jq -c . "$installation_repositories")"
+          echo "Bootstrap Writer repository access: $(jq -c . "$installation_repositories")"
           main_sha="$(gh api "/repos/$TARGET_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
           [ -n "$main_sha" ] || {
-            echo "Maintenance Writer installation cannot read the main ref" >&2
+            echo "Bootstrap Writer installation cannot read the main ref" >&2
             exit 1
           }
           gh api "/repos/$TARGET_REPOSITORY/git/commits/$main_sha" --jq '.sha' | grep -Fxq "$main_sha" || {
-            echo "Maintenance Writer installation cannot read the main commit object" >&2
+            echo "Bootstrap Writer installation cannot read the main commit object" >&2
             exit 1
           }
-          echo "Maintenance Writer installation can read $TARGET_REPOSITORY at main ($main_sha)."
+          echo "Bootstrap Writer installation can read $TARGET_REPOSITORY at main ($main_sha)."
 
       - name: Update repository and template tooling
         env:

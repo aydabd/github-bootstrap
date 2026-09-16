@@ -60,7 +60,7 @@ owner, generated name, and marker topic before archiving.
 
 The weekly maintenance workflow requires the non-secret
 `BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG` variable. It creates the commit through
-the Git database API using the authenticated Maintenance Writer App token and
+the Git database API using the authenticated Bootstrap Writer App token and
 includes a Signed-off-by trailer in the commit message; it does not create a
 local commit, persist a token in Git configuration, or accept a custom signing
 key. The workflow rejects any resulting commit that GitHub does not report as

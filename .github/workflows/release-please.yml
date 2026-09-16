@@ -3,7 +3,7 @@
 # Uses Google's release-please to create release PRs based on conventional commits
 # See: https://github.com/googleapis/release-please
 #
-# release-please runs with a Maintenance Writer App installation token, not the
+# release-please runs with a Bootstrap Writer App installation token, not the
 # default GITHUB_TOKEN. GitHub does not trigger workflows from GITHUB_TOKEN
 # events, so a release PR opened with it never fires the classify / maintenance
 # safety / reviewer chain and cannot auto-merge. The App identity restores those
