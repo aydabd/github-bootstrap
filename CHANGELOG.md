@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.9](https://github.com/aydabd/github-bootstrap/compare/v2.11.8...v2.11.9) (2026-09-16)
+
+
+### Bug Fixes
+
+* match generated repos' review-count gate to what actually works ([#261](https://github.com/aydabd/github-bootstrap/issues/261)) ([91f04ef](https://github.com/aydabd/github-bootstrap/commit/91f04ef09f5fcedf928de30fad9e0bce8d856164))
+
 ## [2.11.8](https://github.com/aydabd/github-bootstrap/compare/v2.11.7...v2.11.8) (2026-09-16)
 
 
