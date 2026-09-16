@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.7](https://github.com/aydabd/github-bootstrap/compare/v2.11.6...v2.11.7) (2026-09-16)
+
+
+### Bug Fixes
+
+* scope the E2E Copilot-fixture merge gate to the fixture PR only ([#257](https://github.com/aydabd/github-bootstrap/issues/257)) ([a9efb3a](https://github.com/aydabd/github-bootstrap/commit/a9efb3a5c45fd9a1212a9cfa32bcd2f2ac7d038f))
+
 ## [2.11.6](https://github.com/aydabd/github-bootstrap/compare/v2.11.5...v2.11.6) (2026-09-15)
 
 
