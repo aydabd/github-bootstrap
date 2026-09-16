@@ -25,35 +25,36 @@ cat > "$tmp_dir/no-request.json" << 'EOF'
 EOF
 "$validator" "$tmp_dir/no-request.json" "$tmp_dir/reviews.json" "$tmp_dir/threads.json" ""
 
-# The production-root validator retains its existing bot behavior. The template
-# maintenance path must validate Copilot evidence for eligible bot PRs.
-cat > "$tmp_dir/bot-pr.json" << 'EOF'
+# Trusted automation PRs do not require Copilot evidence because Copilot cannot
+# review pull requests opened by GitHub Apps or bots.
+cat > "$tmp_dir/bot.json" << 'EOF'
 {"number":9,"head":{"sha":"current-sha"},"user":{"login":"bootstrap-writer[bot]"},"requested_reviewers":[{"login":"copilot-pull-request-reviewer[bot]"}]}
 EOF
-"$validator" "$tmp_dir/bot-pr.json" "$tmp_dir/empty-reviews.json" "$tmp_dir/threads.json" "copilot-pull-request-reviewer[bot]"
-
 template_validator="$repo_root/templates/.github/scripts/validate-copilot-review.sh"
-if "$template_validator" "$tmp_dir/bot-pr.json" "$tmp_dir/empty-reviews.json" \
-    "$tmp_dir/threads.json" "copilot-pull-request-reviewer[bot]"; then
-    echo "template validator bypassed Copilot review for a bot-authored PR" >&2
-    exit 1
-fi
-"$template_validator" "$tmp_dir/bot-pr.json" "$tmp_dir/reviews.json" \
-    "$tmp_dir/threads.json" "copilot-pull-request-reviewer[bot]"
-if "$template_validator" "$tmp_dir/bot-pr.json" "$tmp_dir/reviews.json" \
-    "$tmp_dir/threads.json" ""; then
-    echo "template validator accepted a bot-authored PR without configured Copilot identity" >&2
-    exit 1
-fi
+for validator_path in "$validator" "$template_validator"; do
+    for require_copilot_review in false true; do
+        if REQUIRE_COPILOT_REVIEW="$require_copilot_review" "$validator_path" \
+            "$tmp_dir/bot.json" "$tmp_dir/empty-reviews.json" \
+            "$tmp_dir/threads.json" "copilot-pull-request-reviewer[bot]"; then
+            :
+        else
+            echo "bot-authored pull request required Copilot evidence in $validator_path" >&2
+            exit 1
+        fi
+    done
+done
 sed 's/"isResolved":true/"isResolved":false/' "$tmp_dir/threads.json" > \
     "$tmp_dir/unresolved-threads.json"
-if "$template_validator" "$tmp_dir/bot-pr.json" "$tmp_dir/reviews.json" \
-    "$tmp_dir/unresolved-threads.json" "copilot-pull-request-reviewer[bot]"; then
-    echo "template validator accepted unresolved Copilot threads" >&2
-    exit 1
-fi
+for human_validator in "$validator" "$template_validator"; do
+    if "$human_validator" "$tmp_dir/pr.json" "$tmp_dir/reviews.json" \
+        "$tmp_dir/unresolved-threads.json" "copilot-pull-request-reviewer[bot]"; then
+        echo "validator accepted unresolved Copilot threads in $human_validator" >&2
+        exit 1
+    fi
+done
 
-if "$validator" "$tmp_dir/no-request.json" "$tmp_dir/empty-reviews.json" "$tmp_dir/threads.json" "copilot-pull-request-reviewer[bot]"; then
+if REQUIRE_COPILOT_REVIEW=true "$validator" "$tmp_dir/no-request.json" \
+    "$tmp_dir/empty-reviews.json" "$tmp_dir/threads.json" "copilot-pull-request-reviewer[bot]"; then
     echo "configured Copilot review gate was bypassed" >&2
     exit 1
 fi

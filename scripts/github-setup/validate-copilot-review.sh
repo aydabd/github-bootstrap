@@ -18,16 +18,13 @@ fi
 
 # GitHub Copilot code review does not review pull requests opened by a GitHub
 # App or bot, so a Copilot review can never appear on a trusted-automation
-# maintenance PR (Dependabot, or release-please running under the Writer App).
-# Skip the gate for those; the required checks, the breaking-change E2E gate,
-# and the separate Reviewer App approval still apply.
+# maintenance PR. Skip the gate for those; required checks, risk-specific E2E
+# validation, and the separate maintenance Reviewer App approval still apply.
 pr_author="$(jq -r '.user.login // ""' "$pr_file")"
 case "$pr_author" in
     *"[bot]")
-        if [ "$require_copilot_review" = false ]; then
-            echo "pull request author $pr_author is a bot; Copilot review is not applicable"
-            exit 0
-        fi
+        echo "pull request author $pr_author is a bot; Copilot review is not applicable"
+        exit 0
         ;;
 esac
 
