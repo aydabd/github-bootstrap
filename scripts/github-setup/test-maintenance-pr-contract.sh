@@ -25,7 +25,7 @@ expected_release="release-please"
 actual_release="$(FULL_REPOSITORY=acme/project "$validator" "$tmp_dir/release-please.json")"
 [ "$actual_release" = "$expected_release" ]
 
-# release-please runs as the Maintenance Writer App: its PR is authored by
+# release-please runs as the Bootstrap Writer App: its PR is authored by
 # "<writer-app-slug>[bot]" and must classify as release-please when the slug is
 # supplied, but not otherwise.
 actual_writer="$(FULL_REPOSITORY=acme/project WRITER_APP_SLUG=acme-maintenance-writer \

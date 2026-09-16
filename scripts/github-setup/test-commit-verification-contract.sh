@@ -72,7 +72,7 @@ for forbidden_text in \
 done
 
 if grep -Fq 'BOOTSTRAP_TOKEN' "$workflow"; then
-    echo "weekly tooling ref creation must use the resolved Maintenance Writer App token" >&2
+    echo "weekly tooling ref creation must use the resolved Bootstrap Writer App token" >&2
     exit 1
 fi
 

@@ -3,7 +3,7 @@ set -euo pipefail
 
 pr_file="${1:-}"
 full_repository="${FULL_REPOSITORY:-}"
-# release-please runs under the Maintenance Writer App (see release-please.yml),
+# release-please runs under the Bootstrap Writer App (see release-please.yml),
 # so its release PR is authored by "<writer-app-slug>[bot]" rather than
 # "release-please[bot]". Accept that identity too when it carries the
 # "autorelease: pending" label.
