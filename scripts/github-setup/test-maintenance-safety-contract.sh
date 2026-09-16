@@ -102,6 +102,16 @@ grep -Fq 'DELETE' "$workflow"
 grep -Fq 'POST' "$workflow"
 grep -Fq 'maintenance-e2e.json' "$template_workflow"
 
+# GitHub's labels endpoint requires both issue and pull-request write access
+# when the target is a pull request; issues:write alone returns HTTP 403.
+for maintenance_workflow in "$workflow" "$template_workflow"; do
+    grep -Fq 'issues: write' "$maintenance_workflow"
+    grep -Fq 'pull-requests: write' "$maintenance_workflow" || {
+        echo "maintenance safety must request pull-requests: write for accepted-label mutation: $maintenance_workflow" >&2
+        exit 1
+    }
+done
+
 grep -Fq 'Maintenance safety' "$workflow"
 grep -Fq "github.event_name != 'workflow_run'" "$workflow"
 grep -Fq 'pull_request_target:' "$workflow"
