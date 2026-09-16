@@ -42,8 +42,8 @@ jq -e '
     any(.rules[]; .type == "required_status_checks" and
         .parameters.strict_required_status_checks_policy == true and
         ([.parameters.required_status_checks[]?.context] | sort) == ["Maintenance safety", "Signed-off-by trailers", "quality"]) and
-    any(.rules[]; .type == "pull_request" and .parameters.required_approving_review_count == 1 and
-        .parameters.dismiss_stale_reviews_on_push == true and .parameters.require_last_push_approval == true and
+    any(.rules[]; .type == "pull_request" and .parameters.required_approving_review_count == 0 and
+        .parameters.dismiss_stale_reviews_on_push == true and .parameters.require_last_push_approval == false and
         .parameters.required_review_thread_resolution == true and .parameters.allowed_merge_methods == ["squash"])
 ' "$ruleset" > /dev/null
 

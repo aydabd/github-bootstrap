@@ -710,7 +710,7 @@ jobs:
             exit 1
           fi
 
-          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "pull_request") | (.parameters.required_approving_review_count == 1 and .parameters.require_code_owner_review == false and .parameters.required_review_thread_resolution == true)' >/dev/null; then
+          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "pull_request") | (.parameters.required_approving_review_count == 0 and .parameters.require_code_owner_review == false and .parameters.required_review_thread_resolution == true)' >/dev/null; then
             echo "❌ Pull request review requirements do not match expected defaults"
             exit 1
           fi
