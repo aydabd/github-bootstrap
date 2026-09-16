@@ -58,7 +58,8 @@ jq -e --arg repository "$full_repository" --arg expected_sha "$expected_sha" \
     exit 1
 }
 
-if [ "$identity_mode" = e2e-disposable ]; then
+pr_author="$(jq -r '.user.login' "$pr_file")"
+if [ "$identity_mode" = e2e-disposable ] && [ "$pr_author" = "$fixture_login" ]; then
     jq -e --arg copilot_login "$copilot_login" --arg expected_sha "$expected_sha" \
         'any(.[]?; .user.login == $copilot_login and .state == "COMMENTED" and .commit_id == $expected_sha)' \
         "$reviews_file" > /dev/null || {
