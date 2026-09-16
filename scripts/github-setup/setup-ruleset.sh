@@ -204,9 +204,9 @@ validate_ruleset_payload() {
             $type == "required_linear_history" or $type == "required_signatures" or
             $type == "pull_request" or $type == "required_status_checks")))
         and (any(.rules[]; .type == "pull_request" and
-            .parameters.required_approving_review_count == 1 and
+            .parameters.required_approving_review_count == 0 and
             .parameters.dismiss_stale_reviews_on_push == true and
-            .parameters.require_last_push_approval == true and
+            .parameters.require_last_push_approval == false and
             .parameters.required_review_thread_resolution == true and
             .parameters.allowed_merge_methods == ["squash"]))
         and (any(.rules[]; .type == "required_signatures"))
