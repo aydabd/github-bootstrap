@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.2](https://github.com/aydabd/github-bootstrap/compare/v2.12.1...v2.12.2) (2026-09-16)
+
+
+### Bug Fixes
+
+* allow maintenance safety to label pull requests ([#273](https://github.com/aydabd/github-bootstrap/issues/273)) ([1a6a294](https://github.com/aydabd/github-bootstrap/commit/1a6a294c02b07e366ffc41419894b0f5a940e406)), closes [#272](https://github.com/aydabd/github-bootstrap/issues/272)
+
 ## [2.12.1](https://github.com/aydabd/github-bootstrap/compare/v2.12.0...v2.12.1) (2026-09-16)
 
 
