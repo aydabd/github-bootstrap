@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.8](https://github.com/aydabd/github-bootstrap/compare/v2.11.7...v2.11.8) (2026-09-16)
+
+
+### Bug Fixes
+
+* pass a bare owner reference for team_name in E2E dispatches ([#259](https://github.com/aydabd/github-bootstrap/issues/259)) ([abb3149](https://github.com/aydabd/github-bootstrap/commit/abb3149f38c2db418f1fd8865481908737825271))
+
 ## [2.11.7](https://github.com/aydabd/github-bootstrap/compare/v2.11.6...v2.11.7) (2026-09-16)
 
 
