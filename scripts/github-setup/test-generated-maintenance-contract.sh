@@ -260,7 +260,7 @@ assert_contains 'COPILOT_REVIEWER_LOGIN: ${{ env.MAINTENANCE_COPILOT_REVIEWER_LO
 assert_contains 'COPILOT_REVIEWER_LOGIN: ${{ env.MAINTENANCE_COPILOT_REVIEWER_LOGIN }}' \
     "$generated_dir/.github/workflows/approve-automation-workflows.yml"
 
-cat > "$tmp_dir/bot-pr.json" << 'EOF'
+cat > "$tmp_dir/bot.json" << 'EOF'
 {"user":{"login":"bootstrap-writer[bot]"},"head":{"sha":"current-sha"}}
 EOF
 cat > "$tmp_dir/copilot-review.json" << 'EOF'
@@ -311,10 +311,10 @@ fi
 REQUIRE_COPILOT_REVIEW=true "$validator" "$tmp_dir/human-pr.json" \
     "$tmp_dir/copilot-review.json" "$tmp_dir/resolved-threads.json" \
     'copilot-pull-request-reviewer[bot]'
-if REQUIRE_COPILOT_REVIEW=true "$validator" "$tmp_dir/bot-pr.json" \
+if ! REQUIRE_COPILOT_REVIEW=true "$validator" "$tmp_dir/bot.json" \
     "$tmp_dir/empty-reviews.json" "$tmp_dir/resolved-threads.json" \
     'copilot-pull-request-reviewer[bot]'; then
-    echo "generated maintenance fixture bypassed missing Copilot evidence" >&2
+    echo "generated maintenance bot pull request did not bypass Copilot evidence" >&2
     exit 1
 fi
 
