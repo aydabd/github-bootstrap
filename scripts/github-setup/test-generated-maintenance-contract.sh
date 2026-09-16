@@ -7,7 +7,6 @@ workflow="$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 runbook="$repo_root/docs/maintenance-operations.md"
 validator="$repo_root/scripts/github-setup/validate-copilot-review.sh"
 classifier="$repo_root/scripts/github-setup/validate-maintenance-pr.sh"
-merge_state_validator="$repo_root/scripts/github-setup/validate-maintenance-merge-state.sh"
 merge_validator="$repo_root/scripts/github-setup/validate-maintenance-merge.sh"
 release_validator="$repo_root/scripts/github-setup/validate-maintenance-release.sh"
 tmp_dir="$(mktemp -d)"
@@ -56,7 +55,7 @@ assert_contains 'reviewers[]=$MAINTENANCE_COPILOT_REVIEWER_LOGIN' "$workflow"
 assert_contains '.login == $login' "$workflow"
 assert_contains 'validate-copilot-review.sh' "$workflow"
 assert_contains 'Maintenance safety' "$workflow"
-assert_contains 'Writer auto-merge' "$workflow"
+assert_contains 'Writer explicit/final merge' "$workflow"
 assert_contains 'release-please' "$workflow"
 assert_contains 'archive_repository' "$workflow"
 assert_contains 'validate-e2e-archive-target.sh' "$workflow"
@@ -76,13 +75,14 @@ assert_contains 'pull_requests[]?.number' "$workflow"
 assert_contains 'same repository, pull request, and head' "$workflow"
 assert_contains 'wait_for_run maintenance-safety.yml pull_request_target "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true' "$workflow"
 assert_contains 'wait_for_run merge-maintenance-pr.yml workflow_run "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true' "$workflow"
-assert_contains 'validate-maintenance-merge-state.sh' "$workflow"
+assert_not_contains 'validate-maintenance-merge-state.sh' "$workflow"
+assert_not_contains 'auto_merge' "$workflow"
+assert_contains 'configured Reviewer App approval was not observed for the current PR head' "$workflow"
 assert_contains 'validate-maintenance-release.sh' "$workflow"
 assert_contains 'release_pr_number' "$workflow"
 assert_contains 'release_merge_sha' "$workflow"
 assert_contains 'release_pushed_at' "$workflow"
 assert_contains 'cleanup_armed=true' "$workflow"
-assert_contains 'enabled_by.login' "$workflow"
 assert_contains 'merged_by.login' "$workflow"
 assert_contains 'timeout_seconds' "$workflow"
 assert_contains 'diagnostic' "$workflow"
@@ -318,20 +318,6 @@ if ! REQUIRE_COPILOT_REVIEW=true "$validator" "$tmp_dir/bot.json" \
     exit 1
 fi
 
-cat > "$tmp_dir/merge-pr.json" << 'EOF'
-{"head":{"sha":"current-sha"},"auto_merge":{"merge_method":"SQUASH","enabled_by":{"login":"writer[bot]"}}}
-EOF
-cat > "$tmp_dir/reviewer-approval.json" << 'EOF'
-[{"user":{"login":"reviewer[bot]"},"state":"APPROVED","commit_id":"current-sha"}]
-EOF
-bash "$merge_state_validator" "$tmp_dir/merge-pr.json" "$tmp_dir/reviewer-approval.json" \
-    current-sha writer reviewer
-sed 's/"enabled_by"/"disabled_by"/' "$tmp_dir/merge-pr.json" > "$tmp_dir/no-auto-merge.json"
-if bash "$merge_state_validator" "$tmp_dir/no-auto-merge.json" \
-    "$tmp_dir/reviewer-approval.json" current-sha writer reviewer; then
-    echo "missing Writer auto-merge state was accepted" >&2
-    exit 1
-fi
 cat > "$tmp_dir/releases.json" << 'EOF'
 [{"tag_name":"v1.2.3","created_at":"2026-09-10T05:00:00Z"}]
 EOF

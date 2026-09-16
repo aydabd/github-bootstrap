@@ -713,33 +713,21 @@ jobs:
             exit 1
           }
           # Maintenance safety must pass before the Reviewer approval and
-          # Writer auto-merge stages are allowed to proceed.
+          # explicit Writer merge stages are allowed to proceed.
           wait_for_run maintenance-safety.yml pull_request_target "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
           wait_for_run merge-maintenance-pr.yml workflow_run "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
           merge_reviews_file="$RUNNER_TEMP/merge-reviews-$REPO_NAME.json"
-          merge_authority_validated=false
-          for _ in $(seq 1 60); do
-            e2e_gh api --paginate --slurp \
-              "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/reviews" | jq '[.[][]]' > "$merge_reviews_file"
-            e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" > "$copilot_dir/merge-pr.json"
-            jq -e --arg writer "${WRITER_APP_SLUG}[bot]" \
-              '.auto_merge.enabled_by.login == $writer and .auto_merge.merge_method == "SQUASH"' \
-              "$copilot_dir/merge-pr.json" >/dev/null || continue
-            if bash scripts/github-setup/validate-maintenance-merge-state.sh \
-              "$copilot_dir/merge-pr.json" "$merge_reviews_file" "$pr_head_sha" \
-              "$WRITER_APP_SLUG" "$REVIEWER_APP_SLUG"; then
-              merge_authority_validated=true
-              break
-            fi
-            sleep 10
-          done
-          [ "$merge_authority_validated" = true ] || {
-            echo "Reviewer approval and Writer auto-merge authority were not observed before merge" >&2
+          e2e_gh api --paginate --slurp \
+            "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/reviews" | jq '[.[][]]' > "$merge_reviews_file"
+          jq -e --arg sha "$pr_head_sha" --arg reviewer "${REVIEWER_APP_SLUG}[bot]" \
+            'any(.[]?; .user.login == $reviewer and .state == "APPROVED" and .commit_id == $sha)' \
+            "$merge_reviews_file" >/dev/null || {
+            echo "configured Reviewer App approval was not observed for the current PR head" >&2
             exit 1
           }
           for _ in $(seq 1 120); do
             pr_state="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" --jq '[.state,.merged,.merged_by.login] | @tsv')"
-            diagnostic 'Writer auto-merge/final merge' "https://github.com/$OWNER/$REPO_NAME/pull/$PR_NUMBER" "$pr_state"
+            diagnostic 'Writer explicit/final merge' "https://github.com/$OWNER/$REPO_NAME/pull/$PR_NUMBER" "$pr_state"
             if [ "${pr_state%%$'\t'*}" = closed ] && [ "$(printf '%s' "$pr_state" | cut -f2)" = true ]; then
               [ "$(printf '%s' "$pr_state" | cut -f3)" = "${WRITER_APP_SLUG}[bot]" ] || {
                 echo "merged PR actor was not the configured Writer App" >&2
