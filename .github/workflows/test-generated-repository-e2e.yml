@@ -352,6 +352,7 @@ jobs:
             any(.rules[]?; .type == "required_signatures") and
             any(.rules[]?; .type == "pull_request" and
               .parameters.required_approving_review_count == 0 and
+              .parameters.require_last_push_approval == false and
               .parameters.required_review_thread_resolution == true) and
             any(.rules[]?; .type == "required_status_checks" and
               .parameters.strict_required_status_checks_policy == true)
