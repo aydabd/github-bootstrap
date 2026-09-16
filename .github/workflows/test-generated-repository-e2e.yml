@@ -254,7 +254,7 @@ jobs:
             --field allowed_repo_owners="$OWNER" \
             --field repo_name="$REPO_NAME" \
             --field repo_description="Generated repository E2E scenario" \
-            --field visibility=public --field team_name="* @$OWNER" --field license_holder="$OWNER" \
+            --field visibility=public --field team_name="$OWNER" --field license_holder="$OWNER" \
             --field languages=language-agnostic-only --field env_manager="$PROVIDER" \
             --field release_tool=release-please --field enable_repo_settings=false --field enable_codeowners=true \
             --field workflows=quality,maintenance --field delivery_mode="$DELIVERY" \
@@ -468,7 +468,7 @@ jobs:
             --field provisioner_profile=e2e-provisioner --field app_owner="$APP_OWNER" \
             --field allowed_repo_owners="$OWNER" --field repo_name="$REPO_NAME" \
             --field repo_description="Generated maintenance lifecycle E2E" \
-            --field visibility=public --field team_name="* @$OWNER" \
+            --field visibility=public --field team_name="$OWNER" \
             --field license_holder="$OWNER" --field languages=language-agnostic-only \
             --field env_manager=system --field release_tool=release-please \
             --field enable_repo_settings=false --field enable_codeowners=true \

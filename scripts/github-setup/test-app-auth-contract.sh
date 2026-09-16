@@ -648,4 +648,9 @@ expect_rejected APP_CLIENT_ID=client APP_PRIVATE_KEY= APP_OWNER=acme TARGET_OWNE
 expect_rejected APP_CLIENT_ID=client APP_PRIVATE_KEY=key APP_OWNER= TARGET_OWNER=acme \
     bash "$app_validator"
 
+# A pre-formatted "* @owner" value produces the malformed "* @* @owner" CODEOWNERS line.
+for e2e_dispatch_workflow in test-repository-creation.yml test-generated-repository-e2e.yml; do
+    assert_not_contains 'team_name="* @' "$repo_root/.github/workflows/$e2e_dispatch_workflow"
+done
+
 echo "GitHub App auth contract checks passed."
