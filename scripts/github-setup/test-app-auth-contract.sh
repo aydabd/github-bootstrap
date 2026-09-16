@@ -246,7 +246,8 @@ assert_contains 'validate_state true' "$template_merge"
 assert_contains 'gh api --method POST "/repos/$REPOSITORY/pulls/$PR_NUMBER/reviews"' \
     "$template_merge"
 # shellcheck disable=SC2016 # Literal workflow command in contract text.
-assert_contains 'GH_TOKEN="$MERGE_TOKEN" gh api graphql' "$template_merge"
+assert_contains '"/repos/$REPOSITORY/pulls/$PR_NUMBER/update-branch"' "$template_merge"
+assert_not_contains 'enablePullRequestAutoMerge' "$template_merge"
 assert_not_contains 'gh pr merge' "$template_merge"
 
 for workflow in create-repository.yml terraform-create-repository.yml; do

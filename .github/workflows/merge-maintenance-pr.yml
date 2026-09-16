@@ -63,8 +63,8 @@ jobs:
           [ -n "$EXPECTED_APP_SLUG" ] || { echo "Expected maintenance Reviewer App slug is not configured" >&2; exit 1; }
           [ "$APP_SLUG" = "$EXPECTED_APP_SLUG" ] || { echo "Resolved App is not the configured maintenance Reviewer" >&2; exit 1; }
 
-      # enablePullRequestAutoMerge needs contents:write, which the Reviewer App
-      # does not carry; the Writer App does. The Reviewer still owns the approval.
+      # Merging needs contents:write, which the Reviewer App does not carry;
+      # the Writer App does. The Reviewer still owns the approval.
       - name: Resolve Writer App merge token
         id: resolve-merge-token
         uses: ./.github/actions/resolve-gh-token
@@ -180,75 +180,57 @@ jobs:
           fi
 
           validate_state true
-          node_id="$(jq -r '.node_id' "$tmp_dir/pr.json")"
-          [ -n "$node_id" ] && [ "$node_id" != "null" ] || {
-            echo "pull request node ID is missing" >&2
-            exit 1
-          }
 
-          wait_until_mergeable() {
-            local timeout_seconds="$1" deadline mergeable_state
-            deadline=$((SECONDS + timeout_seconds))
-            while [ "$SECONDS" -lt "$deadline" ]; do
-              mergeable_state="$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.mergeable_state // "unknown"')"
-              case "$mergeable_state" in
-                unstable|unknown)
-                  sleep 5
-                  ;;
-                *)
-                  printf '%s\n' "$mergeable_state"
-                  return 0
-                  ;;
-              esac
+          # allow_auto_merge is disabled repository-wide, so native auto-merge
+          # can't be a fallback; defer instead and let the resulting event
+          # (branch update or check completion) re-invoke this job.
+          attempt_merge() {
+            local current_head_sha mergeable_state deadline
+
+            if ! current_head_sha="$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.head.sha')"; then
+              echo "could not re-read pull request head; deferring" >&2
+              return 0
+            fi
+            if [ "$current_head_sha" != "$HEAD_SHA" ]; then
+              echo "pull request head changed during merge preparation; deferring" >&2
+              return 0
+            fi
+
+            # No event exists for "mergeable_state finished computing".
+            deadline=$((SECONDS + 30))
+            if ! mergeable_state="$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.mergeable_state // "unknown"')"; then
+              echo "could not read mergeable state; deferring" >&2
+              return 0
+            fi
+            while [ "$mergeable_state" = "unknown" ] && [ "$SECONDS" -lt "$deadline" ]; do
+              sleep 5
+              if ! mergeable_state="$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.mergeable_state // "unknown"')"; then
+                echo "could not read mergeable state; deferring" >&2
+                return 0
+              fi
             done
-            return 1
-          }
 
-          merge_with_retry() {
-            local merge_timeout_seconds=60 merge_deadline mergeable_state remaining_seconds response current_head_sha
-            merge_deadline=$((SECONDS + merge_timeout_seconds))
-            while [ "$SECONDS" -lt "$merge_deadline" ]; do
-              if ! current_head_sha="$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.head.sha')"; then
-                echo "could not re-read pull request head; deferring" >&2
-                return 0
-              fi
-              if [ "$current_head_sha" != "$HEAD_SHA" ]; then
-                echo "pull request head changed during merge preparation; deferring" >&2
-                return 0
-              fi
-              remaining_seconds=$((merge_deadline - SECONDS))
-              if ! mergeable_state="$(wait_until_mergeable "$remaining_seconds")"; then
-                echo "mergeability_timeout: state did not stabilize within ${merge_timeout_seconds}s" >&2
-                echo "mergeability remained unstable; deferring to the next trigger" >&2
-                return 0
-              fi
-              if [ "$mergeable_state" = "clean" ]; then
+            case "$mergeable_state" in
+              clean)
                 GH_TOKEN="$MERGE_TOKEN" gh api --method PUT \
                   "/repos/$REPOSITORY/pulls/$PR_NUMBER/merge" \
                   -f sha="$HEAD_SHA" -f merge_method=squash > /dev/null
-                return 0
-              fi
-
-              # shellcheck disable=SC2016
-              if response="$(GH_TOKEN="$MERGE_TOKEN" gh api graphql \
-                -f query='mutation($pullRequestId:ID!,$mergeMethod:PullRequestMergeMethod!){enablePullRequestAutoMerge(input:{pullRequestId:$pullRequestId,mergeMethod:$mergeMethod}){pullRequest{autoMergeRequest{mergeMethod}}}}' \
-                -f pullRequestId="$node_id" \
-                -f mergeMethod=SQUASH 2>&1)"; then
-                return 0
-              fi
-              if grep -Fq 'unstable status' <<< "$response"; then
-                echo "GitHub rejected auto-merge while mergeability was unstable; waiting for a stable state"
-                if [ "$remaining_seconds" -gt 5 ]; then
-                  sleep 5
-                fi
-                continue
-              fi
-              printf '%s\n' "$response" >&2
-              return 1
-            done
-            echo "mergeability_timeout: auto-merge did not stabilize within ${merge_timeout_seconds}s" >&2
-            echo "mergeability remained unstable; deferring to the next trigger" >&2
-            return 0
+                ;;
+              behind)
+                echo "pull request is behind $REPOSITORY main; updating the branch" >&2
+                GH_TOKEN="$MERGE_TOKEN" gh api --method PUT \
+                  "/repos/$REPOSITORY/pulls/$PR_NUMBER/update-branch" \
+                  -f expected_head_sha="$HEAD_SHA" > /dev/null
+                echo "branch update requested; deferring to the checks it triggers" >&2
+                ;;
+              dirty)
+                echo "pull request has merge conflicts with main" >&2
+                return 1
+                ;;
+              *)
+                echo "mergeable_state=$mergeable_state; deferring to the next trigger" >&2
+                ;;
+            esac
           }
 
-          merge_with_retry
+          attempt_merge
