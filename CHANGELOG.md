@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.3](https://github.com/aydabd/github-bootstrap/compare/v2.12.2...v2.12.3) (2026-09-16)
+
+
+### Bug Fixes
+
+* align maintenance E2E with explicit merges ([#277](https://github.com/aydabd/github-bootstrap/issues/277)) ([9da207c](https://github.com/aydabd/github-bootstrap/commit/9da207c1f5f7021f3739e7011b92c22ef03ffc2a))
+
 ## [2.12.2](https://github.com/aydabd/github-bootstrap/compare/v2.12.1...v2.12.2) (2026-09-16)
 
 
