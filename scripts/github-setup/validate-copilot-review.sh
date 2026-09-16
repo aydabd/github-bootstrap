@@ -37,6 +37,10 @@ if [ -z "$copilot_login" ]; then
 fi
 
 if [ -z "$copilot_login" ]; then
+    if [ "$require_copilot_review" = true ]; then
+        echo "Copilot review identity is missing while review is required" >&2
+        exit 1
+    fi
     exit 0
 fi
 

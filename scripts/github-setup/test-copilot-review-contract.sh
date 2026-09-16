@@ -32,6 +32,14 @@ cat > "$tmp_dir/bot.json" << 'EOF'
 EOF
 template_validator="$repo_root/templates/.github/scripts/validate-copilot-review.sh"
 for validator_path in "$validator" "$template_validator"; do
+    if REQUIRE_COPILOT_REVIEW=true "$validator_path" "$tmp_dir/no-request.json" \
+        "$tmp_dir/empty-reviews.json" "$tmp_dir/threads.json" ""; then
+        echo "enabled Copilot review gate failed open in $validator_path" >&2
+        exit 1
+    fi
+done
+
+for validator_path in "$validator" "$template_validator"; do
     for require_copilot_review in false true; do
         if REQUIRE_COPILOT_REVIEW="$require_copilot_review" "$validator_path" \
             "$tmp_dir/bot.json" "$tmp_dir/empty-reviews.json" \
