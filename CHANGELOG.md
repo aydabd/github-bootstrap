@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.1](https://github.com/aydabd/github-bootstrap/compare/v2.12.0...v2.12.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* skip AI review gates for bot PRs ([#270](https://github.com/aydabd/github-bootstrap/issues/270)) ([d8af4cd](https://github.com/aydabd/github-bootstrap/commit/d8af4cdc7878c63d4a60e9a6a00e64313c325c64))
+
 ## [2.12.0](https://github.com/aydabd/github-bootstrap/compare/v2.11.10...v2.12.0) (2026-09-16)
 
 
