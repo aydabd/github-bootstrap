@@ -10,6 +10,8 @@ expected_sha="${6:-}"
 writer_app_slug="${7:-}"
 reviewer_app_slug="${8:-}"
 require_reviewer_approval="${9:-false}"
+e2e_runs_file="${10:-}"
+capability_file="${11:-}"
 identity_mode="${MAINTENANCE_IDENTITY_MODE:-production}"
 fixture_login="${MAINTENANCE_FIXTURE_LOGIN:-}"
 copilot_login="${MAINTENANCE_COPILOT_REVIEWER_LOGIN:-}"
@@ -64,6 +66,27 @@ if [ "$identity_mode" = e2e-disposable ] && [ "$pr_author" = "$fixture_login" ];
         'any(.[]?; .user.login == $copilot_login and .state == "COMMENTED" and .commit_id == $expected_sha)' \
         "$reviews_file" > /dev/null || {
         echo "E2E fixture Copilot review evidence is missing for the current head" >&2
+        exit 1
+    }
+fi
+
+if jq -e 'any(.[]?; .name == "automation: breaking")' "$labels_file" > /dev/null; then
+    [ -n "$e2e_runs_file" ] && [ -s "$e2e_runs_file" ] &&
+        [ -n "$capability_file" ] && [ -s "$capability_file" ] || {
+        echo "breaking maintenance merge evidence is incomplete" >&2
+        exit 1
+    }
+    jq -e '
+        type == "object" and .schema_version == 1 and .enabled == true and
+        (.workflow | type) == "string" and (.workflow | length > 0)
+    ' "$capability_file" > /dev/null || {
+        echo "breaking maintenance E2E capability is disabled or malformed" >&2
+        exit 1
+    }
+    jq -e --arg expected_sha "$expected_sha" \
+        'any(.[]?; .status == "completed" and .conclusion == "success" and .head_sha == $expected_sha)' \
+        "$e2e_runs_file" > /dev/null || {
+        echo "breaking maintenance E2E is missing, failed, stale, or unavailable" >&2
         exit 1
     }
 fi

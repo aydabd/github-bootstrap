@@ -9,6 +9,7 @@ reviews_file="${5:-}"
 threads_file="${6:-}"
 expected_sha="${7:-}"
 copilot_login="${8:-}"
+capability_file="${9:-}"
 
 for input_file in "$pr_file" "$workflow_runs_file" "$e2e_runs_file" "$labels_file" "$reviews_file" "$threads_file"; do
     [ -s "$input_file" ] || {
@@ -18,6 +19,19 @@ for input_file in "$pr_file" "$workflow_runs_file" "$e2e_runs_file" "$labels_fil
 done
 [ -n "$expected_sha" ] || {
     echo "maintenance safety expected SHA is missing" >&2
+    exit 1
+}
+
+[ -n "$capability_file" ] && [ -s "$capability_file" ] || {
+    echo "maintenance E2E capability config is missing" >&2
+    exit 1
+}
+jq -e '
+    type == "object" and .schema_version == 1 and
+    (.enabled | type) == "boolean" and (.workflow | type) == "string" and
+    ((.enabled and (.workflow | length > 0)) or ((.enabled | not) and .workflow == ""))
+' "$capability_file" > /dev/null || {
+    echo "maintenance E2E capability config is malformed" >&2
     exit 1
 }
 
@@ -49,6 +63,11 @@ jq -e '
 }
 
 if jq -e 'any(.[]?; .name == "automation: breaking")' "$labels_file" > /dev/null; then
+    e2e_enabled="$(jq -r '.enabled | tostring' "$capability_file")"
+    if [ "$e2e_enabled" != "true" ]; then
+        echo "breaking maintenance PR requires human review because maintenance E2E is disabled" >&2
+        exit 1
+    fi
     jq -e --arg expected_sha "$expected_sha" 'any(.[]?; .status == "completed" and .conclusion == "success" and .head_sha == $expected_sha)' "$e2e_runs_file" > /dev/null || {
         echo "risk-specific E2E validation is missing, pending, failed, or stale" >&2
         exit 1

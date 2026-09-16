@@ -41,9 +41,31 @@ EOF
 cat > "$tmp_dir/labels.json" << 'EOF'
 [{"name":"automation: maintenance"},{"name":"automation: validating"}]
 EOF
+cat > "$tmp_dir/breaking-labels.json" << 'EOF'
+[{"name":"automation: maintenance"},{"name":"automation: validating"},{"name":"automation: breaking"}]
+EOF
+cat > "$tmp_dir/e2e.json" << 'EOF'
+[{"status":"completed","conclusion":"success","head_sha":"current-sha"}]
+EOF
+cat > "$tmp_dir/capability.json" << 'EOF'
+{"schema_version":1,"enabled":true,"workflow":"test-generated-repository-e2e.yml"}
+EOF
+cat > "$tmp_dir/disabled-capability.json" << 'EOF'
+{"schema_version":1,"enabled":false,"workflow":""}
+EOF
 
 bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"
+bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
+    "$tmp_dir/breaking-labels.json" "aydabd/github-bootstrap" "current-sha" \
+    "maintenance-writer" "maintenance-reviewer" false "$tmp_dir/e2e.json" "$tmp_dir/capability.json"
+if bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
+    "$tmp_dir/breaking-labels.json" "aydabd/github-bootstrap" "current-sha" \
+    "maintenance-writer" "maintenance-reviewer" false "$tmp_dir/e2e.json" \
+    "$tmp_dir/disabled-capability.json"; then
+    echo "breaking maintenance merge accepted disabled E2E capability" >&2
+    exit 1
+fi
 
 sed 's/maintenance-writer\[bot\]/release-please[bot]/; s/"user":/"labels":[{"name":"autorelease: pending"}],"user":/' \
     "$tmp_dir/pr.json" > "$tmp_dir/release-pr.json"
@@ -167,6 +189,10 @@ assert_contains "[ \"\$TRIGGER_HEAD_SHA\" = \"\$HEAD_SHA\" ]" "$workflow"
 assert_contains "if length == 1 then .[0].number else empty end" "$workflow"
 assert_not_contains "[ \"\$SAFETY_SHA\" = \"\$HEAD_SHA\" ]" "$workflow"
 assert_contains 'github.event.workflow_run.pull_requests[0].number' "$workflow"
+assert_contains "maintenance-e2e.json" "$workflow"
+assert_contains "e2e_runs_file" "$repo_root/scripts/github-setup/validate-maintenance-merge.sh"
+assert_contains "breaking maintenance E2E" "$repo_root/scripts/github-setup/validate-maintenance-merge.sh"
+assert_contains "breaking maintenance E2E" "$repo_root/templates/.github/scripts/validate-maintenance-merge.sh"
 assert_not_contains 'gh pr merge' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_not_contains "bypass_actors" "$manifest"
 

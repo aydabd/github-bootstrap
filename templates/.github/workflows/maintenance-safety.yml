@@ -28,6 +28,7 @@ on:
 permissions:
   actions: read
   contents: read
+  issues: write
   pull-requests: read
 
 jobs:
@@ -53,6 +54,7 @@ jobs:
           sparse-checkout: |
             .github/scripts/validate-copilot-review.sh
             .github/scripts/validate-maintenance-safety.sh
+            .github/config/maintenance-e2e.json
 
       - name: Validate maintenance safety gates
         env:
@@ -93,9 +95,16 @@ jobs:
           pr_file="$tmp_dir/pr.json"
           runs_file="$tmp_dir/runs.json"
           e2e_file="$tmp_dir/e2e.json"
+          capability_file="$GITHUB_WORKSPACE/.github/config/maintenance-e2e.json"
           labels_file="$tmp_dir/labels.json"
           reviews_file="$tmp_dir/reviews.json"
           threads_file="$tmp_dir/threads.json"
+
+          gh api "/repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels?per_page=100" > "$labels_file"
+          if jq -e 'any(.[]?; .name == "automation: accepted")' "$labels_file" > /dev/null; then
+            gh api --method DELETE \
+              "/repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels/automation%3A%20accepted" > /dev/null
+          fi
 
           # Required workflow completions retrigger this workflow. Check once
           # for the same SHA and defer while any core gate is still running.
@@ -106,22 +115,34 @@ jobs:
             exit 0
           fi
 
-          gh api "/repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels?per_page=100" > "$labels_file"
-          if jq -e 'any(.[]?; .name == "automation: breaking")' "$labels_file" > /dev/null; then
-            e2e_settled="$(gh api --paginate "/repos/$GITHUB_REPOSITORY/actions/workflows/test-generated-repository-e2e.yml/runs?per_page=100" \
+          jq -e '
+            type == "object" and .schema_version == 1 and
+            (.enabled | type) == "boolean" and (.workflow | type) == "string" and
+            ((.enabled and (.workflow | length > 0)) or ((.enabled | not) and .workflow == ""))
+          ' "$capability_file" > /dev/null || {
+            echo "maintenance E2E capability config is malformed" >&2
+            exit 1
+          }
+          printf '%s\n' '[]' > "$e2e_file"
+          if jq -e --slurpfile capability "$capability_file" \
+            'any(.[]?; .name == "automation: breaking") and $capability[0].enabled == true' \
+            "$labels_file" > /dev/null; then
+            e2e_workflow="$(jq -r '.workflow' "$capability_file")"
+            # only query the declared maintenance E2E workflow when enabled.
+            e2e_settled="$(gh api --paginate "/repos/$GITHUB_REPOSITORY/actions/workflows/$e2e_workflow/runs?per_page=100" \
               --jq '.workflow_runs[] | {head_sha,status}' 2>/dev/null | \
               jq -s --arg head_sha "$HEAD_SHA" 'any(.[]; .head_sha == $head_sha and .status == "completed")' || echo false)"
             if [ "$e2e_settled" != "true" ]; then
               echo "breaking-risk E2E is still running; deferring to the next completion event"
               exit 0
             fi
+            gh api --paginate "/repos/$GITHUB_REPOSITORY/actions/workflows/$e2e_workflow/runs?per_page=100" \
+              --jq '.workflow_runs[] | {status,conclusion,head_sha}' | jq -s '.' > "$e2e_file"
           fi
 
           gh api "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > "$pr_file"
           gh api "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100" \
             --jq '[.workflow_runs[] | select(.name == "Quality" or .name == "Commit policy" or .name == "Test Quality Providers" or .name == "CodeQL Security Scan") | {name,status,conclusion,head_sha}]' > "$runs_file"
-          gh api --paginate "/repos/$GITHUB_REPOSITORY/actions/workflows/test-generated-repository-e2e.yml/runs?per_page=100" \
-            --jq '.workflow_runs[] | {status,conclusion,head_sha}' | jq -s '.' > "$e2e_file"
           gh api --paginate --slurp "/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" > "$tmp_dir/review-pages.json"
           jq '[.[][]]' "$tmp_dir/review-pages.json" > "$reviews_file"
 
@@ -138,4 +159,9 @@ jobs:
 
           "$GITHUB_WORKSPACE/.github/scripts/validate-maintenance-safety.sh" \
             "$pr_file" "$runs_file" "$e2e_file" "$labels_file" "$reviews_file" "$threads_file" \
-            "$HEAD_SHA" "$COPILOT_REVIEWER_LOGIN"
+            "$HEAD_SHA" "$COPILOT_REVIEWER_LOGIN" "$capability_file"
+
+          if jq -e 'any(.[]?; .name == "automation: maintenance")' "$labels_file" > /dev/null; then
+            gh api --method POST "/repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/labels" \
+              -f 'labels[]=automation: accepted' > /dev/null
+          fi
