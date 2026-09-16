@@ -118,18 +118,18 @@ jobs:
             echo "maintenance E2E capability config is malformed" >&2
             exit 1
           }
-          if jq -e '.enabled == true' "$capability_file" > /dev/null; then
-            e2e_workflow="$(jq -r '.workflow' "$capability_file")"
-            gh api --paginate "/repos/$REPOSITORY/actions/workflows/$e2e_workflow/runs?per_page=100" \
-              --jq '.workflow_runs[] | {status,conclusion,head_sha}' | jq -s '.' > "$e2e_runs_file"
-          else
-            printf '%s\n' '[]' > "$e2e_runs_file"
-          fi
-
           fetch_state() {
             gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" > "$tmp_dir/pr.json"
             gh pr checks "$PR_NUMBER" --required --json name,state > "$tmp_dir/checks.json" || true
             gh api "/repos/$REPOSITORY/issues/$PR_NUMBER/labels?per_page=100" > "$tmp_dir/labels.json"
+            if jq -e 'any(.[]?; .name == "automation: breaking")' "$tmp_dir/labels.json" > /dev/null &&
+              jq -e '.enabled == true' "$capability_file" > /dev/null; then
+              e2e_workflow="$(jq -r '.workflow' "$capability_file")"
+              gh api --paginate "/repos/$REPOSITORY/actions/workflows/$e2e_workflow/runs?per_page=100" \
+                --jq '.workflow_runs[] | {status,conclusion,head_sha}' | jq -s '.' > "$e2e_runs_file"
+            else
+              printf '%s\n' '[]' > "$e2e_runs_file"
+            fi
             gh api --paginate --slurp "/repos/$REPOSITORY/pulls/$PR_NUMBER/reviews" > "$tmp_dir/review-pages.json"
             jq '[.[][]]' "$tmp_dir/review-pages.json" > "$tmp_dir/reviews.json"
           }

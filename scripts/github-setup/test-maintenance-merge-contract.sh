@@ -26,6 +26,19 @@ assert_not_contains() {
     fi
 }
 
+assert_before() {
+    local first="$1"
+    local second="$2"
+    local file="$3"
+    local first_line second_line
+    first_line="$(grep -nF -- "$first" "$file" | head -n1 | cut -d: -f1)"
+    second_line="$(grep -nF -- "$second" "$file" | head -n1 | cut -d: -f1)"
+    if [ -z "$first_line" ] || [ -z "$second_line" ] || [ "$first_line" -ge "$second_line" ]; then
+        echo "expected '$first' before '$second' in $file" >&2
+        exit 1
+    fi
+}
+
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
@@ -190,10 +203,21 @@ assert_contains "if length == 1 then .[0].number else empty end" "$workflow"
 assert_not_contains "[ \"\$SAFETY_SHA\" = \"\$HEAD_SHA\" ]" "$workflow"
 assert_contains 'github.event.workflow_run.pull_requests[0].number' "$workflow"
 assert_contains "maintenance-e2e.json" "$workflow"
+# shellcheck disable=SC2016  # workflow expressions are intentionally literal test substrings
+assert_before 'gh api "/repos/$REPOSITORY/issues/$PR_NUMBER/labels?per_page=100"' 'gh api --paginate "/repos/$REPOSITORY/actions/workflows/$e2e_workflow/runs?per_page=100"' "$workflow"
+# shellcheck disable=SC2016  # workflow expressions are intentionally literal test substrings
+assert_before 'gh api "/repos/$REPOSITORY/issues/$PR_NUMBER/labels?per_page=100"' 'if jq -e '\''any(.[]?; .name == "automation: breaking")'\'' "$tmp_dir/labels.json"' "$workflow"
+# shellcheck disable=SC2016  # workflow expressions are intentionally literal test substrings
+assert_before 'gh api "/repos/$REPOSITORY/issues/$PR_NUMBER/labels?per_page=100"' 'gh api --paginate "/repos/$REPOSITORY/actions/workflows/$e2e_workflow/runs?per_page=100"' "$repo_root/templates/.github/workflows/merge-maintenance-pr.yml"
 assert_contains "e2e_runs_file" "$repo_root/scripts/github-setup/validate-maintenance-merge.sh"
 assert_contains "breaking maintenance E2E" "$repo_root/scripts/github-setup/validate-maintenance-merge.sh"
 assert_contains "breaking maintenance E2E" "$repo_root/templates/.github/scripts/validate-maintenance-merge.sh"
 assert_not_contains 'gh pr merge' "$repo_root/.github/workflows/weekly-tooling-updates.yml"
 assert_not_contains "bypass_actors" "$manifest"
+
+shellcheck "$repo_root/scripts/github-setup/validate-maintenance-safety.sh" \
+    "$repo_root/scripts/github-setup/validate-maintenance-merge.sh" \
+    "$repo_root/templates/.github/scripts/validate-maintenance-safety.sh" \
+    "$repo_root/templates/.github/scripts/validate-maintenance-merge.sh"
 
 echo "Maintenance merge contract passed."

@@ -22,10 +22,10 @@ done
     exit 1
 }
 
-[ -n "$capability_file" ] && [ -s "$capability_file" ] || {
+if [ -z "$capability_file" ] || [ ! -s "$capability_file" ]; then
     echo "maintenance E2E capability config is missing" >&2
     exit 1
-}
+fi
 jq -e '
     type == "object" and .schema_version == 1 and
     (.enabled | type) == "boolean" and (.workflow | type) == "string" and

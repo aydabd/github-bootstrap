@@ -71,11 +71,11 @@ if [ "$identity_mode" = e2e-disposable ] && [ "$pr_author" = "$fixture_login" ];
 fi
 
 if jq -e 'any(.[]?; .name == "automation: breaking")' "$labels_file" > /dev/null; then
-    [ -n "$e2e_runs_file" ] && [ -s "$e2e_runs_file" ] &&
-        [ -n "$capability_file" ] && [ -s "$capability_file" ] || {
+    if [ -z "$e2e_runs_file" ] || [ ! -s "$e2e_runs_file" ] ||
+        [ -z "$capability_file" ] || [ ! -s "$capability_file" ]; then
         echo "breaking maintenance merge evidence is incomplete" >&2
         exit 1
-    }
+    fi
     jq -e '
         type == "object" and .schema_version == 1 and .enabled == true and
         (.workflow | type) == "string" and (.workflow | length > 0)
