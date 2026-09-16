@@ -76,7 +76,7 @@ assert_contains 'same repository, pull request, and head' "$workflow"
 assert_contains 'wait_for_run maintenance-safety.yml pull_request_target "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true' "$workflow"
 assert_contains 'wait_for_run merge-maintenance-pr.yml workflow_run "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true' "$workflow"
 assert_not_contains 'validate-maintenance-merge-state.sh' "$workflow"
-assert_not_contains '.auto_merge.enabled_by.login' "$workflow"
+assert_not_contains 'auto_merge' "$workflow"
 assert_contains 'configured Reviewer App approval was not observed for the current PR head' "$workflow"
 assert_contains 'validate-maintenance-release.sh' "$workflow"
 assert_contains 'release_pr_number' "$workflow"
@@ -318,9 +318,6 @@ if ! REQUIRE_COPILOT_REVIEW=true "$validator" "$tmp_dir/bot.json" \
     exit 1
 fi
 
-cat > "$tmp_dir/reviewer-approval.json" << 'EOF'
-[{"user":{"login":"reviewer[bot]"},"state":"APPROVED","commit_id":"current-sha"}]
-EOF
 cat > "$tmp_dir/releases.json" << 'EOF'
 [{"tag_name":"v1.2.3","created_at":"2026-09-10T05:00:00Z"}]
 EOF
