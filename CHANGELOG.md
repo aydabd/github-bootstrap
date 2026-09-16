@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.11.10](https://github.com/aydabd/github-bootstrap/compare/v2.11.9...v2.11.10) (2026-09-16)
+
+
+### Bug Fixes
+
+* handle behind maintenance pull requests ([67df967](https://github.com/aydabd/github-bootstrap/commit/67df967a98cdcf7c31272b6372107c330eb0c909))
+* update a behind PR branch instead of relying on disabled auto-merge ([#263](https://github.com/aydabd/github-bootstrap/issues/263)) ([67df967](https://github.com/aydabd/github-bootstrap/commit/67df967a98cdcf7c31272b6372107c330eb0c909))
+
 ## [2.11.9](https://github.com/aydabd/github-bootstrap/compare/v2.11.8...v2.11.9) (2026-09-16)
 
 
