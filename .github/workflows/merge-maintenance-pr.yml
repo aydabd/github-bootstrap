@@ -39,6 +39,7 @@ jobs:
             scripts/github-setup/gh-common.sh
             scripts/github-setup/validate-app-auth.sh
             scripts/github-setup/validate-maintenance-merge.sh
+            .github/config/maintenance-e2e.json
 
       - name: Resolve Reviewer App token
         id: resolve-token
@@ -117,11 +118,24 @@ jobs:
 
           tmp_dir="$(mktemp -d)"
           trap 'rm -rf "$tmp_dir"' EXIT
-
+          capability_file="$GITHUB_WORKSPACE/.github/config/maintenance-e2e.json"
+          e2e_runs_file="$tmp_dir/e2e.json"
+          jq -e 'type == "object" and .schema_version == 1 and (.enabled | type) == "boolean" and (.workflow | type) == "string" and ((.enabled and (.workflow | length > 0)) or ((.enabled | not) and .workflow == ""))' "$capability_file" > /dev/null || {
+            echo "maintenance E2E capability config is malformed" >&2
+            exit 1
+          }
           fetch_state() {
             gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER" > "$tmp_dir/pr.json"
             gh pr checks "$PR_NUMBER" --required --json name,state > "$tmp_dir/checks.json" || true
             gh api "/repos/$REPOSITORY/issues/$PR_NUMBER/labels?per_page=100" > "$tmp_dir/labels.json"
+            if jq -e 'any(.[]?; .name == "automation: breaking")' "$tmp_dir/labels.json" > /dev/null &&
+              jq -e '.enabled == true' "$capability_file" > /dev/null; then
+              e2e_workflow="$(jq -r '.workflow' "$capability_file")"
+              gh api --paginate "/repos/$REPOSITORY/actions/workflows/$e2e_workflow/runs?per_page=100" \
+                --jq '.workflow_runs[] | {status,conclusion,head_sha}' | jq -s '.' > "$e2e_runs_file"
+            else
+              printf '%s\n' '[]' > "$e2e_runs_file"
+            fi
             gh api --paginate --slurp "/repos/$REPOSITORY/pulls/$PR_NUMBER/reviews" > "$tmp_dir/review-pages.json"
             jq '[.[][]]' "$tmp_dir/review-pages.json" > "$tmp_dir/reviews.json"
           }
@@ -132,7 +146,8 @@ jobs:
             bash scripts/github-setup/validate-maintenance-merge.sh \
               "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/reviews.json" \
               "$tmp_dir/labels.json" "$REPOSITORY" "$HEAD_SHA" \
-              "$WRITER_APP_SLUG" "$REVIEWER_APP_SLUG" "$require_reviewer_approval"
+              "$WRITER_APP_SLUG" "$REVIEWER_APP_SLUG" "$require_reviewer_approval" \
+              "$e2e_runs_file" "$capability_file"
           }
 
           wait_until_safety_check() {
