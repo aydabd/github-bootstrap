@@ -35,7 +35,7 @@ default permissions are the complete requested contract:
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Bootstrap E2E Admin   | `organization_administration: write`, `administration: write`, `metadata: read`                                                       |
 | Bootstrap Provisioner | `administration: write`, `actions: write`, `contents: write`, `issues: write`, `metadata: read`, `secrets: write`, `workflows: write` |
-| Bootstrap Writer      | `contents: write`, `pull_requests: write`, `metadata: read`                                                                           |
+| Bootstrap Writer      | `actions: read`, `contents: write`, `pull_requests: write`, `metadata: read`                                                          |
 | Bootstrap Reviewer    | `actions: write`, `pull_requests: write`, `metadata: read`                                                                            |
 | Bootstrap E2E Fixture | `contents: write`, `pull_requests: write`, `secrets: write`                                                                           |
 

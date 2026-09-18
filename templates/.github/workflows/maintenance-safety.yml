@@ -64,6 +64,7 @@ jobs:
           private-key: ${{ secrets.BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          permission-actions: read
           permission-issues: write
           permission-pull-requests: write
 
