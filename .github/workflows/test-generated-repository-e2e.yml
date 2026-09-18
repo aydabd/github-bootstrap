@@ -724,15 +724,28 @@ jobs:
             echo "fixture App could not create the maintenance branch before the bounded deadline" >&2
             return 1
           }
+          write_fixture_content() {
+            local path="$1" branch_name="$2" content_value="$3"
+            for attempt in $(seq 1 30); do
+              if author_gh api --method PUT "/repos/$OWNER/$REPO_NAME/contents/$path" \
+                -f message="fix: controlled Dependabot-style maintenance update" \
+                -f content="$content_value" -f branch="$branch_name" >/dev/null; then
+                diagnostic 'fixture content write' "https://github.com/$OWNER/$REPO_NAME/blob/$branch_name/$path" "created attempt=$attempt"
+                return 0
+              fi
+              diagnostic 'fixture content write' "https://github.com/$OWNER/$REPO_NAME/blob/$branch_name/$path" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "fixture App could not write the maintenance file before the bounded deadline" >&2
+            return 1
+          }
           main_sha="$(writer_gh api "/repos/$OWNER/$REPO_NAME/git/ref/heads/main" --jq '.object.sha')"
           branch="e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           wait_for_fixture_repository_access
           create_fixture_branch "$branch" "$main_sha"
           marker="maintenance-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           content="$(printf 'fix: controlled Dependabot-style maintenance update (%s)\n' "$marker" | base64 | tr -d '\n')"
-          author_gh api --method PUT "/repos/$OWNER/$REPO_NAME/contents/.github/$marker" \
-            -f message="fix: controlled Dependabot-style maintenance update" -f content="$content" \
-            -f branch="$branch" >/dev/null
+          write_fixture_content ".github/$marker" "$branch" "$content"
           PR_NUMBER="$(author_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls" \
             -f title="fix(deps): controlled Dependabot-style maintenance update" \
             -f body="Deterministic E2E maintenance PR; no production repository operations." \
