@@ -649,22 +649,31 @@ jobs:
           wait_for_run() {
             local workflow="$1" expected_event="$2" expected_sha="$3" expected_branch="$4" since="$5" expected_pr="$6" allow_missing_pr="${7:-false}" timeout_seconds=900
             local deadline=$((SECONDS + timeout_seconds))
-            local run_id="" status="" conclusion="" url=""
+            local run_id="" run_listing="" status="" conclusion="" url=""
             local expected_repository="$OWNER/$REPO_NAME"
             for _ in $(seq 1 60); do
               [ "$SECONDS" -lt "$deadline" ] || break
               # shellcheck disable=SC2016
-              run_id="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/actions/workflows/$workflow/runs?per_page=20" |
-                  jq -r --arg event "$expected_event" --arg sha "$expected_sha" \
-                  --arg branch "$expected_branch" --arg since "$since" --arg pr "$expected_pr" \
-                  --arg repository "$expected_repository" \
-                  --arg allow_missing "$allow_missing_pr" \
-                  '[.workflow_runs[] | select(.event == $event) | select(.head_sha == $sha) |
-                    select(.head_branch == $branch) | select(.head_repository.full_name == $repository) |
-                    select(.created_at >= $since) |
-                    select($pr == "0" or any(.pull_requests[]?.number; . == ($pr | tonumber)) or
-                      ($allow_missing == "true" and (.pull_requests | length) == 0))] |
-                  first | .id // empty')"
+              if ! run_listing="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/actions/workflows/$workflow/runs?per_page=20" 2>/dev/null)"; then
+                diagnostic "$workflow" "https://github.com/$OWNER/$REPO_NAME/actions" "lifecycle observer unavailable"
+                sleep 10
+                continue
+              fi
+              if ! run_id="$(printf '%s\n' "$run_listing" |
+                jq -r --arg event "$expected_event" --arg sha "$expected_sha" \
+                --arg branch "$expected_branch" --arg since "$since" --arg pr "$expected_pr" \
+                --arg repository "$expected_repository" \
+                --arg allow_missing "$allow_missing_pr" \
+                '[.workflow_runs[] | select(.event == $event) | select(.head_sha == $sha) |
+                  select(.head_branch == $branch) | select(.head_repository.full_name == $repository) |
+                  select(.created_at >= $since) |
+                  select($pr == "0" or any(.pull_requests[]?.number; . == ($pr | tonumber)) or
+                    ($allow_missing == "true" and (.pull_requests | length) == 0))] |
+                first | .id // empty')"; then
+                diagnostic "$workflow" "https://github.com/$OWNER/$REPO_NAME/actions" "lifecycle observer returned malformed data"
+                sleep 10
+                continue
+              fi
               [ -n "$run_id" ] && break
               sleep 10
             done
@@ -709,10 +718,14 @@ jobs:
             return 1
           }
           wait_for_label() {
-            local label="$1"
+            local label="$1" labels=""
             for _ in $(seq 1 60); do
-              if e2e_gh api "/repos/$OWNER/$REPO_NAME/issues/$PR_NUMBER/labels" --jq '.[].name' |
-                grep -Fxq "$label"; then return 0; fi
+              if ! labels="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/issues/$PR_NUMBER/labels" --jq '.[].name' 2>/dev/null)"; then
+                diagnostic 'maintenance label' "https://github.com/$OWNER/$REPO_NAME/pull/$PR_NUMBER" "label observer unavailable"
+                sleep 10
+                continue
+              fi
+              if printf '%s\n' "$labels" | grep -Fxq "$label"; then return 0; fi
               sleep 10
             done
             echo "diagnostic: missing label $label for PR $PR_NUMBER" >&2
