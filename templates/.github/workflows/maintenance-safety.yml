@@ -54,22 +54,18 @@ jobs:
           sparse-checkout: |
             .github/scripts/validate-copilot-review.sh
             .github/scripts/validate-maintenance-safety.sh
-            .github/actions/resolve-gh-token/action.yml
-            scripts/github-setup/gh-common.sh
-            scripts/github-setup/validate-app-auth.sh
             .github/config/maintenance-e2e.json
 
       - name: Resolve Writer App token for lifecycle labels
         id: writer-token
-        uses: ./.github/actions/resolve-gh-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID }}
-          refresh_token_secret: ""
-          app_private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY }}
-          app_owner: ${{ github.repository_owner }}
-          target_owner: ${{ github.repository_owner }}
-          permission_profile: maintenance-labeling
+          client-id: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          permission-issues: write
+          permission-pull-requests: write
 
       - name: Validate maintenance safety gates
         env:
@@ -123,6 +119,7 @@ jobs:
 
           # Required workflow completions retrigger this workflow. Check once
           # for the same SHA and defer while any core gate is still running.
+          # shellcheck disable=SC2016
           required_status_jq="[\"Quality\",\"Commit policy\",\"Test Quality Providers\",\"CodeQL Security Scan\"] as \$need | [.workflow_runs[]] as \$runs | [\$need[] | . as \$name | (\$runs | map(select(.name == \$name)) | sort_by(.created_at) | last | .status) // \"missing\"] | all(. == \"completed\")"
           settled="$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100" --jq "$required_status_jq" 2>/dev/null || echo false)"
           if [ "$settled" != "true" ]; then
