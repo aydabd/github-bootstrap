@@ -54,11 +54,26 @@ jobs:
           sparse-checkout: |
             .github/scripts/validate-copilot-review.sh
             .github/scripts/validate-maintenance-safety.sh
+            .github/actions/resolve-gh-token/action.yml
+            scripts/github-setup/gh-common.sh
+            scripts/github-setup/validate-app-auth.sh
             .github/config/maintenance-e2e.json
+
+      - name: Resolve Writer App token for lifecycle labels
+        id: writer-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID }}
+          refresh_token_secret: ""
+          app_private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: maintenance-labeling
+          repositories: ${{ github.event.repository.name }}
 
       - name: Validate maintenance safety gates
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.writer-token.outputs.token }}
           COPILOT_REVIEWER_LOGIN: ${{ vars.BOOTSTRAP_COPILOT_REVIEWER_LOGIN }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.event.inputs.head_sha || github.event.client_payload.head_sha }}
           PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.event.inputs.pr_number || github.event.client_payload.pr_number }}
