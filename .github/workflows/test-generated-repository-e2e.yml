@@ -824,9 +824,9 @@ jobs:
           marker="maintenance-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           content="$(printf 'fix: controlled Dependabot-style maintenance update (%s)\n' "$marker" | base64 | tr -d '\n')"
           write_fixture_content ".github/$marker" "$branch" "$content"
+          maintenance_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           PR_NUMBER="$(create_fixture_pull_request "$branch")"
           [ -n "$PR_NUMBER" ] || { echo "maintenance PR was not created" >&2; exit 1; }
-          maintenance_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           pr_head_sha="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" --jq '.head.sha')"
           [ -n "$pr_head_sha" ] || { echo "maintenance PR head SHA is missing" >&2; exit 1; }
           pr_author="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" --jq '.user.login')"
