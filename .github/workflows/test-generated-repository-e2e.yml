@@ -507,11 +507,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          DISPATCH_REF="$TARGET_REF"
+          TEMP_REF_CREATED=false
+          cleanup_dispatch_ref() {
+            cleanup_status=$?
+            if [ "$TEMP_REF_CREATED" = true ]; then
+              if ! gh api --method DELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$DISPATCH_REF" >/dev/null 2>&1; then
+                echo "failed to remove temporary maintenance E2E dispatch ref" >&2
+                cleanup_status=1
+              fi
+            fi
+            return "$cleanup_status"
+          }
+          trap cleanup_dispatch_ref EXIT
+
+          if [[ "$TARGET_REF" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            DISPATCH_REF="e2e-maintenance-head-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            gh api --method POST "/repos/$GITHUB_REPOSITORY/git/refs" \
+              -f "ref=refs/heads/$DISPATCH_REF" -f "sha=$TARGET_REF" >/dev/null
+            TEMP_REF_CREATED=true
+          fi
           creation_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           requested_target_sha="$(gh api "/repos/$REPOSITORY/commits/$TARGET_REF" --jq '.sha')"
           [ -n "$requested_target_sha" ] || { echo "requested target SHA is missing" >&2; exit 1; }
           gh workflow run create-repository.yml --repo "$REPOSITORY" \
-            --ref "$TARGET_REF" \
+            --ref "$DISPATCH_REF" \
             --field provisioner_profile=e2e-provisioner --field app_owner="$APP_OWNER" \
             --field allowed_repo_owners="$OWNER" --field repo_name="$REPO_NAME" \
             --field repo_description="Generated maintenance lifecycle E2E" \
@@ -525,7 +545,7 @@ jobs:
           for _ in $(seq 1 60); do
             creation_run="$(gh api "/repos/$REPOSITORY/actions/workflows/create-repository.yml/runs?event=workflow_dispatch&per_page=50" |
               jq -r --arg repo "$REPO_NAME" --arg since "$creation_started_at" \
-                --arg ref "$TARGET_REF" --arg sha "$requested_target_sha" \
+                --arg ref "$DISPATCH_REF" --arg sha "$requested_target_sha" \
                 '[.workflow_runs[] | select((.display_title // "") | contains($repo)) |
                   select(.head_branch == $ref and .head_sha == $sha and .created_at >= $since)] |
                   first | .id // empty')"

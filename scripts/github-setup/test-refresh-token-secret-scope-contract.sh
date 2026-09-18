@@ -67,7 +67,7 @@ grep -Fq 'SECRET_WRITER_TOKEN:' "$action" || {
     echo "resolve-gh-token must pass the separate refresh-secret writer token to the rotation step" >&2
     exit 1
 }
-grep -Fq 'GH_TOKEN="$secret_writer_token" gh secret set' "$action" || {
+grep -Fq "GH_TOKEN=\"\$secret_writer_token\" gh secret set" "$action" || {
     echo "resolve-gh-token must use the separate refresh-secret writer token for persistence" >&2
     exit 1
 }
@@ -79,7 +79,7 @@ grep -Fq 'APP_USER_OWNER:' "$action" || {
     echo "resolve-gh-token must pass the separate personal App user owner to rotation" >&2
     exit 1
 }
-grep -Fq 'GH_TOKEN="$secret_writer_token" gh secret set "$ACCESS_TOKEN_SECRET"' "$action" || {
+grep -Fq "GH_TOKEN=\"\$secret_writer_token\" gh secret set \"\$ACCESS_TOKEN_SECRET\"" "$action" || {
     echo "resolve-gh-token must persist the refreshed access token with the secret writer" >&2
     exit 1
 }
