@@ -694,6 +694,19 @@ jobs:
               return 1
             }
           }
+          wait_for_lifecycle_observer_access() {
+            local endpoint="/repos/$OWNER/$REPO_NAME/actions/workflows/quality.yml/runs?per_page=1"
+            for attempt in $(seq 1 30); do
+              if e2e_gh api "$endpoint" >/dev/null 2>&1; then
+                diagnostic 'lifecycle observer access' "https://github.com/$OWNER/$REPO_NAME/actions" "ready attempt=$attempt"
+                return 0
+              fi
+              diagnostic 'lifecycle observer access' "https://github.com/$OWNER/$REPO_NAME/actions" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "E2E lifecycle observer could not read Actions runs before the bounded deadline" >&2
+            return 1
+          }
           wait_for_label() {
             local label="$1"
             for _ in $(seq 1 60); do
@@ -781,6 +794,7 @@ jobs:
             echo "E2E lifecycle App could not request the fixture reviewer before the bounded deadline" >&2
             return 1
           }
+          wait_for_lifecycle_observer_access
           main_sha="$(writer_gh api "/repos/$OWNER/$REPO_NAME/git/ref/heads/main" --jq '.object.sha')"
           branch="e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           wait_for_fixture_repository_access
