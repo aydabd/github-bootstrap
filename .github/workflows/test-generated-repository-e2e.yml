@@ -757,6 +757,20 @@ jobs:
             echo "fixture App could not create the maintenance pull request before the bounded deadline" >&2
             return 1
           }
+          request_fixture_reviewer() {
+            local pr_number="$1"
+            for attempt in $(seq 1 30); do
+              if e2e_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls/$pr_number/requested_reviewers" \
+                -f "reviewers[]=$MAINTENANCE_COPILOT_REVIEWER_LOGIN" >/dev/null; then
+                diagnostic 'fixture reviewer request' "https://github.com/$OWNER/$REPO_NAME/pull/$pr_number" "requested attempt=$attempt"
+                return 0
+              fi
+              diagnostic 'fixture reviewer request' "https://github.com/$OWNER/$REPO_NAME/pull/$pr_number" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "E2E lifecycle App could not request the fixture reviewer before the bounded deadline" >&2
+            return 1
+          }
           main_sha="$(writer_gh api "/repos/$OWNER/$REPO_NAME/git/ref/heads/main" --jq '.object.sha')"
           branch="e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           wait_for_fixture_repository_access
@@ -774,8 +788,7 @@ jobs:
             echo "maintenance fixture PR author '$pr_author' is not the configured disposable identity" >&2
             exit 1
           }
-          e2e_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/requested_reviewers" \
-            -f "reviewers[]=$MAINTENANCE_COPILOT_REVIEWER_LOGIN" >/dev/null
+          request_fixture_reviewer "$PR_NUMBER"
           wait_for_label 'automation: maintenance'
           wait_for_label 'automation: validating'
           wait_for_run quality.yml pull_request "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER"
