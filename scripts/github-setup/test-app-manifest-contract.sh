@@ -52,6 +52,7 @@ manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MA
 assert manifest["name"] == "Bootstrap Writer"
 assert manifest["redirect_url"] == "https://example.test/callback"
 assert manifest["default_permissions"] == {
+    "actions": "read",
     "contents": "write",
     "issues": "write",
     "metadata": "read",
@@ -70,6 +71,7 @@ manifest = json.loads(urllib.parse.parse_qs(urllib.parse.urlsplit(os.environ["MA
 assert manifest["name"] == "Bootstrap E2E Writer"
 assert manifest["redirect_url"] == "https://example.test/callback"
 assert manifest["default_permissions"] == {
+    "actions": "read",
     "contents": "write",
     "issues": "write",
     "pull_requests": "write",
@@ -203,6 +205,7 @@ expected = {
     "bootstrap-writer.json": {
         "name": "Bootstrap Writer",
         "default_permissions": {
+            "actions": "read",
             "contents": "write",
             "issues": "write",
             "metadata": "read",
@@ -221,6 +224,7 @@ expected = {
     "bootstrap-e2e-writer.json": {
         "name": "Bootstrap E2E Writer",
         "default_permissions": {
+            "actions": "read",
             "contents": "write",
             "issues": "write",
             "pull_requests": "write",
