@@ -122,6 +122,7 @@ jobs:
 
           # Required workflow completions retrigger this workflow. Check once
           # for the same SHA and defer while any core gate is still running.
+          # shellcheck disable=SC2016
           required_status_jq='["Quality","Commit policy","Test Quality Providers","CodeQL Security Scan"] as $need | [.workflow_runs[]] as $runs | [$need[] | . as $name | ($runs | map(select(.name == $name)) | sort_by(.created_at) | last | .status) // "missing"] | all(. == "completed")'
           settled="$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100" --jq "$required_status_jq" 2>/dev/null || echo false)"
           if [ "$settled" != "true" ]; then
