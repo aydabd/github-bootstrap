@@ -152,6 +152,7 @@ bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/head-appro
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer" true
 
 assert_contains "workflow_run:" "$workflow"
+assert_contains "      - Maintenance safety" "$workflow"
 assert_contains "pull_request_target:" "$workflow"
 assert_contains "types: [labeled]" "$workflow"
 assert_contains "github.event.label.name == 'automation: accepted'" "$workflow"

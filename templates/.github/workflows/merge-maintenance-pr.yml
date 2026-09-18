@@ -5,6 +5,7 @@ on:
     types: [labeled]
   workflow_run:
     workflows:
+      - Maintenance safety
       - Verify Conda Lockfiles
     types: [completed]
 
