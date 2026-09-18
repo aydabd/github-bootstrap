@@ -739,6 +739,24 @@ jobs:
             echo "fixture App could not write the maintenance file before the bounded deadline" >&2
             return 1
           }
+          create_fixture_pull_request() {
+            local branch_name="$1"
+            for attempt in $(seq 1 30); do
+              if pr_number="$(author_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls" \
+                -f title="fix(deps): controlled Dependabot-style maintenance update" \
+                -f body="Deterministic E2E maintenance PR; no production repository operations." \
+                -f head="$branch_name" -f base=main --jq '.number')"; then
+                [ -n "$pr_number" ] || continue
+                diagnostic 'fixture pull request creation' "https://github.com/$OWNER/$REPO_NAME/pull/$pr_number" "created attempt=$attempt"
+                printf '%s\n' "$pr_number"
+                return 0
+              fi
+              diagnostic 'fixture pull request creation' "https://github.com/$OWNER/$REPO_NAME/pulls" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "fixture App could not create the maintenance pull request before the bounded deadline" >&2
+            return 1
+          }
           main_sha="$(writer_gh api "/repos/$OWNER/$REPO_NAME/git/ref/heads/main" --jq '.object.sha')"
           branch="e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           wait_for_fixture_repository_access
@@ -746,10 +764,7 @@ jobs:
           marker="maintenance-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           content="$(printf 'fix: controlled Dependabot-style maintenance update (%s)\n' "$marker" | base64 | tr -d '\n')"
           write_fixture_content ".github/$marker" "$branch" "$content"
-          PR_NUMBER="$(author_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls" \
-            -f title="fix(deps): controlled Dependabot-style maintenance update" \
-            -f body="Deterministic E2E maintenance PR; no production repository operations." \
-            -f head="$branch" -f base=main --jq '.number')"
+          PR_NUMBER="$(create_fixture_pull_request "$branch")"
           [ -n "$PR_NUMBER" ] || { echo "maintenance PR was not created" >&2; exit 1; }
           maintenance_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           pr_head_sha="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" --jq '.head.sha')"
