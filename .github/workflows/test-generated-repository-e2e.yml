@@ -760,7 +760,7 @@ jobs:
           request_fixture_reviewer() {
             local pr_number="$1"
             for attempt in $(seq 1 30); do
-              if e2e_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls/$pr_number/requested_reviewers" \
+              if writer_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls/$pr_number/requested_reviewers" \
                 -f "reviewers[]=$MAINTENANCE_COPILOT_REVIEWER_LOGIN" >/dev/null; then
                 diagnostic 'fixture reviewer request' "https://github.com/$OWNER/$REPO_NAME/pull/$pr_number" "requested attempt=$attempt"
                 return 0
