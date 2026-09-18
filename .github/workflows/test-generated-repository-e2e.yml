@@ -865,7 +865,7 @@ jobs:
           # Maintenance safety must pass before the Reviewer approval and
           # explicit Writer merge stages are allowed to proceed.
           wait_for_run maintenance-safety.yml pull_request_target "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
-          wait_for_run merge-maintenance-pr.yml workflow_run "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
+          wait_for_run merge-maintenance-pr.yml pull_request_target "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
           merge_reviews_file="$RUNNER_TEMP/merge-reviews-$REPO_NAME.json"
           e2e_gh api --paginate --slurp \
             "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/reviews" | jq '[.[][]]' > "$merge_reviews_file"
@@ -917,7 +917,7 @@ jobs:
           release_pr_branch="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$release_pr_number" --jq '.head.ref')"
           wait_for_run maintenance-safety.yml pull_request_target "$release_pr_head" \
             "$release_pr_branch" "$release_started_at" "$release_pr_number"
-          wait_for_run merge-maintenance-pr.yml workflow_run "$release_pr_head" \
+          wait_for_run merge-maintenance-pr.yml pull_request_target "$release_pr_head" \
             "$release_pr_branch" "$release_started_at" "$release_pr_number" true
           release_merge_sha=""
           for _ in $(seq 1 120); do

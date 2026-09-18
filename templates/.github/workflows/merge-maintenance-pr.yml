@@ -1,9 +1,10 @@
 name: Merge Maintenance Pull Request
 
 on:
+  pull_request_target:
+    types: [labeled]
   workflow_run:
     workflows:
-      - Maintenance safety
       - Verify Conda Lockfiles
     types: [completed]
 
@@ -15,8 +16,11 @@ permissions:
 jobs:
   merge:
     if: >-
+      (github.event_name == 'pull_request_target' &&
+      github.event.pull_request.label.name == 'automation: accepted') ||
+      (github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch != 'main'
+      github.event.workflow_run.head_branch != 'main')
     name: Approve and enable squash auto-merge
     runs-on: ubuntu-24.04
     environment: production
@@ -76,10 +80,10 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           MERGE_TOKEN: ${{ steps.resolve-merge-token.outputs.token }}
-          TRIGGER_WORKFLOW: ${{ github.event.workflow_run.name }}
-          TRIGGER_PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
-          TRIGGER_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          TRIGGER_WORKFLOW: ${{ github.event.workflow_run.name || '' }}
+          TRIGGER_PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || '' }}
+          TRIGGER_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || '' }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref || github.event.workflow_run.head_branch || '' }}
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}
           REVIEWER_APP_SLUG: ${{ steps.resolve-token.outputs.app-slug }}
           REPOSITORY: ${{ github.repository }}
