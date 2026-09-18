@@ -827,12 +827,20 @@ jobs:
             jq -e --arg sha "$pr_head_sha" \
               '.head.sha == $sha' \
               "$copilot_dir/pr.json" >/dev/null || { sleep 10; continue; }
-            reviewer_gh api --paginate --slurp \
-              "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/reviews" | jq '[.[][]]' > "$copilot_dir/reviews.json"
+            if ! reviewer_gh api --paginate --slurp \
+              "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/reviews" | jq '[.[][]]' > "$copilot_dir/reviews.json"; then
+              diagnostic 'Copilot review read' "https://github.com/$OWNER/$REPO_NAME/pull/$PR_NUMBER" "waiting"
+              sleep 10
+              continue
+            fi
             # shellcheck disable=SC2016
-            e2e_gh api graphql \
+            if ! e2e_gh api graphql \
               -f query='query($owner:String!,$repository:String!,$number:Int!){repository(owner:$owner,name:$repository){pullRequest(number:$number){reviewThreads(first:100){pageInfo{hasNextPage}nodes{isResolved comments(first:1){nodes{author{login}}}}}}}}' \
-              -F owner="$OWNER" -F repository="$REPO_NAME" -F number="$PR_NUMBER" > "$copilot_dir/thread-response.json"
+              -F owner="$OWNER" -F repository="$REPO_NAME" -F number="$PR_NUMBER" > "$copilot_dir/thread-response.json"; then
+              diagnostic 'Copilot thread read' "https://github.com/$OWNER/$REPO_NAME/pull/$PR_NUMBER" "waiting"
+              sleep 10
+              continue
+            fi
             jq -e '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage == false' \
               "$copilot_dir/thread-response.json" >/dev/null || {
               echo "Copilot review threads exceed validation page; refusing to pass" >&2
