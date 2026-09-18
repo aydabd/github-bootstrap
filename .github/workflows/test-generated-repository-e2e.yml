@@ -445,7 +445,7 @@ jobs:
           access_token_secret: BOOTSTRAP_E2E_FIXTURE_APP_USER_ACCESS_TOKEN
           secret_writer_token: ${{ steps.provisioner-token.outputs.token }}
           app_owner: ${{ github.repository_owner }}
-          app_user_owner: e2e-user
+          app_user_owner: ${{ inputs.app_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: e2e-fixture
           repositories: ${{ github.event.repository.name }}
@@ -592,8 +592,8 @@ jobs:
           set -euo pipefail
           [ -n "$FIXTURE_TOKEN" ] || { echo "E2E fixture access token was not published by the rotation job" >&2; exit 1; }
           fixture_login="$(GH_TOKEN="$FIXTURE_TOKEN" gh api /user --jq '.login')"
-          [ "$fixture_login" = e2e-user ] || {
-            echo "E2E fixture access token belongs to '$fixture_login', expected e2e-user" >&2
+          [ "$fixture_login" = "${{ inputs.app_owner }}" ] || {
+            echo "E2E fixture access token belongs to '$fixture_login', expected '${{ inputs.app_owner }}'" >&2
             exit 1
           }
 
@@ -611,7 +611,7 @@ jobs:
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_E2E_WRITER_APP_SLUG }}
           REVIEWER_APP_SLUG: ${{ vars.BOOTSTRAP_E2E_REVIEWER_APP_SLUG }}
           MAINTENANCE_IDENTITY_MODE: e2e-disposable
-          MAINTENANCE_FIXTURE_LOGIN: e2e-user
+          MAINTENANCE_FIXTURE_LOGIN: ${{ inputs.app_owner }}
           MAINTENANCE_COPILOT_REVIEWER_LOGIN: copilot-pull-request-reviewer[bot]
         shell: bash
         run: |

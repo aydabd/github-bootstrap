@@ -172,13 +172,13 @@ bind_e2e() {
                 esac
             fi
             temporary_file="${file}.tmp"
-            awk -v copilot_login="$copilot_login" '
+            awk -v fixture_login="${E2E_FIXTURE_LOGIN:-e2e-user}" -v copilot_login="$copilot_login" '
                 {
                     print
                     if ($0 == "    environment: e2e") {
                         print "    env:"
                         print "      MAINTENANCE_IDENTITY_MODE: e2e-disposable"
-                        print "      MAINTENANCE_FIXTURE_LOGIN: e2e-user"
+                        print "      MAINTENANCE_FIXTURE_LOGIN: " fixture_login
                         print "      MAINTENANCE_COPILOT_REVIEWER_LOGIN: " copilot_login
                     }
                 }
