@@ -20,6 +20,10 @@ inputs:
     description: Actions environment whose refresh token should be rotated.
     required: false
     default: ""
+  secret_writer_token:
+    description: Optional token with permission to persist the rotated refresh token.
+    required: false
+    default: ""
   app_client_secret:
     description: GitHub App client secret used to exchange the refresh token.
     required: false
@@ -142,7 +146,7 @@ runs:
         permission-issues: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-labeling' || inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'e2e-dispatch') && 'write' || '' }}
         permission-organization-administration: ${{ inputs.permission_profile == 'repository-creation' && 'write' || '' }}
         permission-pull-requests: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-review' || inputs.permission_profile == 'maintenance-labeling' || inputs.permission_profile == 'release-please' || inputs.permission_profile == 'maintenance-merge') && 'write' || inputs.permission_profile == 'workflow-approval' && 'read' || '' }}
-        permission-secrets: ${{ inputs.permission_profile == 'repository-setup' && 'write' || '' }}
+        permission-secrets: ${{ (inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'e2e-dispatch') && 'write' || '' }}
         permission-workflows: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'weekly-tooling') && 'write' || '' }}
 
     - name: Refresh GitHub App user token
@@ -155,6 +159,7 @@ runs:
         APP_REFRESH_TOKEN: ${{ inputs.app_user_refresh_token }}
         REFRESH_TOKEN_SECRET: ${{ inputs.refresh_token_secret }}
         REFRESH_TOKEN_SECRET_ENVIRONMENT: ${{ inputs.refresh_token_secret_environment }}
+        SECRET_WRITER_TOKEN: ${{ inputs.secret_writer_token }}
         OWNER: ${{ inputs.target_owner }}
       run: |
         set -euo pipefail
@@ -182,7 +187,8 @@ runs:
           echo "::error::Cannot rotate the configured refresh-token secret: target user '$OWNER' does not own '$GITHUB_REPOSITORY'. Use an external secret manager or rotate the refresh secret manually." >&2
           exit 1
         fi
-        GH_TOKEN="$access_token" gh secret set "$REFRESH_TOKEN_SECRET" --repo "$GITHUB_REPOSITORY" --env "$REFRESH_TOKEN_SECRET_ENVIRONMENT" < "$refresh_file"
+        secret_writer_token="${SECRET_WRITER_TOKEN:-$access_token}"
+        GH_TOKEN="$secret_writer_token" gh secret set "$REFRESH_TOKEN_SECRET" --repo "$GITHUB_REPOSITORY" --env "$REFRESH_TOKEN_SECRET_ENVIRONMENT" < "$refresh_file"
         {
           echo "token=$access_token"
           echo "auth_mode=app-user"

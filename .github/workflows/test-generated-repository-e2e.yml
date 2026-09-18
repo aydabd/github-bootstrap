@@ -549,6 +549,7 @@ jobs:
           app_user_refresh_token: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN }}
           refresh_token_secret: BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN
           refresh_token_secret_environment: e2e
+          secret_writer_token: ${{ steps.provisioner-token.outputs.token }}
           app_owner: ${{ github.repository_owner }}
           target_owner: ${{ github.repository_owner }}
           permission_profile: e2e-fixture
