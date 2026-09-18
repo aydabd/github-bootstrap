@@ -810,6 +810,7 @@ jobs:
         if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner' && inputs.workflows != 'none'
         env:
           WORKFLOWS_INPUT: ${{ inputs.workflows }}
+          E2E_FIXTURE_LOGIN: ${{ inputs.app_owner }}
           E2E_COPILOT_REVIEWER_LOGIN: copilot-pull-request-reviewer[bot]
         run: |
           bash scripts/select-generated-workflows.sh bind-e2e new-repo "$WORKFLOWS_INPUT" \
