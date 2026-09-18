@@ -692,10 +692,42 @@ jobs:
             echo "diagnostic: missing label $label for PR $PR_NUMBER" >&2
             return 1
           }
+          wait_for_fixture_repository_access() {
+            local repository_endpoint="/repos/$OWNER/$REPO_NAME"
+            for attempt in $(seq 1 30); do
+              if author_gh api "$repository_endpoint" --jq '.permissions.push == true' 2>/dev/null |
+                grep -Fxq true; then
+                diagnostic 'fixture repository access' "https://github.com/$OWNER/$REPO_NAME" "ready attempt=$attempt"
+                return 0
+              fi
+              diagnostic 'fixture repository access' "https://github.com/$OWNER/$REPO_NAME" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "fixture App did not obtain repository write access before the bounded deadline" >&2
+            return 1
+          }
+          create_fixture_branch() {
+            local ref="$1" sha="$2"
+            for attempt in $(seq 1 30); do
+              if author_gh api --method POST "/repos/$OWNER/$REPO_NAME/git/refs" \
+                -f "ref=refs/heads/$ref" -f "sha=$sha" >/dev/null; then
+                diagnostic 'fixture branch creation' "https://github.com/$OWNER/$REPO_NAME/tree/$ref" "created attempt=$attempt"
+                return 0
+              fi
+              if author_gh api "/repos/$OWNER/$REPO_NAME/git/ref/heads/$ref" >/dev/null 2>&1; then
+                diagnostic 'fixture branch creation' "https://github.com/$OWNER/$REPO_NAME/tree/$ref" "already-created attempt=$attempt"
+                return 0
+              fi
+              diagnostic 'fixture branch creation' "https://github.com/$OWNER/$REPO_NAME/tree/$ref" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "fixture App could not create the maintenance branch before the bounded deadline" >&2
+            return 1
+          }
           main_sha="$(writer_gh api "/repos/$OWNER/$REPO_NAME/git/ref/heads/main" --jq '.object.sha')"
           branch="e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          author_gh api --method POST "/repos/$OWNER/$REPO_NAME/git/refs" \
-            -f "ref=refs/heads/$branch" -f "sha=$main_sha" >/dev/null
+          wait_for_fixture_repository_access
+          create_fixture_branch "$branch" "$main_sha"
           marker="maintenance-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           content="$(printf 'fix: controlled Dependabot-style maintenance update (%s)\n' "$marker" | base64 | tr -d '\n')"
           author_gh api --method PUT "/repos/$OWNER/$REPO_NAME/contents/.github/$marker" \
