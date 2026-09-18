@@ -96,6 +96,10 @@ done
 jq -e '.schema_version == 1 and .enabled == true and .workflow == "test-generated-repository-e2e.yml"' "$config" > /dev/null
 jq -e '.schema_version == 1 and .enabled == false and .workflow == ""' "$template_config" > /dev/null
 grep -Fq 'maintenance-e2e.json' "$workflow"
+grep -Fq '.github/actions/resolve-gh-token/action.yml' "$workflow"
+grep -Fq 'id: writer-token' "$workflow"
+grep -Fq 'permission_profile: maintenance-labeling' "$workflow"
+grep -Fq 'GH_TOKEN: \${{ steps.writer-token.outputs.token }}' "$workflow"
 grep -Fq 'automation: accepted' "$workflow"
 grep -Fq 'automation: maintenance' "$workflow"
 grep -Fq 'DELETE' "$workflow"
