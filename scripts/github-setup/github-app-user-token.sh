@@ -92,7 +92,14 @@ refresh_token() {
         --data-urlencode "grant_type=refresh_token" \
         --data-urlencode "refresh_token@$sanitized_refresh_file" \
         'https://github.com/login/oauth/access_token' > "$response_file"
-    access_token="$(jq -er '.access_token // empty' "$response_file")"
+    if ! access_token="$(jq -er '.access_token // empty' "$response_file")"; then
+        oauth_error="$(jq -r '.error // "missing_access_token"' "$response_file" 2>/dev/null || printf 'invalid_response')"
+        oauth_error_description="$(jq -r '.error_description // "no_description"' "$response_file" 2>/dev/null || printf 'unparseable_response')"
+        oauth_error_description="$(printf '%s' "$oauth_error_description" | tr '\r\n' ' ' | cut -c1-240)"
+        printf 'GitHub App user-token refresh failed: error=%s error_description=%s\n' \
+            "$oauth_error" "$oauth_error_description" >&2
+        exit 1
+    fi
     next_refresh_token="$(jq -er '.refresh_token // empty' "$response_file")"
     case "$access_token" in
         ghu_*) ;;
