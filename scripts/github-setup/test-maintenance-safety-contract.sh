@@ -121,6 +121,10 @@ done
 grep -Fq 'Maintenance safety' "$workflow"
 grep -Fq "github.event_name != 'workflow_run'" "$workflow"
 grep -Fq 'pull_request_target:' "$workflow"
+if grep -Fq 'labeled' "$workflow" || grep -Fq 'unlabeled' "$workflow"; then
+    echo "maintenance safety must not trigger on label mutations it performs itself" >&2
+    exit 1
+fi
 grep -Fq 'ref: main' "$workflow"
 grep -Fq 'repository_dispatch:' "$workflow"
 grep -Fq 'client_payload.head_sha' "$workflow"
