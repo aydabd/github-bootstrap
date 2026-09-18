@@ -67,6 +67,7 @@ assert_contains 'writer_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls/$pr
 assert_contains 'Signed-off-by: E2E Fixture' "$workflow"
 assert_contains 'id: generated-repository-token' "$workflow"
 assert_contains 'E2E_GH_TOKEN: ${{ steps.generated-repository-token.outputs.token }}' "$workflow"
+assert_contains 'wait_for_lifecycle_observer_access' "$workflow"
 assert_contains 'reviewers[]=$MAINTENANCE_COPILOT_REVIEWER_LOGIN' "$workflow"
 assert_contains '.login == $login' "$workflow"
 assert_contains 'validate-copilot-review.sh' "$workflow"
