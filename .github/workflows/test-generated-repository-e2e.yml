@@ -666,6 +666,7 @@ jobs:
                 --arg allow_missing "$allow_missing_pr" \
                 '[.workflow_runs[] | select(.event == $event) | select(.head_sha == $sha) |
                   select(.head_branch == $branch) | select(.head_repository.full_name == $repository) |
+                  select(.conclusion != "skipped") |
                   select(.created_at >= $since) |
                   select($pr == "0" or any(.pull_requests[]?.number; . == ($pr | tonumber)) or
                     ($allow_missing == "true" and (.pull_requests | length) == 0))] |
@@ -883,6 +884,7 @@ jobs:
             echo "Copilot review evidence was not observed for the current PR head" >&2
             exit 1
           }
+          wait_for_label 'automation: accepted'
           # Maintenance safety must pass before the Reviewer approval and
           # explicit Writer merge stages are allowed to proceed.
           wait_for_run maintenance-safety.yml pull_request_target "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
