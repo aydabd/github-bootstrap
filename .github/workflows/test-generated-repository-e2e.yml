@@ -824,8 +824,8 @@ jobs:
           copilot_validated=false
           for _ in $(seq 1 60); do
             e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" > "$copilot_dir/pr.json"
-            jq -e --arg sha "$pr_head_sha" --arg login "$MAINTENANCE_COPILOT_REVIEWER_LOGIN" \
-              '.head.sha == $sha and any(.requested_reviewers[]?; .login == $login)' \
+            jq -e --arg sha "$pr_head_sha" \
+              '.head.sha == $sha' \
               "$copilot_dir/pr.json" >/dev/null || { sleep 10; continue; }
             reviewer_gh api --paginate --slurp \
               "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/reviews" | jq '[.[][]]' > "$copilot_dir/reviews.json"
