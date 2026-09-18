@@ -807,7 +807,7 @@ jobs:
                 commit_sha="$(printf '%s\n' "$commit_response" | jq -er '.commit.sha')"; then
                 for verify_attempt in $(seq 1 30); do
                   if verification="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/commits/$commit_sha" \
-                    --jq '[.verification.verified,.verification.reason] | @tsv' 2>/dev/null)" &&
+                    --jq '[.commit.verification.verified,.commit.verification.reason] | @tsv' 2>/dev/null)" &&
                     [ "$verification" = $'true\tvalid' ]; then
                     diagnostic 'fixture commit signature' "https://github.com/$OWNER/$REPO_NAME/commit/$commit_sha" "verified attempt=$verify_attempt"
                     diagnostic 'fixture content write' "https://github.com/$OWNER/$REPO_NAME/blob/$branch_name/$path" "created attempt=$attempt"
