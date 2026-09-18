@@ -13,6 +13,10 @@ inputs:
   app_user_refresh_token:
     description: GitHub App refresh token for the target personal account.
     required: false
+  app_user_owner:
+    description: Personal account that owns the GitHub App user token; defaults to target_owner.
+    required: false
+    default: ""
   refresh_token_secret:
     description: Secret name where the rotated GitHub App refresh token is stored.
     required: true
@@ -22,6 +26,10 @@ inputs:
     default: ""
   secret_writer_token:
     description: Optional token with permission to persist the rotated refresh token.
+    required: false
+    default: ""
+  access_token_secret:
+    description: Optional secret name where the refreshed App user access token is stored.
     required: false
     default: ""
   app_client_secret:
@@ -61,6 +69,7 @@ runs:
         APP_CLIENT_ID: ${{ inputs.client_id }}
         APP_PRIVATE_KEY: ${{ inputs.app_private_key }}
         APP_USER_REFRESH_TOKEN: ${{ inputs.app_user_refresh_token }}
+        APP_USER_OWNER: ${{ inputs.app_user_owner }}
         APP_CLIENT_SECRET: ${{ inputs.app_client_secret }}
         GH_TOKEN: ${{ github.token }}
         APP_OWNER: ${{ inputs.app_owner }}
@@ -83,8 +92,14 @@ runs:
         if [ -n "$APP_CLIENT_SECRET" ]; then
           echo "::add-mask::$APP_CLIENT_SECRET"
         fi
-        AUTH_MODE=owner-only bash ./scripts/github-setup/validate-app-auth.sh
-        target_owner_type="$(gh api "/users/$TARGET_OWNER" --jq '.type')"
+        user_owner="${APP_USER_OWNER:-$TARGET_OWNER}"
+        if [ -n "$APP_USER_REFRESH_TOKEN" ]; then
+          AUTH_MODE=owner-only APP_OWNER="$user_owner" TARGET_OWNER="$user_owner" bash ./scripts/github-setup/validate-app-auth.sh
+          target_owner_type="$(gh api "/users/$user_owner" --jq '.type')"
+        else
+          AUTH_MODE=owner-only bash ./scripts/github-setup/validate-app-auth.sh
+          target_owner_type="$(gh api "/users/$TARGET_OWNER" --jq '.type')"
+        fi
 
         case "$target_owner_type" in
           User)
@@ -107,7 +122,7 @@ runs:
                   exit 1
                   ;;
               esac
-              AUTH_MODE=app-user bash ./scripts/github-setup/validate-app-auth.sh
+              AUTH_MODE=app-user APP_OWNER="$user_owner" TARGET_OWNER="$user_owner" bash ./scripts/github-setup/validate-app-auth.sh
               echo "mode=app-user-refresh" >> "$GITHUB_OUTPUT"
             else
               case "$PERMISSION_PROFILE" in
@@ -142,7 +157,7 @@ runs:
         permission-administration: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'repository-cleanup' || inputs.permission_profile == 'e2e-dispatch' || inputs.permission_profile == 'e2e-lifecycle') && 'write' || '' }}
         permission-actions: ${{ (inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'workflow-approval' || inputs.permission_profile == 'e2e-dispatch') && 'write' || '' }}
         permission-contents: ${{ (inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'e2e-dispatch' || inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'release-please' || inputs.permission_profile == 'maintenance-merge') && 'write' || '' }}
-        permission-environments: ${{ inputs.permission_profile == 'repository-setup' && 'write' || '' }}
+        permission-environments: ${{ (inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'e2e-dispatch') && 'write' || '' }}
         permission-issues: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-labeling' || inputs.permission_profile == 'repository-creation' || inputs.permission_profile == 'repository-setup' || inputs.permission_profile == 'e2e-dispatch') && 'write' || '' }}
         permission-organization-administration: ${{ inputs.permission_profile == 'repository-creation' && 'write' || '' }}
         permission-pull-requests: ${{ (inputs.permission_profile == 'weekly-tooling' || inputs.permission_profile == 'maintenance-review' || inputs.permission_profile == 'maintenance-labeling' || inputs.permission_profile == 'release-please' || inputs.permission_profile == 'maintenance-merge') && 'write' || inputs.permission_profile == 'workflow-approval' && 'read' || '' }}
@@ -160,7 +175,9 @@ runs:
         REFRESH_TOKEN_SECRET: ${{ inputs.refresh_token_secret }}
         REFRESH_TOKEN_SECRET_ENVIRONMENT: ${{ inputs.refresh_token_secret_environment }}
         SECRET_WRITER_TOKEN: ${{ inputs.secret_writer_token }}
-        OWNER: ${{ inputs.target_owner }}
+        ACCESS_TOKEN_SECRET: ${{ inputs.access_token_secret }}
+        APP_USER_OWNER: ${{ inputs.app_user_owner }}
+        OWNER: ${{ inputs.app_user_owner || inputs.target_owner }}
       run: |
         set -euo pipefail
         if [ -z "$REFRESH_TOKEN_SECRET_ENVIRONMENT" ]; then
@@ -183,12 +200,15 @@ runs:
         caller_owner="${GITHUB_REPOSITORY_OWNER:-${GITHUB_REPOSITORY%%/*}}"
         normalized_owner="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
         normalized_caller="$(printf '%s' "$caller_owner" | tr '[:upper:]' '[:lower:]')"
-        if [ "$normalized_owner" != "$normalized_caller" ]; then
+        if [ -z "$SECRET_WRITER_TOKEN" ] && [ "$normalized_owner" != "$normalized_caller" ]; then
           echo "::error::Cannot rotate the configured refresh-token secret: target user '$OWNER' does not own '$GITHUB_REPOSITORY'. Use an external secret manager or rotate the refresh secret manually." >&2
           exit 1
         fi
         secret_writer_token="${SECRET_WRITER_TOKEN:-$access_token}"
         GH_TOKEN="$secret_writer_token" gh secret set "$REFRESH_TOKEN_SECRET" --repo "$GITHUB_REPOSITORY" --env "$REFRESH_TOKEN_SECRET_ENVIRONMENT" < "$refresh_file"
+        if [ -n "$ACCESS_TOKEN_SECRET" ]; then
+          printf '%s' "$access_token" | GH_TOKEN="$secret_writer_token" gh secret set "$ACCESS_TOKEN_SECRET" --repo "$GITHUB_REPOSITORY" --env "$REFRESH_TOKEN_SECRET_ENVIRONMENT"
+        fi
         {
           echo "token=$access_token"
           echo "auth_mode=app-user"
