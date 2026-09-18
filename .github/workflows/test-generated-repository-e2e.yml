@@ -649,7 +649,7 @@ jobs:
           wait_for_run() {
             local workflow="$1" expected_event="$2" expected_sha="$3" expected_branch="$4" since="$5" expected_pr="$6" allow_missing_pr="${7:-false}" timeout_seconds=900
             local deadline=$((SECONDS + timeout_seconds))
-            local run_id="" run_listing="" status="" conclusion="" url=""
+            local run_id="" run_listing="" run_state="" status="" conclusion="" url=""
             local expected_repository="$OWNER/$REPO_NAME"
             for _ in $(seq 1 60); do
               [ "$SECONDS" -lt "$deadline" ] || break
@@ -683,8 +683,11 @@ jobs:
             # so an unrelated run can never satisfy this lifecycle gate.
             # before accepting it, regardless of the event's payload shape.
             if [ "$expected_pr" != 0 ]; then
-              correlated_pr="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$expected_pr" \
-                --jq '[.head.sha,.head.ref,.base.ref,.created_at] | @tsv')"
+              if ! correlated_pr="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$expected_pr" \
+                --jq '[.head.sha,.head.ref,.base.ref,.created_at] | @tsv' 2>/dev/null)"; then
+                diagnostic "$workflow" "https://github.com/$OWNER/$REPO_NAME/pull/$expected_pr" "pull request observer unavailable"
+                return 1
+              fi
               [ "$(printf '%s' "$correlated_pr" | cut -f1)" = "$expected_sha" ] || return 1
               [ "$(printf '%s' "$correlated_pr" | cut -f2)" = "$expected_branch" ] || return 1
               [ "$(printf '%s' "$correlated_pr" | cut -f3)" = main ] || return 1
@@ -693,8 +696,13 @@ jobs:
             fi
             for _ in $(seq 1 90); do
               [ "$SECONDS" -lt "$deadline" ] || break
-              read -r status conclusion url < <(e2e_gh run view "$run_id" --repo "$OWNER/$REPO_NAME" \
-                --json status,conclusion,url --jq '[.status,.conclusion,.url] | @tsv')
+              if ! run_state="$(e2e_gh run view "$run_id" --repo "$OWNER/$REPO_NAME" \
+                --json status,conclusion,url --jq '[.status,.conclusion,.url] | @tsv' 2>/dev/null)"; then
+                diagnostic "$workflow" "https://github.com/$OWNER/$REPO_NAME/actions/runs/$run_id" "workflow status observer unavailable"
+                sleep 10
+                continue
+              fi
+              read -r status conclusion url <<<"$run_state"
               diagnostic "$workflow" "$url" "$status/$conclusion"
               [ "$status" = completed ] && break
               sleep 10
