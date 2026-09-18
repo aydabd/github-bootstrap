@@ -679,7 +679,8 @@ jobs:
               [ "$(printf '%s' "$correlated_pr" | cut -f1)" = "$expected_sha" ] || return 1
               [ "$(printf '%s' "$correlated_pr" | cut -f2)" = "$expected_branch" ] || return 1
               [ "$(printf '%s' "$correlated_pr" | cut -f3)" = main ] || return 1
-              [ "$(printf '%s' "$correlated_pr" | cut -f4)" \> "$since" ] || return 1
+              correlated_created_at="$(printf '%s' "$correlated_pr" | cut -f4)"
+              [[ "$correlated_created_at" < "$since" ]] && return 1
             fi
             for _ in $(seq 1 90); do
               [ "$SECONDS" -lt "$deadline" ] || break
