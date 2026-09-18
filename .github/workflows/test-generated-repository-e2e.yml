@@ -571,6 +571,18 @@ jobs:
           permission_profile: maintenance-merge
           repositories: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
 
+      - name: Resolve generated repository lifecycle token
+        id: generated-repository-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: e2e-dispatch
+          repositories: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
+
       - name: Resolve E2E maintenance Reviewer token
         id: reviewer-token
         uses: ./.github/actions/resolve-gh-token
@@ -603,7 +615,7 @@ jobs:
           WRITER_TOKEN: ${{ steps.writer-token.outputs.token }}
           REVIEWER_TOKEN: ${{ steps.reviewer-token.outputs.token }}
           PR_AUTHOR_USER_TOKEN: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_USER_ACCESS_TOKEN }}
-          E2E_GH_TOKEN: ${{ steps.e2e-token.outputs.token }}
+          E2E_GH_TOKEN: ${{ steps.generated-repository-token.outputs.token }}
           OWNER: ${{ github.repository_owner }}
           APP_OWNER: ${{ inputs.app_owner }}
           REPOSITORY: ${{ github.repository }}
