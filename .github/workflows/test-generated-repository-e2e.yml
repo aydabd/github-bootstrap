@@ -773,14 +773,31 @@ jobs:
             return 1
           }
           write_fixture_content() {
-            local path="$1" branch_name="$2" content_value="$3" commit_message
+            local path="$1" branch_name="$2" content_value="$3" commit_message commit_response commit_sha verification
             commit_message=$'fix: controlled Dependabot-style maintenance update\n\nSigned-off-by: E2E Fixture <e2e-fixture@users.noreply.github.com>'
             for attempt in $(seq 1 30); do
-              if author_gh api --method PUT "/repos/$OWNER/$REPO_NAME/contents/$path" \
+              # Authenticate the Contents API write as the GitHub App. GitHub
+              # automatically verifies bot-authored commits only when the
+              # request is App-authenticated and supplies no custom author,
+              # committer, or signature fields. The disposable fixture user
+              # still creates the branch and PR below.
+              if commit_response="$(writer_gh api --method PUT "/repos/$OWNER/$REPO_NAME/contents/$path" \
                 -f message="$commit_message" \
-                -f content="$content_value" -f branch="$branch_name" >/dev/null; then
-                diagnostic 'fixture content write' "https://github.com/$OWNER/$REPO_NAME/blob/$branch_name/$path" "created attempt=$attempt"
-                return 0
+                -f content="$content_value" -f branch="$branch_name")" &&
+                commit_sha="$(printf '%s\n' "$commit_response" | jq -er '.commit.sha')"; then
+                for verify_attempt in $(seq 1 30); do
+                  if verification="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/commits/$commit_sha" \
+                    --jq '[.verification.verified,.verification.reason] | @tsv' 2>/dev/null)" &&
+                    [ "$verification" = $'true\tvalid' ]; then
+                    diagnostic 'fixture commit signature' "https://github.com/$OWNER/$REPO_NAME/commit/$commit_sha" "verified attempt=$verify_attempt"
+                    diagnostic 'fixture content write' "https://github.com/$OWNER/$REPO_NAME/blob/$branch_name/$path" "created attempt=$attempt"
+                    return 0
+                  fi
+                  diagnostic 'fixture commit signature' "https://github.com/$OWNER/$REPO_NAME/commit/$commit_sha" "waiting state=${verification:-unavailable} attempt=$verify_attempt"
+                  sleep 5
+                done
+                echo "fixture content commit $commit_sha was not cryptographically verified" >&2
+                return 1
               fi
               diagnostic 'fixture content write' "https://github.com/$OWNER/$REPO_NAME/blob/$branch_name/$path" "waiting attempt=$attempt"
               sleep 5
