@@ -841,11 +841,12 @@ jobs:
               sleep 10
               continue
             fi
-            jq -e '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage == false' \
-              "$copilot_dir/thread-response.json" >/dev/null || {
-              echo "Copilot review threads exceed validation page; refusing to pass" >&2
-              exit 1
-            }
+            if ! jq -e '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage == false' \
+              "$copilot_dir/thread-response.json" >/dev/null; then
+              diagnostic 'Copilot review threads' "https://github.com/$OWNER/$REPO_NAME/pull/$PR_NUMBER" "waiting"
+              sleep 10
+              continue
+            fi
             jq '[.data.repository.pullRequest.reviewThreads.nodes[] |
               {isResolved, author_login: (.comments.nodes[0].author.login // "")}]' \
               "$copilot_dir/thread-response.json" > "$copilot_dir/threads.json"
