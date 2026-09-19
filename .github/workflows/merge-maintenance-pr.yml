@@ -201,9 +201,20 @@ jobs:
 
           validate_state true
 
-          # allow_auto_merge is disabled repository-wide, so native auto-merge
-          # can't be a fallback; defer instead and let the resulting event
-          # (branch update or check completion) re-invoke this job.
+          enable_native_auto_merge() {
+            local allow_auto_merge
+            allow_auto_merge="$(gh api "/repos/$REPOSITORY" --jq '.allow_auto_merge // false')"
+            if [ "$allow_auto_merge" != "true" ]; then
+              echo "native auto-merge is unavailable; using direct merge fallback" >&2
+              return 1
+            fi
+            GH_TOKEN="$MERGE_TOKEN" gh api --method PUT \
+              "/repos/$REPOSITORY/pulls/$PR_NUMBER/auto-merge" \
+              -f sha="$HEAD_SHA" -f merge_method=squash > /dev/null
+            echo "native auto-merge enabled for $REPOSITORY#$PR_NUMBER at $HEAD_SHA"
+            return 0
+          }
+
           attempt_merge() {
             local current_head_sha mergeable_state deadline
 
@@ -253,4 +264,6 @@ jobs:
             esac
           }
 
-          attempt_merge
+          if ! enable_native_auto_merge; then
+            attempt_merge
+          fi

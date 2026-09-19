@@ -196,7 +196,10 @@ assert_contains '"/repos/$REPOSITORY/pulls/$PR_NUMBER/update-branch"' "$workflow
 assert_contains '-f expected_head_sha="$HEAD_SHA"' "$workflow"
 assert_contains 'sleep 5' "$workflow"
 assert_contains 'deferring to the next trigger' "$workflow"
-assert_not_contains 'enablePullRequestAutoMerge' "$workflow"
+assert_contains 'allow_auto_merge' "$workflow"
+# shellcheck disable=SC2016  # literal workflow substring, not shell to expand
+assert_contains 'pulls/$PR_NUMBER/auto-merge' "$workflow"
+assert_contains 'native auto-merge is unavailable; using direct merge fallback' "$workflow"
 assert_not_contains 'wait_until_mergeable' "$workflow"
 assert_not_contains 'merge_with_retry' "$workflow"
 assert_not_contains 'mergeability_timeout' "$workflow"

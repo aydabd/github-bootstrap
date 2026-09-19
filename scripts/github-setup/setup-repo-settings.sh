@@ -62,7 +62,7 @@ validate_inputs() {
     jq -e '
         type == "object" and .default_branch == "main" and
         .allow_squash_merge == true and .allow_merge_commit == false and
-        .allow_rebase_merge == false and .allow_auto_merge == false and
+        .allow_rebase_merge == false and .allow_auto_merge == true and
         .allow_update_branch == true and .delete_branch_on_merge == true and
         .squash_merge_commit_title == "PR_TITLE" and
         .squash_merge_commit_message == "COMMIT_MESSAGES" and
@@ -74,10 +74,26 @@ validate_inputs() {
 }
 
 apply_repo_settings() {
-    gh_api_json \
+    local response_file fallback_settings_file
+    response_file="$(mktemp)"
+    fallback_settings_file="$(mktemp)"
+    trap 'rm -f "$response_file" "$fallback_settings_file"' RETURN
+    if ! gh_api_json \
         --method PATCH \
         "$(repo_endpoint)" \
-        --input "$settings_file"
+        --input "$settings_file" > "$response_file" 2>&1; then
+        if grep -Eiq 'Upgrade to GitHub Pro|auto.?merge.*(available|private)|private repositories.*auto.?merge' "$response_file"; then
+            jq '.allow_auto_merge = false' "$settings_file" > "$fallback_settings_file"
+            gh_api_json \
+                --method PATCH \
+                "$(repo_endpoint)" \
+                --input "$fallback_settings_file"
+            echo "Native auto-merge is unavailable; configured direct-merge fallback." >&2
+        else
+            cat "$response_file" >&2
+            return 1
+        fi
+    fi
 }
 
 main() {
