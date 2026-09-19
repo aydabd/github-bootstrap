@@ -664,12 +664,15 @@ jobs:
 
           REPO_JSON=$(gh api "/repos/${OWNER}/${REPO_NAME}")
           DEFAULT_BRANCH=$(echo "$REPO_JSON" | jq -r '.default_branch // "main"')
+          EXPECTED_AUTO_MERGE="false"
+          if [ "$ENABLE_REPO_SETTINGS" = "true" ]; then
+            EXPECTED_AUTO_MERGE="true"
+          fi
 
           for assertion in \
             '.has_wiki == false' \
             '.has_projects == true' \
             '.has_issues == true' \
-            '.allow_auto_merge == false' \
             '.allow_update_branch == true' \
             '.allow_squash_merge == true' \
             '.allow_merge_commit == false' \
@@ -682,6 +685,10 @@ jobs:
               exit 1
             fi
           done
+          if ! echo "$REPO_JSON" | jq -e --arg expected "$EXPECTED_AUTO_MERGE" '.allow_auto_merge == ($expected == "true")' >/dev/null; then
+            echo "❌ Repository setting assertion failed: allow_auto_merge == $EXPECTED_AUTO_MERGE"
+            exit 1
+          fi
 
           echo "✅ Repository settings parity checks passed"
 
