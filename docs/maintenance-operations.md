@@ -62,9 +62,10 @@ rotating `ghr_...` refresh token at runtime and never stores the resulting
 Writer and Reviewer App credentials are still the identities used for
 maintenance classification, approval, auto-merge, and release operations.
 
-The fixture account's exact GitHub login is `e2e-user`. Generated
-maintenance workflows bind `MAINTENANCE_IDENTITY_MODE=e2e-disposable`,
-`MAINTENANCE_FIXTURE_LOGIN=e2e-user`, and
+The fixture account is the personal owner supplied to the E2E workflow's
+`app_owner` input. Generated maintenance workflows bind
+`MAINTENANCE_IDENTITY_MODE=e2e-disposable`,
+`MAINTENANCE_FIXTURE_LOGIN=<app_owner>`, and
 `MAINTENANCE_COPILOT_REVIEWER_LOGIN=copilot-pull-request-reviewer[bot]`.
 Production workflows leave this mode unset and therefore accept only their
 configured automation bot identities; the fixture login is never a production
@@ -78,7 +79,7 @@ manifests. The manifest helper's supported E2E role arguments are
 `bootstrap-e2e-writer` and `bootstrap-e2e-reviewer`;
 the production role arguments remain separate. Configure the fixture App from
 [`bootstrap-e2e-fixture.json`](github-app-manifests/bootstrap-e2e-fixture.json)
-and authorize it as `e2e-user`. Store its client ID and slug as
+and authorize it as the configured `app_owner`. Store its client ID and slug as
 variables, and its private key, client secret, and refresh token as secrets in
 the source `OWNER/github-bootstrap` repository's `e2e` Environment.
 Store the Writer and Reviewer client IDs and slugs as variables and their

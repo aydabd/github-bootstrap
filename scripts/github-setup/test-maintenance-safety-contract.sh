@@ -8,6 +8,7 @@ config="$script_dir/../../.github/config/maintenance-e2e.json"
 template_workflow="$script_dir/../../templates/.github/workflows/maintenance-safety.yml"
 template_config="$script_dir/../../templates/.github/config/maintenance-e2e.json"
 template_validator="$script_dir/../../templates/.github/scripts/validate-maintenance-safety.sh"
+resolver="$script_dir/../../.github/actions/resolve-gh-token/action.yml"
 ruleset="$script_dir/../../.github/config/ruleset-default.json"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -96,6 +97,15 @@ done
 jq -e '.schema_version == 1 and .enabled == true and .workflow == "test-generated-repository-e2e.yml"' "$config" > /dev/null
 jq -e '.schema_version == 1 and .enabled == false and .workflow == ""' "$template_config" > /dev/null
 grep -Fq 'maintenance-e2e.json' "$workflow"
+grep -Fq '.github/actions/resolve-gh-token/action.yml' "$workflow"
+grep -Fq 'id: writer-token' "$workflow"
+grep -Fq 'permission_profile: maintenance-labeling' "$workflow"
+grep -Fq 'actions: read' "$workflow"
+grep -Fq 'permission-actions: read' "$template_workflow"
+grep -Fq "inputs.permission_profile == 'maintenance-labeling'" "$resolver"
+grep -Fq "GH_TOKEN: \${{ steps.writer-token.outputs.token }}" "$workflow"
+grep -Fq 'actions/create-github-app-token@' "$template_workflow"
+grep -Fq 'permission-issues: write' "$template_workflow"
 grep -Fq 'automation: accepted' "$workflow"
 grep -Fq 'automation: maintenance' "$workflow"
 grep -Fq 'DELETE' "$workflow"
@@ -115,6 +125,10 @@ done
 grep -Fq 'Maintenance safety' "$workflow"
 grep -Fq "github.event_name != 'workflow_run'" "$workflow"
 grep -Fq 'pull_request_target:' "$workflow"
+if grep -Fq 'labeled' "$workflow" || grep -Fq 'unlabeled' "$workflow"; then
+    echo "maintenance safety must not trigger on label mutations it performs itself" >&2
+    exit 1
+fi
 grep -Fq 'ref: main' "$workflow"
 grep -Fq 'repository_dispatch:' "$workflow"
 grep -Fq 'client_payload.head_sha' "$workflow"

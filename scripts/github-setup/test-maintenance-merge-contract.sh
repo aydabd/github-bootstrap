@@ -152,6 +152,12 @@ bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/head-appro
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer" true
 
 assert_contains "workflow_run:" "$workflow"
+assert_contains "      - Maintenance safety" "$workflow"
+assert_contains "pull_request_target:" "$workflow"
+assert_contains "types: [labeled]" "$workflow"
+assert_contains "github.event.label.name == 'automation: accepted'" "$workflow"
+assert_not_contains "github.event.pull_request.label.name" "$workflow"
+assert_contains "github.event.pull_request.number" "$workflow"
 assert_contains "workflows:" "$workflow"
 assert_contains "Maintenance safety" "$workflow"
 assert_contains "Verify Conda Lockfiles" "$workflow"
@@ -190,7 +196,10 @@ assert_contains '"/repos/$REPOSITORY/pulls/$PR_NUMBER/update-branch"' "$workflow
 assert_contains '-f expected_head_sha="$HEAD_SHA"' "$workflow"
 assert_contains 'sleep 5' "$workflow"
 assert_contains 'deferring to the next trigger' "$workflow"
-assert_not_contains 'enablePullRequestAutoMerge' "$workflow"
+assert_contains 'allow_auto_merge' "$workflow"
+# shellcheck disable=SC2016  # literal workflow substring, not shell to expand
+assert_contains 'pulls/$PR_NUMBER/auto-merge' "$workflow"
+assert_contains 'native auto-merge is unavailable; using direct merge fallback' "$workflow"
 assert_not_contains 'wait_until_mergeable' "$workflow"
 assert_not_contains 'merge_with_retry' "$workflow"
 assert_not_contains 'mergeability_timeout' "$workflow"
@@ -202,6 +211,7 @@ assert_contains "[ \"\$TRIGGER_HEAD_SHA\" = \"\$HEAD_SHA\" ]" "$workflow"
 assert_contains "if length == 1 then .[0].number else empty end" "$workflow"
 assert_not_contains "[ \"\$SAFETY_SHA\" = \"\$HEAD_SHA\" ]" "$workflow"
 assert_contains 'github.event.workflow_run.pull_requests[0].number' "$workflow"
+assert_contains 'github.event.pull_request.head.sha' "$workflow"
 assert_contains "maintenance-e2e.json" "$workflow"
 # shellcheck disable=SC2016  # workflow expressions are intentionally literal test substrings
 assert_before 'gh api "/repos/$REPOSITORY/issues/$PR_NUMBER/labels?per_page=100"' 'gh api --paginate "/repos/$REPOSITORY/actions/workflows/$e2e_workflow/runs?per_page=100"' "$workflow"
