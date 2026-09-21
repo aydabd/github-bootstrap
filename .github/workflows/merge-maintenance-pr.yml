@@ -82,7 +82,7 @@ jobs:
             payload="$(jq -c '{pr_number: .number, head_sha: .head_sha, head_branch: .head_branch}' <<< "$pr")"
             gh api --method POST "/repos/$REPOSITORY/dispatches" \
               -f event_type=maintenance-reconcile \
-              -f client_payload="$payload" > /dev/null
+              -F client_payload="$payload" > /dev/null
             dispatched=$((dispatched + 1))
             echo "dispatched maintenance reconciliation for PR $(jq -r '.number' <<< "$pr")"
           done < <(jq -c '.[]' <<< "$accepted_prs")
@@ -286,7 +286,7 @@ jobs:
             echo "Dispatch post-approval reconciliation for $REPOSITORY#$PR_NUMBER"
             GH_TOKEN="$MERGE_TOKEN" gh api --method POST "/repos/$REPOSITORY/dispatches" \
               -f event_type=maintenance-reconcile \
-              -f client_payload="$payload" > /dev/null
+              -F client_payload="$payload" > /dev/null
             exit 0
           fi
 
