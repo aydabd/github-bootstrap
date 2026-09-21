@@ -4,8 +4,15 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/../.." && pwd)"
 validator="$script_dir/validate-maintenance-pr.sh"
+template_classifier_workflow="$repo_root/templates/.github/workflows/classify-maintenance-pr.yml"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
+
+# shellcheck disable=SC2016  # literal workflow substring, not shell to expand
+grep -Fq 'if ! classification="$(bash .github/scripts/validate-maintenance-pr.sh "$pr_file")"; then' \
+    "$template_classifier_workflow"
+grep -Fq 'Pull request is not an eligible maintenance automation PR; skipping classification.' \
+    "$template_classifier_workflow"
 
 cat > "$tmp_dir/dependabot.json" << 'EOF'
 {"state":"open","draft":false,"user":{"login":"dependabot[bot]"},"head":{"repo":{"full_name":"acme/project"}},"base":{"ref":"main","repo":{"full_name":"acme/project"}},"labels":[{"name":"dependencies"}]}
