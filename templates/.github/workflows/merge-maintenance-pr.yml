@@ -7,8 +7,11 @@ on:
     workflows:
       - Maintenance safety
       - Verify Conda Lockfiles
-    types: [completed]
-  check_suite:
+      - Quality
+      - Commit policy
+      - Test Quality Providers
+      - CodeQL Security Scan
+      - Test Generated Repository E2E
     types: [completed]
 
 permissions:
@@ -23,10 +26,7 @@ jobs:
       github.event.label.name == 'automation: accepted') ||
       (github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch != 'main') ||
-      (github.event_name == 'check_suite' &&
-      github.event.check_suite.conclusion == 'success' &&
-      github.event.check_suite.pull_requests[0].number != '')
+      github.event.workflow_run.head_branch != 'main')
     name: Approve and enable squash auto-merge
     runs-on: ubuntu-24.04
     environment: production
@@ -87,9 +87,9 @@ jobs:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           MERGE_TOKEN: ${{ steps.resolve-merge-token.outputs.token }}
           TRIGGER_WORKFLOW: ${{ github.event.workflow_run.name || '' }}
-          TRIGGER_PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.event.check_suite.pull_requests[0].number || '' }}
-          TRIGGER_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.event.check_suite.head_sha || '' }}
-          HEAD_BRANCH: ${{ github.event.pull_request.head.ref || github.event.workflow_run.head_branch || github.event.check_suite.head_branch || '' }}
+          TRIGGER_PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || '' }}
+          TRIGGER_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || '' }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref || github.event.workflow_run.head_branch || '' }}
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}
           REVIEWER_APP_SLUG: ${{ steps.resolve-token.outputs.app-slug }}
           REPOSITORY: ${{ github.repository }}
