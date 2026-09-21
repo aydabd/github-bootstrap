@@ -152,6 +152,8 @@ bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/head-appro
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer" true
 
 assert_contains "workflow_run:" "$workflow"
+assert_contains "check_suite:" "$workflow"
+assert_contains "github.event.check_suite.conclusion == 'success'" "$workflow"
 assert_contains "      - Maintenance safety" "$workflow"
 assert_contains "pull_request_target:" "$workflow"
 assert_contains "types: [labeled]" "$workflow"
@@ -197,6 +199,8 @@ assert_contains '-f expected_head_sha="$HEAD_SHA"' "$workflow"
 assert_contains 'sleep 5' "$workflow"
 assert_contains 'deferring to the next trigger' "$workflow"
 assert_contains 'allow_auto_merge' "$workflow"
+# shellcheck disable=SC2016  # literal workflow substring, not shell to expand
+assert_contains 'allow_auto_merge="$(GH_TOKEN="$MERGE_TOKEN" gh api "/repos/$REPOSITORY" --jq '\''.allow_auto_merge // false'\'')"' "$workflow"
 # shellcheck disable=SC2016  # literal workflow substring, not shell to expand
 assert_contains 'pulls/$PR_NUMBER/auto-merge' "$workflow"
 assert_contains 'native auto-merge is unavailable; using direct merge fallback' "$workflow"
