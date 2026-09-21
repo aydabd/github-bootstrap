@@ -197,8 +197,9 @@ assert_contains "gh api --method POST \"/repos/\$REPOSITORY/pulls/\$PR_NUMBER/re
 assert_contains 'validate_state true' "$workflow"
 assert_contains 'attempt_merge()' "$workflow"
 assert_contains 'mergeable_state' "$workflow"
-assert_contains 'Dependabot owns the behind-branch update' "$workflow"
-assert_contains 'user.login == "dependabot[bot]" or .user.login == "app/dependabot"' "$workflow"
+assert_contains 'protected branch-update fallback for all automation authors' "$workflow"
+assert_not_contains 'Dependabot owns the behind-branch update' "$workflow"
+assert_not_contains 'user.login == "dependabot[bot]" or .user.login == "app/dependabot"' "$workflow"
 # shellcheck disable=SC2016  # literal workflow substring, not shell to expand
 assert_contains 'if [ "$mergeable_state" = "behind" ]; then' "$workflow"
 # shellcheck disable=SC2016  # literal workflow substring, not shell to expand

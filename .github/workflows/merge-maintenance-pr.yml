@@ -298,11 +298,7 @@ jobs:
             local allow_auto_merge mergeable_state pull_request_node_id
             mergeable_state="$(jq -r '.mergeable_state // "unknown"' "$tmp_dir/pr.json")"
             if [ "$mergeable_state" = "behind" ]; then
-              if jq -e '.user.login == "dependabot[bot]" or .user.login == "app/dependabot"' "$tmp_dir/pr.json" > /dev/null; then
-                echo "Dependabot owns the behind-branch update; deferring native auto-merge"
-                return 0
-              fi
-              echo "pull request is behind; using the protected branch-update fallback" >&2
+              echo "pull request is behind; using the protected branch-update fallback for all automation authors" >&2
               return 1
             fi
             allow_auto_merge="$(GH_TOKEN="$MERGE_TOKEN" gh api "/repos/$REPOSITORY" --jq '.allow_auto_merge // false')"
