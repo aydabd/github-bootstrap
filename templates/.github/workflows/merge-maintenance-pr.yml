@@ -201,15 +201,26 @@ jobs:
           validate_state true
 
           enable_native_auto_merge() {
-            local allow_auto_merge
+            local allow_auto_merge pull_request_node_id
             allow_auto_merge="$(GH_TOKEN="$MERGE_TOKEN" gh api "/repos/$REPOSITORY" --jq '.allow_auto_merge // false')"
             if [ "$allow_auto_merge" != "true" ]; then
               echo "native auto-merge is unavailable; using direct merge fallback" >&2
               return 1
             fi
-            GH_TOKEN="$MERGE_TOKEN" gh api --method PUT \
-              "/repos/$REPOSITORY/pulls/$PR_NUMBER/auto-merge" \
-              -f sha="$HEAD_SHA" -f merge_method=squash > /dev/null
+            if ! pull_request_node_id="$(GH_TOKEN="$MERGE_TOKEN" gh api \
+              "/repos/$REPOSITORY/pulls/$PR_NUMBER" --jq '.node_id')"; then
+              echo "native auto-merge request failed: could not resolve pull request node ID" >&2
+              return 1
+            fi
+            if ! GH_TOKEN="$MERGE_TOKEN" gh api graphql \
+              -f query='mutation($pullRequestId:ID!,$mergeMethod:PullRequestMergeMethod!,$expectedHeadOid:GitObjectID){enablePullRequestAutoMerge(input:{pullRequestId:$pullRequestId,mergeMethod:$mergeMethod,expectedHeadOid:$expectedHeadOid}){pullRequest{id}}}' \
+              -f pullRequestId="$pull_request_node_id" \
+              -f mergeMethod=SQUASH \
+              -f expectedHeadOid="$HEAD_SHA" > "$tmp_dir/auto-merge.json" ||
+              ! jq -e '.data.enablePullRequestAutoMerge.pullRequest.id != null' "$tmp_dir/auto-merge.json" > /dev/null; then
+              echo "native auto-merge request failed; using protected direct merge fallback" >&2
+              return 1
+            fi
             echo "native auto-merge enabled for $REPOSITORY#$PR_NUMBER at $HEAD_SHA"
             return 0
           }
