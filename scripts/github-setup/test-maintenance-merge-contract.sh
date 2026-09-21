@@ -152,6 +152,12 @@ bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/head-appro
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer" true
 
 assert_contains "workflow_run:" "$workflow"
+assert_contains "schedule:" "$workflow"
+assert_contains "repository_dispatch:" "$workflow"
+assert_contains "maintenance-reconcile" "$workflow"
+assert_contains "concurrency:" "$workflow"
+assert_contains "maintenance-merge-" "$workflow"
+assert_contains "cancel-in-progress: false" "$workflow"
 assert_contains "      - Maintenance safety" "$workflow"
 assert_contains "pull_request_target:" "$workflow"
 assert_contains "types: [labeled]" "$workflow"
@@ -224,6 +230,10 @@ assert_contains "if length == 1 then .[0].number else empty end" "$workflow"
 assert_not_contains "[ \"\$SAFETY_SHA\" = \"\$HEAD_SHA\" ]" "$workflow"
 assert_contains 'github.event.workflow_run.pull_requests[0].number' "$workflow"
 assert_contains 'github.event.pull_request.head.sha' "$workflow"
+assert_contains 'github.event.client_payload.pr_number' "$workflow"
+assert_contains 'github.event.client_payload.head_sha' "$workflow"
+assert_contains 'Dispatch maintenance reconciliation' "$workflow"
+assert_contains 'event_type=maintenance-reconcile' "$workflow"
 assert_contains "maintenance-e2e.json" "$workflow"
 # shellcheck disable=SC2016  # workflow expressions are intentionally literal test substrings
 assert_before 'gh api "/repos/$REPOSITORY/issues/$PR_NUMBER/labels?per_page=100"' 'gh api --paginate "/repos/$REPOSITORY/actions/workflows/$e2e_workflow/runs?per_page=100"' "$workflow"

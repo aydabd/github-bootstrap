@@ -3,6 +3,10 @@ name: Merge Maintenance Pull Request
 on:
   pull_request_target:
     types: [labeled]
+  repository_dispatch:
+    types: [maintenance-reconcile]
+  schedule:
+    - cron: "*/5 * * * *"
   workflow_run:
     workflows:
       - Maintenance safety
@@ -14,16 +18,81 @@ on:
       - Test Generated Repository E2E
     types: [completed]
 
+concurrency:
+  group: >-
+    maintenance-merge-${{ github.repository }}-${{
+    github.event.pull_request.number ||
+    github.event.workflow_run.pull_requests[0].number ||
+    github.event.client_payload.pr_number ||
+    github.event.workflow_run.head_sha ||
+    github.event.client_payload.head_sha ||
+    'reconcile' }}
+  cancel-in-progress: false
+
 permissions:
   actions: read
   contents: read
   pull-requests: read
 
 jobs:
+  reconcile:
+    if: github.event_name == 'schedule'
+    name: Dispatch maintenance reconciliation
+    runs-on: ubuntu-24.04
+    environment: production
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout token resolver
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: main
+          sparse-checkout: .github/actions/resolve-gh-token/action.yml
+
+      - name: Resolve Writer App dispatch token
+        id: resolve-merge-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_CLIENT_ID }}
+          refresh_token_secret: ""
+          app_private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY }}
+          app_owner: ${{ github.repository_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: maintenance-merge
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Dispatch reconciliation for accepted maintenance PRs
+        env:
+          GH_TOKEN: ${{ steps.resolve-merge-token.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          accepted_prs="$(gh api "/repos/$REPOSITORY/pulls?state=open&base=main&per_page=100" |
+            jq -c '[.[] | select(any(.labels[]?.name; . == "automation: accepted")) |
+              {number, head_sha: .head.sha, head_branch: .head.ref}]')"
+          dispatched=0
+          while IFS= read -r pr; do
+            [ -n "$pr" ] || continue
+            payload="$(jq -c '{pr_number: .number, head_sha: .head_sha, head_branch: .head_branch}' <<< "$pr")"
+            gh api --method POST "/repos/$REPOSITORY/dispatches" \
+              -f event_type=maintenance-reconcile \
+              -f client_payload="$payload" > /dev/null
+            dispatched=$((dispatched + 1))
+            echo "dispatched maintenance reconciliation for PR $(jq -r '.number' <<< "$pr")"
+          done < <(jq -c '.[]' <<< "$accepted_prs")
+          echo "dispatched $dispatched maintenance reconciliation event(s)"
+
   merge:
     if: >-
       (github.event_name == 'pull_request_target' &&
       github.event.label.name == 'automation: accepted') ||
+      (github.event_name == 'repository_dispatch' &&
+      github.event.action == 'maintenance-reconcile' &&
+      github.event.client_payload.pr_number) ||
       (github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_branch != 'main')
@@ -93,9 +162,9 @@ jobs:
           GH_TOKEN: ${{ steps.resolve-token.outputs.token }}
           MERGE_TOKEN: ${{ steps.resolve-merge-token.outputs.token }}
           TRIGGER_WORKFLOW: ${{ github.event.workflow_run.name || '' }}
-          TRIGGER_PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || '' }}
-          TRIGGER_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || '' }}
-          HEAD_BRANCH: ${{ github.event.pull_request.head.ref || github.event.workflow_run.head_branch || '' }}
+          TRIGGER_PR_NUMBER: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.event.client_payload.pr_number || '' }}
+          TRIGGER_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.event.client_payload.head_sha || '' }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref || github.event.workflow_run.head_branch || github.event.client_payload.head_branch || '' }}
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}
           REVIEWER_APP_SLUG: ${{ steps.resolve-token.outputs.app_slug }}
           REPOSITORY: ${{ github.repository }}
@@ -111,6 +180,7 @@ jobs:
           if [ -n "$TRIGGER_PR_NUMBER" ]; then
             PR_NUMBER="$TRIGGER_PR_NUMBER"
           else
+            # shellcheck disable=SC2016 # jq program is intentionally literal.
             PR_NUMBER="$(gh api --method GET "repos/$REPOSITORY/pulls" \
               -f head="${REPOSITORY%%/*}:$HEAD_BRANCH" -f base=main -f state=open \
               --jq 'if length == 1 then .[0].number else empty end')"
@@ -218,6 +288,7 @@ jobs:
               echo "native auto-merge request failed: could not resolve pull request node ID" >&2
               return 1
             fi
+            # shellcheck disable=SC2016 # GraphQL document is intentionally literal.
             if ! GH_TOKEN="$MERGE_TOKEN" gh api graphql \
               -f query='mutation($pullRequestId:ID!,$mergeMethod:PullRequestMergeMethod!,$expectedHeadOid:GitObjectID){enablePullRequestAutoMerge(input:{pullRequestId:$pullRequestId,mergeMethod:$mergeMethod,expectedHeadOid:$expectedHeadOid}){pullRequest{id}}}' \
               -f pullRequestId="$pull_request_node_id" \
