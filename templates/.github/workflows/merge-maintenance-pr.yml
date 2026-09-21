@@ -71,10 +71,11 @@ jobs:
           dispatched=0
           while IFS= read -r pr; do
             [ -n "$pr" ] || continue
-            payload="$(jq -c '{pr_number: .number, head_sha: .head_sha, head_branch: .head_branch}' <<< "$pr")"
-            gh api --method POST "/repos/$REPOSITORY/dispatches" \
-              -f event_type=maintenance-reconcile \
-            -F client_payload="$payload" > /dev/null
+          payload="$(jq -c '{pr_number: .number, head_sha: .head_sha, head_branch: .head_branch}' <<< "$pr")"
+          request_payload="$(jq -nc --argjson client_payload "$payload" \
+            '{event_type: "maintenance-reconcile", client_payload: $client_payload}')"
+          gh api --method POST "/repos/$REPOSITORY/dispatches" \
+            --input - <<< "$request_payload" > /dev/null
             dispatched=$((dispatched + 1))
             echo "dispatched maintenance reconciliation for PR $(jq -r '.number' <<< "$pr")"
           done < <(jq -c '.[]' <<< "$accepted_prs")
@@ -267,12 +268,13 @@ jobs:
           fi
 
           if [ "$approval_submitted" = true ]; then
-            payload="$(jq -nc --arg pr_number "$PR_NUMBER" --arg head_sha "$HEAD_SHA" --arg head_branch "$HEAD_BRANCH" \
-              '{pr_number: ($pr_number | tonumber), head_sha: $head_sha, head_branch: $head_branch}')"
-            echo "Dispatch post-approval reconciliation for $REPOSITORY#$PR_NUMBER"
-            GH_TOKEN="$MERGE_TOKEN" gh api --method POST "/repos/$REPOSITORY/dispatches" \
-              -f event_type=maintenance-reconcile \
-              -F client_payload="$payload" > /dev/null
+          payload="$(jq -nc --arg pr_number "$PR_NUMBER" --arg head_sha "$HEAD_SHA" --arg head_branch "$HEAD_BRANCH" \
+            '{pr_number: ($pr_number | tonumber), head_sha: $head_sha, head_branch: $head_branch}')"
+          request_payload="$(jq -nc --argjson client_payload "$payload" \
+            '{event_type: "maintenance-reconcile", client_payload: $client_payload}')"
+          echo "Dispatch post-approval reconciliation for $REPOSITORY#$PR_NUMBER"
+          GH_TOKEN="$MERGE_TOKEN" gh api --method POST "/repos/$REPOSITORY/dispatches" \
+            --input - <<< "$request_payload" > /dev/null
             exit 0
           fi
 

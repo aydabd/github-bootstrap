@@ -239,11 +239,13 @@ assert_contains 'github.event.pull_request.head.sha' "$workflow"
 assert_contains 'github.event.client_payload.pr_number' "$workflow"
 assert_contains 'github.event.client_payload.head_sha' "$workflow"
 assert_contains 'Dispatch maintenance reconciliation' "$workflow"
-assert_contains 'event_type=maintenance-reconcile' "$workflow"
-# shellcheck disable=SC2016  # literal workflow substrings, not shell to expand
-assert_contains '-F client_payload="$payload"' "$workflow"
+assert_contains 'event_type: "maintenance-reconcile"' "$workflow"
 # shellcheck disable=SC2016  # literal workflow substring, not shell to expand
-assert_not_contains '-f client_payload="$payload"' "$workflow"
+assert_contains 'request_payload="$(jq -nc --argjson client_payload "$payload"' "$workflow"
+# shellcheck disable=SC2016  # literal workflow substring, not shell to expand
+assert_contains '--input - <<< "$request_payload"' "$workflow"
+# shellcheck disable=SC2016  # literal workflow substring, not shell to expand
+assert_not_contains '-F client_payload="$payload"' "$workflow"
 assert_contains 'approval_submitted' "$workflow"
 assert_contains 'Dispatch post-approval reconciliation' "$workflow"
 assert_contains 'github.event.review.state == '\''approved'\''' "$workflow"
