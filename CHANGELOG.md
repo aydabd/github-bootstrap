@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.12.4](https://github.com/aydabd/github-bootstrap/compare/v2.12.3...v2.12.4) (2026-09-22)
+
+
+### Bug Fixes
+
+* bind maintenance safety to production environment ([#286](https://github.com/aydabd/github-bootstrap/issues/286)) ([3dcc5e3](https://github.com/aydabd/github-bootstrap/commit/3dcc5e359761ad4c2e5a07af5df055020eb1fb82))
+* create verified E2E fixture commits ([#281](https://github.com/aydabd/github-bootstrap/issues/281)) ([404c166](https://github.com/aydabd/github-bootstrap/commit/404c16610867e29e5e254fdfe352ea3f382bb8e8))
+* include auth validator in scheduled reconciliation ([#287](https://github.com/aydabd/github-bootstrap/issues/287)) ([b6f6e34](https://github.com/aydabd/github-bootstrap/commit/b6f6e34aa1e610c2d81730d75380e19bc4daa65e))
+* recover open maintenance PR reconciliation ([#284](https://github.com/aydabd/github-bootstrap/issues/284)) ([6f919b2](https://github.com/aydabd/github-bootstrap/commit/6f919b2a307dee11a68fd4befb9db72913f717fc))
+
 ## [2.12.3](https://github.com/aydabd/github-bootstrap/compare/v2.12.2...v2.12.3) (2026-09-16)
 
 
