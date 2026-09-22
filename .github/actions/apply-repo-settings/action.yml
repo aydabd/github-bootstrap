@@ -85,17 +85,33 @@ runs:
         jq -e '
           type == "object" and .default_branch == "main" and
           .has_wiki == false and .has_issues == true and .has_projects == true and
-          .allow_auto_merge == false and .allow_squash_merge == true and
+          .allow_auto_merge == true and .allow_squash_merge == true and
           .allow_merge_commit == false and .allow_rebase_merge == false and
           .allow_update_branch == true and .delete_branch_on_merge == true and
           .squash_merge_commit_title == "PR_TITLE" and
           .squash_merge_commit_message == "COMMIT_MESSAGES"
         ' "$REPO_SETTINGS_FILE" >/dev/null
-            gh api \
+            settings_response_file="$(mktemp)"
+            fallback_settings_file="$(mktemp)"
+            trap 'rm -f "$settings_response_file" "$fallback_settings_file"' EXIT
+            if ! gh api \
               --method PATCH \
               -H "Accept: application/vnd.github+json" \
               /repos/"$OWNER"/"$REPO" \
-              --input "$REPO_SETTINGS_FILE"
+              --input "$REPO_SETTINGS_FILE" >"$settings_response_file" 2>&1; then
+              if grep -Eiq 'Upgrade to GitHub Pro|auto.?merge.*(available|private)|private repositories.*auto.?merge' "$settings_response_file"; then
+                jq '.allow_auto_merge = false' "$REPO_SETTINGS_FILE" > "$fallback_settings_file"
+                gh api \
+                  --method PATCH \
+                  -H "Accept: application/vnd.github+json" \
+                  /repos/"$OWNER"/"$REPO" \
+                  --input "$fallback_settings_file"
+                echo "⚠️ Native auto-merge is unavailable; configured direct-merge fallback." >> "$GITHUB_STEP_SUMMARY"
+              else
+                cat "$settings_response_file" >&2
+                exit 1
+              fi
+            fi
             echo "repository_settings_applied=true" >> "$GITHUB_OUTPUT"
             echo "✅ Repository settings patched from $REPO_SETTINGS_FILE" >> "$GITHUB_STEP_SUMMARY"
             ;;

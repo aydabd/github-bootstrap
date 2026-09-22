@@ -405,9 +405,55 @@ jobs:
           }
           echo "E2E passed: $OWNER/$REPO_NAME ($PROVIDER, $DELIVERY): $QUALITY_URL"
 
+  refresh-e2e-fixture-token:
+    name: Refresh E2E fixture access token
+    if: inputs.maintenance_lifecycle == true
+    runs-on: ubuntu-24.04
+    environment: e2e
+    concurrency:
+      group: e2e-fixture-token-rotation
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout bootstrap repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve E2E provisioner token
+        id: provisioner-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: e2e-dispatch
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Rotate E2E fixture credentials once
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_PRIVATE_KEY }}
+          app_client_secret: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_SECRET }}
+          app_user_refresh_token: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN }}
+          refresh_token_secret: BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN
+          refresh_token_secret_environment: e2e
+          access_token_secret: BOOTSTRAP_E2E_FIXTURE_APP_USER_ACCESS_TOKEN
+          secret_writer_token: ${{ steps.provisioner-token.outputs.token }}
+          app_owner: ${{ github.repository_owner }}
+          app_user_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: e2e-fixture
+          repositories: ${{ github.event.repository.name }}
+
   generated-maintenance-lifecycle:
     name: Generated Maintenance Lifecycle
     if: inputs.maintenance_lifecycle == true
+    needs: refresh-e2e-fixture-token
     runs-on: ubuntu-24.04
     environment: e2e
     outputs:
@@ -461,11 +507,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          DISPATCH_REF="$TARGET_REF"
+          TEMP_REF_CREATED=false
+          cleanup_dispatch_ref() {
+            cleanup_status=$?
+            if [ "$TEMP_REF_CREATED" = true ]; then
+              if ! gh api --method DELETE "/repos/$GITHUB_REPOSITORY/git/refs/heads/$DISPATCH_REF" >/dev/null 2>&1; then
+                echo "failed to remove temporary maintenance E2E dispatch ref" >&2
+                cleanup_status=1
+              fi
+            fi
+            return "$cleanup_status"
+          }
+          trap cleanup_dispatch_ref EXIT
+
+          if [[ "$TARGET_REF" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            DISPATCH_REF="e2e-maintenance-head-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            gh api --method POST "/repos/$GITHUB_REPOSITORY/git/refs" \
+              -f "ref=refs/heads/$DISPATCH_REF" -f "sha=$TARGET_REF" >/dev/null
+            TEMP_REF_CREATED=true
+          fi
           creation_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           requested_target_sha="$(gh api "/repos/$REPOSITORY/commits/$TARGET_REF" --jq '.sha')"
           [ -n "$requested_target_sha" ] || { echo "requested target SHA is missing" >&2; exit 1; }
           gh workflow run create-repository.yml --repo "$REPOSITORY" \
-            --ref "$TARGET_REF" \
+            --ref "$DISPATCH_REF" \
             --field provisioner_profile=e2e-provisioner --field app_owner="$APP_OWNER" \
             --field allowed_repo_owners="$OWNER" --field repo_name="$REPO_NAME" \
             --field repo_description="Generated maintenance lifecycle E2E" \
@@ -479,7 +545,7 @@ jobs:
           for _ in $(seq 1 60); do
             creation_run="$(gh api "/repos/$REPOSITORY/actions/workflows/create-repository.yml/runs?event=workflow_dispatch&per_page=50" |
               jq -r --arg repo "$REPO_NAME" --arg since "$creation_started_at" \
-                --arg ref "$TARGET_REF" --arg sha "$requested_target_sha" \
+                --arg ref "$DISPATCH_REF" --arg sha "$requested_target_sha" \
                 '[.workflow_runs[] | select((.display_title // "") | contains($repo)) |
                   select(.head_branch == $ref and .head_sha == $sha and .created_at >= $since)] |
                   first | .id // empty')"
@@ -525,6 +591,18 @@ jobs:
           permission_profile: maintenance-merge
           repositories: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
 
+      - name: Resolve generated repository lifecycle token
+        id: generated-repository-token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.app_owner }}
+          target_owner: ${{ github.repository_owner }}
+          permission_profile: e2e-dispatch
+          repositories: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
+
       - name: Resolve E2E maintenance Reviewer token
         id: reviewer-token
         uses: ./.github/actions/resolve-gh-token
@@ -538,29 +616,26 @@ jobs:
           permission_profile: maintenance-review
           repositories: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
 
-      - name: Resolve E2E maintenance fixture user token
-        id: fixture-token
-        uses: ./.github/actions/resolve-gh-token
-        with:
-          # Credential profile: e2e-fixture; target Environment: e2e.
-          client_id: ${{ vars.BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_ID }}
-          app_private_key: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_PRIVATE_KEY }}
-          app_client_secret: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_CLIENT_SECRET }}
-          app_user_refresh_token: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN }}
-          refresh_token_secret: BOOTSTRAP_E2E_FIXTURE_APP_USER_REFRESH_TOKEN
-          refresh_token_secret_environment: e2e
-          app_owner: ${{ github.repository_owner }}
-          target_owner: ${{ github.repository_owner }}
-          permission_profile: e2e-fixture
-          repositories: bootstrap-e2e-${{ github.run_id }}-${{ github.run_attempt }}-system-embedded-create-repository
+      - name: Verify E2E fixture access token
+        env:
+          FIXTURE_TOKEN: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_USER_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$FIXTURE_TOKEN" ] || { echo "E2E fixture access token was not published by the rotation job" >&2; exit 1; }
+          fixture_login="$(GH_TOKEN="$FIXTURE_TOKEN" gh api /user --jq '.login')"
+          [ "$fixture_login" = "${{ inputs.app_owner }}" ] || {
+            echo "E2E fixture access token belongs to '$fixture_login', expected '${{ inputs.app_owner }}'" >&2
+            exit 1
+          }
 
       - name: Create and verify maintenance lifecycle
         env:
           GH_TOKEN: ${{ steps.provisioner-token.outputs.token }}
           WRITER_TOKEN: ${{ steps.writer-token.outputs.token }}
           REVIEWER_TOKEN: ${{ steps.reviewer-token.outputs.token }}
-          PR_AUTHOR_USER_TOKEN: ${{ steps.fixture-token.outputs.token }}
-          E2E_GH_TOKEN: ${{ steps.e2e-token.outputs.token }}
+          PR_AUTHOR_USER_TOKEN: ${{ secrets.BOOTSTRAP_E2E_FIXTURE_APP_USER_ACCESS_TOKEN }}
+          E2E_GH_TOKEN: ${{ steps.generated-repository-token.outputs.token }}
           OWNER: ${{ github.repository_owner }}
           APP_OWNER: ${{ inputs.app_owner }}
           REPOSITORY: ${{ github.repository }}
@@ -568,7 +643,7 @@ jobs:
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_E2E_WRITER_APP_SLUG }}
           REVIEWER_APP_SLUG: ${{ vars.BOOTSTRAP_E2E_REVIEWER_APP_SLUG }}
           MAINTENANCE_IDENTITY_MODE: e2e-disposable
-          MAINTENANCE_FIXTURE_LOGIN: e2e-user
+          MAINTENANCE_FIXTURE_LOGIN: ${{ inputs.app_owner }}
           MAINTENANCE_COPILOT_REVIEWER_LOGIN: copilot-pull-request-reviewer[bot]
         shell: bash
         run: |
@@ -594,22 +669,32 @@ jobs:
           wait_for_run() {
             local workflow="$1" expected_event="$2" expected_sha="$3" expected_branch="$4" since="$5" expected_pr="$6" allow_missing_pr="${7:-false}" timeout_seconds=900
             local deadline=$((SECONDS + timeout_seconds))
-            local run_id="" status="" conclusion="" url=""
+            local run_id="" run_listing="" run_state="" status="" conclusion="" url=""
             local expected_repository="$OWNER/$REPO_NAME"
             for _ in $(seq 1 60); do
               [ "$SECONDS" -lt "$deadline" ] || break
               # shellcheck disable=SC2016
-              run_id="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/actions/workflows/$workflow/runs?per_page=20" |
-                  jq -r --arg event "$expected_event" --arg sha "$expected_sha" \
-                  --arg branch "$expected_branch" --arg since "$since" --arg pr "$expected_pr" \
-                  --arg repository "$expected_repository" \
-                  --arg allow_missing "$allow_missing_pr" \
-                  '[.workflow_runs[] | select(.event == $event) | select(.head_sha == $sha) |
-                    select(.head_branch == $branch) | select(.head_repository.full_name == $repository) |
-                    select(.created_at >= $since) |
-                    select($pr == "0" or any(.pull_requests[]?.number; . == ($pr | tonumber)) or
-                      ($allow_missing == "true" and (.pull_requests | length) == 0))] |
-                  first | .id // empty')"
+              if ! run_listing="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/actions/workflows/$workflow/runs?per_page=20" 2>/dev/null)"; then
+                diagnostic "$workflow" "https://github.com/$OWNER/$REPO_NAME/actions" "lifecycle observer unavailable"
+                sleep 10
+                continue
+              fi
+              if ! run_id="$(printf '%s\n' "$run_listing" |
+                jq -r --arg event "$expected_event" --arg sha "$expected_sha" \
+                --arg branch "$expected_branch" --arg since "$since" --arg pr "$expected_pr" \
+                --arg repository "$expected_repository" \
+                --arg allow_missing "$allow_missing_pr" \
+                '[.workflow_runs[] | select(.event == $event) | select(.head_sha == $sha) |
+                  select(.head_branch == $branch) | select(.head_repository.full_name == $repository) |
+                  select(.conclusion != "skipped") |
+                  select(.created_at >= $since) |
+                  select($pr == "0" or any(.pull_requests[]?.number; . == ($pr | tonumber)) or
+                    ($allow_missing == "true" and (.pull_requests | length) == 0))] |
+                first | .id // empty')"; then
+                diagnostic "$workflow" "https://github.com/$OWNER/$REPO_NAME/actions" "lifecycle observer returned malformed data"
+                sleep 10
+                continue
+              fi
               [ -n "$run_id" ] && break
               sleep 10
             done
@@ -619,17 +704,26 @@ jobs:
             # so an unrelated run can never satisfy this lifecycle gate.
             # before accepting it, regardless of the event's payload shape.
             if [ "$expected_pr" != 0 ]; then
-              correlated_pr="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$expected_pr" \
-                --jq '[.head.sha,.head.ref,.base.ref,.created_at] | @tsv')"
+              if ! correlated_pr="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$expected_pr" \
+                --jq '[.head.sha,.head.ref,.base.ref,.created_at] | @tsv' 2>/dev/null)"; then
+                diagnostic "$workflow" "https://github.com/$OWNER/$REPO_NAME/pull/$expected_pr" "pull request observer unavailable"
+                return 1
+              fi
               [ "$(printf '%s' "$correlated_pr" | cut -f1)" = "$expected_sha" ] || return 1
               [ "$(printf '%s' "$correlated_pr" | cut -f2)" = "$expected_branch" ] || return 1
               [ "$(printf '%s' "$correlated_pr" | cut -f3)" = main ] || return 1
-              [ "$(printf '%s' "$correlated_pr" | cut -f4)" \> "$since" ] || return 1
+              correlated_created_at="$(printf '%s' "$correlated_pr" | cut -f4)"
+              [[ "$correlated_created_at" < "$since" ]] && return 1
             fi
             for _ in $(seq 1 90); do
               [ "$SECONDS" -lt "$deadline" ] || break
-              read -r status conclusion url < <(e2e_gh run view "$run_id" --repo "$OWNER/$REPO_NAME" \
-                --json status,conclusion,url --jq '[.status,.conclusion,.url] | @tsv')
+              if ! run_state="$(e2e_gh run view "$run_id" --repo "$OWNER/$REPO_NAME" \
+                --json status,conclusion,url --jq '[.status,.conclusion,.url] | @tsv' 2>/dev/null)"; then
+                diagnostic "$workflow" "https://github.com/$OWNER/$REPO_NAME/actions/runs/$run_id" "workflow status observer unavailable"
+                sleep 10
+                continue
+              fi
+              read -r status conclusion url <<<"$run_state"
               diagnostic "$workflow" "$url" "$status/$conclusion"
               [ "$status" = completed ] && break
               sleep 10
@@ -639,31 +733,138 @@ jobs:
               return 1
             }
           }
+          wait_for_lifecycle_observer_access() {
+            local endpoint="/repos/$OWNER/$REPO_NAME/actions/workflows/quality.yml/runs?per_page=1"
+            for attempt in $(seq 1 30); do
+              if e2e_gh api "$endpoint" >/dev/null 2>&1; then
+                diagnostic 'lifecycle observer access' "https://github.com/$OWNER/$REPO_NAME/actions" "ready attempt=$attempt"
+                return 0
+              fi
+              diagnostic 'lifecycle observer access' "https://github.com/$OWNER/$REPO_NAME/actions" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "E2E lifecycle observer could not read Actions runs before the bounded deadline" >&2
+            return 1
+          }
           wait_for_label() {
-            local label="$1"
+            local label="$1" labels=""
             for _ in $(seq 1 60); do
-              if e2e_gh api "/repos/$OWNER/$REPO_NAME/issues/$PR_NUMBER/labels" --jq '.[].name' |
-                grep -Fxq "$label"; then return 0; fi
+              if ! labels="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/issues/$PR_NUMBER/labels" --jq '.[].name' 2>/dev/null)"; then
+                diagnostic 'maintenance label' "https://github.com/$OWNER/$REPO_NAME/pull/$PR_NUMBER" "label observer unavailable"
+                sleep 10
+                continue
+              fi
+              if printf '%s\n' "$labels" | grep -Fxq "$label"; then return 0; fi
               sleep 10
             done
             echo "diagnostic: missing label $label for PR $PR_NUMBER" >&2
             return 1
           }
+          wait_for_fixture_repository_access() {
+            local repository_endpoint="/repos/$OWNER/$REPO_NAME"
+            for attempt in $(seq 1 30); do
+              if author_gh api "$repository_endpoint" --jq '.permissions.push == true' 2>/dev/null |
+                grep -Fxq true; then
+                diagnostic 'fixture repository access' "https://github.com/$OWNER/$REPO_NAME" "ready attempt=$attempt"
+                return 0
+              fi
+              diagnostic 'fixture repository access' "https://github.com/$OWNER/$REPO_NAME" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "fixture App did not obtain repository write access before the bounded deadline" >&2
+            return 1
+          }
+          create_fixture_branch() {
+            local ref="$1" sha="$2"
+            for attempt in $(seq 1 30); do
+              if author_gh api --method POST "/repos/$OWNER/$REPO_NAME/git/refs" \
+                -f "ref=refs/heads/$ref" -f "sha=$sha" >/dev/null; then
+                diagnostic 'fixture branch creation' "https://github.com/$OWNER/$REPO_NAME/tree/$ref" "created attempt=$attempt"
+                return 0
+              fi
+              if author_gh api "/repos/$OWNER/$REPO_NAME/git/ref/heads/$ref" >/dev/null 2>&1; then
+                diagnostic 'fixture branch creation' "https://github.com/$OWNER/$REPO_NAME/tree/$ref" "already-created attempt=$attempt"
+                return 0
+              fi
+              diagnostic 'fixture branch creation' "https://github.com/$OWNER/$REPO_NAME/tree/$ref" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "fixture App could not create the maintenance branch before the bounded deadline" >&2
+            return 1
+          }
+          write_fixture_content() {
+            local path="$1" branch_name="$2" content_value="$3" commit_message commit_response commit_sha verification
+            commit_message=$'fix: controlled Dependabot-style maintenance update\n\nSigned-off-by: E2E Fixture <e2e-fixture@users.noreply.github.com>'
+            for attempt in $(seq 1 30); do
+              # Authenticate the Contents API write as the GitHub App. GitHub
+              # automatically verifies bot-authored commits only when the
+              # request is App-authenticated and supplies no custom author,
+              # committer, or signature fields. The disposable fixture user
+              # still creates the branch and PR below.
+              if commit_response="$(writer_gh api --method PUT "/repos/$OWNER/$REPO_NAME/contents/$path" \
+                -f message="$commit_message" \
+                -f content="$content_value" -f branch="$branch_name")" &&
+                commit_sha="$(printf '%s\n' "$commit_response" | jq -er '.commit.sha')"; then
+                for verify_attempt in $(seq 1 30); do
+                  if verification="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/commits/$commit_sha" \
+                    --jq '[.commit.verification.verified,.commit.verification.reason] | @tsv' 2>/dev/null)" &&
+                    [ "$verification" = $'true\tvalid' ]; then
+                    diagnostic 'fixture commit signature' "https://github.com/$OWNER/$REPO_NAME/commit/$commit_sha" "verified attempt=$verify_attempt"
+                    diagnostic 'fixture content write' "https://github.com/$OWNER/$REPO_NAME/blob/$branch_name/$path" "created attempt=$attempt"
+                    return 0
+                  fi
+                  diagnostic 'fixture commit signature' "https://github.com/$OWNER/$REPO_NAME/commit/$commit_sha" "waiting state=${verification:-unavailable} attempt=$verify_attempt"
+                  sleep 5
+                done
+                echo "fixture content commit $commit_sha was not cryptographically verified" >&2
+                return 1
+              fi
+              diagnostic 'fixture content write' "https://github.com/$OWNER/$REPO_NAME/blob/$branch_name/$path" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "fixture App could not write the maintenance file before the bounded deadline" >&2
+            return 1
+          }
+          create_fixture_pull_request() {
+            local branch_name="$1"
+            for attempt in $(seq 1 30); do
+              if pr_number="$(author_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls" -f 'title=fix(deps): controlled Dependabot-style maintenance update' -f 'body=Deterministic E2E maintenance PR; no production repository operations.' -f "head=$branch_name" -f base=main --jq '.number')"; then
+                [ -n "$pr_number" ] || continue
+                diagnostic 'fixture pull request creation' "https://github.com/$OWNER/$REPO_NAME/pull/$pr_number" "created attempt=$attempt"
+                printf '%s\n' "$pr_number"
+                return 0
+              fi
+              diagnostic 'fixture pull request creation' "https://github.com/$OWNER/$REPO_NAME/pulls" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "fixture App could not create the maintenance pull request before the bounded deadline" >&2
+            return 1
+          }
+          request_fixture_reviewer() {
+            local pr_number="$1"
+            for attempt in $(seq 1 30); do
+              if writer_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls/$pr_number/requested_reviewers" \
+                -f "reviewers[]=$MAINTENANCE_COPILOT_REVIEWER_LOGIN" >/dev/null; then
+                diagnostic 'fixture reviewer request' "https://github.com/$OWNER/$REPO_NAME/pull/$pr_number" "requested attempt=$attempt"
+                return 0
+              fi
+              diagnostic 'fixture reviewer request' "https://github.com/$OWNER/$REPO_NAME/pull/$pr_number" "waiting attempt=$attempt"
+              sleep 5
+            done
+            echo "E2E lifecycle App could not request the fixture reviewer before the bounded deadline" >&2
+            return 1
+          }
+          wait_for_lifecycle_observer_access
           main_sha="$(writer_gh api "/repos/$OWNER/$REPO_NAME/git/ref/heads/main" --jq '.object.sha')"
           branch="e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          author_gh api --method POST "/repos/$OWNER/$REPO_NAME/git/refs" \
-            -f "ref=refs/heads/$branch" -f "sha=$main_sha" >/dev/null
+          wait_for_fixture_repository_access
+          create_fixture_branch "$branch" "$main_sha"
           marker="maintenance-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           content="$(printf 'fix: controlled Dependabot-style maintenance update (%s)\n' "$marker" | base64 | tr -d '\n')"
-          author_gh api --method PUT "/repos/$OWNER/$REPO_NAME/contents/.github/$marker" \
-            -f message="fix: controlled Dependabot-style maintenance update" -f content="$content" \
-            -f branch="$branch" >/dev/null
-          PR_NUMBER="$(author_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls" \
-            -f title="fix(deps): controlled Dependabot-style maintenance update" \
-            -f body="Deterministic E2E maintenance PR; no production repository operations." \
-            -f head="$branch" -f base=main --jq '.number')"
-          [ -n "$PR_NUMBER" ] || { echo "maintenance PR was not created" >&2; exit 1; }
+          write_fixture_content ".github/$marker" "$branch" "$content"
           maintenance_started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          PR_NUMBER="$(create_fixture_pull_request "$branch")"
+          [ -n "$PR_NUMBER" ] || { echo "maintenance PR was not created" >&2; exit 1; }
           pr_head_sha="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" --jq '.head.sha')"
           [ -n "$pr_head_sha" ] || { echo "maintenance PR head SHA is missing" >&2; exit 1; }
           pr_author="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" --jq '.user.login')"
@@ -671,8 +872,7 @@ jobs:
             echo "maintenance fixture PR author '$pr_author' is not the configured disposable identity" >&2
             exit 1
           }
-          e2e_gh api --method POST "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/requested_reviewers" \
-            -f "reviewers[]=$MAINTENANCE_COPILOT_REVIEWER_LOGIN" >/dev/null
+          request_fixture_reviewer "$PR_NUMBER"
           wait_for_label 'automation: maintenance'
           wait_for_label 'automation: validating'
           wait_for_run quality.yml pull_request "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER"
@@ -683,20 +883,29 @@ jobs:
           copilot_validated=false
           for _ in $(seq 1 60); do
             e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER" > "$copilot_dir/pr.json"
-            jq -e --arg sha "$pr_head_sha" --arg login "$MAINTENANCE_COPILOT_REVIEWER_LOGIN" \
-              '.head.sha == $sha and any(.requested_reviewers[]?; .login == $login)' \
+            jq -e --arg sha "$pr_head_sha" \
+              '.head.sha == $sha' \
               "$copilot_dir/pr.json" >/dev/null || { sleep 10; continue; }
-            reviewer_gh api --paginate --slurp \
-              "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/reviews" | jq '[.[][]]' > "$copilot_dir/reviews.json"
+            if ! reviewer_gh api --paginate --slurp \
+              "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/reviews" | jq '[.[][]]' > "$copilot_dir/reviews.json"; then
+              diagnostic 'Copilot review read' "https://github.com/$OWNER/$REPO_NAME/pull/$PR_NUMBER" "waiting"
+              sleep 10
+              continue
+            fi
             # shellcheck disable=SC2016
-            e2e_gh api graphql \
+            if ! e2e_gh api graphql \
               -f query='query($owner:String!,$repository:String!,$number:Int!){repository(owner:$owner,name:$repository){pullRequest(number:$number){reviewThreads(first:100){pageInfo{hasNextPage}nodes{isResolved comments(first:1){nodes{author{login}}}}}}}}' \
-              -F owner="$OWNER" -F repository="$REPO_NAME" -F number="$PR_NUMBER" > "$copilot_dir/thread-response.json"
-            jq -e '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage == false' \
-              "$copilot_dir/thread-response.json" >/dev/null || {
-              echo "Copilot review threads exceed validation page; refusing to pass" >&2
-              exit 1
-            }
+              -F owner="$OWNER" -F repository="$REPO_NAME" -F number="$PR_NUMBER" > "$copilot_dir/thread-response.json"; then
+              diagnostic 'Copilot thread read' "https://github.com/$OWNER/$REPO_NAME/pull/$PR_NUMBER" "waiting"
+              sleep 10
+              continue
+            fi
+            if ! jq -e '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage == false' \
+              "$copilot_dir/thread-response.json" >/dev/null; then
+              diagnostic 'Copilot review threads' "https://github.com/$OWNER/$REPO_NAME/pull/$PR_NUMBER" "waiting"
+              sleep 10
+              continue
+            fi
             jq '[.data.repository.pullRequest.reviewThreads.nodes[] |
               {isResolved, author_login: (.comments.nodes[0].author.login // "")}]' \
               "$copilot_dir/thread-response.json" > "$copilot_dir/threads.json"
@@ -712,10 +921,11 @@ jobs:
             echo "Copilot review evidence was not observed for the current PR head" >&2
             exit 1
           }
+          wait_for_label 'automation: accepted'
           # Maintenance safety must pass before the Reviewer approval and
           # explicit Writer merge stages are allowed to proceed.
           wait_for_run maintenance-safety.yml pull_request_target "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
-          wait_for_run merge-maintenance-pr.yml workflow_run "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
+          wait_for_run merge-maintenance-pr.yml pull_request_target "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
           merge_reviews_file="$RUNNER_TEMP/merge-reviews-$REPO_NAME.json"
           e2e_gh api --paginate --slurp \
             "/repos/$OWNER/$REPO_NAME/pulls/$PR_NUMBER/reviews" | jq '[.[][]]' > "$merge_reviews_file"
@@ -767,7 +977,7 @@ jobs:
           release_pr_branch="$(e2e_gh api "/repos/$OWNER/$REPO_NAME/pulls/$release_pr_number" --jq '.head.ref')"
           wait_for_run maintenance-safety.yml pull_request_target "$release_pr_head" \
             "$release_pr_branch" "$release_started_at" "$release_pr_number"
-          wait_for_run merge-maintenance-pr.yml workflow_run "$release_pr_head" \
+          wait_for_run merge-maintenance-pr.yml pull_request_target "$release_pr_head" \
             "$release_pr_branch" "$release_started_at" "$release_pr_number" true
           release_merge_sha=""
           for _ in $(seq 1 120); do

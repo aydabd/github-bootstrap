@@ -25,7 +25,7 @@ require_file "$security"
 
 jq -e '
     type == "object" and .default_branch == "main" and .has_wiki == false and
-    .has_issues == true and .has_projects == true and .allow_auto_merge == false and
+    .has_issues == true and .has_projects == true and .allow_auto_merge == true and
     .allow_squash_merge == true and .allow_merge_commit == false and
     .allow_rebase_merge == false and .allow_update_branch == true and
     .delete_branch_on_merge == true and .squash_merge_commit_title == "PR_TITLE" and

@@ -51,6 +51,38 @@ grep -Fq 'app_user_refresh_token:' "$action" || {
     echo "resolve-gh-token must retain the generic refresh-token credential input" >&2
     exit 1
 }
+grep -Fq 'secret_writer_token:' "$action" || {
+    echo "resolve-gh-token must accept a separate least-privilege refresh-secret writer token" >&2
+    exit 1
+}
+grep -Fq 'access_token_secret:' "$action" || {
+    echo "resolve-gh-token must accept a secret name for the refreshed access token" >&2
+    exit 1
+}
+grep -Fq 'app_user_owner:' "$action" || {
+    echo "resolve-gh-token must accept a separate personal App user owner" >&2
+    exit 1
+}
+grep -Fq 'SECRET_WRITER_TOKEN:' "$action" || {
+    echo "resolve-gh-token must pass the separate refresh-secret writer token to the rotation step" >&2
+    exit 1
+}
+grep -Fq "GH_TOKEN=\"\$secret_writer_token\" gh secret set" "$action" || {
+    echo "resolve-gh-token must use the separate refresh-secret writer token for persistence" >&2
+    exit 1
+}
+grep -Fq 'ACCESS_TOKEN_SECRET:' "$action" || {
+    echo "resolve-gh-token must pass the access-token secret name to the rotation step" >&2
+    exit 1
+}
+grep -Fq 'APP_USER_OWNER:' "$action" || {
+    echo "resolve-gh-token must pass the separate personal App user owner to rotation" >&2
+    exit 1
+}
+grep -Fq "GH_TOKEN=\"\$secret_writer_token\" gh secret set \"\$ACCESS_TOKEN_SECRET\"" "$action" || {
+    echo "resolve-gh-token must persist the refreshed access token with the secret writer" >&2
+    exit 1
+}
 grep -Fq "refresh_token_secret: \${{ env.PROVISIONER_REFRESH_TOKEN_NAME }}" "$repo_root/.github/workflows/create-repository.yml" || {
     echo "generated repository creation must use its selected refresh-token secret" >&2
     exit 1

@@ -129,6 +129,7 @@ writer_manifest="$script_dir/../../docs/github-app-manifests/bootstrap-e2e-write
 reviewer_manifest="$script_dir/../../docs/github-app-manifests/bootstrap-e2e-reviewer.json"
 jq -e '.name == "Bootstrap E2E Writer" and
     .default_permissions == {
+        "actions": "read",
         "contents": "write",
         "issues": "write",
         "pull_requests": "write",
