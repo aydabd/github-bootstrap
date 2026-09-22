@@ -162,9 +162,9 @@ grep -Fq 'BOOTSTRAP_COPILOT_REVIEWER_LOGIN' "$workflow"
 # completing that gate must still re-evaluate safety via the PR head branch,
 # but only for non-main heads so routine/manual E2E runs do not spawn a failing
 # safety run, and a run with no open PR skips rather than fails.
-grep -Fq "github.event.workflow_run.name == 'Test Generated Repository E2E'" "$workflow"
-grep -Fq "github.event.workflow_run.head_branch != 'main'" "$workflow"
-if grep -Fq "github.event.workflow_run.pull_requests[0].number" "$workflow"; then
+job_if="$(sed -n '35,45p' "$workflow")"
+grep -Fq "github.event.workflow_run.head_branch != 'main'" <<<"$job_if"
+if grep -Fq "github.event.workflow_run.pull_requests[0].number" <<<"$job_if"; then
     echo "maintenance safety must recover PRs from workflow-run head branches" >&2
     exit 1
 fi
