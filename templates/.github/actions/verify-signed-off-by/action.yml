@@ -29,11 +29,12 @@ runs:
           "/repos/$REPOSITORY/pulls/$PR_NUMBER/commits?per_page=100" \
           > "$commits_file"
         missing_commits="$(jq -r '
-          ["github-actions[bot]", "bootstrap-writer[bot]", "dependabot[bot]"] as $trusted_bots
+          ["github-actions[bot]", "bootstrap-writer[bot]", "bootstrap-e2e-writer[bot]", "dependabot[bot]"] as $trusted_bots
           | flatten[]
           | (.author.login? // "") as $login
           | select(
-              ($trusted_bots | index($login) | not)
+              (($trusted_bots | index($login) | not) or
+                ($login == "bootstrap-e2e-writer[bot]" and ((.commit.verification.verified // false) | not)))
               and (.commit.message | test("(?m)^Signed-off-by: .+ <[^>]+>\\n?$") | not)
             )
           | .sha

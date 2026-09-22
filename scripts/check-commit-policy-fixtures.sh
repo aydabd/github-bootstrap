@@ -11,6 +11,12 @@ policy_actions=(
     ".github/actions/verify-signed-off-by/action.yml"
 )
 
+grep -qF '"bootstrap-e2e-writer[bot]" and ((.commit.verification.verified // false) | not)' \
+    "$ROOT_DIR/.github/actions/verify-signed-off-by/action.yml" || {
+    echo "MISSING_TRUSTED_E2E_WRITER: signed-off-by action" >&2
+    exit 1
+}
+
 weekly_workflow="$ROOT_DIR/.github/workflows/weekly-tooling-updates.yml"
 # shellcheck disable=SC2016
 if ! grep -qF 'Signed-off-by: ${signoff_name} <${signoff_email}>' "$weekly_workflow"; then
