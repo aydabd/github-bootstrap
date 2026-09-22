@@ -12,6 +12,21 @@ fail() {
     exit 1
 }
 
+step_line() {
+    local workflow="$1"
+    local step="$2"
+    local matches
+    local line
+
+    matches="$(grep -Fxc -- "$step" "$workflow" || true)"
+    [ "$matches" -eq 1 ] ||
+        fail "expected exactly one '$step' step in $workflow, found $matches"
+
+    line="$(awk -v step="$step" 'index($0, step) == 1 { print NR; exit }' "$workflow")"
+    [ -n "$line" ] || fail "could not locate '$step' step in $workflow"
+    printf '%s\n' "$line"
+}
+
 grep -Fq 'E2E_FIXTURE_LOGIN: ${{ inputs.app_owner }}' "$api_workflow" ||
     fail "API workflow fixture login binding is missing"
 grep -Fq 'E2E_FIXTURE_LOGIN: ${{ inputs.app_owner }}' "$terraform_workflow" ||
@@ -28,10 +43,10 @@ for workflow in "$api_workflow" "$terraform_workflow"; do
         fail "CODEOWNERS does not fall back to app_owner in $workflow"
 done
 
-api_filter_line="$(grep -n '^      - name: Remove unselected workflows$' "$api_workflow" | cut -d: -f1)"
-api_codeowners_line="$(grep -n '^      - name: Configure CODEOWNERS$' "$api_workflow" | cut -d: -f1)"
-terraform_filter_line="$(grep -n '^      - name: Remove unselected workflows$' "$terraform_workflow" | cut -d: -f1)"
-terraform_codeowners_line="$(grep -n '^      - name: Configure CODEOWNERS$' "$terraform_workflow" | cut -d: -f1)"
+api_filter_line="$(step_line "$api_workflow" '      - name: Remove unselected workflows')"
+api_codeowners_line="$(step_line "$api_workflow" '      - name: Configure CODEOWNERS')"
+terraform_filter_line="$(step_line "$terraform_workflow" '      - name: Remove unselected workflows')"
+terraform_codeowners_line="$(step_line "$terraform_workflow" '      - name: Configure CODEOWNERS')"
 [ "$api_filter_line" -lt "$api_codeowners_line" ] || fail "API workflow filter order changed"
 [ "$terraform_filter_line" -lt "$terraform_codeowners_line" ] ||
     fail "Terraform workflow filters workflows after CODEOWNERS parity point"

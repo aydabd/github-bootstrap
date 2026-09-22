@@ -11,8 +11,12 @@ and template files.
 - **`github_repository`** - Base repository matching the API creation request (issues and projects
   enabled, wiki disabled, and an initial commit)
 - **`github_repository_environment`** - `dev` and `prod` deployment environments
-- **Shared bootstrap actions** - Repository settings, security features, rulesets, and generated
-  repository files, applied by the wrapper workflow to keep Terraform and API creation in parity
+
+## Workflow-applied Bootstrap Steps
+
+When run through the Terraform workflow, shared bootstrap actions apply repository settings,
+security features, rulesets, and generated repository files. These are wrapper-workflow steps,
+not Terraform-managed resources.
 
 ## Usage
 
@@ -86,7 +90,7 @@ terraform {
 
 ## Differences from the GitHub Actions Workflow
 
-| Feature                 | GitHub Actions Workflow                             | Terraform Module                                 |
+| Feature                 | GitHub Actions Workflow                             | Terraform orchestration path                     |
 | ----------------------- | --------------------------------------------------- | ------------------------------------------------ |
 | Repository creation     | ✅ GitHub API via `gh` CLI                          | ✅ `github_repository` resource                  |
 | Repository settings     | ✅ Shared action via `gh api`                       | ✅ Same shared action                            |
