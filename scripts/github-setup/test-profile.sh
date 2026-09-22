@@ -118,9 +118,13 @@ for creation_workflow in \
     grep -q '^      app_owner:' "$creation_workflow"
     grep -q '^      allowed_repo_owners:' "$creation_workflow"
     grep -q '^      require_cleanup_approval:' "$creation_workflow"
-    grep -q '^      optional_features:' "$creation_workflow"
+    if grep -q '^      optional_features:' "$creation_workflow" ||
+        grep -q 'inputs.optional_features' "$creation_workflow" ||
+        grep -q 'github-planning' "$creation_workflow"; then
+        echo "removed optional_features/github-planning input is still present: $creation_workflow" >&2
+        exit 1
+    fi
     grep -q 'OWNER/REPOSITORY@REF' "$creation_workflow"
-    grep -q "OPTIONAL_FEATURES=\"\${{ inputs.optional_features || 'github-planning' }}\"" "$creation_workflow"
     grep -q 'maintenance' "$creation_workflow"
     grep -q 'e2e' "$creation_workflow"
     grep -q 'scripts/select-generated-workflows.sh' "$creation_workflow"

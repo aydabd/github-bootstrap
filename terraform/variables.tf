@@ -32,16 +32,10 @@ variable "visibility" {
   }
 }
 
-variable "enable_branch_protection" {
-  description = "Opt-in: create a Terraform-managed repository ruleset for the main branch. Disabled by default because bootstrap workflows apply the default ruleset via apply-repository-ruleset. Enable only when managing rulesets through Terraform directly and not using the bootstrap workflow."
-  type        = bool
-  default     = false
-}
-
 variable "team_name" {
-  description = "GitHub team for code owners (e.g., team-leads)"
+  description = "CODEOWNERS owner (GitHub username or org/team); empty uses the workflow app owner"
   type        = string
-  default     = "team-leads"
+  default     = ""
 }
 
 variable "license_holder" {

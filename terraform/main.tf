@@ -9,17 +9,6 @@ resource "github_repository" "new_repo" {
   has_wiki     = false
   auto_init    = true
 
-  vulnerability_alerts = true
-
-  # Merge strategy: squash only. Matches repo-settings.json applied by workflows.
-  allow_squash_merge          = true
-  allow_merge_commit          = false
-  allow_rebase_merge          = false
-  allow_auto_merge            = true
-  allow_update_branch         = true
-  squash_merge_commit_title   = "PR_TITLE"
-  squash_merge_commit_message = "COMMIT_MESSAGES"
-  delete_branch_on_merge      = true
 }
 
 # Create development environment (no wait, no reviewers required)
@@ -36,55 +25,6 @@ resource "github_repository_environment" "prod" {
   count       = var.enable_repo_settings ? 1 : 0
   environment = "prod"
   repository  = github_repository.new_repo.name
-
-  deployment_branch_policy {
-    protected_branches     = true
-    custom_branch_policies = false
-  }
-
-  depends_on = [github_repository.new_repo]
-}
-
-# Apply branch protection ruleset for the main branch
-resource "github_repository_ruleset" "main_protection" {
-  count = var.enable_repo_settings && var.enable_branch_protection ? 1 : 0
-
-  name        = "default"
-  repository  = github_repository.new_repo.name
-  target      = "branch"
-  enforcement = "active"
-
-  conditions {
-    ref_name {
-      include = ["refs/heads/main"]
-      exclude = []
-    }
-  }
-
-  rules {
-    deletion                = true
-    non_fast_forward        = true
-    required_linear_history = true
-    required_signatures     = true
-
-    pull_request {
-      required_approving_review_count   = 0
-      dismiss_stale_reviews_on_push     = true
-      require_code_owner_review         = false
-      require_last_push_approval        = false
-      required_review_thread_resolution = true
-    }
-
-    required_status_checks {
-      strict_required_status_checks_policy = true
-      required_check {
-        context = "Signed-off-by trailers"
-      }
-      required_check {
-        context = "quality"
-      }
-    }
-  }
 
   depends_on = [github_repository.new_repo]
 }

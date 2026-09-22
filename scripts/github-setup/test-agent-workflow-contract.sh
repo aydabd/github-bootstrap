@@ -77,9 +77,16 @@ done
 for workflow in .github/workflows/create-repository.yml .github/workflows/terraform-create-repository.yml; do
     grep -Fq 'cp templates/AGENTS.md new-repo/AGENTS.md' "$repo_root/$workflow" ||
         fail "$workflow does not install the generic AGENTS.md template"
-    grep -Fq 'default: "github-planning"' "$repo_root/$workflow" ||
-        fail "$workflow does not enable GitHub planning by default"
+    if grep -Fq 'optional_features:' "$repo_root/$workflow" ||
+        grep -Fq 'inputs.optional_features' "$repo_root/$workflow" ||
+        grep -Fq 'github-planning' "$repo_root/$workflow"; then
+        fail "$workflow still exposes the removed optional_features/github-planning input"
+    fi
 done
+
+grep -Eq '\(quality\|codeql\|ai-code-review\|release\|maintenance\)' \
+    "$repo_root/.github/workflows/test-repository-creation.yml" ||
+    fail "test-repository-creation.yml does not accept the maintenance workflow bundle"
 
 # shellcheck disable=SC2016 # The literal shell snippet is the contract under test.
 grep -Fq 'cp "$bootstrap_root/templates/AGENTS.md" AGENTS.md' \

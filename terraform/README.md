@@ -1,19 +1,22 @@
 # Terraform Module: GitHub Repository Bootstrap
 
-This Terraform module creates a fully configured GitHub repository with the same settings as the
+This Terraform module creates the base GitHub repository used by the
 [`create-repository.yml`](../.github/workflows/create-repository.yml) GitHub Actions workflow.
+The API workflow is the source of truth for bootstrap behavior; both orchestration paths then
+use the same shared actions for repository settings, environments, security features, rulesets,
+and template files.
 
 ## Resources Created
 
-- **`github_repository`** - Repository with squash merge, branch deletion, issues, projects enabled,
-  and vulnerability alerts enabled
+- **`github_repository`** - Base repository matching the API creation request (issues and projects
+  enabled, wiki disabled, and an initial commit)
 - **`github_repository_environment`** - `dev` and `prod` deployment environments
-- **`github_repository_ruleset`** - Branch protection for `main` (optional) requiring one approving review,
-  latest-push approval, resolved review threads, `quality` and `CodeRabbit` status checks,
-  and linear history (no merge commits)
 
-  CodeRabbit must be installed and have review quota available when this ruleset is enabled;
-  otherwise automation PRs can remain blocked waiting for the required `CodeRabbit` status.
+## Workflow-applied Bootstrap Steps
+
+When run through the Terraform workflow, shared bootstrap actions apply repository settings,
+security features, rulesets, and generated repository files. These are wrapper-workflow steps,
+not Terraform-managed resources.
 
 ## Usage
 
@@ -50,17 +53,16 @@ allowlists and targets outside that explicit list.
 
 ## Input Variables
 
-| Variable                   | Required | Default                                    | Description                                                                                                                                                                                                                                |
-| -------------------------- | -------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `github_token`             | **Yes**  | -                                          | GitHub App installation token for organization targets or GitHub App user access token for personal targets, supplied internally by the workflow                                                                                           |
-| `repo_name`                | **Yes**  | -                                          | New repository name                                                                                                                                                                                                                        |
-| `repo_owner`               | No       | `""`                                       | Repository owner; may be an organization or the authorized personal account. When empty, the GitHub provider uses the authenticated token owner.                                                                                           |
-| `repo_description`         | No       | `"Repository following SOLID principles…"` | Repository description                                                                                                                                                                                                                     |
-| `visibility`               | No       | `"public"`                                 | `public`, `private`, or `internal`                                                                                                                                                                                                         |
-| `enable_branch_protection` | No       | `false`                                    | Opt-in: create a Terraform-managed branch protection ruleset for `main`. Disabled by default; bootstrap workflows apply the default ruleset via `apply-repository-ruleset`. Enable only when managing rulesets through Terraform directly. |
-| `team_name`                | No       | `"team-leads"`                             | GitHub team name used by the wrapper workflow when templating CODEOWNERS (no direct Terraform effect)                                                                                                                                      |
-| `license_holder`           | No       | `""` (uses `repo_owner`)                   | License copyright holder used only when the wrapper workflow templates the LICENSE file (no direct Terraform effect)                                                                                                                       |
-| `languages`                | No       | `"language-agnostic-only"`                 | Comma-separated languages used by the wrapper workflow for pre-commit rendering and tooling selection (no direct Terraform effect)                                                                                                         |
+| Variable           | Required | Default                                    | Description                                                                                                                                      |
+| ------------------ | -------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `github_token`     | **Yes**  | -                                          | GitHub App installation token for organization targets or GitHub App user access token for personal targets, supplied internally by the workflow |
+| `repo_name`        | **Yes**  | -                                          | New repository name                                                                                                                              |
+| `repo_owner`       | No       | `""`                                       | Repository owner; may be an organization or the authorized personal account. When empty, the GitHub provider uses the authenticated token owner. |
+| `repo_description` | No       | `"Repository following SOLID principles…"` | Repository description                                                                                                                           |
+| `visibility`       | No       | `"public"`                                 | `public`, `private`, or `internal`                                                                                                               |
+| `team_name`        | No       | `""`                                       | CODEOWNERS owner as a GitHub username or `org/team`; empty uses the workflow app owner (no direct Terraform effect)                              |
+| `license_holder`   | No       | `""` (uses `repo_owner`)                   | License copyright holder used only when the wrapper workflow templates the LICENSE file (no direct Terraform effect)                             |
+| `languages`        | No       | `"language-agnostic-only"`                 | Comma-separated languages used by the wrapper workflow for pre-commit rendering and tooling selection (no direct Terraform effect)               |
 
 ## Outputs
 
@@ -88,23 +90,23 @@ terraform {
 
 ## Differences from the GitHub Actions Workflow
 
-| Feature                 | GitHub Actions Workflow                             | Terraform Module                     |
-| ----------------------- | --------------------------------------------------- | ------------------------------------ |
-| Repository creation     | ✅ GitHub API via `gh` CLI                          | ✅ `github_repository` resource      |
-| Repository settings     | ✅ PATCH via `gh api`                               | ✅ Inline in `github_repository`     |
-| Vulnerability alerts    | ✅ PUT via `gh api`                                 | ✅ `vulnerability_alerts = true`     |
-| Dependabot sec. updates | ✅ PUT via `gh api`                                 | ⚠️ Not directly in the provider      |
-| Environments            | ✅ PUT via `gh api`                                 | ✅ `github_repository_environment`   |
-| Branch protection       | ✅ POST rulesets via `gh api`                       | ✅ `github_repository_ruleset`       |
-| Template files          | ✅ Git clone + copy + push                          | ✅ Handled by the wrapper workflow   |
-| Language configuration  | ✅ Renderer-based generation from snippet templates | ✅ Handled by the wrapper workflow   |
-| CodeQL workflow         | ✅ Configured by wrapper                            | ✅ Handled by the wrapper workflow   |
-| SECURITY.md             | ✅ Copied from template                             | ✅ Handled by the wrapper workflow   |
-| CONTRIBUTING.md         | ✅ Copied from template                             | ✅ Handled by the wrapper workflow   |
-| Conventional commits    | ✅ commitlint config + linter                       | ✅ Handled by the wrapper workflow   |
-| Release Please          | ✅ Workflow + config files                          | ✅ Handled by the wrapper workflow   |
-| State tracking          | ❌ Stateless                                        | ✅ Terraform state (drift detection) |
-| Idempotency             | ⚠️ Creates new repo each run                        | ✅ Apply is idempotent               |
+| Feature                 | GitHub Actions Workflow                             | Terraform orchestration path                     |
+| ----------------------- | --------------------------------------------------- | ------------------------------------------------ |
+| Repository creation     | ✅ GitHub API via `gh` CLI                          | ✅ `github_repository` resource                  |
+| Repository settings     | ✅ Shared action via `gh api`                       | ✅ Same shared action                            |
+| Vulnerability alerts    | ✅ Shared action via `gh api`                       | ✅ Same shared action                            |
+| Dependabot sec. updates | ✅ Shared action via `gh api`                       | ✅ Same shared action                            |
+| Environments            | ✅ Shared action via `gh api`                       | ✅ Terraform resources, then shared verification |
+| Branch protection       | ✅ Shared ruleset action via `gh api`               | ✅ Same shared ruleset action                    |
+| Template files          | ✅ Git clone + copy + push                          | ✅ Handled by the wrapper workflow               |
+| Language configuration  | ✅ Renderer-based generation from snippet templates | ✅ Handled by the wrapper workflow               |
+| CodeQL workflow         | ✅ Configured by wrapper                            | ✅ Handled by the wrapper workflow               |
+| SECURITY.md             | ✅ Copied from template                             | ✅ Handled by the wrapper workflow               |
+| CONTRIBUTING.md         | ✅ Copied from template                             | ✅ Handled by the wrapper workflow               |
+| Conventional commits    | ✅ commitlint config + linter                       | ✅ Handled by the wrapper workflow               |
+| Release Please          | ✅ Workflow + config files                          | ✅ Handled by the wrapper workflow               |
+| State tracking          | ❌ Stateless                                        | ✅ Terraform state (drift detection)             |
+| Idempotency             | ⚠️ Creates new repo each run                        | ✅ Apply is idempotent with persisted state      |
 
 ## Architecture Notes
 
@@ -126,10 +128,9 @@ For extension work (new language/provider/runtime), use the maintainer guide:
 
 Common failure signatures and quick triage:
 
-| Failure signature                                      | Where it appears                                 | Likely cause                                                    | What to do                                                                                                                              |
-| ------------------------------------------------------ | ------------------------------------------------ | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `Error: creating repository`                           | Terraform apply output                           | App installation lacks required permissions                     | Verify the App installation and the [permission matrix](../docs/github-app-permission-matrix.md).                                       |
-| `Error: creating repository ruleset`                   | Terraform apply output                           | plan/features do not support rulesets or settings conflict      | Keep `enable_branch_protection=false` unless Terraform should own rulesets, and avoid dual ownership with workflow ruleset application. |
-| `Error: creating environment`                          | Terraform apply output                           | missing admin rights or existing environment policy constraints | Confirm token has administration rights and inspect existing environment configuration.                                                 |
-| Workflow succeeds but expected files are missing       | Post-apply template copy step                    | wrapper workflow failed after Terraform apply                   | Inspect `terraform-create-repository.yml` run logs after the apply step.                                                                |
-| Test harness timeout (`Workflow monitoring timed out`) | `.github/workflows/test-repository-creation.yml` | dispatch/run correlation mismatch                               | Verify monitor filter uses `dispatch_actor` from token identity and matching target ref.                                                |
+| Failure signature                                      | Where it appears                                 | Likely cause                                                    | What to do                                                                                        |
+| ------------------------------------------------------ | ------------------------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `Error: creating repository`                           | Terraform apply output                           | App installation lacks required permissions                     | Verify the App installation and the [permission matrix](../docs/github-app-permission-matrix.md). |
+| `Error: creating environment`                          | Terraform apply output                           | missing admin rights or existing environment policy constraints | Confirm token has administration rights and inspect existing environment configuration.           |
+| Workflow succeeds but expected files are missing       | Post-apply template copy step                    | wrapper workflow failed after Terraform apply                   | Inspect `terraform-create-repository.yml` run logs after the apply step.                          |
+| Test harness timeout (`Workflow monitoring timed out`) | `.github/workflows/test-repository-creation.yml` | dispatch/run correlation mismatch                               | Verify monitor filter uses `dispatch_actor` from token identity and matching target ref.          |

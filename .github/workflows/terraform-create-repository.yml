@@ -27,14 +27,14 @@ on:
           - private
           - internal
       cleanup_on_failure:
-        description: "Destroy Terraform resources if workflow fails"
+        description: "Delete repository if creation fails"
         required: false
         default: true
         type: boolean
       team_name:
-        description: "GitHub team for code owners (e.g., team-leads)"
+        description: "CODEOWNERS owner (GitHub username or org/team; defaults to app owner)"
         required: false
-        default: "team-leads"
+        default: ""
         type: string
       license_holder:
         description: "License copyright holder name"
@@ -105,11 +105,6 @@ on:
         required: false
         default: "all"
         type: string
-      optional_features:
-        description: Legacy compatibility input; GitHub planning assets are always included.
-        required: false
-        default: "github-planning"
-        type: string
       delivery_mode:
         description: Embed workflows locally or reference a user-owned central repository.
         required: false
@@ -120,6 +115,10 @@ on:
           - centralized
       central_repository:
         description: User-owned central repository and immutable ref as OWNER/REPOSITORY@REF (required for centralized mode).
+        required: false
+        type: string
+      central_ref:
+        description: Immutable central workflow ref (tag or 40-character commit SHA; required for centralized mode).
         required: false
         type: string
       github_host:
@@ -170,7 +169,7 @@ on:
         type: boolean
       team_name:
         required: false
-        default: "team-leads"
+        default: ""
         type: string
       license_holder:
         required: false
@@ -231,10 +230,6 @@ on:
         type: string
       central_ref:
         required: false
-        type: string
-      optional_features:
-        required: false
-        default: "none"
         type: string
       github_host:
         required: false
@@ -605,12 +600,8 @@ jobs:
           TF_VAR_repo_owner: ${{ steps.set-owner.outputs.owner }}
           TF_VAR_repo_description: ${{ inputs.repo_description }}
           TF_VAR_visibility: ${{ inputs.visibility }}
-          TF_VAR_enable_branch_protection: false
           TF_VAR_enable_repo_settings: ${{ inputs.enable_repo_settings }}
           TF_VAR_github_host: ${{ inputs.github_host }}
-          TF_VAR_team_name: ${{ inputs.team_name }}
-          TF_VAR_license_holder: ${{ steps.set-license.outputs.holder }}
-          TF_VAR_languages: ${{ inputs.languages }}
         run: terraform plan -out=tfplan
 
       - name: Terraform Apply
@@ -623,12 +614,8 @@ jobs:
           TF_VAR_repo_owner: ${{ steps.set-owner.outputs.owner }}
           TF_VAR_repo_description: ${{ inputs.repo_description }}
           TF_VAR_visibility: ${{ inputs.visibility }}
-          TF_VAR_enable_branch_protection: false
           TF_VAR_enable_repo_settings: ${{ inputs.enable_repo_settings }}
           TF_VAR_github_host: ${{ inputs.github_host }}
-          TF_VAR_team_name: ${{ inputs.team_name }}
-          TF_VAR_license_holder: ${{ steps.set-license.outputs.holder }}
-          TF_VAR_languages: ${{ inputs.languages }}
         run: terraform apply -auto-approve tfplan
 
       - name: Check repository created
@@ -814,10 +801,27 @@ jobs:
             -e "s|{{ENV_MANAGER}}|${{ steps.validate-inputs.outputs.env_manager }}|g" \
             .github/workflows/test-quality-providers.yml
 
+      - name: Remove unselected workflows
+        id: filter-workflows
+        run: |
+          bash scripts/select-generated-workflows.sh select new-repo \
+            "${{ inputs.workflows }}" "${{ inputs.release_tool }}"
+
+      - name: Bind E2E maintenance workflows to their Environment
+        if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner' && inputs.workflows != 'none'
+        env:
+          WORKFLOWS_INPUT: ${{ inputs.workflows }}
+          E2E_FIXTURE_LOGIN: ${{ inputs.app_owner }}
+          E2E_COPILOT_REVIEWER_LOGIN: copilot-pull-request-reviewer[bot]
+        run: |
+          bash scripts/select-generated-workflows.sh bind-e2e new-repo "$WORKFLOWS_INPUT" \
+            "${{ inputs.release_tool }}"
+
       - name: Configure CODEOWNERS
         env:
           ENABLE_CODEOWNERS: ${{ inputs.enable_codeowners }}
           TEAM_NAME: ${{ inputs.team_name }}
+          CODEOWNERS_OWNER: ${{ inputs.app_owner }}
         run: |
           cd new-repo
           case "$ENABLE_CODEOWNERS" in
@@ -827,13 +831,13 @@ jobs:
           import os
 
           path = Path(".github/CODEOWNERS")
-          path.write_text(path.read_text().replace("team-leads", os.environ["TEAM_NAME"]))
+          owner = os.environ["TEAM_NAME"] or os.environ["CODEOWNERS_OWNER"]
+          path.write_text(path.read_text().replace("team-leads", owner))
           PY
-              echo "✅ CODEOWNERS configured with team: $TEAM_NAME" >> "$GITHUB_STEP_SUMMARY"
               ;;
             *)
               rm -f .github/CODEOWNERS
-              echo "⏭️ CODEOWNERS skipped (enable_codeowners=false)" >> "$GITHUB_STEP_SUMMARY"
+              echo "⏭️ CODEOWNERS skipped" >> "$GITHUB_STEP_SUMMARY"
               ;;
           esac
 
@@ -900,35 +904,6 @@ jobs:
           go_version: ${{ steps.validate-inputs.outputs.go_version }}
           java_version: ${{ steps.validate-inputs.outputs.java_version }}
 
-      - name: Remove unselected workflows
-        id: filter-workflows
-        run: |
-          OPTIONAL_FEATURES="${{ inputs.optional_features || 'github-planning' }}"
-          case "$OPTIONAL_FEATURES" in
-            ""|"none")
-              echo "✅ GitHub planning assets are mandatory and remain installed." >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            "github-planning")
-              echo "✅ Optional GitHub planning assets enabled." >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            *)
-              echo "::error::Unknown optional feature bundle '$OPTIONAL_FEATURES'. Valid: none,github-planning"
-              exit 1
-              ;;
-          esac
-
-          bash scripts/select-generated-workflows.sh select new-repo \
-            "${{ inputs.workflows }}" "${{ inputs.release_tool }}"
-
-      - name: Bind E2E maintenance workflows to their Environment
-        if: needs.validate-provisioner.outputs.profile == 'e2e-provisioner' && inputs.workflows != 'none'
-        env:
-          WORKFLOWS_INPUT: ${{ inputs.workflows }}
-          E2E_COPILOT_REVIEWER_LOGIN: copilot-pull-request-reviewer[bot]
-        run: |
-          bash scripts/select-generated-workflows.sh bind-e2e new-repo "$WORKFLOWS_INPUT" \
-            "${{ inputs.release_tool }}"
-
       - name: Configure Release Please for selected languages
         uses: ./.github/actions/configure-release-tool
         with:
@@ -964,9 +939,6 @@ jobs:
           owner: ${{ steps.set-owner.outputs.owner }}
           repo_name: ${{ inputs.repo_name }}
           enable_repo_settings: ${{ inputs.enable_repo_settings }}
-          apply_repository_settings: "false"
-          manage_environments: "false"
-          enable_dependabot: ${{ inputs.enable_repo_settings }}
           gh_token: ${{ steps.resolve-token.outputs.token }}
 
       - name: Apply repository labels

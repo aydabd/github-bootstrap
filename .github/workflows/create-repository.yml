@@ -32,9 +32,9 @@ on:
         default: true
         type: boolean
       team_name:
-        description: "GitHub team for code owners (e.g., org/team-leads)"
+        description: "CODEOWNERS owner (GitHub username or org/team; defaults to app owner)"
         required: false
-        default: "team-leads"
+        default: ""
         type: string
       license_holder:
         description: "License copyright holder name"
@@ -105,11 +105,6 @@ on:
         required: false
         default: "all"
         type: string
-      optional_features:
-        description: Legacy compatibility input; GitHub planning assets are always included.
-        required: false
-        default: "github-planning"
-        type: string
       delivery_mode:
         description: Embed workflows locally or reference a user-owned central repository.
         required: false
@@ -120,6 +115,10 @@ on:
           - centralized
       central_repository:
         description: User-owned central repository and immutable ref as OWNER/REPOSITORY@REF (required for centralized mode).
+        required: false
+        type: string
+      central_ref:
+        description: Immutable central workflow ref (tag or 40-character commit SHA; required for centralized mode).
         required: false
         type: string
       github_host:
@@ -170,7 +169,7 @@ on:
         type: boolean
       team_name:
         required: false
-        default: "team-leads"
+        default: ""
         type: string
       license_holder:
         required: false
@@ -231,10 +230,6 @@ on:
         type: string
       central_ref:
         required: false
-        type: string
-      optional_features:
-        required: false
-        default: "none"
         type: string
       github_host:
         required: false
@@ -789,20 +784,6 @@ jobs:
       - name: Remove unselected workflows
         id: filter-workflows
         run: |
-          OPTIONAL_FEATURES="${{ inputs.optional_features || 'github-planning' }}"
-          case "$OPTIONAL_FEATURES" in
-            ""|"none")
-              echo "✅ GitHub planning assets are mandatory and remain installed." >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            "github-planning")
-              echo "✅ Optional GitHub planning assets enabled." >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            *)
-              echo "::error::Unknown optional feature bundle '$OPTIONAL_FEATURES'. Valid: none,github-planning"
-              exit 1
-              ;;
-          esac
-
           bash scripts/select-generated-workflows.sh select new-repo \
             "${{ inputs.workflows }}" "${{ inputs.release_tool }}"
 
@@ -820,6 +801,7 @@ jobs:
         env:
           ENABLE_CODEOWNERS: ${{ inputs.enable_codeowners }}
           TEAM_NAME: ${{ inputs.team_name }}
+          CODEOWNERS_OWNER: ${{ inputs.app_owner }}
         run: |
           cd new-repo
           case "$ENABLE_CODEOWNERS" in
@@ -829,7 +811,8 @@ jobs:
           import os
 
           path = Path(".github/CODEOWNERS")
-          path.write_text(path.read_text().replace("team-leads", os.environ["TEAM_NAME"]))
+          owner = os.environ["TEAM_NAME"] or os.environ["CODEOWNERS_OWNER"]
+          path.write_text(path.read_text().replace("team-leads", owner))
           PY
               ;;
             *)
