@@ -40,7 +40,7 @@ cases = [
     ({"GITHUB_APP_VISIBILITY": "public"}, "/settings/apps/new", True, "Bootstrap Writer"),
 ]
 for overrides, path, public, name in cases:
-    result = subprocess.run([helper, "url", "bootstrap-writer"], env=base | overrides,
+    result = subprocess.run([helper, "url", "bootstrap-writer"], env={**base, **overrides},
                             capture_output=True, text=True, check=True)
     url = urllib.parse.urlsplit(result.stdout.strip())
     assert url.path == path, (url.path, path)
@@ -57,14 +57,14 @@ for overrides in [
     {"GITHUB_APP_ORGANIZATION": "two--hyphens"},
     {"GITHUB_APP_VISIBILITY": "internal"},
 ]:
-    result = subprocess.run([helper, "url", "bootstrap-writer"], env=base | overrides,
+    result = subprocess.run([helper, "url", "bootstrap-writer"], env={**base, **overrides},
                             capture_output=True, text=True)
     assert result.returncode == 2, overrides
     assert not result.stdout, overrides
     with tempfile.TemporaryDirectory() as directory:
         target = Path(directory) / "credentials"
         result = subprocess.run([helper, "start", "bootstrap-writer", str(target)],
-                                env=base | overrides, capture_output=True, text=True, timeout=5)
+                                env={**base, **overrides}, capture_output=True, text=True, timeout=5)
         assert result.returncode == 2, overrides
         assert not target.exists(), overrides
 PY
