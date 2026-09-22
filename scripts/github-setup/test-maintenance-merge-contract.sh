@@ -39,6 +39,16 @@ assert_before() {
     fi
 }
 
+scheduled_checkout="$(awk '
+    /name: Checkout token resolver/ { in_step = 1 }
+    in_step { print }
+    in_step && /name: Discover open maintenance PRs/ { exit }
+' "$workflow")"
+grep -Fq -- 'scripts/github-setup/validate-app-auth.sh' <<< "$scheduled_checkout" || {
+    echo "scheduled maintenance reconciliation must check out App auth validation" >&2
+    exit 1
+}
+
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
