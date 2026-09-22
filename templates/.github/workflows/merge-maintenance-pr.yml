@@ -55,8 +55,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          maintenance_prs="$(gh api "/repos/$REPOSITORY/pulls?state=open&base=main&per_page=100" |
-            jq -c '[.[] | select(any(.labels[]?.name; . == "automation: maintenance")) |
+          maintenance_prs="$(gh api --paginate --slurp "/repos/$REPOSITORY/pulls?state=open&base=main&per_page=100" |
+            jq -c '[.[][] | select(any(.labels[]?.name; . == "automation: maintenance")) |
               {number, head_sha: .head.sha, head_branch: .head.ref}]')"
           echo "maintenance_prs=$maintenance_prs" >> "$GITHUB_OUTPUT"
           echo "has_candidates=$(jq -r 'length > 0' <<< "$maintenance_prs")" >> "$GITHUB_OUTPUT"

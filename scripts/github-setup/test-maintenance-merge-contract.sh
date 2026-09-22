@@ -157,12 +157,18 @@ assert_contains "repository_dispatch:" "$workflow"
 assert_contains "pull_request_review:" "$workflow"
 assert_contains "types: [submitted]" "$workflow"
 assert_contains "maintenance-reconcile" "$workflow"
+# shellcheck disable=SC2016  # workflow expressions and shell snippets are literal test substrings.
 assert_contains 'select(any(.labels[]?.name; . == "automation: maintenance"))' "$workflow"
 assert_not_contains 'select(any(.labels[]?.name; . == "automation: accepted"))' "$workflow"
 assert_contains "id: candidates" "$workflow"
+# shellcheck disable=SC2016  # workflow expressions and shell snippets are literal test substrings.
+assert_contains 'gh api --paginate --slurp "/repos/$REPOSITORY/pulls?state=open&base=main&per_page=100"' "$workflow"
+# shellcheck disable=SC2016  # workflow expressions and shell snippets are literal test substrings.
 assert_contains 'GH_TOKEN: ${{ github.token }}' "$workflow"
+# shellcheck disable=SC2016  # workflow expressions and shell snippets are literal test substrings.
 assert_contains 'has_candidates=$(jq -r '\''length > 0'\'' <<< "$maintenance_prs")' "$workflow"
 assert_contains "if: steps.candidates.outputs.has_candidates == 'true'" "$workflow"
+# shellcheck disable=SC2016  # workflow expressions and shell snippets are literal test substrings.
 assert_contains 'MAINTENANCE_PRS: ${{ steps.candidates.outputs.maintenance_prs }}' "$workflow"
 assert_before "id: candidates" "id: resolve-merge-token" "$workflow"
 assert_contains "concurrency:" "$workflow"
