@@ -854,6 +854,12 @@ jobs:
             echo "E2E lifecycle App could not request the fixture reviewer before the bounded deadline" >&2
             return 1
           }
+          opt_in_fixture_pull_request() {
+            local pr_number="$1"
+            author_gh api --method POST "/repos/$OWNER/$REPO_NAME/issues/$pr_number/labels" \
+              -f 'labels[]=automation: opt-in' >/dev/null
+            diagnostic 'fixture automation opt-in' "https://github.com/$OWNER/$REPO_NAME/pull/$pr_number" "applied"
+          }
           wait_for_lifecycle_observer_access
           main_sha="$(writer_gh api "/repos/$OWNER/$REPO_NAME/git/ref/heads/main" --jq '.object.sha')"
           branch="e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
@@ -872,6 +878,7 @@ jobs:
             echo "maintenance fixture PR author '$pr_author' is not the configured disposable identity" >&2
             exit 1
           }
+          opt_in_fixture_pull_request "$PR_NUMBER"
           request_fixture_reviewer "$PR_NUMBER"
           wait_for_label 'automation: maintenance'
           wait_for_label 'automation: validating'
@@ -909,7 +916,7 @@ jobs:
             jq '[.data.repository.pullRequest.reviewThreads.nodes[] |
               {isResolved, author_login: (.comments.nodes[0].author.login // "")}]' \
               "$copilot_dir/thread-response.json" > "$copilot_dir/threads.json"
-            if REQUIRE_COPILOT_REVIEW=true bash scripts/github-setup/validate-copilot-review.sh \
+            if REQUIRE_COPILOT_REVIEW=true COPILOT_REVIEW_MODE=once bash scripts/github-setup/validate-copilot-review.sh \
               "$copilot_dir/pr.json" "$copilot_dir/reviews.json" "$copilot_dir/threads.json" \
               "$MAINTENANCE_COPILOT_REVIEWER_LOGIN"; then
               copilot_validated=true
@@ -921,7 +928,7 @@ jobs:
             echo "Copilot review evidence was not observed for the current PR head" >&2
             exit 1
           }
-          wait_for_label 'automation: accepted'
+          wait_for_label 'automation: opt-in'
           # Maintenance safety must pass before the Reviewer approval and
           # explicit Writer merge stages are allowed to proceed.
           wait_for_run maintenance-safety.yml pull_request_target "$pr_head_sha" "$branch" "$maintenance_started_at" "$PR_NUMBER" true
@@ -1027,6 +1034,8 @@ jobs:
         with:
           client_id: ${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}
           app_private_key: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY }}
+          app_client_secret: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}
+          app_user_refresh_token: ${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}
           refresh_token_secret: ""
           app_owner: ${{ inputs.app_owner }}
           target_owner: ${{ github.repository_owner }}

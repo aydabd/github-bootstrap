@@ -20,6 +20,19 @@ printf '%s\n' '[]' > "$tmp_dir/empty-reviews.json"
 
 "$validator" "$tmp_dir/pr.json" "$tmp_dir/reviews.json" "$tmp_dir/threads.json" "copilot-pull-request-reviewer[bot]"
 
+sed 's/current-sha/old-sha/' "$tmp_dir/reviews.json" > "$tmp_dir/old-head-reviews.json"
+sed 's/"requested_reviewers":\[{"login":"copilot-pull-request-reviewer\\[bot\\]"}\]//' \
+    "$tmp_dir/pr.json" > "$tmp_dir/completed-old-pr.json"
+COPILOT_REVIEW_MODE=once "$validator" "$tmp_dir/completed-old-pr.json" \
+    "$tmp_dir/old-head-reviews.json" "$tmp_dir/threads.json" \
+    "copilot-pull-request-reviewer[bot]"
+if COPILOT_REVIEW_MODE=current_head "$validator" "$tmp_dir/completed-old-pr.json" \
+    "$tmp_dir/old-head-reviews.json" "$tmp_dir/threads.json" \
+    "copilot-pull-request-reviewer[bot]"; then
+    echo "current-head Copilot mode accepted a stale review" >&2
+    exit 1
+fi
+
 cat > "$tmp_dir/no-request.json" << 'EOF'
 {"number":7,"head":{"sha":"current-sha"},"requested_reviewers":[]}
 EOF
@@ -67,6 +80,13 @@ if REQUIRE_COPILOT_REVIEW=true "$validator" "$tmp_dir/no-request.json" \
     exit 1
 fi
 
+if COPILOT_REVIEW_MODE=once "$validator" "$tmp_dir/pr.json" \
+    "$tmp_dir/empty-reviews.json" "$tmp_dir/threads.json" \
+    "copilot-pull-request-reviewer[bot]"; then
+    echo "pending Copilot review was accepted" >&2
+    exit 1
+fi
+
 for mutation in pending stale unresolved; do
     cp "$tmp_dir/pr.json" "$tmp_dir/mutated-pr.json"
     cp "$tmp_dir/reviews.json" "$tmp_dir/mutated-reviews.json"
@@ -85,6 +105,7 @@ done
 workflow="$script_dir/../../.github/workflows/approve-automation-workflows.yml"
 grep -Fq 'validate-copilot-review.sh' "$workflow"
 grep -Fq 'BOOTSTRAP_COPILOT_REVIEWER_LOGIN' "$workflow"
+grep -Fq 'BOOTSTRAP_COPILOT_REVIEW_MODE' "$workflow"
 grep -Fq "pulls/\$pr_number/reviews" "$workflow"
 grep -Fq 'reviewThreads(first:100)' "$workflow"
 grep -Fq 'pageInfo.hasNextPage == false' "$workflow"
