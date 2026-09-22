@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016 # These quoted GitHub expressions are literal contract text.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -19,6 +20,12 @@ grep -Fq 'E2E_FIXTURE_LOGIN: ${{ inputs.app_owner }}' "$terraform_workflow" ||
 for workflow in "$api_workflow" "$terraform_workflow"; do
     grep -A4 '^      central_ref:$' "$workflow" | grep -Fq 'type: string' ||
         fail "central_ref must be a string input in $workflow"
+    grep -A4 '^      team_name:$' "$workflow" | grep -Fq 'default: ""' ||
+        fail "team_name must default to the authenticated owner in $workflow"
+    grep -Fq 'CODEOWNERS_OWNER: ${{ inputs.app_owner }}' "$workflow" ||
+        fail "CODEOWNERS owner fallback is missing in $workflow"
+    grep -Fq 'os.environ["TEAM_NAME"] or os.environ["CODEOWNERS_OWNER"]' "$workflow" ||
+        fail "CODEOWNERS does not fall back to app_owner in $workflow"
 done
 
 api_filter_line="$(grep -n '^      - name: Remove unselected workflows$' "$api_workflow" | cut -d: -f1)"

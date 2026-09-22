@@ -32,9 +32,9 @@ on:
         default: true
         type: boolean
       team_name:
-        description: "GitHub team for code owners (e.g., org/team-leads)"
+        description: "CODEOWNERS owner (GitHub username or org/team; defaults to app owner)"
         required: false
-        default: "team-leads"
+        default: ""
         type: string
       license_holder:
         description: "License copyright holder name"
@@ -169,7 +169,7 @@ on:
         type: boolean
       team_name:
         required: false
-        default: "team-leads"
+        default: ""
         type: string
       license_holder:
         required: false
@@ -821,6 +821,7 @@ jobs:
         env:
           ENABLE_CODEOWNERS: ${{ inputs.enable_codeowners }}
           TEAM_NAME: ${{ inputs.team_name }}
+          CODEOWNERS_OWNER: ${{ inputs.app_owner }}
         run: |
           cd new-repo
           case "$ENABLE_CODEOWNERS" in
@@ -830,7 +831,8 @@ jobs:
           import os
 
           path = Path(".github/CODEOWNERS")
-          path.write_text(path.read_text().replace("team-leads", os.environ["TEAM_NAME"]))
+          owner = os.environ["TEAM_NAME"] or os.environ["CODEOWNERS_OWNER"]
+          path.write_text(path.read_text().replace("team-leads", owner))
           PY
               ;;
             *)

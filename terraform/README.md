@@ -56,7 +56,7 @@ allowlists and targets outside that explicit list.
 | `repo_owner`       | No       | `""`                                       | Repository owner; may be an organization or the authorized personal account. When empty, the GitHub provider uses the authenticated token owner. |
 | `repo_description` | No       | `"Repository following SOLID principles…"` | Repository description                                                                                                                           |
 | `visibility`       | No       | `"public"`                                 | `public`, `private`, or `internal`                                                                                                               |
-| `team_name`        | No       | `"team-leads"`                             | GitHub team name used by the wrapper workflow when templating CODEOWNERS (no direct Terraform effect)                                            |
+| `team_name`        | No       | `""`                                       | CODEOWNERS owner as a GitHub username or `org/team`; empty uses the workflow app owner (no direct Terraform effect)                              |
 | `license_holder`   | No       | `""` (uses `repo_owner`)                   | License copyright holder used only when the wrapper workflow templates the LICENSE file (no direct Terraform effect)                             |
 | `languages`        | No       | `"language-agnostic-only"`                 | Comma-separated languages used by the wrapper workflow for pre-commit rendering and tooling selection (no direct Terraform effect)               |
 

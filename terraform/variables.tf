@@ -33,9 +33,9 @@ variable "visibility" {
 }
 
 variable "team_name" {
-  description = "GitHub team for code owners (e.g., team-leads)"
+  description = "CODEOWNERS owner (GitHub username or org/team); empty uses the workflow app owner"
   type        = string
-  default     = "team-leads"
+  default     = ""
 }
 
 variable "license_holder" {
