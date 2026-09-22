@@ -164,6 +164,10 @@ grep -Fq 'BOOTSTRAP_COPILOT_REVIEWER_LOGIN' "$workflow"
 # safety run, and a run with no open PR skips rather than fails.
 grep -Fq "github.event.workflow_run.name == 'Test Generated Repository E2E'" "$workflow"
 grep -Fq "github.event.workflow_run.head_branch != 'main'" "$workflow"
+if grep -Fq "github.event.workflow_run.pull_requests[0].number" "$workflow"; then
+    echo "maintenance safety must recover PRs from workflow-run head branches" >&2
+    exit 1
+fi
 grep -Fq 'no open maintenance PR for this run; nothing to validate.' "$workflow"
 # shellcheck disable=SC2016  # literal workflow substrings, not shell to expand
 grep -Fq 'HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}' "$workflow"

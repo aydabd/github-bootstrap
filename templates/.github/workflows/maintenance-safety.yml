@@ -36,9 +36,7 @@ jobs:
     name: Maintenance safety
     if: |
       github.event_name != 'workflow_run' ||
-      github.event.workflow_run.pull_requests[0].number ||
-      (github.event.workflow_run.name == 'Test Generated Repository E2E' &&
-      github.event.workflow_run.head_branch != 'main')
+      github.event.workflow_run.head_branch != 'main'
     runs-on: ubuntu-24.04
     environment: production
     steps:
