@@ -116,6 +116,17 @@ if MAINTENANCE_IDENTITY_MODE=e2e-disposable MAINTENANCE_FIXTURE_LOGIN=e2e-user \
     exit 1
 fi
 
+cat > "$tmp_dir/old-head-copilot-review.json" << 'EOF'
+[{"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","commit_id":"old-sha"}]
+EOF
+COPILOT_REVIEW_MODE=once MAINTENANCE_IDENTITY_MODE=e2e-disposable \
+    MAINTENANCE_FIXTURE_LOGIN=e2e-user \
+    MAINTENANCE_COPILOT_REVIEWER_LOGIN='copilot-pull-request-reviewer[bot]' \
+    bash "$validator" "$tmp_dir/fixture-pr.json" "$tmp_dir/checks.json" \
+    "$tmp_dir/old-head-copilot-review.json" "$tmp_dir/labels.json" \
+    "aydabd/github-bootstrap" "current-sha" "maintenance-writer" \
+    "maintenance-reviewer"
+
 sed 's/"SUCCESS"/"PENDING"/' "$tmp_dir/checks.json" > "$tmp_dir/pending-checks.json"
 if bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/pending-checks.json" "$tmp_dir/reviews.json" \
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer"; then
@@ -151,6 +162,35 @@ EOF
 bash "$validator" "$tmp_dir/pr.json" "$tmp_dir/checks.json" "$tmp_dir/head-approval.json" \
     "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" "maintenance-writer" "maintenance-reviewer" true
 
+sed 's/"login":"maintenance-writer\[bot\]"/"login":"aydabd","type":"User"/' \
+    "$tmp_dir/pr.json" > "$tmp_dir/human-pr.json"
+sed 's/"user":/"labels":[{"name":"automation: opt-in"}],"user":/' \
+    "$tmp_dir/human-pr.json" > "$tmp_dir/human-pr-with-labels.json"
+mv "$tmp_dir/human-pr-with-labels.json" "$tmp_dir/human-pr.json"
+sed 's/"automation: maintenance"/"automation: maintenance"}, {"name":"automation: opt-in"/' \
+    "$tmp_dir/labels.json" > "$tmp_dir/human-opt-in-labels.json"
+bash "$validator" "$tmp_dir/human-pr.json" "$tmp_dir/checks.json" "$tmp_dir/head-approval.json" \
+    "$tmp_dir/human-opt-in-labels.json" "aydabd/github-bootstrap" "current-sha" \
+    "maintenance-writer" "maintenance-reviewer" true
+
+sed 's/"labels":\[{"name":"automation: opt-in"}\],//' \
+    "$tmp_dir/human-pr.json" > "$tmp_dir/human-without-opt-in-pr.json"
+if bash "$validator" "$tmp_dir/human-without-opt-in-pr.json" "$tmp_dir/checks.json" "$tmp_dir/head-approval.json" \
+    "$tmp_dir/labels.json" "aydabd/github-bootstrap" "current-sha" \
+    "maintenance-writer" "maintenance-reviewer" true; then
+    echo "human PR without automation opt-in was accepted" >&2
+    exit 1
+fi
+
+sed 's/"login":"aydabd","type":"User"/"login":"unknown[bot]","type":"Bot"/' \
+    "$tmp_dir/human-pr.json" > "$tmp_dir/unknown-bot-pr.json"
+if bash "$validator" "$tmp_dir/unknown-bot-pr.json" "$tmp_dir/checks.json" "$tmp_dir/head-approval.json" \
+    "$tmp_dir/human-opt-in-labels.json" "aydabd/github-bootstrap" "current-sha" \
+    "maintenance-writer" "maintenance-reviewer" true; then
+    echo "untrusted bot PR with automation opt-in was accepted" >&2
+    exit 1
+fi
+
 assert_contains "workflow_run:" "$workflow"
 assert_contains "schedule:" "$workflow"
 assert_contains "repository_dispatch:" "$workflow"
@@ -178,6 +218,9 @@ assert_contains "      - Maintenance safety" "$workflow"
 assert_contains "pull_request_target:" "$workflow"
 assert_contains "types: [labeled]" "$workflow"
 assert_contains "github.event.label.name == 'automation: accepted'" "$workflow"
+assert_contains "github.event.label.name == 'automation: opt-in'" "$workflow"
+assert_contains 'automation: opt-in' "$repo_root/.github/config/labels-default.json"
+assert_contains 'automation: opt-in' "$repo_root/templates/.github/config/labels-default.json"
 assert_not_contains "github.event.pull_request.label.name" "$workflow"
 assert_contains "github.event.pull_request.number" "$workflow"
 assert_contains "workflows:" "$workflow"
@@ -265,6 +308,8 @@ assert_contains 'approval_submitted' "$workflow"
 assert_contains 'Dispatch post-approval reconciliation' "$workflow"
 assert_contains 'github.event.review.state == '\''approved'\''' "$workflow"
 assert_contains "maintenance-e2e.json" "$workflow"
+assert_contains "BOOTSTRAP_COPILOT_REVIEW_MODE" "$workflow"
+assert_contains "BOOTSTRAP_COPILOT_REVIEW_MODE" "$repo_root/templates/.github/workflows/merge-maintenance-pr.yml"
 # shellcheck disable=SC2016  # workflow expressions are intentionally literal test substrings
 assert_before 'gh api "/repos/$REPOSITORY/issues/$PR_NUMBER/labels?per_page=100"' 'gh api --paginate "/repos/$REPOSITORY/actions/workflows/$e2e_workflow/runs?per_page=100"' "$workflow"
 # shellcheck disable=SC2016  # workflow expressions are intentionally literal test substrings

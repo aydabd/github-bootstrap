@@ -99,6 +99,8 @@ jobs:
     if: >-
       (github.event_name == 'pull_request_target' &&
       github.event.label.name == 'automation: accepted') ||
+      (github.event_name == 'pull_request_target' &&
+      github.event.label.name == 'automation: opt-in') ||
       (github.event_name == 'repository_dispatch' &&
       github.event.action == 'maintenance-reconcile' &&
       github.event.client_payload.pr_number) ||
@@ -172,6 +174,7 @@ jobs:
           HEAD_BRANCH: ${{ github.event.pull_request.head.ref || github.event.workflow_run.head_branch || github.event.client_payload.head_branch || '' }}
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}
           REVIEWER_APP_SLUG: ${{ steps.resolve-token.outputs.app-slug }}
+          COPILOT_REVIEW_MODE: ${{ vars.BOOTSTRAP_COPILOT_REVIEW_MODE || 'once' }}
           REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |

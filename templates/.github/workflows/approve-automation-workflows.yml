@@ -66,6 +66,7 @@ jobs:
           REPOSITORY: ${{ github.event.repository.name }}
           WRITER_APP_SLUG: ${{ vars.BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG }}
           COPILOT_REVIEWER_LOGIN: ${{ vars.BOOTSTRAP_COPILOT_REVIEWER_LOGIN }}
+          COPILOT_REVIEW_MODE: ${{ vars.BOOTSTRAP_COPILOT_REVIEW_MODE || 'once' }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           VALIDATOR: .github/scripts/validate-workflow-approval.sh
         shell: bash

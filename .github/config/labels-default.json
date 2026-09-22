@@ -31,6 +31,11 @@
       "description": "Automated update passed all current safety gates"
     },
     {
+      "name": "automation: opt-in",
+      "color": "5319e7",
+      "description": "Human-authorized opt-in to automated merge after policy validation"
+    },
+    {
       "name": "bug",
       "color": "d73a4a",
       "description": "Something is not working as expected"

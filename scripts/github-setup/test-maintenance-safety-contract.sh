@@ -112,7 +112,11 @@ grep -Fq "GH_TOKEN: \${{ steps.writer-token.outputs.token }}" "$workflow"
 grep -Fq 'actions/create-github-app-token@' "$template_workflow"
 grep -Fq 'permission-issues: write' "$template_workflow"
 grep -Fq 'automation: accepted' "$workflow"
+grep -Fq 'automation: opt-in' "$workflow"
+grep -Fq 'any(.[]?; .name == "automation: opt-in") | not' "$workflow"
 grep -Fq 'automation: maintenance' "$workflow"
+grep -Fq 'automation: opt-in' "$template_workflow"
+grep -Fq 'any(.[]?; .name == "automation: opt-in") | not' "$template_workflow"
 grep -Fq 'DELETE' "$workflow"
 grep -Fq 'POST' "$workflow"
 grep -Fq 'maintenance-e2e.json' "$template_workflow"
@@ -163,6 +167,8 @@ accepted_remove_line="$(grep -n 'automation%3A%20accepted' "$workflow" | head -n
 required_gate_line="$(grep -n 'required_status_jq=' "$workflow" | head -n1 | cut -d: -f1)"
 [ "$accepted_remove_line" -lt "$required_gate_line" ]
 grep -Fq 'BOOTSTRAP_COPILOT_REVIEWER_LOGIN' "$workflow"
+grep -Fq 'BOOTSTRAP_COPILOT_REVIEW_MODE' "$workflow"
+grep -Fq 'BOOTSTRAP_COPILOT_REVIEW_MODE' "$template_workflow"
 # A dispatched Test Generated Repository E2E run carries no pull_requests[0];
 # completing that gate must still re-evaluate safety via the PR head branch,
 # but only for non-main heads so routine/manual E2E runs do not spawn a failing
