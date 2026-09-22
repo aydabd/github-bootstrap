@@ -311,8 +311,8 @@ jobs:
           if [ -z "$WORKFLOWS" ]; then
             WORKFLOWS="all"
           fi
-          if ! [[ "$WORKFLOWS" =~ ^(all|none)$ ]] && ! [[ "$WORKFLOWS" =~ ^(quality|codeql|ai-code-review|release)(,(quality|codeql|ai-code-review|release))*$ ]]; then
-            echo "::error::Invalid workflows '$WORKFLOWS'. Allowed: all, none, or comma-separated of quality,codeql,ai-code-review,release"
+          if ! [[ "$WORKFLOWS" =~ ^(all|none)$ ]] && ! [[ "$WORKFLOWS" =~ ^(quality|codeql|ai-code-review|release|maintenance)(,(quality|codeql|ai-code-review|release|maintenance))*$ ]]; then
+            echo "::error::Invalid workflows '$WORKFLOWS'. Allowed: all, none, or comma-separated of quality,codeql,ai-code-review,release,maintenance"
             exit 1
           fi
           if ! [[ "$TARGET_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "$TARGET_REF" == *".."* ]] || [[ "$TARGET_REF" == /* ]] || [[ "$TARGET_REF" == */ ]]; then

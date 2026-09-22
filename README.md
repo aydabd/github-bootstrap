@@ -663,13 +663,12 @@ This is the canonical checklist for extension work and validation steps.
 
 ### Terraform IaC
 
-The Terraform module (in `terraform/`) manages the same infrastructure declaratively:
-
-1. Creates the repository with all settings via `github_repository`
-2. Creates `dev` and `prod` environments via `github_repository_environment`
-3. Optionally creates a repository ruleset via `github_repository_ruleset`
-   when Terraform input `enable_branch_protection=true`
-4. The wrapper workflow then copies template files and configures the selected quality profile
+The Terraform module (in `terraform/`) creates the same base repository as the API workflow.
+The wrapper workflow then runs the same shared actions used by
+`.github/workflows/create-repository.yml` for repository settings, environments, security
+features, rulesets, template files, and the selected quality profile.
+The deprecated branch-protection API is not used. Repository protection is applied only through
+the shared ruleset action.
 
 Bootstrap workflows apply the default ruleset payload from
 `.github/config/ruleset-default.json` after repository creation.
@@ -684,16 +683,10 @@ as ownership documentation, but the ruleset does not require code-owner-specific
 approval.
 Repositories can add CodeRabbit or other checks only after verifying their
 exact check-run names in the target repository.
-If you run Terraform directly, you can also manage rulesets through Terraform
-inputs (for example, `enable_branch_protection=true`) or configure them
-manually in repository settings.
-
-Avoid enabling both approaches for the same repository at the same time.
-Applying both the bootstrap default ruleset and Terraform ruleset management
-can create overlapping/conflicting rules on `main`.
-
-Terraform provides idempotent applies and state tracking, making it suitable for
-managing repositories as long-lived infrastructure.
+Terraform provides idempotent applies and state tracking when state is persisted,
+making it suitable for managing repositories as long-lived infrastructure. The API
+workflow remains the behavioral source of truth, so Terraform should not add a
+second implementation of repository settings or ruleset policy.
 
 ## Troubleshooting
 
