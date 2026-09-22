@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.5](https://github.com/aydabd/github-bootstrap/compare/v2.12.4...v2.12.5) (2026-09-22)
+
+
+### Bug Fixes
+
+* align Terraform repository creation with API workflow ([#288](https://github.com/aydabd/github-bootstrap/issues/288)) ([3694922](https://github.com/aydabd/github-bootstrap/commit/3694922410da7257f26e42cb0982a44fab3c145d))
+
 ## [2.12.4](https://github.com/aydabd/github-bootstrap/compare/v2.12.3...v2.12.4) (2026-09-22)
 
 
