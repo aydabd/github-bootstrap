@@ -52,7 +52,9 @@ jobs:
         with:
           persist-credentials: false
           ref: main
-          sparse-checkout: .github/actions/resolve-gh-token/action.yml
+          sparse-checkout: |
+            .github/actions/resolve-gh-token/action.yml
+            scripts/github-setup/validate-app-auth.sh
 
       - name: Discover open maintenance PRs
         id: candidates
