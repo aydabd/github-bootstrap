@@ -13,6 +13,11 @@ ruleset="$script_dir/../../.github/config/ruleset-default.json"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
+grep -Fq '    environment: production' "$workflow" || {
+    echo "root maintenance safety workflow must load production App credentials" >&2
+    exit 1
+}
+
 cat > "$tmp_dir/pr.json" << 'EOF'
 {"number":7,"head":{"sha":"current-sha"},"requested_reviewers":[{"login":"copilot-pull-request-reviewer[bot]"}]}
 EOF
