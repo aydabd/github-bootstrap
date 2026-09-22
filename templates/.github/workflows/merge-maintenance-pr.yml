@@ -47,7 +47,22 @@ jobs:
       contents: read
       pull-requests: read
     steps:
+      - name: Discover open maintenance PRs
+        id: candidates
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          maintenance_prs="$(gh api "/repos/$REPOSITORY/pulls?state=open&base=main&per_page=100" |
+            jq -c '[.[] | select(any(.labels[]?.name; . == "automation: maintenance")) |
+              {number, head_sha: .head.sha, head_branch: .head.ref}]')"
+          echo "maintenance_prs=$maintenance_prs" >> "$GITHUB_OUTPUT"
+          echo "has_candidates=$(jq -r 'length > 0' <<< "$maintenance_prs")" >> "$GITHUB_OUTPUT"
+
       - name: Resolve Writer App dispatch token
+        if: steps.candidates.outputs.has_candidates == 'true'
         id: resolve-merge-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
@@ -58,16 +73,15 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
-      - name: Dispatch reconciliation for accepted maintenance PRs
+      - name: Dispatch reconciliation for open maintenance PRs
+        if: steps.candidates.outputs.has_candidates == 'true'
         env:
           GH_TOKEN: ${{ steps.resolve-merge-token.outputs.token }}
           REPOSITORY: ${{ github.repository }}
+          MAINTENANCE_PRS: ${{ steps.candidates.outputs.maintenance_prs }}
         shell: bash
         run: |
           set -euo pipefail
-          accepted_prs="$(gh api "/repos/$REPOSITORY/pulls?state=open&base=main&per_page=100" |
-            jq -c '[.[] | select(any(.labels[]?.name; . == "automation: accepted")) |
-              {number, head_sha: .head.sha, head_branch: .head.ref}]')"
           dispatched=0
           while IFS= read -r pr; do
             [ -n "$pr" ] || continue
@@ -78,7 +92,7 @@ jobs:
             --input - <<< "$request_payload" > /dev/null
             dispatched=$((dispatched + 1))
             echo "dispatched maintenance reconciliation for PR $(jq -r '.number' <<< "$pr")"
-          done < <(jq -c '.[]' <<< "$accepted_prs")
+          done < <(jq -c '.[]' <<< "$MAINTENANCE_PRS")
           echo "dispatched $dispatched maintenance reconciliation event(s)"
 
   merge:
