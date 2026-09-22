@@ -31,6 +31,7 @@ assert_not_contains() {
 }
 
 assert_contains 'name: Generated Maintenance Lifecycle' "$workflow"
+assert_contains '        default: false' "$workflow"
 assert_contains 'refresh-e2e-fixture-token:' "$workflow"
 assert_contains 'e2e-fixture-token-rotation' "$workflow"
 assert_contains 'BOOTSTRAP_E2E_FIXTURE_APP_USER_ACCESS_TOKEN' "$workflow"
@@ -106,6 +107,8 @@ assert_contains 'Arm cleanup before repository creation' "$workflow"
 assert_not_contains "needs.generated-maintenance-lifecycle.outputs.cleanup_armed == 'true'" "$workflow"
 assert_contains 'permission_profile: repository-cleanup' "$workflow"
 assert_contains 'BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY' "$workflow"
+assert_contains "app_client_secret: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}" "$workflow"
+assert_contains "app_user_refresh_token: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}" "$workflow"
 assert_contains 'continue-on-error: true' "$workflow"
 assert_contains 'provisioner cleanup token resolver failed' "$workflow"
 assert_contains 'requested_target_sha' "$workflow"

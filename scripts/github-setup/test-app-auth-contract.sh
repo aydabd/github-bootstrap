@@ -520,8 +520,6 @@ assert_contains "environment: e2e" "$repo_root/.github/workflows/test-generated-
 assert_contains "repositories: \${{ github.event.repository.name }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_contains "permission_profile: e2e-dispatch" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_not_line '^      client_id:' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
-assert_not_contains "app_client_secret: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_SECRET }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
-assert_not_contains "app_user_refresh_token: \${{ secrets.BOOTSTRAP_E2E_PROVISIONER_APP_USER_REFRESH_TOKEN }}" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_contains "--field provisioner_profile=e2e-provisioner" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_not_contains "--field provisioner_profile=production-provisioner" "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
 assert_not_contains 'BOOTSTRAP_PRODUCTION_PROVISIONER_APP' "$repo_root/.github/workflows/test-generated-repository-e2e.yml"
