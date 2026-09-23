@@ -33,6 +33,23 @@ grep -q 'central_repository' "$workflow"
 test -x "$seed_script"
 grep -q 'gh repo create' "$seed_script"
 grep -q 'push "https://x-access-token' "$seed_script"
+grep -q 'REPOSITORY_OWNER}}' "$seed_script"
+grep -q 'REPOSITORY_NAME}}' "$seed_script"
+
+manifest="$seed_root/.github/centralized-workflows.json"
+test -f "$manifest"
+jq -e '
+    .schema_version == 1 and
+    .package == "centralized-actions-workflows" and
+    (.version | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) and
+    .source_repository == "{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}" and
+    .reusable_workflows == [".github/workflows/quality.yml"] and
+    .ref_policy.type == "immutable" and
+    (.ref_policy.allowed | sort) == ["commit-sha", "semver-release-tag"]
+' "$manifest" > /dev/null || {
+    echo "centralized workflow package manifest is invalid" >&2
+    exit 1
+}
 
 grep -q 'test-centralized-monorepo:' "$makefile"
 grep -q 'preset=centralized-monorepo' "$makefile"

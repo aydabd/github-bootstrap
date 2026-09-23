@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "package": "centralized-actions-workflows",
+  "version": "v1.0.0",
+  "source_repository": "{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}",
+  "reusable_workflows": [".github/workflows/quality.yml"],
+  "ref_policy": {
+    "type": "immutable",
+    "allowed": ["semver-release-tag", "commit-sha"]
+  }
+}

@@ -71,6 +71,12 @@ temporary_root="$(mktemp -d)"
 cleanup() { rm -rf "$temporary_root"; }
 trap cleanup EXIT
 cp -R "$seed_root"/. "$temporary_root"/
+manifest="$temporary_root/.github/centralized-workflows.json"
+if [ -f "$manifest" ]; then
+    sed -e "s/{{REPOSITORY_OWNER}}/$owner/g" \
+        -e "s/{{REPOSITORY_NAME}}/$repository/g" "$manifest" > "$manifest.tmp"
+    mv "$manifest.tmp" "$manifest"
+fi
 git -C "$temporary_root" init --initial-branch=main > /dev/null
 git -C "$temporary_root" config user.name "github-bootstrap-e2e"
 git -C "$temporary_root" config user.email "github-bootstrap-e2e@users.noreply.github.com"

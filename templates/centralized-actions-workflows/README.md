@@ -31,6 +31,15 @@ pull requests. This project does not automatically migrate existing
 repositories; use the example in `examples/consumer-quality.yml` when manually
 updating selected repositories.
 
+The machine-readable package identity and release policy are recorded in
+`.github/centralized-workflows.json`. The seed process materializes its
+`source_repository` from the target owner and repository, so forks and other
+organizations retain their own identity. Its version identifies the seed
+package; the release tag or commit SHA selected by each consumer identifies
+the exact workflow implementation it runs. Inspect this manifest when
+preparing a consumer upgrade, then update that consumer's pinned `central_ref`
+in a reviewed pull request.
+
 ## Ownership and releases
 
 The central repository should use its own owners, CODEOWNERS, permissions,
