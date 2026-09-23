@@ -96,8 +96,17 @@ jobs:
             exit 0
           fi
           if [ -z "$item_id" ]; then
-            summary_warning "Project status sync skipped: issue or pull request is not an item in the configured Project."
-            exit 0
+            # shellcheck disable=SC2016
+            add_mutation='mutation($project:ID!,$content:ID!){addProjectV2ItemById(input:{projectId:$project,contentId:$content}){item{id}}}'
+            if ! add_response="$(gh api graphql -f query="$add_mutation" -f project="$project_id" -f content="$CONTENT_ID" 2>&1)"; then
+              summary_warning "Project status sync could not add the issue or pull request to the configured Project."
+              exit 0
+            fi
+            item_id="$(jq -r '.data.addProjectV2ItemById.item.id // empty' <<<"$add_response")"
+            if [ -z "$item_id" ]; then
+              summary_warning "Project status sync could not identify the newly added Project item."
+              exit 0
+            fi
           fi
 
           # shellcheck disable=SC2016

@@ -50,6 +50,12 @@ if grep -En 'Needs plan|In progress|In review' "$repo_root/templates/.github/wor
     fail "project status sync contains non-canonical status names"
 fi
 
+project_sync="$repo_root/templates/.github/workflows/project-status-sync.yml"
+grep -Fq 'addProjectV2ItemById' "$project_sync" ||
+    fail "Project status sync does not auto-add missing content"
+grep -Fq "if [ -z \"\$item_id\" ]; then" "$project_sync" ||
+    fail "Project status sync does not handle missing Project items"
+
 for template in epic.yml story.yml task.yml bug.yml security.yml config.yml; do
     [ -f "$repo_root/.github/ISSUE_TEMPLATE/$template" ] || fail "missing root issue form: $template"
 done
