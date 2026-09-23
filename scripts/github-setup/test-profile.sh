@@ -620,7 +620,7 @@ for invalid_central_ref in main refs/tags/v1.0.0 'v1.0' 'v1.0.0 ' \
         '.delivery_modes.centralized.repository = "test-owner/test-workflows" |
         .delivery_modes.centralized.ref = $ref' "$profile_file" > "$temp_file"
     if "$validator" --profile-file "$temp_file" --profile baseline --delivery-mode centralized > /dev/null 2>&1; then
-        echo "invalid centralized ref unexpectedly passed: $invalid_central_ref" >&2
+        printf 'invalid centralized ref unexpectedly passed: %q\n' "$invalid_central_ref" >&2
         exit 1
     fi
 done
@@ -636,7 +636,7 @@ for invalid_central_repository in test-owner '../test-workflows' 'test owner/tes
         '.delivery_modes.centralized.repository = $repository |
         .delivery_modes.centralized.ref = "v1.0.0"' "$profile_file" > "$temp_file"
     if "$validator" --profile-file "$temp_file" --profile baseline --delivery-mode centralized > /dev/null 2>&1; then
-        echo "invalid centralized repository unexpectedly passed: $invalid_central_repository" >&2
+        printf 'invalid centralized repository unexpectedly passed: %q\n' "$invalid_central_repository" >&2
         exit 1
     fi
 done
