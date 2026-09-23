@@ -99,6 +99,11 @@
       "evidence": "machine-readable test results"
     },
     {
+      "gate": "closeout",
+      "skill": "verification-before-completion",
+      "evidence": "reconciled Issue, PR, Project, validation, and handoff evidence"
+    },
+    {
       "gate": "improve-process",
       "skill": "using-superpowers",
       "evidence": "reusable process change or explicit none"

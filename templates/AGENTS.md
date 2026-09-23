@@ -33,6 +33,8 @@ Issue templates, project fields, and project views are declared by the
 machine-readable workflow manifest. Keep repository-specific commands,
 test layers, release gates, security rules, and provider configuration in the
 repository adapter; do not fork the lifecycle.
+Before PR handoff, complete the closeout gate by reconciling the Issue, linked
+PR, Project state, fresh validation evidence, and deterministic handoff JSON.
 
 Required skill resolution is fail-closed: resolve repository lifecycle skills
 from the repository skill catalog at `.github/skills/` before checking the

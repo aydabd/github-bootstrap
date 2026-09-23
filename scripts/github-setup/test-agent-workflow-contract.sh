@@ -26,7 +26,8 @@ jq -e '
     (.project.views | map(.name) | index("Ready to work")) != null and
     (.issue_templates | map(.name) | index("Epic")) != null and
     (.issue_templates | map(.name) | index("Task")) != null and
-    (.lifecycle | map(.gate) | index("select-next-work")) != null
+    (.lifecycle | map(.gate) | index("select-next-work")) != null and
+    (.lifecycle | map(.gate) | index("closeout")) != null
 ' "$manifest" > /dev/null || fail "manifest schema or required values are invalid"
 
 result="$($validator --repository "$repo_root")"
@@ -82,6 +83,8 @@ for instructions in "$repo_root/AGENTS.md" "$repo_root/templates/AGENTS.md" "$re
         fail "external skill source distinction is missing from $instructions"
     grep -Fq 'declare a required skill missing' "$instructions" ||
         fail "fail-closed skill resolution rule is missing from $instructions"
+    grep -Fiq 'closeout' "$instructions" ||
+        fail "closeout handoff gate is missing from $instructions"
 done
 
 for workflow in .github/workflows/create-repository.yml .github/workflows/terraform-create-repository.yml; do

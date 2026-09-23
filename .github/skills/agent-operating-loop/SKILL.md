@@ -16,7 +16,9 @@ unavailable, stop with `FAIL` and exact installation instructions.
 
 Use the declared Superpowers gates for discovery, brainstorming, planning,
 worktree isolation, TDD, debugging, parallel work, review, verification, and
-cleanup. Emit selection, test, and handoff evidence as deterministic JSON.
+cleanup. Before PR handoff, complete the closeout gate by reconciling the Issue,
+PR, Project, validation, and handoff evidence. Emit selection, test, and
+handoff evidence as deterministic JSON.
 Do not create local planning/specification files for ordinary implementation.
 
 ## Skill resolution
