@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.17.0](https://github.com/aydabd/github-bootstrap/compare/v2.16.0...v2.17.0) (2026-09-23)
+
+
+### Features
+
+* add agent closeout gate ([#308](https://github.com/aydabd/github-bootstrap/issues/308)) ([058e739](https://github.com/aydabd/github-bootstrap/commit/058e73935dc293a924f9894a3ed660ba285f8616))
+* auto-add Project items ([#306](https://github.com/aydabd/github-bootstrap/issues/306)) ([e66ebd3](https://github.com/aydabd/github-bootstrap/commit/e66ebd39b4be220e5395b85dd8028f92894cc21d))
+
 ## [2.16.0](https://github.com/aydabd/github-bootstrap/compare/v2.15.1...v2.16.0) (2026-09-23)
 
 
