@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.0](https://github.com/aydabd/github-bootstrap/compare/v2.14.0...v2.15.0) (2026-09-23)
+
+
+### Features
+
+* enforce immutable centralized workflow refs ([#297](https://github.com/aydabd/github-bootstrap/issues/297)) ([9480cb4](https://github.com/aydabd/github-bootstrap/commit/9480cb40cdccfa243af3997a4c903f38067eb210))
+
 ## [2.14.0](https://github.com/aydabd/github-bootstrap/compare/v2.13.0...v2.14.0) (2026-09-23)
 
 
