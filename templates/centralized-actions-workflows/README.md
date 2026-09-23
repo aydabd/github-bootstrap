@@ -36,4 +36,8 @@ updating selected repositories.
 The central repository should use its own owners, CODEOWNERS, permissions,
 release process, and security policy. Update consumers through deliberate
 pull requests after publishing a new version. Do not use a floating branch as
-the production ref.
+the production ref. The bootstrap validator accepts only a complete
+`OWNER/REPOSITORY` and an immutable `vMAJOR.MINOR.PATCH` release tag or
+40-character commit SHA. Each consumer may pin a different release or SHA;
+upgrading changes only its `central_ref` after the central repository has
+published and validated the new version.

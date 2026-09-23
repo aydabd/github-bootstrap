@@ -108,8 +108,10 @@ jq -e --arg profile "$profile_name" --arg mode "$delivery_mode" '
     (if $mode == "centralized" then
         (.delivery_modes.centralized.requires_repository == true and
         .delivery_modes.centralized.requires_ref == true and
-        (.delivery_modes.centralized.repository | type == "string" and length > 0) and
-        (.delivery_modes.centralized.ref | type == "string" and length > 0))
+        (.delivery_modes.centralized.repository | type == "string" and
+            test("^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?/[A-Za-z0-9._-]{1,100}$")) and
+        (.delivery_modes.centralized.ref | type == "string" and
+            test("^(v[0-9]+\\.[0-9]+\\.[0-9]+|[0-9a-fA-F]{40})$")))
     else true end)
 ' "$profile_file" > /dev/null || {
     echo "invalid profile '$profile_name' or delivery mode '$delivery_mode' in $profile_file" >&2
