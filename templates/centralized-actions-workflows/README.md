@@ -27,6 +27,11 @@ requests. This project does not automatically migrate existing repositories;
 use the example in `examples/consumer-quality.yml` when manually updating
 selected repositories.
 
+Consumers can remain on different immutable package versions while they are
+upgraded independently. See `examples/consumer-quality-versions.yml` for a
+release-tag-pinned consumer and a commit-SHA-pinned consumer using the same
+workflow interface.
+
 The machine-readable package identity and release policy are recorded in
 `.github/centralized-workflows.json`. The seed process materializes its
 `source_repository` from the target owner and repository, so forks and other
