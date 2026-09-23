@@ -35,3 +35,5 @@ as deterministic JSON.
 The bootstrap repository must dogfood the same issue-first, project-driven
 workflow that it generates. Repository-specific setup commands and security
 rules remain in the project instructions; lifecycle rules are not duplicated.
+Before PR handoff, complete the closeout gate by reconciling the Issue, linked
+PR, Project state, fresh validation evidence, and deterministic handoff JSON.
