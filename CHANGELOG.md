@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.16.0](https://github.com/aydabd/github-bootstrap/compare/v2.15.1...v2.16.0) (2026-09-23)
+
+
+### Features
+
+* add centralized workflow package manifest ([#301](https://github.com/aydabd/github-bootstrap/issues/301)) ([292c9e3](https://github.com/aydabd/github-bootstrap/commit/292c9e36a92f13077d474ce71edf6aa79cd67afe))
+* add portable centralized workflow manifest ([292c9e3](https://github.com/aydabd/github-bootstrap/commit/292c9e36a92f13077d474ce71edf6aa79cd67afe))
+
 ## [2.15.1](https://github.com/aydabd/github-bootstrap/compare/v2.15.0...v2.15.1) (2026-09-23)
 
 
