@@ -75,8 +75,9 @@ when any part is missing. Keep ordered implementation tasks in the Issue.
   passed.
 - Prefer JUnit/JSON reports and query them before reading raw logs.
 - Before completion, inspect live CI conclusions and every review comment.
-- Before PR handoff, reconcile the Issue, linked PR, live Project item and
-  fields, fresh validation evidence, and deterministic handoff JSON.
+- Before PR handoff, complete the closeout gate by reconciling the Issue, linked
+  PR, live Project item and fields, fresh validation evidence, and deterministic
+  handoff JSON.
 - Never claim completion from a diff alone.
 
 ## Process improvement
