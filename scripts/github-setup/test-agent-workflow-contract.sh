@@ -55,6 +55,10 @@ grep -Fq 'addProjectV2ItemById' "$project_sync" ||
     fail "Project status sync does not auto-add missing content"
 grep -Fq "if [ -z \"\$item_id\" ]; then" "$project_sync" ||
     fail "Project status sync does not handle missing Project items"
+grep -Fq 'projectItems(first:100)' "$project_sync" ||
+    fail "Project status sync does not inspect content Project memberships"
+grep -Fq '.projectItems.nodes[]?' "$project_sync" ||
+    fail "Project status sync does not match content Project memberships"
 
 for template in epic.yml story.yml task.yml bug.yml security.yml config.yml; do
     [ -f "$repo_root/.github/ISSUE_TEMPLATE/$template" ] || fail "missing root issue form: $template"
