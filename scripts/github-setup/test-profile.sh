@@ -614,6 +614,33 @@ fi
 jq '.delivery_modes.centralized.repository = "test-owner/test-workflows" | .delivery_modes.centralized.ref = "v1.0.0"' "$profile_file" > "$temp_file"
 "$validator" --profile-file "$temp_file" --profile baseline --delivery-mode centralized
 
+for invalid_central_ref in main refs/tags/v1.0.0 'v1.0' 'v1.0.0 ' \
+    012345678901234567890123456789012345678; do
+    jq --arg ref "$invalid_central_ref" \
+        '.delivery_modes.centralized.repository = "test-owner/test-workflows" |
+        .delivery_modes.centralized.ref = $ref' "$profile_file" > "$temp_file"
+    if "$validator" --profile-file "$temp_file" --profile baseline --delivery-mode centralized > /dev/null 2>&1; then
+        echo "invalid centralized ref unexpectedly passed: $invalid_central_ref" >&2
+        exit 1
+    fi
+done
+
+jq '.delivery_modes.centralized.repository = "test-owner/test-workflows" |
+    .delivery_modes.centralized.ref = "0123456789abcdef0123456789abcdef01234567"' \
+    "$profile_file" > "$temp_file"
+"$validator" --profile-file "$temp_file" --profile baseline --delivery-mode centralized
+
+for invalid_central_repository in test-owner '../test-workflows' 'test owner/test-workflows' \
+    'test-owner/test/workflows'; do
+    jq --arg repository "$invalid_central_repository" \
+        '.delivery_modes.centralized.repository = $repository |
+        .delivery_modes.centralized.ref = "v1.0.0"' "$profile_file" > "$temp_file"
+    if "$validator" --profile-file "$temp_file" --profile baseline --delivery-mode centralized > /dev/null 2>&1; then
+        echo "invalid centralized repository unexpectedly passed: $invalid_central_repository" >&2
+        exit 1
+    fi
+done
+
 missing_value_output="$("$validator" --profile-file 2>&1 || true)"
 if ! grep -q "requires a value" <<< "$missing_value_output"; then
     echo "missing option value did not produce a clear validation error" >&2
