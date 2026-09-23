@@ -336,6 +336,11 @@ jobs:
               exit 1
             }
             has_file .github/actions/quality/run-quality/action.yml && { echo "local quality action present in centralized repo" >&2; exit 1; } || true
+            has_file .github/actions/setup-lint-system/action.yml && { echo "local system setup action present in centralized repo" >&2; exit 1; } || true
+            has_file .github/actions/setup-lint-mise/action.yml && { echo "local mise setup action present in centralized repo" >&2; exit 1; } || true
+            has_file .github/linters/.yaml-lint.yml && { echo "local quality linter config present in centralized repo" >&2; exit 1; } || true
+            has_file scripts/lint-shell.sh && { echo "local shell lint script present in centralized repo" >&2; exit 1; } || true
+            has_file scripts/lint-yaml.sh && { echo "local YAML lint script present in centralized repo" >&2; exit 1; } || true
             printf '%s\n' "$QUALITY_WORKFLOW" | grep -Fq "$CENTRAL_REPOSITORY/.github/workflows/quality.yml@$CENTRAL_REF" || {
               echo "central workflow reference mismatch" >&2
               exit 1

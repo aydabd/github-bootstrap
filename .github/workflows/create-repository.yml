@@ -761,7 +761,9 @@ jobs:
               -e "s|{{CENTRAL_REPOSITORY}}|$CENTRAL_REPOSITORY|g" \
               -e "s|{{CENTRAL_REF}}|$CENTRAL_REF|g" \
               .github/config/bootstrap-profile.json
-            rm -rf .github/actions/quality .github/workflows/quality.yml .github/workflows/quality-capability.yml
+            rm -rf .github/actions/quality .github/actions/setup-lint-* .github/linters \
+              scripts/lint-shell.sh scripts/lint-yaml.sh \
+              .github/workflows/quality.yml .github/workflows/quality-capability.yml
             mv .github/workflows/centralized-quality.yml .github/workflows/quality.yml
             echo "✅ Quality implementation centralized at $CENTRAL_REPOSITORY@$CENTRAL_REF" >> "$GITHUB_STEP_SUMMARY"
           else

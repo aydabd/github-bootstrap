@@ -5,16 +5,13 @@ that wants to share quality automation across multiple repositories. It is
 independent of `github-bootstrap` after creation.
 
 This seeded repository contains the reusable workflow at
-`.github/workflows/quality.yml` and its setup actions under
-`.github/actions/setup-lint-*`. Copy the referenced setup actions into every
-consumer repository as well: the workflow checks out and operates on the
-calling consumer repository, and its relative
-`./.github/actions/setup-lint-*` references resolve there. Each consumer must
-therefore retain its own Makefile, provider files, scripts, setup actions, and
-lint configuration. The reusable workflow intentionally declares only
-`workflow_call`; the consumer repository should define its own workflow with
-`push` and `pull_request` triggers. Publish immutable release tags or use
-commit SHAs, then configure consumer repositories with:
+`.github/workflows/quality.yml`, its composite quality actions, setup actions,
+lint scripts, and lint configuration. The workflow intentionally declares
+only `workflow_call`; the consumer repository should define its own workflow
+with `push` and `pull_request` triggers. The consumer retains its own
+Makefile, provider files, and repository source/configuration, but does not
+copy the central quality actions or lint scripts. Publish immutable release
+tags or use commit SHAs, then configure consumer repositories with:
 
 ```yaml
 delivery_mode: centralized
@@ -23,13 +20,12 @@ central_ref: v1.0.0
 ```
 
 Consumers reference the central workflow at a pinned ref. The called workflow
-checks out and validates the consumer repository, so the consumer must retain
-its own Makefile, provider files, setup actions, and lint configuration. Local
-repository configuration, provider selection, and branch rules remain local.
-The central repository itself does not run consumer quality checks on pushes or
-pull requests. This project does not automatically migrate existing
-repositories; use the example in `examples/consumer-quality.yml` when manually
-updating selected repositories.
+checks out and validates the consumer repository. Local repository
+configuration, provider selection, and branch rules remain local. The central
+repository itself does not run consumer quality checks on pushes or pull
+requests. This project does not automatically migrate existing repositories;
+use the example in `examples/consumer-quality.yml` when manually updating
+selected repositories.
 
 The machine-readable package identity and release policy are recorded in
 `.github/centralized-workflows.json`. The seed process materializes its

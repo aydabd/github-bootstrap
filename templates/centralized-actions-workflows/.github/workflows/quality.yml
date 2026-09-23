@@ -31,10 +31,10 @@ jobs:
           fetch-depth: 0
       - name: Setup mise tooling
         if: inputs['environment-manager'] == 'mise'
-        uses: ./.github/actions/setup-lint-mise
+        uses: $/.github/actions/setup-lint-mise
       - name: Setup system tooling
         if: inputs['environment-manager'] == 'system'
-        uses: ./.github/actions/setup-lint-system
+        uses: $/.github/actions/setup-lint-system
       - name: Bootstrap consumer toolchain
         shell: bash
         env:
@@ -44,58 +44,7 @@ jobs:
           [ -f Makefile ] || { echo "Consumer repository is missing its provider Makefile" >&2; exit 1; }
           ENV_MANAGER="$ENVIRONMENT_MANAGER" make install
       - name: Run consumer quality capabilities
-        shell: bash
-        env:
-          CAPABILITIES: ${{ inputs.capabilities }}
-          ENVIRONMENT_MANAGER: ${{ inputs['environment-manager'] }}
-          WORKING_DIRECTORY: ${{ github.workspace }}
-        run: |
-          set -euo pipefail
-          [ -n "$CAPABILITIES" ] || { echo "At least one quality capability is required" >&2; exit 1; }
-
-          provider_run() {
-            if [ "$ENVIRONMENT_MANAGER" = system ]; then
-              "$@"
-            else
-              bash "$WORKING_DIRECTORY/scripts/provider-run.sh" "$@"
-            fi
-          }
-
-          IFS=',' read -r -a selected <<< "$CAPABILITIES"
-          for capability in "${selected[@]}"; do
-            capability="$(printf '%s' "$capability" | sed 's/^ *//;s/ *$//')"
-            case "$capability" in
-              lint-markdown) provider_run markdownlint --config .github/linters/.markdownlint.json --ignore-path .github/linters/.markdownlintignore . ;;
-              lint-json) provider_run bash -c 'find . -path "./.git" -prune -o -path "./node_modules" -prune -o -type f -name "*.json" -exec jq empty {} +' ;;
-              lint-yaml) provider_run bash scripts/lint-yaml.sh "$PWD" ;;
-              lint-actions) provider_run actionlint -ignore 'SC[0-9]+'; provider_run uv run zizmor --pedantic .github ;;
-              lint-shell)
-                provider_run bash scripts/lint-shell.sh "$PWD"
-                ;;
-              lint-python) provider_run python3 -m compileall -q . ;;
-              lint-terraform)
-                terraform_file="$(find . -type f -name '*.tf' -print -quit)"
-                if [ -z "$terraform_file" ]; then
-                  echo "No Terraform files found; skipping lint-terraform"
-                else
-                  terraform_dir="$(dirname "$terraform_file")"
-                  provider_run terraform fmt -check -recursive
-                  provider_run terraform -chdir="$terraform_dir" init -backend=false -input=false
-                  provider_run terraform -chdir="$terraform_dir" validate
-                fi
-                ;;
-              lint-format) LINT_MODE=check provider_run uv run pre-commit run --all-files --color=always ;;
-              lint-tests)
-                if [ -f go.mod ]; then provider_run go test ./...; fi
-                if [ -f package.json ]; then provider_run npm test --if-present; fi
-                if [ -f pyproject.toml ] || [ -f pytest.ini ]; then
-                  if provider_run python3 -c "import pytest" >/dev/null 2>&1; then
-                    provider_run uv run python3 -m pytest
-                  else
-                    echo "pytest is not installed; skipping Python tests"
-                  fi
-                fi
-                ;;
-              *) echo "Unknown quality capability: $capability" >&2; exit 1 ;;
-            esac
-          done
+        uses: $/.github/actions/quality/run-quality
+        with:
+          capabilities: ${{ inputs.capabilities }}
+          environment-manager: ${{ inputs['environment-manager'] }}
