@@ -29,6 +29,16 @@ if printf '%s' "$output" | grep -Eiq 'gho_|ghr_|BEGIN .*PRIVATE KEY|client[_-]?s
     exit 1
 fi
 
+owner_error="$(mktemp)"
+if env -u BOOTSTRAP_APP_OWNER -u GITHUB_REPOSITORY_OWNER -u GITHUB_REPOSITORY \
+    "$orchestrator" check > /dev/null 2> "$owner_error"; then
+    echo "setup must reject missing owner context" >&2
+    rm -f "$owner_error"
+    exit 1
+fi
+grep -Fq 'invalid or missing repository owner' "$owner_error"
+rm -f "$owner_error"
+
 set +e
 install_output="$(GITHUB_REPOSITORY=aydabd/github-bootstrap \
     APP_CREDENTIAL_DIR=/private/tmp \

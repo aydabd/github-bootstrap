@@ -15,7 +15,10 @@ fi
 
 profile="$1"
 
-repository_owner="${BOOTSTRAP_APP_OWNER:-${GITHUB_REPOSITORY_OWNER:-${GITHUB_REPOSITORY%%/*}}}"
+repository_owner="${BOOTSTRAP_APP_OWNER:-${GITHUB_REPOSITORY_OWNER:-}}"
+if [ -z "$repository_owner" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
+    repository_owner="${GITHUB_REPOSITORY%%/*}"
+fi
 owner_pattern='^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$'
 if [ -z "$repository_owner" ] || [[ ! "$repository_owner" =~ $owner_pattern ]]; then
     echo "invalid or missing repository owner; set BOOTSTRAP_APP_OWNER or GITHUB_REPOSITORY_OWNER" >&2
