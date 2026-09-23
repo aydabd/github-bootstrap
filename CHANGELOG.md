@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.0](https://github.com/aydabd/github-bootstrap/compare/v2.12.5...v2.13.0) (2026-09-23)
+
+
+### Features
+
+* support organization-owned App registration ([#291](https://github.com/aydabd/github-bootstrap/issues/291)) ([9d8c7c4](https://github.com/aydabd/github-bootstrap/commit/9d8c7c43aa4d571f3fcc1dd009034fe64d35dbc4))
+
 ## [2.12.5](https://github.com/aydabd/github-bootstrap/compare/v2.12.4...v2.12.5) (2026-09-22)
 
 
