@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.18.0](https://github.com/aydabd/github-bootstrap/compare/v2.17.0...v2.18.0) (2026-09-23)
+
+
+### Features
+
+* centralize reusable quality actions ([#310](https://github.com/aydabd/github-bootstrap/issues/310)) ([5dd2fa9](https://github.com/aydabd/github-bootstrap/commit/5dd2fa9b0860dc130b91f23472cd255b6f4213b6))
+
 ## [2.17.0](https://github.com/aydabd/github-bootstrap/compare/v2.16.0...v2.17.0) (2026-09-23)
 
 
