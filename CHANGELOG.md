@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.1](https://github.com/aydabd/github-bootstrap/compare/v2.15.0...v2.15.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* align centralized runtime validation ([#299](https://github.com/aydabd/github-bootstrap/issues/299)) ([86e34ed](https://github.com/aydabd/github-bootstrap/commit/86e34edaf115c2049591333a26b0aab106303ed2))
+
 ## [2.15.0](https://github.com/aydabd/github-bootstrap/compare/v2.14.0...v2.15.0) (2026-09-23)
 
 
