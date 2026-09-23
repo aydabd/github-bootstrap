@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export GITHUB_REPOSITORY=octo/bootstrap
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/../.." && pwd)"
 profile_file="$repo_root/templates/.github/config/bootstrap-profile.json"

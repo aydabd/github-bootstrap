@@ -79,6 +79,20 @@ an App for the selected organization. Review the permissions before submitting
 the form. Organization-owned shared Apps and fork-owned Apps use the same role
 interfaces; neither requires an App owned by `aydabd` or `leniva-ab`.
 
+Credential profile ownership is resolved separately when setup scripts read
+`app-credential-profiles.json`: `BOOTSTRAP_APP_OWNER` takes precedence, then
+`GITHUB_REPOSITORY_OWNER`, then the owner portion of `GITHUB_REPOSITORY`.
+For local setup, set the override explicitly:
+
+```bash
+BOOTSTRAP_APP_OWNER=your-org scripts/github-setup/manage-app-setup.sh check
+```
+
+The owner must be a valid GitHub user or organization slug. Missing or invalid
+values fail before credential installation, rotation, or cleanup. This owner
+identifies the profile's registration metadata; workflow authentication still
+checks that the App installation owner matches the target repository owner.
+
 For existing Apps, ownership transfer through GitHub's App settings is a
 separate operator action. Inventory registrations and installations, inspect
 GitHub's transfer warnings, and verify dependent workflows before rotating or

@@ -75,6 +75,7 @@ run_action() {
         APP_PRIVATE_KEY_INPUT=maintenance-private-key \
         GH_TOKEN_INPUT=provisioner-token \
         MAINTENANCE_TOKEN_INPUT=maintenance-token \
+        GITHUB_REPOSITORY=acme/bootstrap \
         bash "$run_script" > "$tmp_dir/action-output" 2>&1; then
         return 0
     fi

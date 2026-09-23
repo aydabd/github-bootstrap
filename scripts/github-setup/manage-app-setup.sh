@@ -15,6 +15,12 @@ usage() {
 }
 
 repository="${GITHUB_REPOSITORY:-local/repository}"
+repository_owner="${BOOTSTRAP_APP_OWNER:-${GITHUB_REPOSITORY_OWNER:-${repository%%/*}}}"
+owner_pattern='^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$'
+if [ -z "$repository_owner" ] || [[ ! "$repository_owner" =~ $owner_pattern ]]; then
+    echo "invalid or missing repository owner; set BOOTSTRAP_APP_OWNER or GITHUB_REPOSITORY_OWNER" >&2
+    exit 1
+fi
 
 check_profile() {
     local role="$1"
@@ -56,14 +62,15 @@ check_manifest() {
 }
 
 check_isolation() {
-    jq -e '
+    jq -e --arg owner "$repository_owner" '
+        .repository_owner == "{{REPOSITORY_OWNER}}" and
         .["production-provisioner"].environment != .["e2e-provisioner"].environment and
         .["production-writer"].environment != .["e2e-writer"].environment and
         .["production-reviewer"].environment != .["e2e-reviewer"].environment and
         .["production-provisioner"].refresh_token_secret != .["e2e-provisioner"].refresh_token_secret and
         .["production-writer"].private_key_secret != .["e2e-writer"].private_key_secret and
         .["production-reviewer"].private_key_secret != .["e2e-reviewer"].private_key_secret and
-        ([.profile_metadata[] | select(.owner != "aydabd" or .visibility != "private" or
+        ([.profile_metadata[] | select((.owner | if . == "{{REPOSITORY_OWNER}}" then $owner else . end) != $owner or .visibility != "private" or
             .installation_scope != "repository" or .api_method != "POST" or
             (.events | type != "array"))] | length) == 0
     ' "$profile_file" > /dev/null

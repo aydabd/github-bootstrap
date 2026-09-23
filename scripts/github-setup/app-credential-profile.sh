@@ -15,6 +15,13 @@ fi
 
 profile="$1"
 
+repository_owner="${BOOTSTRAP_APP_OWNER:-${GITHUB_REPOSITORY_OWNER:-${GITHUB_REPOSITORY%%/*}}}"
+owner_pattern='^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$'
+if [ -z "$repository_owner" ] || [[ ! "$repository_owner" =~ $owner_pattern ]]; then
+    echo "invalid or missing repository owner; set BOOTSTRAP_APP_OWNER or GITHUB_REPOSITORY_OWNER" >&2
+    exit 1
+fi
+
 if ! jq -e --arg profile "$profile" '.role_order | index($profile) != null' "$manifest" > /dev/null; then
     echo "unknown credential profile: $profile" >&2
     exit 1
@@ -64,13 +71,14 @@ fi
 
 field="$2"
 if ! jq -e --arg profile "$profile" --arg field "$field" \
-    '((.[$profile] | has($field)) or (.profile_metadata[$profile] | has($field)))' \
+    '($field == "owner" or (.[$profile] | has($field)) or (.profile_metadata[$profile] | has($field)))' \
     "$manifest" > /dev/null; then
     echo "unknown credential profile field: $field" >&2
     exit 1
 fi
 
-jq -er --arg profile "$profile" --arg field "$field" \
+jq -er --arg profile "$profile" --arg field "$field" --arg owner "$repository_owner" \
     'if .[$profile] | has($field) then .[$profile][$field]
+        elif $field == "owner" then $owner
         elif .profile_metadata[$profile] | has($field) then .profile_metadata[$profile][$field]
         else empty end' "$manifest"

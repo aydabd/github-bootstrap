@@ -24,9 +24,9 @@ jq -e '.role_order == [
     exit 1
 }
 
-jq -e '.schema_version == 1 and .repository_owner == "aydabd" and
+jq -e '.schema_version == 1 and .repository_owner == "{{REPOSITORY_OWNER}}" and
     ([.role_order[] | .] | length) == 8 and
-    ([.profile_metadata[] | select(.owner == "aydabd" and .visibility == "private" and
+    ([.profile_metadata[] | select(.owner == "{{REPOSITORY_OWNER}}" and .visibility == "private" and
         .installation_scope == "repository" and .api_method == "POST" and
         (.api_endpoint | endswith("/conversions")) and (.permissions | type == "array") and
         (.events | type == "array") and (.rotation | type == "string") and
@@ -35,6 +35,7 @@ jq -e '.schema_version == 1 and .repository_owner == "aydabd" and
     exit 1
 }
 
+export BOOTSTRAP_APP_OWNER=aydabd
 production_profile="$(bash "$helper" production-provisioner)"
 e2e_profile="$(bash "$helper" e2e-provisioner)"
 e2e_admin_profile="$(bash "$helper" e2e-admin)"
@@ -43,6 +44,20 @@ e2e_reviewer_profile="$(bash "$helper" e2e-reviewer)"
 e2e_fixture_profile="$(bash "$helper" e2e-fixture)"
 production_writer_profile="$(bash "$helper" production-writer)"
 production_reviewer_profile="$(bash "$helper" production-reviewer)"
+
+[ "$(BOOTSTRAP_APP_OWNER=personal-user bash "$helper" e2e-writer owner)" = personal-user ]
+[ "$(BOOTSTRAP_APP_OWNER=example-org bash "$helper" e2e-writer owner)" = example-org ]
+[ "$(env -u BOOTSTRAP_APP_OWNER GITHUB_REPOSITORY_OWNER=runtime-org bash "$helper" e2e-writer owner)" = runtime-org ]
+[ "$(env -u BOOTSTRAP_APP_OWNER -u GITHUB_REPOSITORY_OWNER GITHUB_REPOSITORY=fork-org/bootstrap bash "$helper" e2e-writer owner)" = fork-org ]
+if env -u BOOTSTRAP_APP_OWNER -u GITHUB_REPOSITORY_OWNER -u GITHUB_REPOSITORY \
+    bash "$helper" e2e-writer owner > /dev/null 2>&1; then
+    echo "profile owner resolution must reject missing owner" >&2
+    exit 1
+fi
+if BOOTSTRAP_APP_OWNER='invalid/owner' bash "$helper" e2e-writer owner > /dev/null 2>&1; then
+    echo "profile owner resolution must reject invalid owner" >&2
+    exit 1
+fi
 
 jq -e 'keys == [
     "client_id_variable",

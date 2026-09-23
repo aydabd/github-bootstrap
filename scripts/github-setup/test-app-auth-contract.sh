@@ -440,7 +440,8 @@ run_caller_preflight_fixture() {
         APP_SLUG_INPUT="$caller_app_slug" APP_PRIVATE_KEY_INPUT="$caller_private_key" \
         GH_TOKEN_INPUT="$provisioner_token_fixture" \
         MAINTENANCE_TOKEN_INPUT="$maintenance_token_fixture" \
-        GITHUB_API_URL="$api_url_fixture" bash "$caller_fixture" > "$caller_output" 2>&1; then
+        GITHUB_API_URL="$api_url_fixture" GITHUB_REPOSITORY="$repository_fixture" \
+        bash "$caller_fixture" > "$caller_output" 2>&1; then
         echo "missing maintenance installation was accepted by $workflow_name" >&2
         exit 1
     fi
