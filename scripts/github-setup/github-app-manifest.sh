@@ -19,6 +19,12 @@ The start command prints a temporary local URL for a POST form, then captures
 and validates GitHub's callback state into a protected code file.
 The convert command writes GitHub's returned App private key and metadata to
 0600 files in OUTPUT_DIRECTORY. It never prints credentials.
+
+Registration overrides for url/start:
+    GITHUB_APP_ORGANIZATION  Organization slug; unset uses the signed-in personal account.
+    GITHUB_APP_VISIBILITY    private (default) or public for cross-account installation.
+    GITHUB_APP_NAME          Optional App display name, unique to your deployment.
+These configure registration, not the installation or repository target owner.
 EOF
     exit 2
 }
@@ -29,8 +35,26 @@ main() {
         url | start)
             require_command python3
             role="${2:-}"
+            registration_url="https://github.com/settings/apps/new"
+            organization="${GITHUB_APP_ORGANIZATION:-}"
+            if [ -n "$organization" ]; then
+                if ! [[ "$organization" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$ ]] ||
+                    [[ "$organization" == *--* ]]; then
+                    echo "invalid GITHUB_APP_ORGANIZATION: expected an organization slug" >&2
+                    exit 2
+                fi
+                registration_url="https://github.com/organizations/$organization/settings/apps/new"
+            fi
+            visibility="${GITHUB_APP_VISIBILITY:-private}"
+            case "$visibility" in
+                private | public) ;;
+                *)
+                    echo "invalid GITHUB_APP_VISIBILITY: expected private or public" >&2
+                    exit 2
+                    ;;
+            esac
             if [ "$command_name" = "url" ]; then
-                redirect_url="${3:-https://github.com/settings/apps/new}"
+                redirect_url="${3:-$registration_url}"
             fi
             case "$role" in
                 bootstrap-e2e-admin | bootstrap-provisioner | bootstrap-e2e-provisioner | bootstrap-writer | bootstrap-reviewer | bootstrap-e2e-writer | bootstrap-e2e-reviewer | bootstrap-e2e-fixture) ;;
@@ -44,12 +68,26 @@ main() {
                 echo "missing App manifest: $manifest_file" >&2
                 exit 1
             }
+            manifest_json="$(
+                python3 - "$manifest_file" "$visibility" "${GITHUB_APP_NAME:-}" << 'PY'
+import json
+import pathlib
+import sys
+
+manifest_path, visibility, name = sys.argv[1:]
+manifest = json.loads(pathlib.Path(manifest_path).read_text())
+manifest["public"] = visibility == "public"
+if name:
+    manifest["name"] = name
+print(json.dumps(manifest, separators=(",", ":")))
+PY
+            )"
             if [ "$command_name" = "start" ]; then
                 output_dir="${3:-}"
                 [ -n "$output_dir" ] || usage
                 mkdir -p "$output_dir"
                 chmod 700 "$output_dir"
-                python3 - "$manifest_file" "$output_dir" << 'PY'
+                python3 - "$manifest_json" "$output_dir" "$registration_url" << 'PY'
 import html
 import json
 import pathlib
@@ -59,8 +97,8 @@ import threading
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-manifest_path, output_dir = sys.argv[1:]
-manifest = json.loads(pathlib.Path(manifest_path).read_text())
+manifest_json, output_dir, registration_url = sys.argv[1:]
+manifest = json.loads(manifest_json)
 state = secrets.token_urlsafe(24)
 callback_file = pathlib.Path(output_dir) / "app-manifest-code"
 
@@ -96,7 +134,7 @@ class ManifestHandler(BaseHTTPRequestHandler):
         manifest_script = manifest_script.replace("<", "\\u003c")
         body = f'''<!doctype html>
 <html><body>
-<form method="post" action="https://github.com/settings/apps/new?state={state}">
+<form method="post" action="{html.escape(registration_url)}?state={state}">
 <label for="manifest">GitHub App Manifest</label>
 <input type="text" name="manifest" id="manifest">
 <input type="submit" value="Continue to GitHub">
@@ -121,17 +159,16 @@ server.serve_forever()
 PY
                 printf 'Manifest callback code stored in protected file: %s/app-manifest-code\n' "$output_dir"
             else
-                python3 - "$manifest_file" "$redirect_url" << 'PY'
+                python3 - "$manifest_json" "$redirect_url" "$registration_url" << 'PY'
 import json
-import pathlib
 import sys
 import urllib.parse
 
-manifest_path, redirect_url = sys.argv[1:]
-manifest = json.loads(pathlib.Path(manifest_path).read_text())
+manifest_json, redirect_url, registration_url = sys.argv[1:]
+manifest = json.loads(manifest_json)
 manifest["redirect_url"] = redirect_url
 encoded_manifest = urllib.parse.quote(json.dumps(manifest, separators=(",", ":")), safe="")
-print(f"https://github.com/settings/apps/new?manifest={encoded_manifest}")
+print(f"{registration_url}?manifest={encoded_manifest}")
 PY
             fi
             ;;

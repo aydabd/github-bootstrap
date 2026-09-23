@@ -20,6 +20,54 @@ grep -Fq 'chmod 600' "$helper"
 grep -Fq 'private key' "$helper"
 grep -Fq "jq -j '.client_id'" "$helper"
 grep -Fq "jq -j '.client_secret'" "$helper"
+MANIFEST_HELPER="$helper" python3 - << 'PY'
+import json
+import os
+import subprocess
+import tempfile
+import urllib.parse
+from pathlib import Path
+
+helper = os.environ["MANIFEST_HELPER"]
+base = {k: v for k, v in os.environ.items() if not k.startswith("GITHUB_APP_")}
+cases = [
+    ({}, "/settings/apps/new", False, "Bootstrap Writer"),
+    ({"GITHUB_APP_ORGANIZATION": "unrelated-fork-org", "GITHUB_APP_VISIBILITY": "public",
+        "GITHUB_APP_NAME": "Fork Writer"},
+        "/organizations/unrelated-fork-org/settings/apps/new", True, "Fork Writer"),
+    ({"GITHUB_APP_ORGANIZATION": "leniva-ab", "GITHUB_APP_VISIBILITY": "private"},
+        "/organizations/leniva-ab/settings/apps/new", False, "Bootstrap Writer"),
+    ({"GITHUB_APP_VISIBILITY": "public"}, "/settings/apps/new", True, "Bootstrap Writer"),
+]
+for overrides, path, public, name in cases:
+    result = subprocess.run([helper, "url", "bootstrap-writer"], env=base | overrides,
+                            capture_output=True, text=True, check=True)
+    url = urllib.parse.urlsplit(result.stdout.strip())
+    assert url.path == path, (url.path, path)
+    manifest = json.loads(urllib.parse.parse_qs(url.query)["manifest"][0])
+    assert manifest["public"] is public
+    assert manifest["name"] == name
+    assert manifest["redirect_url"] == "https://github.com" + path
+
+for overrides in [
+    {"GITHUB_APP_ORGANIZATION": "../other"},
+    {"GITHUB_APP_ORGANIZATION": "org?state=bad"},
+    {"GITHUB_APP_ORGANIZATION": "-invalid"},
+    {"GITHUB_APP_ORGANIZATION": "invalid-"},
+    {"GITHUB_APP_ORGANIZATION": "two--hyphens"},
+    {"GITHUB_APP_VISIBILITY": "internal"},
+]:
+    result = subprocess.run([helper, "url", "bootstrap-writer"], env=base | overrides,
+                            capture_output=True, text=True)
+    assert result.returncode == 2, overrides
+    assert not result.stdout, overrides
+    with tempfile.TemporaryDirectory() as directory:
+        target = Path(directory) / "credentials"
+        result = subprocess.run([helper, "start", "bootstrap-writer", str(target)],
+                                env=base | overrides, capture_output=True, text=True, timeout=5)
+        assert result.returncode == 2, overrides
+        assert not target.exists(), overrides
+PY
 manifest_url="$("$helper" url bootstrap-provisioner $'https://example.test/callback\nsecond')"
 MANIFEST_URL="$manifest_url" python3 - << 'PY'
 import json
@@ -113,7 +161,9 @@ file_mode() {
 }
 
 start_output="$tmp_dir/start-output"
-GITHUB_APP_MANIFEST_TEST_MODE=1 "$helper" start bootstrap-writer "$tmp_dir/credentials" > "$start_output" &
+GITHUB_APP_ORGANIZATION=unrelated-fork-org GITHUB_APP_VISIBILITY=public \
+    GITHUB_APP_NAME='Fork </script> Writer' \
+    "$helper" start bootstrap-writer "$tmp_dir/credentials" > "$start_output" &
 start_pid=$!
 for _ in $(seq 1 50); do
     if grep -Eq '^http://127\.0\.0\.1:[0-9]+/$' "$start_output" 2> /dev/null; then
@@ -132,11 +182,13 @@ START_HTML="$start_html" python3 - << 'PY'
 import os
 
 html = os.environ["START_HTML"]
-assert '<form method="post" action="https://github.com/settings/apps/new?state=' in html
+assert '<form method="post" action="https://github.com/organizations/unrelated-fork-org/settings/apps/new?state=' in html
 assert '<input type="text" name="manifest" id="manifest">' in html
 assert '<input type="submit" value="Continue to GitHub">' in html
 assert 'JSON.stringify({' in html
-assert 'Bootstrap Writer' in html
+assert '"public":true' in html
+assert 'Fork \\u003c/script> Writer' in html
+assert 'Fork </script>' not in html
 PY
 state="$(
     START_HTML="$start_html" python3 - << 'PY'
@@ -149,6 +201,8 @@ print(match.group(1))
 PY
 )"
 callback_url="${start_url}callback?code=test-conversion-code&state=${state}"
+test "$(curl --silent -o /dev/null -w '%{http_code}' "${start_url}callback?code=bad&state=wrong")" = 400
+test ! -e "$tmp_dir/credentials/app-manifest-code"
 curl --fail --silent "$callback_url" > /dev/null
 wait "$start_pid"
 start_pid=""

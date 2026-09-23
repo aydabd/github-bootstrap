@@ -51,6 +51,54 @@ ruleset or combine the E2E and production trust boundaries.
 
 ## Installation and secret handling
 
+### Registering your own Apps
+
+Fork owners can register their own Apps using the role manifests. Registration
+ownership is independent of the installation owner passed as `app_owner` to a
+bootstrap workflow. With no overrides, the manifest helper targets the signed-in
+personal account and creates a private App. To register an organization-owned
+App that other users and organizations can install, run:
+
+```bash
+GITHUB_APP_ORGANIZATION=your-org \
+    GITHUB_APP_VISIBILITY=public \
+    GITHUB_APP_NAME='Your Organization Bootstrap Writer' \
+    scripts/github-setup/github-app-manifest.sh start bootstrap-writer /private/tmp/your-app-registration
+```
+
+Use your own protected output directory. The command prints a local URL with a
+POST form and waits for GitHub's callback. It does not launch a browser. The
+`url` command accepts the same overrides for inspecting the registration URL;
+use `start` for GitHub's POST-based manifest registration flow. Omit
+`GITHUB_APP_ORGANIZATION` for personal ownership. Set `GITHUB_APP_VISIBILITY=private`
+when installation should be limited to the account that owns the App.
+
+These overrides do not edit the checked-in manifests, change role permissions,
+or select a repository. GitHub checks the signed-in user's ability to register
+an App for the selected organization. Review the permissions before submitting
+the form. Organization-owned shared Apps and fork-owned Apps use the same role
+interfaces; neither requires an App owned by `aydabd` or `leniva-ab`.
+
+For existing Apps, ownership transfer through GitHub's App settings is a
+separate operator action. Inventory registrations and installations, inspect
+GitHub's transfer warnings, and verify dependent workflows before rotating or
+removing credentials. Transferring ownership is not the same as replacing the
+App, installing it in another account, or renaming it.
+
+A shared App's private key and client secret must remain with its operator.
+Do not copy them into external consumer repositories: a private key can mint
+tokens for the App's installations. External consumers need an authorized
+central execution or token service, or their own independently registered Apps.
+Calling a reusable workflow does not automatically expose the central
+repository's secrets. The existing credential-copy installer is appropriate
+only within the operator's trusted deployment boundary; multi-tenant shared-App
+runtime support is tracked in issue #280.
+
+Registration details follow GitHub's
+[manifest registration documentation](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest).
+
+### Installing and operating Apps
+
 Organization consumers install the appropriate App on the organization and
 select only the repositories needed by that role. Personal-account consumers
 must use the supported App user-token refresh flow for personal targets; an
