@@ -56,4 +56,13 @@ if printf '%s\n' "$lifecycle_resolver" | grep -Eq 'refresh_token_secret: +"?BOOT
     exit 1
 fi
 
+printf '%s\n' "$generated_repository_job" | grep -Fq 'for file in Makefile scripts/provider-run.sh; do' || {
+    echo "generated repository E2E must always require only consumer provider assets" >&2
+    exit 1
+}
+printf '%s\n' "$generated_repository_job" | grep -Fq "if [ \"\$DELIVERY\" = embedded ]; then" || {
+    echo "generated repository E2E must gate embedded-only setup assets by delivery mode" >&2
+    exit 1
+}
+
 echo "Generated repository E2E concurrency contract passed."

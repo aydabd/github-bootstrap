@@ -310,9 +310,14 @@ jobs:
           for file in .github/workflows/quality.yml .github/workflows/commit-policy.yml .github/config/bootstrap-profile.json; do
             has_file "$file" || { echo "missing generated file: $file" >&2; exit 1; }
           done
-          for file in Makefile scripts/provider-run.sh .github/actions/setup-lint-mise/action.yml .github/actions/setup-lint-system/action.yml; do
+          for file in Makefile scripts/provider-run.sh; do
             has_file "$file" || { echo "missing generated provider asset: $file" >&2; exit 1; }
           done
+          if [ "$DELIVERY" = embedded ]; then
+            for file in .github/actions/setup-lint-mise/action.yml .github/actions/setup-lint-system/action.yml; do
+              has_file "$file" || { echo "missing generated embedded provider asset: $file" >&2; exit 1; }
+            done
+          fi
           if has_file .github/workflows/lint.yml || has_file .github/workflows/providers/lint-system.yml; then
             echo "legacy lint workflow asset found" >&2
             exit 1
@@ -336,6 +341,11 @@ jobs:
               exit 1
             }
             has_file .github/actions/quality/run-quality/action.yml && { echo "local quality action present in centralized repo" >&2; exit 1; } || true
+            has_file .github/actions/setup-lint-system/action.yml && { echo "local system setup action present in centralized repo" >&2; exit 1; } || true
+            has_file .github/actions/setup-lint-mise/action.yml && { echo "local mise setup action present in centralized repo" >&2; exit 1; } || true
+            has_file .github/linters/.yaml-lint.yml && { echo "local quality linter config present in centralized repo" >&2; exit 1; } || true
+            has_file scripts/lint-shell.sh && { echo "local shell lint script present in centralized repo" >&2; exit 1; } || true
+            has_file scripts/lint-yaml.sh && { echo "local YAML lint script present in centralized repo" >&2; exit 1; } || true
             printf '%s\n' "$QUALITY_WORKFLOW" | grep -Fq "$CENTRAL_REPOSITORY/.github/workflows/quality.yml@$CENTRAL_REF" || {
               echo "central workflow reference mismatch" >&2
               exit 1

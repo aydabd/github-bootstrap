@@ -1,0 +1,20 @@
+name: Run quality capability
+description: Run one quality capability against the calling repository.
+
+inputs:
+  capability:
+    description: Capability identifier.
+    required: true
+  environment-manager:
+    description: Selected local tooling provider.
+    required: false
+    default: system
+
+runs:
+  using: composite
+  steps:
+    - name: Run selected capability
+      uses: $/.github/actions/quality/run-quality
+      with:
+        capabilities: ${{ inputs.capability }}
+        environment-manager: ${{ inputs['environment-manager'] }}

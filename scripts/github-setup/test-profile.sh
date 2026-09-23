@@ -36,11 +36,40 @@ fi
 [ -f "$repo_root/templates/.github/workflows/centralized-quality.yml" ]
 [ -f "$repo_root/templates/centralized-actions-workflows/examples/consumer-quality.yml" ]
 [ -f "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml" ]
-[ -f "$repo_root/templates/centralized-actions-workflows/.github/actions/setup-lint-mise/action.yml" ]
-[ -f "$repo_root/templates/centralized-actions-workflows/.github/actions/setup-lint-system/action.yml" ]
+for central_quality_asset in \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml" \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-capability/action.yml" \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/setup-lint-mise/action.yml" \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/setup-lint-system/action.yml" \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/scripts/lint-shell.sh" \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/scripts/lint-yaml.sh" \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/config/.markdownlint.json" \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/config/.markdownlintignore" \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/config/.shell-lint-ignore" \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/config/.yaml-lint.yml" \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/config/.yaml-lint-ignore"; do
+    [ -f "$central_quality_asset" ] || {
+        echo "central quality package is missing asset: $central_quality_asset" >&2
+        exit 1
+    }
+done
 grep -q '^  workflow_call:' "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
 if grep -Eq '^  (push|pull_request|workflow_dispatch):' "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"; then
     echo "centralized seed quality workflow must not have repository event triggers" >&2
+    exit 1
+fi
+grep -Fq 'uses: $/.github/actions/setup-lint-mise' \
+    "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+grep -Fq 'uses: $/.github/actions/setup-lint-system' \
+    "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+grep -Fq 'uses: $/.github/actions/quality/run-quality' \
+    "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+grep -Fq 'GITHUB_ACTION_PATH/config' \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"
+grep -Fq 'GITHUB_ACTION_PATH/scripts' \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"
+if grep -Fq "case \"\$capability\" in" "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"; then
+    echo "centralized quality workflow must not embed the capability dispatcher" >&2
     exit 1
 fi
 grep -q '{{CENTRAL_REPOSITORY}}/.github/workflows/quality.yml@{{CENTRAL_REF}}' "$repo_root/templates/.github/workflows/centralized-quality.yml"
@@ -416,21 +445,22 @@ for shell_runner in \
 done
 grep -Fq 'scripts/lint-yaml.sh' "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -Fq 'scripts/lint-yaml.sh' "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
-grep -Fq 'scripts/lint-yaml.sh' "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+grep -Fq 'scripts/lint-yaml.sh' "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"
 grep -Fq 'scripts/lint-shell.sh' "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -Fq 'scripts/lint-shell.sh' "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
-grep -Fq 'scripts/lint-shell.sh' "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+grep -Fq 'scripts/lint-shell.sh' "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"
 grep -Fq -- "--ignore-path \"\$WORKING_DIRECTORY/.github/linters/.markdownlintignore\"" \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -Fq -- '--ignore-path .github/linters/.markdownlintignore' \
-    "$repo_root/templates/.github/actions/quality/run-capability/action.yml" \
-    "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+    "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
+grep -Fq -- 'config/.markdownlintignore' \
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"
 grep -Fq -- '--ignore-path .github/linters/.markdownlintignore' \
     "$repo_root/templates/languages/agnostic/pre-commit-snippets/base.tmpl"
 if grep -Eq 'yamllint.*--ignore|yamllint --config-file' \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml" \
     "$repo_root/templates/.github/actions/quality/run-capability/action.yml" \
-    "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"; then
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"; then
     echo "YAML exclusions must be configured in .yaml-lint-ignore" >&2
     exit 1
 fi
@@ -438,18 +468,18 @@ grep -qF 'provider_run python3 -c "import pytest"' "$repo_root/templates/.github
 grep -qF "provider_run uv run python3 -m pytest" "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -qF 'provider_run python3 -c "import pytest"' "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
 grep -qF "provider_run uv run python3 -m pytest" "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
-grep -qF 'provider_run python3 -c "import pytest"' "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
-grep -qF "provider_run uv run python3 -m pytest" "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+grep -qF 'provider_run python3 -c "import pytest"' "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"
+grep -qF "provider_run uv run python3 -m pytest" "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"
 grep -qF "(cd \"\$WORKING_DIRECTORY\" && LINT_MODE=check provider_run uv run pre-commit run --all-files --color=always)" \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -qF "WORKING_DIRECTORY=\"\$PWD/\$WORKING_DIRECTORY\"" "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
 grep -q 'No Terraform files found; skipping lint-terraform' "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -q 'No Terraform files found; skipping lint-terraform' "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
-grep -q 'No Terraform files found; skipping lint-terraform' "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
+grep -q 'No Terraform files found; skipping lint-terraform' "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"
 for terraform_quality_file in \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml" \
     "$repo_root/templates/.github/actions/quality/run-capability/action.yml" \
-    "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"; do
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"; do
     grep -q 'terraform_dir=' "$terraform_quality_file"
     grep -q 'terraform.*init -backend=false' "$terraform_quality_file"
     grep -q -- "-chdir=\"\$terraform_dir\" validate" "$terraform_quality_file"
@@ -457,7 +487,7 @@ done
 for json_quality_file in \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml" \
     "$repo_root/templates/.github/actions/quality/run-capability/action.yml" \
-    "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"; do
+    "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"; do
     grep -q 'provider_run bash -c' "$json_quality_file"
     grep -Eq -- "-path ['\"]\\./\\.git['\"] -prune -o -path ['\"]\\./node_modules['\"] -prune -o" "$json_quality_file"
     grep -Fq -- '-type f -name' "$json_quality_file"
