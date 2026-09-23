@@ -123,7 +123,7 @@ printf '%s\n' '-----BEGIN PRIVATE KEY-----' 'key' '-----END PRIVATE KEY-----' > 
 printf 'client-secret\n' > "$test_tmp_dir/client-secret"
 printf 'ghr_test-token\n' > "$test_tmp_dir/refresh-token"
 chmod 600 "$test_tmp_dir/client-id" "$test_tmp_dir/private-key" "$test_tmp_dir/client-secret" "$test_tmp_dir/refresh-token"
-if GH_TOKEN=contract-test-token PATH="$test_tmp_dir/bin:$PATH" "$helper" \
+if GH_TOKEN=contract-test-token GITHUB_REPOSITORY=octo/bootstrap PATH="$test_tmp_dir/bin:$PATH" "$helper" \
     octo/repo unknown-profile "$test_tmp_dir/client-id" "$test_tmp_dir/private-key" \
     "$test_tmp_dir/client-secret" "$test_tmp_dir/refresh-token" \
     2> "$test_tmp_dir/installer-error"; then
@@ -145,7 +145,8 @@ EOF
 chmod +x "$test_tmp_dir/success-bin/gh"
 
 : > "$gh_calls"
-if ! GH_TOKEN=contract-test-token PATH="$test_tmp_dir/success-bin:$PATH" "$helper" \
+if ! GH_TOKEN=contract-test-token GITHUB_REPOSITORY=octo/bootstrap \
+    PATH="$test_tmp_dir/success-bin:$PATH" "$helper" \
     octo/repo e2e-admin "$test_tmp_dir/client-id" "$test_tmp_dir/private-key" \
     2> "$test_tmp_dir/e2e-admin-error"; then
     cat "$test_tmp_dir/e2e-admin-error" >&2
