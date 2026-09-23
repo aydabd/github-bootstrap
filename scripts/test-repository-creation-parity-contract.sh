@@ -35,6 +35,10 @@ grep -Fq 'E2E_FIXTURE_LOGIN: ${{ inputs.app_owner }}' "$terraform_workflow" ||
 for workflow in "$api_workflow" "$terraform_workflow"; do
     grep -A4 '^      central_ref:$' "$workflow" | grep -Fq 'type: string' ||
         fail "central_ref must be a string input in $workflow"
+    grep -Fq 'if [ "$DELIVERY_MODE" = "centralized" ] && ! [[ "$CENTRAL_REPOSITORY" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?/[A-Za-z0-9._-]{1,100}$ ]]; then' "$workflow" ||
+        fail "central_repository validation is not aligned with the profile contract in $workflow"
+    grep -Fq 'if [ "$DELIVERY_MODE" = "centralized" ] && ! [[ "$CENTRAL_REF" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+|[0-9a-fA-F]{40})$ ]]; then' "$workflow" ||
+        fail "central_ref validation is not immutable and semver-only in $workflow"
     grep -A4 '^      team_name:$' "$workflow" | grep -Fq 'default: ""' ||
         fail "team_name must default to the authenticated owner in $workflow"
     grep -Fq 'CODEOWNERS_OWNER: ${{ inputs.app_owner }}' "$workflow" ||
