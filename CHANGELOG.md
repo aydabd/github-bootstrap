@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.19.0](https://github.com/aydabd/github-bootstrap/compare/v2.18.0...v2.19.0) (2026-09-24)
+
+
+### Features
+
+* add deterministic agent closeout validator ([#313](https://github.com/aydabd/github-bootstrap/issues/313)) ([2c80bd8](https://github.com/aydabd/github-bootstrap/commit/2c80bd814a52c5766ce5df864d04e3cb024af139))
+
 ## [2.18.0](https://github.com/aydabd/github-bootstrap/compare/v2.17.0...v2.18.0) (2026-09-23)
 
 
