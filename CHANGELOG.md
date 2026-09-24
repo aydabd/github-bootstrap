@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.20.0](https://github.com/aydabd/github-bootstrap/compare/v2.19.0...v2.20.0) (2026-09-24)
+
+
+### Features
+
+* enforce closeout handoff evidence ([#315](https://github.com/aydabd/github-bootstrap/issues/315)) ([2d92062](https://github.com/aydabd/github-bootstrap/commit/2d9206215c3c056872c316f1bd445c044805636e))
+
 ## [2.19.0](https://github.com/aydabd/github-bootstrap/compare/v2.18.0...v2.19.0) (2026-09-24)
 
 
