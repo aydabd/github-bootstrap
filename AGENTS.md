@@ -35,5 +35,16 @@ as deterministic JSON.
 The bootstrap repository must dogfood the same issue-first, project-driven
 workflow that it generates. Repository-specific setup commands and security
 rules remain in the project instructions; lifecycle rules are not duplicated.
-Before PR handoff, complete the closeout gate by reconciling the Issue, linked
-PR, Project state, fresh validation evidence, and deterministic handoff JSON.
+
+Before PR handoff, write deterministic evidence JSON and run:
+
+```bash
+scripts/github-setup/validate-agent-closeout.sh \
+  --repository OWNER/REPOSITORY \
+  --evidence-file PATH/TO/closeout-evidence.json
+```
+
+The evidence must include `issue.acceptance_complete`, the linked PR number and
+base branch, `project.fields` with every required Project field, fresh
+validation counts, and the handoff/process-refinement data. A non-zero result
+or any missing required evidence blocks handoff.

@@ -80,6 +80,21 @@ when any part is missing. Keep ordered implementation tasks in the Issue.
   handoff JSON.
 - Never claim completion from a diff alone.
 
+### Closeout command
+
+Before creating or handing off a PR, write the evidence JSON and run:
+
+```bash
+.github/scripts/validate-agent-closeout.sh \
+  --repository OWNER/REPOSITORY \
+  --evidence-file PATH/TO/closeout-evidence.json
+```
+
+The validator requires explicit `issue.acceptance_complete`, linked PR number
+and base branch, all required `project.fields`, fresh validation counts, and
+handoff/process-refinement evidence. A non-zero result blocks handoff; do not
+infer missing Project metadata from labels or repository defaults.
+
 ## Process improvement
 
 After every issue, bug, failed check, review, or merge, record one reusable
