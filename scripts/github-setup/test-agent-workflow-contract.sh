@@ -52,6 +52,10 @@ if grep -En 'Needs plan|In progress|In review' "$repo_root/templates/.github/wor
 fi
 
 project_sync="$repo_root/templates/.github/workflows/project-status-sync.yml"
+[ -f "$repo_root/.github/workflows/project-status-sync.yml" ] ||
+    fail "bootstrap repository does not dogfood the Project status sync workflow"
+cmp -s "$repo_root/.github/workflows/project-status-sync.yml" "$project_sync" ||
+    fail "root and generated Project status sync workflows differ"
 grep -Fq 'addProjectV2ItemById' "$project_sync" ||
     fail "Project status sync does not auto-add missing content"
 grep -Fq "if [ -z \"\$item_id\" ]; then" "$project_sync" ||
