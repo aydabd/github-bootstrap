@@ -53,6 +53,7 @@ contract_tests=(
     "$script_dir/github-setup/test-generated-e2e-concurrency-contract.sh"
     "$script_dir/github-setup/test-refresh-token-secret-scope-contract.sh"
     "$script_dir/github-setup/test-centralized-monorepo-e2e-contract.sh"
+    "$script_dir/github-setup/test-centralized-quality-interface-contract.sh"
     "$script_dir/github-setup/test-profile.sh"
 )
 

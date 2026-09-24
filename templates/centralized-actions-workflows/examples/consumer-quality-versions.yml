@@ -1,0 +1,28 @@
+# Compatibility fixture: consumers may upgrade independently while sharing the
+# same reusable workflow interface. Replace the example owner and SHA with the
+# central repository and published immutable refs used by the deployment.
+name: Quality from independently pinned central versions
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  release-pinned-consumer:
+    name: release-pinned-consumer
+    uses: "{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}/.github/workflows/quality.yml@v1.0.0"
+    with:
+      capabilities: lint-markdown,lint-json,lint-yaml
+      environment-manager: system
+    permissions:
+      contents: read
+
+  sha-pinned-consumer:
+    name: sha-pinned-consumer
+    uses: "{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}/.github/workflows/quality.yml@0123456789abcdef0123456789abcdef01234567"
+    with:
+      capabilities: lint-shell,lint-format,lint-tests
+      environment-manager: system
+    permissions:
+      contents: read
