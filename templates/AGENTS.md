@@ -36,6 +36,19 @@ repository adapter; do not fork the lifecycle.
 Before PR handoff, complete the closeout gate by reconciling the Issue, linked
 PR, Project state, fresh validation evidence, and deterministic handoff JSON.
 
+Before PR handoff, write deterministic evidence JSON and run:
+
+```bash
+.github/scripts/validate-agent-closeout.sh \
+  --repository OWNER/REPOSITORY \
+  --evidence-file PATH/TO/closeout-evidence.json
+```
+
+The evidence must include `issue.acceptance_complete`, the linked PR number and
+base branch, `project.fields` with every required Project field, fresh
+validation counts, and the handoff/process-refinement data. A non-zero result
+or any missing required evidence blocks handoff.
+
 Required skill resolution is fail-closed: resolve repository lifecycle skills
 from the repository skill catalog at `.github/skills/` before checking the
 external Superpowers plugin. Never declare a required skill missing until both

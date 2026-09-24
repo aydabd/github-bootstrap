@@ -85,6 +85,28 @@ for instructions in "$repo_root/AGENTS.md" "$repo_root/templates/AGENTS.md" "$re
         fail "fail-closed skill resolution rule is missing from $instructions"
     grep -Fiq 'closeout' "$instructions" ||
         fail "closeout handoff gate is missing from $instructions"
+    grep -Fq 'acceptance_complete' "$instructions" ||
+        fail "closeout acceptance evidence requirement is missing from $instructions"
+    grep -Fq 'project.fields' "$instructions" ||
+        fail "closeout Project-field evidence requirement is missing from $instructions"
+done
+
+for instructions in "$repo_root/AGENTS.md" "$repo_root/.github/skills/agent-operating-loop/SKILL.md"; do
+    grep -Fq 'scripts/github-setup/validate-agent-closeout.sh' "$instructions" ||
+        fail "root closeout validator path is missing from $instructions"
+    grep -Fq -- '--repository OWNER/REPOSITORY' "$instructions" ||
+        fail "root closeout repository argument is missing from $instructions"
+    grep -Fq -- '--evidence-file PATH/TO/closeout-evidence.json' "$instructions" ||
+        fail "root closeout evidence-file argument is missing from $instructions"
+done
+
+for instructions in "$repo_root/templates/AGENTS.md" "$repo_root/templates/.github/skills/agent-operating-loop/SKILL.md"; do
+    grep -Fq '.github/scripts/validate-agent-closeout.sh' "$instructions" ||
+        fail "generated-repository closeout validator path is missing from $instructions"
+    grep -Fq -- '--repository OWNER/REPOSITORY' "$instructions" ||
+        fail "generated-repository closeout repository argument is missing from $instructions"
+    grep -Fq -- '--evidence-file PATH/TO/closeout-evidence.json' "$instructions" ||
+        fail "generated-repository closeout evidence-file argument is missing from $instructions"
 done
 
 for workflow in .github/workflows/create-repository.yml .github/workflows/terraform-create-repository.yml; do

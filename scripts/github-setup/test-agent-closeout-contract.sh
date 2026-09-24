@@ -70,6 +70,16 @@ missing_link_result="$($validator --repository OWNER/repository --evidence-file 
 printf '%s\n' "$missing_link_result" | jq -e 'any(.checks[]; (.check | contains("linked-issue")) and .result == "FAIL")' > /dev/null ||
     fail "missing linked issue was not reported as a failed check"
 
+jq 'del(.pull_request.base)' "$fixture" > "$invalid"
+missing_base_result="$($validator --repository OWNER/repository --evidence-file "$invalid" || true)"
+printf '%s\n' "$missing_base_result" | jq -e 'any(.checks[]; (.check | contains("pull-request-base")) and .result == "FAIL")' > /dev/null ||
+    fail "missing pull request base was not reported as a failed check"
+
+jq '.issue.acceptance_complete = false' "$fixture" > "$invalid"
+stale_acceptance_result="$($validator --repository OWNER/repository --evidence-file "$invalid" || true)"
+printf '%s\n' "$stale_acceptance_result" | jq -e 'any(.checks[]; (.check | contains("acceptance-complete")) and .result == "FAIL")' > /dev/null ||
+    fail "incomplete acceptance evidence was not reported as a failed check"
+
 jq 'del(.project.fields.Risk)' "$fixture" > "$invalid"
 if "$validator" --repository OWNER/repository --evidence-file "$invalid" > /dev/null 2>&1; then
     fail "missing required Project field was accepted"
