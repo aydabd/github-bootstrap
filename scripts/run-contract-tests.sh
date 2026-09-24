@@ -24,6 +24,7 @@ contract_tests=(
     "$script_dir/github-setup/test-app-credential-profile-contract.sh"
     "$script_dir/github-setup/test-manage-app-setup-contract.sh"
     "$script_dir/github-setup/test-agent-workflow-contract.sh"
+    "$script_dir/github-setup/test-agent-closeout-contract.sh"
     "$script_dir/github-setup/test-agent-audit-contract.sh"
     "$script_dir/github-setup/test-agent-provenance-contract.sh"
     "$script_dir/github-setup/test-agent-github-verifier-contract.sh"
