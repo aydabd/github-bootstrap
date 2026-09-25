@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.23.0](https://github.com/aydabd/github-bootstrap/compare/v2.22.0...v2.23.0) (2026-09-25)
+
+
+### Features
+
+* **workflows:** validate portable repository configuration ([#320](https://github.com/aydabd/github-bootstrap/issues/320)) ([f48a39c](https://github.com/aydabd/github-bootstrap/commit/f48a39c370e2507b302cdc13f60edbd18c46e198))
+
 ## [2.22.0](https://github.com/aydabd/github-bootstrap/compare/v2.21.0...v2.22.0) (2026-09-25)
 
 
