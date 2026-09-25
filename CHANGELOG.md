@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.21.0](https://github.com/aydabd/github-bootstrap/compare/v2.20.0...v2.21.0) (2026-09-25)
+
+
+### Features
+
+* dogfood project status sync ([#317](https://github.com/aydabd/github-bootstrap/issues/317)) ([feed6d4](https://github.com/aydabd/github-bootstrap/commit/feed6d44ff0db8238c544386bf8fa37dd20ca556))
+
 ## [2.20.0](https://github.com/aydabd/github-bootstrap/compare/v2.19.0...v2.20.0) (2026-09-24)
 
 
