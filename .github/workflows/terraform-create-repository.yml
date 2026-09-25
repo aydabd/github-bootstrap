@@ -360,6 +360,9 @@ jobs:
       project_number: ${{ steps.portable.outputs.project_number }}
       token_mode: ${{ steps.portable.outputs.token_mode }}
       team_name: ${{ steps.portable.outputs.team_name }}
+      delivery_mode: ${{ steps.portable.outputs.delivery_mode }}
+      central_repository: ${{ steps.portable.outputs.central_repository }}
+      central_ref: ${{ steps.portable.outputs.central_ref }}
     steps:
       - name: Validate portable fields before Terraform
         id: portable
@@ -395,15 +398,6 @@ jobs:
           OWNER_TYPE="${OWNER_TYPE:-auto}"
           APP_PERMISSION_PROFILE="${APP_PERMISSION_PROFILE:-repository-creation}"
           TOKEN_MODE="${TOKEN_MODE:-auto}"
-          {
-            echo "owner_type=$OWNER_TYPE"
-            echo "app_installation_identity=$APP_INSTALLATION_IDENTITY"
-            echo "app_permission_profile=$APP_PERMISSION_PROFILE"
-            echo "project_owner=$PROJECT_OWNER"
-            echo "project_number=$PROJECT_NUMBER"
-            echo "token_mode=$TOKEN_MODE"
-            echo "team_name=$TEAM_NAME"
-          } >> "$GITHUB_OUTPUT"
           case "$OWNER_TYPE" in
             auto|user|organization) ;;
             *) echo "::error::Invalid owner_type '$OWNER_TYPE'. Allowed: auto, user, organization" >&2; exit 1 ;;
@@ -447,6 +441,19 @@ jobs:
             echo "::error::central_ref must be a vMAJOR.MINOR.PATCH tag or 40-character commit SHA" >&2
             exit 1
           fi
+          PROJECT_NUMBER_OUTPUT="${PROJECT_NUMBER:-null}"
+          {
+            echo "owner_type=$OWNER_TYPE"
+            echo "app_installation_identity=$APP_INSTALLATION_IDENTITY"
+            echo "app_permission_profile=$APP_PERMISSION_PROFILE"
+            echo "project_owner=$PROJECT_OWNER"
+            echo "project_number=$PROJECT_NUMBER_OUTPUT"
+            echo "token_mode=$TOKEN_MODE"
+            echo "team_name=$TEAM_NAME"
+            echo "delivery_mode=$DELIVERY_MODE"
+            echo "central_repository=$CENTRAL_REPOSITORY"
+            echo "central_ref=$CENTRAL_REF"
+          } >> "$GITHUB_OUTPUT"
 
   terraform-create-repository:
     name: Terraform Create Repository
@@ -732,11 +739,11 @@ jobs:
           TF_VAR_app_installation_identity: ${{ needs.validate-portable-configuration.outputs.app_installation_identity }}
           TF_VAR_app_permission_profile: ${{ needs.validate-portable-configuration.outputs.app_permission_profile }}
           TF_VAR_project_owner: ${{ needs.validate-portable-configuration.outputs.project_owner }}
-          TF_VAR_project_number: ${{ needs.validate-portable-configuration.outputs.project_number }}
+          TF_VAR_project_number: ${{ needs.validate-portable-configuration.outputs.project_number || 'null' }}
           TF_VAR_token_mode: ${{ needs.validate-portable-configuration.outputs.token_mode }}
-          TF_VAR_delivery_mode: ${{ inputs.delivery_mode || 'embedded' }}
-          TF_VAR_central_repository: ${{ inputs.central_repository }}
-          TF_VAR_central_ref: ${{ inputs.central_ref }}
+          TF_VAR_delivery_mode: ${{ needs.validate-portable-configuration.outputs.delivery_mode }}
+          TF_VAR_central_repository: ${{ needs.validate-portable-configuration.outputs.central_repository }}
+          TF_VAR_central_ref: ${{ needs.validate-portable-configuration.outputs.central_ref }}
         run: terraform plan -out=tfplan
 
       - name: Terraform Apply
@@ -755,11 +762,11 @@ jobs:
           TF_VAR_app_installation_identity: ${{ needs.validate-portable-configuration.outputs.app_installation_identity }}
           TF_VAR_app_permission_profile: ${{ needs.validate-portable-configuration.outputs.app_permission_profile }}
           TF_VAR_project_owner: ${{ needs.validate-portable-configuration.outputs.project_owner }}
-          TF_VAR_project_number: ${{ needs.validate-portable-configuration.outputs.project_number }}
+          TF_VAR_project_number: ${{ needs.validate-portable-configuration.outputs.project_number || 'null' }}
           TF_VAR_token_mode: ${{ needs.validate-portable-configuration.outputs.token_mode }}
-          TF_VAR_delivery_mode: ${{ inputs.delivery_mode || 'embedded' }}
-          TF_VAR_central_repository: ${{ inputs.central_repository }}
-          TF_VAR_central_ref: ${{ inputs.central_ref }}
+          TF_VAR_delivery_mode: ${{ needs.validate-portable-configuration.outputs.delivery_mode }}
+          TF_VAR_central_repository: ${{ needs.validate-portable-configuration.outputs.central_repository }}
+          TF_VAR_central_ref: ${{ needs.validate-portable-configuration.outputs.central_ref }}
         run: terraform apply -auto-approve tfplan
 
       - name: Check repository created

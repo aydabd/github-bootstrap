@@ -95,6 +95,20 @@ for variable in owner_type app_installation_identity app_permission_profile proj
     grep -Fq "TF_VAR_${variable}:" "$terraform_workflow" ||
         fail "Terraform workflow does not pass TF_VAR_${variable}"
 done
+grep -Fq 'delivery_mode: ${{ steps.portable.outputs.delivery_mode }}' "$terraform_workflow" ||
+    fail "Terraform preflight does not emit normalized delivery_mode"
+grep -Fq 'central_repository: ${{ steps.portable.outputs.central_repository }}' "$terraform_workflow" ||
+    fail "Terraform preflight does not emit normalized central_repository"
+grep -Fq 'central_ref: ${{ steps.portable.outputs.central_ref }}' "$terraform_workflow" ||
+    fail "Terraform preflight does not emit normalized central_ref"
+grep -Fq 'PROJECT_NUMBER_OUTPUT="${PROJECT_NUMBER:-null}"' "$terraform_workflow" ||
+    fail "Terraform preflight does not null-normalize an omitted project number"
+grep -Fq "TF_VAR_project_number: \${{ needs.validate-portable-configuration.outputs.project_number || 'null' }}" "$terraform_workflow" ||
+    fail "Terraform plan/apply does not use a null-safe project number"
+for variable in delivery_mode central_repository central_ref; do
+    grep -Fq "TF_VAR_${variable}: \${{ needs.validate-portable-configuration.outputs.${variable} }}" "$terraform_workflow" ||
+        fail "Terraform plan/apply does not use normalized ${variable}"
+done
 grep -Fq 'project_owner and project_number must be supplied together' "$terraform_workflow" ||
     fail "Terraform project owner/number pair validation is missing"
 grep -Fq 'central_ref must be a vMAJOR.MINOR.PATCH tag or 40-character commit SHA' "$terraform_workflow" ||
