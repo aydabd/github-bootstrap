@@ -9,6 +9,21 @@ resource "github_repository" "new_repo" {
   has_wiki     = false
   auto_init    = true
 
+  lifecycle {
+    precondition {
+      condition     = (var.project_owner == "") == (var.project_number == null)
+      error_message = "project_owner and project_number must be supplied together."
+    }
+    precondition {
+      condition     = var.delivery_mode != "centralized" || (var.central_repository != "" && var.central_ref != "")
+      error_message = "central_repository and central_ref are required for centralized delivery."
+    }
+    precondition {
+      condition     = var.delivery_mode != "centralized" || can(regex("^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?/[A-Za-z0-9._-]{1,100}$", var.central_repository))
+      error_message = "central_repository must match OWNER/REPOSITORY."
+    }
+  }
+
 }
 
 # Create development environment (no wait, no reviewers required)

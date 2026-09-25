@@ -53,16 +53,25 @@ allowlists and targets outside that explicit list.
 
 ## Input Variables
 
-| Variable           | Required | Default                                    | Description                                                                                                                                      |
-| ------------------ | -------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `github_token`     | **Yes**  | -                                          | GitHub App installation token for organization targets or GitHub App user access token for personal targets, supplied internally by the workflow |
-| `repo_name`        | **Yes**  | -                                          | New repository name                                                                                                                              |
-| `repo_owner`       | No       | `""`                                       | Repository owner; may be an organization or the authorized personal account. When empty, the GitHub provider uses the authenticated token owner. |
-| `repo_description` | No       | `"Repository following SOLID principles…"` | Repository description                                                                                                                           |
-| `visibility`       | No       | `"public"`                                 | `public`, `private`, or `internal`                                                                                                               |
-| `team_name`        | No       | `""`                                       | CODEOWNERS owner as a GitHub username or `org/team`; empty uses the workflow app owner (no direct Terraform effect)                              |
-| `license_holder`   | No       | `""` (uses `repo_owner`)                   | License copyright holder used only when the wrapper workflow templates the LICENSE file (no direct Terraform effect)                             |
-| `languages`        | No       | `"language-agnostic-only"`                 | Comma-separated languages used by the wrapper workflow for pre-commit rendering and tooling selection (no direct Terraform effect)               |
+| Variable                    | Required | Default                                    | Description                                                                                                                                      |
+| --------------------------- | -------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `github_token`              | **Yes**  | -                                          | GitHub App installation token for organization targets or GitHub App user access token for personal targets, supplied internally by the workflow |
+| `repo_name`                 | **Yes**  | -                                          | New repository name                                                                                                                              |
+| `repo_owner`                | No       | `""`                                       | Repository owner; may be an organization or the authorized personal account. When empty, the GitHub provider uses the authenticated token owner. |
+| `owner_type`                | No       | `"auto"`                                   | Target owner type: `auto`, `user`, or `organization`.                                                                                            |
+| `app_installation_identity` | No       | `""`                                       | GitHub App installation owner or identity; empty preserves the workflow's `app_owner` fallback.                                                  |
+| `app_permission_profile`    | No       | `"repository-creation"`                    | Explicit App permission profile used for repository creation.                                                                                    |
+| `project_owner`             | No       | `""`                                       | Optional GitHub Project owner; must be supplied with `project_number`.                                                                           |
+| `project_number`            | No       | `null`                                     | Optional positive GitHub Project number; must be supplied with `project_owner`.                                                                  |
+| `token_mode`                | No       | `"auto"`                                   | Token selection mode: `auto`, `installation`, or `user`.                                                                                         |
+| `delivery_mode`             | No       | `"embedded"`                               | Workflow delivery mode: `embedded` or `centralized`.                                                                                             |
+| `central_repository`        | No       | `""`                                       | Central workflow repository in `OWNER/REPOSITORY` form when centralized delivery is selected.                                                    |
+| `central_ref`               | No       | `""`                                       | Immutable centralized workflow ref: `vMAJOR.MINOR.PATCH` or a 40-character commit SHA.                                                           |
+| `repo_description`          | No       | `"Repository following SOLID principles…"` | Repository description                                                                                                                           |
+| `visibility`                | No       | `"public"`                                 | `public`, `private`, or `internal`                                                                                                               |
+| `team_name`                 | No       | `""`                                       | CODEOWNERS owner as a GitHub username or `org/team`; empty uses the workflow app owner (no direct Terraform effect)                              |
+| `license_holder`            | No       | `""` (uses `repo_owner`)                   | License copyright holder used only when the wrapper workflow templates the LICENSE file (no direct Terraform effect)                             |
+| `languages`                 | No       | `"language-agnostic-only"`                 | Comma-separated languages used by the wrapper workflow for pre-commit rendering and tooling selection (no direct Terraform effect)               |
 
 ## Outputs
 
