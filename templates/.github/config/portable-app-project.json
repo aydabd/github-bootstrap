@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "owner_type": "organization",
-  "app_installation_identity": "leniva-ab-governance",
+  "app_installation_identity": "{{APP_INSTALLATION_IDENTITY}}",
   "app_permission_profile": "governance-runtime",
-  "project_owner": "leniva-ab",
+  "project_owner": "{{PROJECT_OWNER}}",
   "project_number": 1,
   "token_mode": "installation",
-  "central_repository": "leniva-ab/governance",
-  "central_ref": "v1.0.0"
+  "central_repository": "{{CENTRAL_REPOSITORY}}",
+  "central_ref": "{{CENTRAL_REF}}"
 }

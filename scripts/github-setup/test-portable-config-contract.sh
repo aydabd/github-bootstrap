@@ -22,46 +22,54 @@ assert_json_result() {
 [ -x "$validator" ] || fail "portable config validator is not executable"
 [ -f "$config" ] || fail "portable app/project config is missing"
 
-configured_owner="$(jq -r '.project_owner' "$config")"
-configured_repository="$(jq -r '.central_repository' "$config")"
-configured_ref="$(jq -r '.central_ref' "$config")"
-valid_output="$($validator --config-file "$config" --owner "$configured_owner" --repository "$configured_repository" --ref "$configured_ref")"
+temp_root="$(mktemp -d)"
+trap 'rm -rf "$temp_root"' EXIT
+
+rendered_config="$temp_root/rendered-config.json"
+sed \
+    -e 's/{{APP_INSTALLATION_IDENTITY}}/example-governance/' \
+    -e 's/{{PROJECT_OWNER}}/example-org/' \
+    -e 's/{{CENTRAL_REPOSITORY}}/example-org\/governance/' \
+    -e 's/{{CENTRAL_REF}}/v1.0.0/' \
+    "$config" > "$rendered_config"
+
+configured_owner="$(jq -r '.project_owner' "$rendered_config")"
+configured_repository="$(jq -r '.central_repository' "$rendered_config")"
+configured_ref="$(jq -r '.central_ref' "$rendered_config")"
+valid_output="$($validator --config-file "$rendered_config" --owner "$configured_owner" --repository "$configured_repository" --ref "$configured_ref")"
 printf '%s\n' "$valid_output" | jq -e '
     .schema_version == 1 and .result == "PASS" and
     .summary.failed == 0 and .summary.skipped == 0 and
     ([.checks[] | select(.result == "PASS")] | length) >= 7
 ' > /dev/null || fail "valid config did not produce deterministic PASS output"
 
-temp_root="$(mktemp -d)"
-trap 'rm -rf "$temp_root"' EXIT
-
-jq '. + {private_key: "-----BEGIN PRIVATE KEY-----"}' "$config" > "$temp_root/secret.json"
+jq '. + {private_key: "-----BEGIN PRIVATE KEY-----"}' "$rendered_config" > "$temp_root/secret.json"
 secret_output="$($validator --config-file "$temp_root/secret.json" --owner "$configured_owner" --repository "$configured_repository" --ref "$configured_ref" || true)"
 assert_json_result FAIL SECRET_EXPOSURE "$secret_output"
 
-jq '.central_ref = "main"' "$config" > "$temp_root/mutable-ref.json"
+jq '.central_ref = "main"' "$rendered_config" > "$temp_root/mutable-ref.json"
 mutable_output="$($validator --config-file "$temp_root/mutable-ref.json" --owner "$configured_owner" --repository "$configured_repository" --ref "$configured_ref" || true)"
 assert_json_result FAIL IMMUTABLE_REF_REQUIRED "$mutable_output"
 
-jq '.project_owner = "other-user"' "$config" > "$temp_root/wrong-owner.json"
+jq '.project_owner = "other-user"' "$rendered_config" > "$temp_root/wrong-owner.json"
 owner_output="$($validator --config-file "$temp_root/wrong-owner.json" --owner "$configured_owner" --repository "$configured_repository" --ref "$configured_ref" || true)"
 assert_json_result FAIL PROJECT_OWNER_MISMATCH "$owner_output"
 
-jq '.central_repository = "other-org/governance"' "$config" > "$temp_root/wrong-repository.json"
+jq '.central_repository = "other-org/governance"' "$rendered_config" > "$temp_root/wrong-repository.json"
 repository_output="$($validator --config-file "$temp_root/wrong-repository.json" --owner "$configured_owner" --repository "$configured_repository" --ref "$configured_ref" || true)"
 assert_json_result FAIL CENTRAL_REPOSITORY_MISMATCH "$repository_output"
 
-invalid_ref_output="$($validator --config-file "$config" --owner "$configured_owner" --repository "$configured_repository" --ref main || true)"
+invalid_ref_output="$($validator --config-file "$rendered_config" --owner "$configured_owner" --repository "$configured_repository" --ref main || true)"
 assert_json_result FAIL IMMUTABLE_REF_REQUIRED "$invalid_ref_output"
 
-jq '. + {license_holder: "leniva-ab/license-holder"}' "$config" > "$temp_root/license-holder.json"
+jq --arg license_holder "$configured_owner/license-holder" '. + {license_holder: $license_holder}' "$rendered_config" > "$temp_root/license-holder.json"
 license_holder_output="$($validator --config-file "$temp_root/license-holder.json" --owner "$configured_owner" --repository "$configured_repository" --ref "$configured_ref")"
 printf '%s\n' "$license_holder_output" | jq -e '
     .result == "PASS" and
     ([.checks[] | select(.check == "license-holder" and .result == "PASS")] | length) == 1
 ' > /dev/null || fail "safe optional license_holder was not accepted: $license_holder_output"
 
-jq '. + {license_holder: "leniva-ab;rm -rf"}' "$config" > "$temp_root/unsafe-license-holder.json"
+jq '. + {license_holder: "example-org;rm -rf"}' "$rendered_config" > "$temp_root/unsafe-license-holder.json"
 unsafe_license_holder_output="$($validator --config-file "$temp_root/unsafe-license-holder.json" --owner "$configured_owner" --repository "$configured_repository" --ref "$configured_ref" || true)"
 assert_json_result FAIL INVALID_LICENSE_HOLDER "$unsafe_license_holder_output"
 
