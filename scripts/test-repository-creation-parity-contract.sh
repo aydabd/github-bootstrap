@@ -6,6 +6,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 api_workflow="$repo_root/.github/workflows/create-repository.yml"
 terraform_workflow="$repo_root/.github/workflows/terraform-create-repository.yml"
 terraform_main="$repo_root/terraform/main.tf"
+terraform_variables="$repo_root/terraform/variables.tf"
 
 fail() {
     echo "repository creation parity contract failure: $1" >&2
@@ -31,6 +32,89 @@ grep -Fq 'E2E_FIXTURE_LOGIN: ${{ inputs.app_owner }}' "$api_workflow" ||
     fail "API workflow fixture login binding is missing"
 grep -Fq 'E2E_FIXTURE_LOGIN: ${{ inputs.app_owner }}' "$terraform_workflow" ||
     fail "Terraform workflow fixture login binding is not equivalent to the API workflow"
+
+grep -A6 '^      portable_config:$' "$api_workflow" | grep -Fq 'type: string' ||
+    fail "workflow_dispatch portable_config envelope is missing"
+grep -A1 '^      portable_config:$' "$api_workflow" | grep -Fq 'license_holder' ||
+    fail "portable_config must document license_holder compatibility"
+for input in owner_type app_installation_identity app_permission_profile project_owner project_number token_mode; do
+    workflow_call_block="$(sed -n '/^  workflow_call:/,/^    secrets:/p' "$api_workflow")"
+    printf '%s\n' "$workflow_call_block" | grep -A4 "^      ${input}:$" | grep -Eq 'type: (string|number)' ||
+        fail "workflow_call is missing portable input ${input}"
+done
+
+resolve_token_block="$(sed -n '/^      - name: Resolve GitHub token/,/^      - name:/p' "$api_workflow")"
+printf '%s\n' "$resolve_token_block" | grep -Fq 'app_owner: ${{ inputs.app_owner }}' ||
+    fail "repository token resolution must remain bound to inputs.app_owner"
+if printf '%s\n' "$resolve_token_block" | grep -Fq 'app_installation_identity'; then
+    fail "app_installation_identity must remain metadata-only in this slice"
+fi
+
+for variable in owner_type app_installation_identity app_permission_profile project_owner project_number token_mode; do
+    grep -Fq "variable \"${variable}\"" "$terraform_variables" ||
+        fail "Terraform variable ${variable} is missing"
+done
+
+grep -Fq 'name: Validate portable repository configuration' "$api_workflow" ||
+    fail "portable configuration preflight job is missing"
+preflight_line="$(grep -n '^  validate-portable-configuration:' "$api_workflow" | cut -d: -f1)"
+create_line="$(grep -n '^  create-repository:' "$api_workflow" | cut -d: -f1)"
+if [ -z "$preflight_line" ] || [ "$preflight_line" -ge "$create_line" ]; then
+    fail "portable configuration preflight must run before repository creation"
+fi
+preflight_block="$(sed -n "${preflight_line},${create_line}p" "$api_workflow")"
+if printf '%s\n' "$preflight_block" | grep -Eq 'gh (api|repo)|actions/checkout|resolve-gh-token|configure-provisioner'; then
+    fail "portable configuration preflight must not contact GitHub"
+fi
+grep -Fq 'project_owner and project_number must be supplied together' "$api_workflow" ||
+    fail "project owner/number pair validation is missing"
+grep -Fq 'central_ref must be a vMAJOR.MINOR.PATCH tag or 40-character commit SHA' "$api_workflow" ||
+    fail "immutable central ref validation is missing"
+grep -Fq 'INPUT_LICENSE_HOLDER: ${{ inputs.license_holder || needs.validate-portable-configuration.outputs.license_holder }}' "$api_workflow" ||
+    fail "license_holder compatibility fallback is missing"
+
+terraform_workflow_call="$(sed -n '/^  workflow_call:/,/^    secrets:/p' "$terraform_workflow")"
+grep -A6 '^      portable_config:$' "$terraform_workflow" | grep -Fq 'type: string' ||
+    fail "Terraform workflow_dispatch portable_config envelope is missing"
+grep -A4 '^      license_holder:$' "$terraform_workflow" | grep -Fq 'type: string' ||
+    fail "Terraform workflow_dispatch license_holder input was removed"
+for input in owner_type app_installation_identity app_permission_profile project_owner project_number token_mode; do
+    printf '%s\n' "$terraform_workflow_call" | grep -A4 "^      ${input}:$" | grep -Eq 'type: (string|number)' ||
+        fail "Terraform workflow_call is missing portable input ${input}"
+done
+grep -Fq 'name: Validate portable repository configuration' "$terraform_workflow" ||
+    fail "Terraform portable configuration preflight job is missing"
+terraform_preflight_line="$(grep -n '^  validate-portable-configuration:' "$terraform_workflow" | cut -d: -f1)"
+terraform_create_line="$(grep -n '^  terraform-create-repository:' "$terraform_workflow" | cut -d: -f1)"
+if [ -z "$terraform_preflight_line" ] || [ "$terraform_preflight_line" -ge "$terraform_create_line" ]; then
+    fail "Terraform portable configuration preflight must run before plan/apply job"
+fi
+terraform_preflight_block="$(sed -n "${terraform_preflight_line},${terraform_create_line}p" "$terraform_workflow")"
+if printf '%s\n' "$terraform_preflight_block" | grep -Eq 'gh (api|repo)|actions/checkout|resolve-gh-token|configure-provisioner'; then
+    fail "Terraform portable configuration preflight must not contact GitHub"
+fi
+for variable in owner_type app_installation_identity app_permission_profile project_owner project_number token_mode delivery_mode central_repository central_ref; do
+    grep -Fq "TF_VAR_${variable}:" "$terraform_workflow" ||
+        fail "Terraform workflow does not pass TF_VAR_${variable}"
+done
+grep -Fq 'delivery_mode: ${{ steps.portable.outputs.delivery_mode }}' "$terraform_workflow" ||
+    fail "Terraform preflight does not emit normalized delivery_mode"
+grep -Fq 'central_repository: ${{ steps.portable.outputs.central_repository }}' "$terraform_workflow" ||
+    fail "Terraform preflight does not emit normalized central_repository"
+grep -Fq 'central_ref: ${{ steps.portable.outputs.central_ref }}' "$terraform_workflow" ||
+    fail "Terraform preflight does not emit normalized central_ref"
+grep -Fq 'PROJECT_NUMBER_OUTPUT="${PROJECT_NUMBER:-null}"' "$terraform_workflow" ||
+    fail "Terraform preflight does not null-normalize an omitted project number"
+grep -Fq "TF_VAR_project_number: \${{ needs.validate-portable-configuration.outputs.project_number || 'null' }}" "$terraform_workflow" ||
+    fail "Terraform plan/apply does not use a null-safe project number"
+for variable in delivery_mode central_repository central_ref; do
+    grep -Fq "TF_VAR_${variable}: \${{ needs.validate-portable-configuration.outputs.${variable} }}" "$terraform_workflow" ||
+        fail "Terraform plan/apply does not use normalized ${variable}"
+done
+grep -Fq 'project_owner and project_number must be supplied together' "$terraform_workflow" ||
+    fail "Terraform project owner/number pair validation is missing"
+grep -Fq 'central_ref must be a vMAJOR.MINOR.PATCH tag or 40-character commit SHA' "$terraform_workflow" ||
+    fail "Terraform immutable central ref validation is missing"
 
 for workflow in "$api_workflow" "$terraform_workflow"; do
     grep -A4 '^      central_ref:$' "$workflow" | grep -Fq 'type: string' ||
