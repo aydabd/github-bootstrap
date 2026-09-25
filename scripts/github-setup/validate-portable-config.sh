@@ -9,7 +9,7 @@ expected_ref=""
 usage() {
     cat << 'USAGE'
 Usage: validate-portable-config.sh --config-file PATH [--owner OWNER]
-       [--repository OWNER/REPOSITORY] [--ref IMMUTABLE_REF]
+[--repository OWNER/REPOSITORY] [--ref IMMUTABLE_REF]
 USAGE
 }
 
