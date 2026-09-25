@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.22.0](https://github.com/aydabd/github-bootstrap/compare/v2.21.0...v2.22.0) (2026-09-25)
+
+
+### Features
+
+* **config:** add portable App and Project preflight contract ([#319](https://github.com/aydabd/github-bootstrap/issues/319)) ([666e2b2](https://github.com/aydabd/github-bootstrap/commit/666e2b2ea7b0a0099aa0edeec55b39eef3e3b1a6))
+
 ## [2.21.0](https://github.com/aydabd/github-bootstrap/compare/v2.20.0...v2.21.0) (2026-09-25)
 
 
