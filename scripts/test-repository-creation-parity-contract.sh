@@ -59,8 +59,9 @@ grep -Fq 'name: Validate portable repository configuration' "$api_workflow" ||
     fail "portable configuration preflight job is missing"
 preflight_line="$(grep -n '^  validate-portable-configuration:' "$api_workflow" | cut -d: -f1)"
 create_line="$(grep -n '^  create-repository:' "$api_workflow" | cut -d: -f1)"
-[ -n "$preflight_line" ] && [ "$preflight_line" -lt "$create_line" ] ||
+if [ -z "$preflight_line" ] || [ "$preflight_line" -ge "$create_line" ]; then
     fail "portable configuration preflight must run before repository creation"
+fi
 preflight_block="$(sed -n "${preflight_line},${create_line}p" "$api_workflow")"
 if printf '%s\n' "$preflight_block" | grep -Eq 'gh (api|repo)|actions/checkout|resolve-gh-token|configure-provisioner'; then
     fail "portable configuration preflight must not contact GitHub"
@@ -85,8 +86,9 @@ grep -Fq 'name: Validate portable repository configuration' "$terraform_workflow
     fail "Terraform portable configuration preflight job is missing"
 terraform_preflight_line="$(grep -n '^  validate-portable-configuration:' "$terraform_workflow" | cut -d: -f1)"
 terraform_create_line="$(grep -n '^  terraform-create-repository:' "$terraform_workflow" | cut -d: -f1)"
-[ -n "$terraform_preflight_line" ] && [ "$terraform_preflight_line" -lt "$terraform_create_line" ] ||
+if [ -z "$terraform_preflight_line" ] || [ "$terraform_preflight_line" -ge "$terraform_create_line" ]; then
     fail "Terraform portable configuration preflight must run before plan/apply job"
+fi
 terraform_preflight_block="$(sed -n "${terraform_preflight_line},${terraform_create_line}p" "$terraform_workflow")"
 if printf '%s\n' "$terraform_preflight_block" | grep -Eq 'gh (api|repo)|actions/checkout|resolve-gh-token|configure-provisioner'; then
     fail "Terraform portable configuration preflight must not contact GitHub"
