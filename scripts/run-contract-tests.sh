@@ -20,6 +20,7 @@ contract_tests=(
     "$script_dir/test-weekly-tooling-lock-refresh-contract.sh"
     "$script_dir/check-commit-policy-fixtures.sh"
     "$script_dir/github-setup/test-app-auth-contract.sh"
+    "$script_dir/github-setup/test-token-connector-contract.sh"
     "$script_dir/github-setup/test-maintenance-credentials-action.sh"
     "$script_dir/github-setup/test-app-credential-profile-contract.sh"
     "$script_dir/github-setup/test-manage-app-setup-contract.sh"

@@ -670,7 +670,9 @@ jobs:
           refresh_token_secret: ${{ env.PROVISIONER_REFRESH_TOKEN_NAME }}
           refresh_token_secret_environment: ${{ env.PROVISIONER_ENVIRONMENT }}
           app_owner: ${{ inputs.app_owner }}
+          app_installation_identity: ${{ needs.validate-portable-configuration.outputs.app_installation_identity }}
           target_owner: ${{ steps.set-owner.outputs.owner }}
+          token_mode: ${{ needs.validate-portable-configuration.outputs.token_mode || 'auto' }}
           permission_profile: ${{ needs.validate-portable-configuration.outputs.app_permission_profile || 'repository-creation' }}
 
       - name: Reject internal visibility for personal accounts
