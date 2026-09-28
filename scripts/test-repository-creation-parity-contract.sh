@@ -5,6 +5,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 api_workflow="$repo_root/.github/workflows/create-repository.yml"
 terraform_workflow="$repo_root/.github/workflows/terraform-create-repository.yml"
+e2e_workflow="$repo_root/.github/workflows/test-repository-creation.yml"
 terraform_main="$repo_root/terraform/main.tf"
 terraform_variables="$repo_root/terraform/variables.tf"
 
@@ -12,6 +13,11 @@ fail() {
     echo "repository creation parity contract failure: $1" >&2
     exit 1
 }
+
+trigger_block="$(sed -n '/^      - name: Trigger repository creation workflow/,/^      - name:/p' "$e2e_workflow")"
+if printf '%s\n' "$trigger_block" | grep -Fq 'license_holder'; then
+    fail "E2E dispatch must not pass undeclared license_holder workflow input"
+fi
 
 step_line() {
     local workflow="$1"
