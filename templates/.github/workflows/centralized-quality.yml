@@ -16,5 +16,7 @@ jobs:
     with:
       capabilities: "{{QUALITY_CAPABILITIES}}"
       environment-manager: "{{ENV_MANAGER}}"
+      central-repository: "{{CENTRAL_REPOSITORY}}"
+      central-ref: "{{CENTRAL_REF}}"
     permissions:
       contents: read # Read repository files for quality checks.
