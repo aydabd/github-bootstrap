@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.25.1](https://github.com/aydabd/github-bootstrap/compare/v2.25.0...v2.25.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* use valid local action paths in central workflows ([#332](https://github.com/aydabd/github-bootstrap/issues/332)) ([a30bde2](https://github.com/aydabd/github-bootstrap/commit/a30bde23b3c976ce132fc74093d16064d8d55b65))
+
 ## [2.25.0](https://github.com/aydabd/github-bootstrap/compare/v2.24.1...v2.25.0) (2026-09-28)
 
 
