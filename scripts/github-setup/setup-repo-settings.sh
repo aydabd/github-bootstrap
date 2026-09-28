@@ -77,23 +77,27 @@ apply_repo_settings() {
     local response_file fallback_settings_file
     response_file="$(mktemp)"
     fallback_settings_file="$(mktemp)"
-    trap 'rm -f "$response_file" "$fallback_settings_file"' RETURN
     if ! gh_api_json \
         --method PATCH \
         "$(repo_endpoint)" \
         --input "$settings_file" > "$response_file" 2>&1; then
         if grep -Eiq 'Upgrade to GitHub Pro|auto.?merge.*(available|private)|private repositories.*auto.?merge' "$response_file"; then
             jq '.allow_auto_merge = false' "$settings_file" > "$fallback_settings_file"
-            gh_api_json \
+            if ! gh_api_json \
                 --method PATCH \
                 "$(repo_endpoint)" \
-                --input "$fallback_settings_file"
+                --input "$fallback_settings_file"; then
+                rm -f "$response_file" "$fallback_settings_file"
+                return 1
+            fi
             echo "Native auto-merge is unavailable; configured direct-merge fallback." >&2
         else
             cat "$response_file" >&2
+            rm -f "$response_file" "$fallback_settings_file"
             return 1
         fi
     fi
+    rm -f "$response_file" "$fallback_settings_file"
 }
 
 main() {

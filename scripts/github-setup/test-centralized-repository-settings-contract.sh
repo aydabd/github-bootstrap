@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 seed_script="$repo_root/scripts/github-setup/seed-centralized-e2e-repository.sh"
 settings_file="$repo_root/.github/config/repo-settings.json"
 ruleset_file="$repo_root/.github/config/ruleset-default.json"
+settings_script="$repo_root/scripts/github-setup/setup-repo-settings.sh"
 
 fail() {
     echo "centralized repository settings contract: $*" >&2
@@ -49,5 +50,10 @@ grep -Fq 'can_approve_pull_request_reviews' "$seed_script" ||
     fail "seed script does not disable workflow approval by default"
 grep -Fq 'visibility' "$repo_root/.github/actions/apply-repo-settings/action.yml" ||
     fail "generated repository settings action does not guard the private/internal-only access policy endpoint"
+if grep -Eq '^[[:space:]]*trap .*RETURN' "$settings_script"; then
+    fail "repository settings cleanup must not leak function-local variables through a RETURN trap"
+fi
+grep -Fq "rm -f \"\$response_file\" \"\$fallback_settings_file\"" "$settings_script" ||
+    fail "repository settings cleanup is missing explicit temporary-file cleanup"
 
 echo "centralized repository settings contract checks passed."
