@@ -21,11 +21,26 @@ grep -q 'workflow_call' "$workflow"
 grep -q 'quality.yml' "$workflow"
 grep -Eq 'consumer.*quality|quality.*consumer' "$workflow"
 grep -q 'gh run view "\$run_id" --repo "\${OWNER}/\${REPO_NAME}" --log-failed' "$workflow"
-grep -q 'policy_content=' "$workflow" || fail "E2E must inspect the central PR policy workflow path"
-grep -q 'aggregate_content=' "$workflow" || fail "E2E must inspect the central aggregate workflow paths"
-grep -q 'obsolete centralized-pull-request adapter name' "$workflow" || fail "E2E must reject the obsolete consumer adapter path"
-grep -q 'pull-request / aggregate' "$workflow" || fail "E2E must require the emitted aggregate check context"
-grep -q 'mergeable_state' "$workflow" || fail "E2E must validate centralized PR mergeability"
+grep -q 'policy_content=' "$workflow" || {
+    echo "E2E must inspect the central PR policy workflow path" >&2
+    exit 1
+}
+grep -q 'aggregate_content=' "$workflow" || {
+    echo "E2E must inspect the central aggregate workflow paths" >&2
+    exit 1
+}
+grep -q 'obsolete centralized-pull-request adapter name' "$workflow" || {
+    echo "E2E must reject the obsolete consumer adapter path" >&2
+    exit 1
+}
+grep -q 'pull-request / aggregate' "$workflow" || {
+    echo "E2E must require the emitted aggregate check context" >&2
+    exit 1
+}
+grep -q 'mergeable_state' "$workflow" || {
+    echo "E2E must validate centralized PR mergeability" >&2
+    exit 1
+}
 if ! grep -q 'git/refs' "$workflow" || ! grep -q 'contents' "$workflow" || ! grep -q 'pulls' "$workflow"; then
     echo "centralized E2E must create a disposable pull request for PR workflow validation" >&2
     exit 1
