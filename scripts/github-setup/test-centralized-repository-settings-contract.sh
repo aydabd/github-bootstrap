@@ -25,7 +25,7 @@ grep -Fq 'setup-ruleset.sh' "$seed_script" ||
     fail "central seed does not use the shared ruleset implementation"
 grep -Fq 'ruleset-default.json' "$seed_script" ||
     fail "central seed does not use the canonical ruleset payload"
-grep -Fq -- '--required-status-checks pull-request' "$seed_script" ||
+grep -Fq -- "--required-status-checks 'pull-request / aggregate'" "$seed_script" ||
     fail "central seed does not bind the aggregate status check through the shared ruleset implementation"
 for endpoint in '/actions/permissions' '/actions/permissions/workflow' '/actions/permissions/access'; do
     grep -Fq "$endpoint" "$seed_script" || fail "seed script does not reconcile $endpoint"
