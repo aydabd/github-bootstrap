@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.25.5](https://github.com/aydabd/github-bootstrap/compare/v2.25.4...v2.25.5) (2026-09-28)
+
+
+### Bug Fixes
+
+* stabilize centralized workflow consumers ([#340](https://github.com/aydabd/github-bootstrap/issues/340)) ([424d05a](https://github.com/aydabd/github-bootstrap/commit/424d05a7d9a4118547d6b3a3d03f5a86478858a8))
+
 ## [2.25.4](https://github.com/aydabd/github-bootstrap/compare/v2.25.3...v2.25.4) (2026-09-28)
 
 
