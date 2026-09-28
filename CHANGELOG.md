@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.26.1](https://github.com/aydabd/github-bootstrap/compare/v2.26.0...v2.26.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* harden centralized workflow path checks ([#350](https://github.com/aydabd/github-bootstrap/issues/350)) ([be36db7](https://github.com/aydabd/github-bootstrap/commit/be36db71ecdbd5f34b5d9559e59cad0ad9f388e8))
+
 ## [2.26.0](https://github.com/aydabd/github-bootstrap/compare/v2.25.8...v2.26.0) (2026-09-28)
 
 
