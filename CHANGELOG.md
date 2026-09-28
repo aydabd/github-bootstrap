@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.26.0](https://github.com/aydabd/github-bootstrap/compare/v2.25.8...v2.26.0) (2026-09-28)
+
+
+### Features
+
+* define centralized capability contracts ([#348](https://github.com/aydabd/github-bootstrap/issues/348)) ([6bc88ae](https://github.com/aydabd/github-bootstrap/commit/6bc88ae85a1e774e57c252f1c1efb98ed0a9662d))
+
 ## [2.25.8](https://github.com/aydabd/github-bootstrap/compare/v2.25.7...v2.25.8) (2026-09-28)
 
 
