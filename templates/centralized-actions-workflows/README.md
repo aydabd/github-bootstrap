@@ -74,6 +74,25 @@ the exact workflow implementation it runs. Inspect this manifest when
 preparing a consumer upgrade, then update that consumer's pinned `central_ref`
 in a reviewed pull request.
 
+## Optional capability inventory
+
+The manifest also records the contract boundary for optional maintenance and
+release capabilities: `maintenance-safety`, `maintenance-merge`,
+`release-please`, and `weekly-tooling-updates`. These entries are currently
+`contract-only` and disabled by default. They describe stable capability names,
+contract versions, future workflow paths, required inputs, and minimum caller
+permissions; they do not add workflows to a consumer or grant access to its
+secrets, environments, variables, Apps, settings, rulesets, or repository
+policy.
+
+An optional capability becomes `available` only in a later immutable package
+release after its reusable implementation and E2E contract are validated.
+Consumers must opt in explicitly, and capability contract changes require a
+contract-version increment. The local consumer workflow remains responsible
+for its event trigger and filename, so a repository may use `pull-request.yml`,
+`pr.yml`, `ci.yml`, or another configured name without changing the central
+capability identifiers.
+
 ## Ownership and releases
 
 The central repository should use its own owners, CODEOWNERS, permissions,

@@ -13,6 +13,56 @@
     ".github/actions/verify-pull-request-title",
     ".github/actions/verify-signed-off-by"
   ],
+  "capabilities": {
+    "maintenance-safety": {
+      "status": "contract-only",
+      "enabled_by_default": false,
+      "workflow": ".github/workflows/maintenance-safety.yml",
+      "contract_version": 1,
+      "required_inputs": ["repository", "head-sha", "pull-request-number"],
+      "minimum_permissions": {
+        "actions": "read",
+        "contents": "read",
+        "issues": "write",
+        "pull-requests": "write"
+      }
+    },
+    "maintenance-merge": {
+      "status": "contract-only",
+      "enabled_by_default": false,
+      "workflow": ".github/workflows/merge-maintenance-pr.yml",
+      "contract_version": 1,
+      "required_inputs": ["repository", "head-sha", "pull-request-number"],
+      "minimum_permissions": {
+        "actions": "read",
+        "contents": "read",
+        "pull-requests": "read"
+      }
+    },
+    "release-please": {
+      "status": "contract-only",
+      "enabled_by_default": false,
+      "workflow": ".github/workflows/release-please.yml",
+      "contract_version": 1,
+      "required_inputs": ["repository", "release-config", "manifest-file"],
+      "minimum_permissions": {
+        "contents": "read",
+        "pull-requests": "read"
+      }
+    },
+    "weekly-tooling-updates": {
+      "status": "contract-only",
+      "enabled_by_default": false,
+      "workflow": ".github/workflows/weekly-tooling-updates.yml",
+      "contract_version": 1,
+      "required_inputs": ["repository", "explicit-breaking"],
+      "minimum_permissions": {
+        "contents": "write",
+        "issues": "read",
+        "pull-requests": "write"
+      }
+    }
+  },
   "ref_policy": {
     "type": "immutable",
     "allowed": ["semver-release-tag", "commit-sha"]
