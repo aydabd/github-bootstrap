@@ -949,12 +949,14 @@ jobs:
               -f "ref=refs/heads/${branch_name}" \
               -f "sha=${head_sha}" > /dev/null
             marker_path=".github/e2e-centralized-validation-${GITHUB_RUN_ID}.md"
-            marker_content="$(printf '%s\n' 'Disposable centralized workflow E2E validation.')"
-            marker_content_base64="$(printf '%s' "$marker_content" | base64 | tr -d '\\n')"
+            marker_content_base64="$(printf '%s\n' 'Disposable centralized workflow E2E validation.' | base64 | tr -d '\\n')"
+            commit_message="$(printf '%s\n\n%s\n' \
+              'chore: validate centralized workflows' \
+              'Signed-off-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>')"
             head_sha="$(gh api \
               --method PUT \
               "/repos/${OWNER}/${REPO_NAME}/contents/${marker_path}" \
-              -f "message=chore: validate centralized workflows" \
+              -f "message=${commit_message}" \
               -f "content=${marker_content_base64}" \
               -f "branch=${branch_name}" \
               --jq '.commit.sha')"

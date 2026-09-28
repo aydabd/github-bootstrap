@@ -36,4 +36,4 @@ body:
     id: parent
     attributes:
       label: Parent issue
-      description: Use #123 when this Task belongs to a Story or Epic.
+      description: "Use #123 when this Task belongs to a Story or Epic."

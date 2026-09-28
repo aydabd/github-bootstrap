@@ -29,6 +29,10 @@ grep -q 'runs?event=pull_request&per_page=20' "$workflow" || {
     echo "centralized E2E must poll the pull-request run it triggered" >&2
     exit 1
 }
+grep -q 'Signed-off-by: github-actions\[bot\]' "$workflow" || {
+    echo "centralized E2E disposable PR commit must satisfy signed-off policy" >&2
+    exit 1
+}
 grep -q 'cleanup_after_test' "$workflow"
 grep -q 'app_owner=.*REPO_OWNER' "$workflow"
 grep -q 'allowed_repo_owners=.*REPO_OWNER' "$workflow"
