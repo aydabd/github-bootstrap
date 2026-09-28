@@ -549,7 +549,6 @@ jobs:
 
           # Check essential files exist
           REQUIRED_FILES=(
-            ".github/workflows/quality.yml"
             ".github/CODEOWNERS"
             ".github/dependabot.yml"
             ".pre-commit-config.yaml"
@@ -568,6 +567,11 @@ jobs:
             ".cursor/rules/project.mdc"
             ".windsurfrules"
           )
+          if [ "${{ steps.validate-inputs.outputs.preset }}" = "centralized-monorepo" ]; then
+            REQUIRED_FILES+=(".github/workflows/pull-request.yml")
+          else
+            REQUIRED_FILES+=(".github/workflows/quality.yml")
+          fi
 
           for file in "${REQUIRED_FILES[@]}"; do
             if gh api "/repos/${{ github.repository_owner }}/${REPO_NAME}/contents/${file}" >/dev/null 2>&1; then
@@ -729,14 +733,20 @@ jobs:
           REQUIRED_CHECK_CONTEXTS=$(echo "$DEFAULT_RULESET" | jq -r '[.rules[]? | select(.type == "required_status_checks") | .parameters.required_status_checks[]?.context] | sort | join(", ")')
           echo "Required status checks: ${REQUIRED_CHECK_CONTEXTS:-none}"
 
-          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | index("quality") != null)' >/dev/null; then
-            echo "❌ quality status check requirement missing (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
-            exit 1
-          fi
-
-          if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | sort) == ["Signed-off-by trailers", "quality"]' >/dev/null; then
-            echo "❌ Bootstrap status checks must be exactly Signed-off-by trailers and quality (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
-            exit 1
+          if [ "${{ steps.validate-inputs.outputs.preset }}" = "centralized-monorepo" ]; then
+            if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | sort) == ["pull-request"]' >/dev/null; then
+              echo "❌ Centralized status checks must be exactly pull-request (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
+              exit 1
+            fi
+          else
+            if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | index("quality") != null)' >/dev/null; then
+              echo "❌ quality status check requirement missing (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
+              exit 1
+            fi
+            if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | sort) == ["Signed-off-by trailers", "quality"]' >/dev/null; then
+              echo "❌ Bootstrap status checks must be exactly Signed-off-by trailers and quality (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
+              exit 1
+            fi
           fi
 
           echo "✅ Ruleset parity checks passed"
@@ -777,6 +787,8 @@ jobs:
 
           for seed_file in \
             README.md \
+            .github/workflows/pull-request.yml \
+            .github/workflows/pr-policy.yml \
             .github/workflows/quality.yml \
             .github/actions/setup-lint-mise/action.yml \
             .github/actions/setup-lint-system/action.yml; do
@@ -792,8 +804,12 @@ jobs:
             fi
           done
 
-          caller_content="$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/workflows/quality.yml" --jq .content | base64 -d)"
-          grep -Fq "${CENTRAL_REPOSITORY}/.github/workflows/quality.yml@${CENTRAL_REF}" <<< "$caller_content"
+          caller_content="$(gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/workflows/pull-request.yml" --jq .content | base64 -d)"
+          grep -Fq "${CENTRAL_REPOSITORY}/.github/workflows/pull-request.yml@${CENTRAL_REF}" <<< "$caller_content"
+          if gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/workflows/quality.yml" >/dev/null 2>&1; then
+            echo "consumer contains a separate centralized quality workflow" >&2
+            exit 1
+          fi
           if gh api "/repos/${OWNER}/${REPO_NAME}/contents/.github/actions/quality" >/dev/null 2>&1; then
             echo "consumer contains embedded quality actions" >&2
             exit 1
@@ -924,10 +940,10 @@ jobs:
           OWNER="${{ github.repository_owner }}"
 
           if [ "${{ steps.validate-inputs.outputs.preset }}" = "centralized-monorepo" ]; then
-            echo "Centralized quality workflow was triggered by the consumer push; polling for completion."
+            echo "Centralized pull-request workflow was triggered by the consumer push; polling for completion."
             head_sha="$(gh api "/repos/${OWNER}/${REPO_NAME}/git/ref/heads/main" --jq '.object.sha')"
             for attempt in {1..60}; do
-              run_json="$(gh api "/repos/${OWNER}/${REPO_NAME}/actions/workflows/quality.yml/runs?event=push&per_page=20" | jq -c --arg head_sha "$head_sha" '[.workflow_runs[] | select(.head_sha == $head_sha)] | first // {}')"
+              run_json="$(gh api "/repos/${OWNER}/${REPO_NAME}/actions/workflows/pull-request.yml/runs?event=push&per_page=20" | jq -c --arg head_sha "$head_sha" '[.workflow_runs[] | select(.head_sha == $head_sha)] | first // {}')"
               if [ "$run_json" != "{}" ]; then
                 run_id="$(jq -r '.id' <<< "$run_json")"
                 run_status="$(jq -r '.status' <<< "$run_json")"
@@ -935,11 +951,11 @@ jobs:
                 run_url="$(jq -r '.html_url' <<< "$run_json")"
                 if [ "$run_status" = "completed" ]; then
                   if [ "$run_conclusion" != "success" ]; then
-                    echo "quality workflow failed: $run_url" >&2
+                    echo "pull-request workflow failed: $run_url" >&2
                     gh run view "$run_id" --repo "${OWNER}/${REPO_NAME}" --log-failed || true
                     exit 1
                   fi
-                  echo "✅ Consumer quality workflow passed: $run_url"
+                  echo "✅ Consumer pull-request workflow passed: $run_url"
                   break
                 fi
               fi

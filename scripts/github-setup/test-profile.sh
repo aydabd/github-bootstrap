@@ -337,6 +337,29 @@ for removed in ai-code-review.yml release-please.yml unrelated.yml; do
 done
 rm -rf "$terraform_fixture"
 
+centralized_fixture="$(mktemp -d)"
+mkdir -p "$centralized_fixture/.github/workflows"
+for workflow in commit-policy.yml quality.yml centralized-pull-request.yml codeql.yml; do
+    if [ "$workflow" = centralized-pull-request.yml ]; then
+        cp "$repo_root/templates/.github/workflows/$workflow" \
+            "$centralized_fixture/.github/workflows/pull-request.yml"
+    else
+        : > "$centralized_fixture/.github/workflows/$workflow"
+    fi
+done
+"$workflow_helper" select "$centralized_fixture" all git-cliff centralized
+test -f "$centralized_fixture/.github/workflows/pull-request.yml"
+test ! -e "$centralized_fixture/.github/workflows/quality.yml"
+test ! -e "$centralized_fixture/.github/workflows/commit-policy.yml"
+rm -rf "$centralized_fixture"
+
+named_centralized_fixture="$(mktemp -d)"
+mkdir -p "$named_centralized_fixture/.github/workflows"
+: > "$named_centralized_fixture/.github/workflows/ci.yml"
+"$workflow_helper" select "$named_centralized_fixture" all git-cliff centralized ci.yml
+test -f "$named_centralized_fixture/.github/workflows/ci.yml"
+rm -rf "$named_centralized_fixture"
+
 binding_fixture="$(mktemp -d)"
 mkdir -p "$binding_fixture/.github/workflows"
 for maintenance_workflow in classify-maintenance-pr.yml maintenance-safety.yml \
@@ -708,11 +731,11 @@ fi
 grep -q -- "derive checks from validated workflow files under" \
     "$repo_root/scripts/github-setup/setup-ruleset.sh"
 grep -q -- "--installed-root" "$repo_root/scripts/github-setup/setup-ruleset.sh"
-grep -q -- ".github/workflows/commit-policy.yml" \
+grep -q -- "find \"\$installed_root/.github/workflows\"" \
     "$repo_root/scripts/github-setup/setup-ruleset.sh"
 if grep -q -- ".github/workflows/signed-off-by.yml" \
     "$repo_root/scripts/github-setup/setup-ruleset.sh"; then
-    echo "ruleset setup must use the commit-policy workflow" >&2
+    echo "ruleset setup must not use the removed signed-off-by workflow" >&2
     exit 1
 fi
 

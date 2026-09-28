@@ -10,6 +10,8 @@ operation="${1:-}"
 repository_dir="${2:-}"
 workflows_input="${3:-}"
 release_tool="${4:-git-cliff}"
+delivery_mode="${5:-embedded}"
+central_workflow_name="${6:-pull-request.yml}"
 if [ -z "$operation" ] || [ -z "$repository_dir" ] || [ -z "$workflows_input" ]; then
     usage
 fi
@@ -73,6 +75,68 @@ select_workflows() {
     local keep_files=" commit-policy.yml" quality_kept=false release_kept=false
     local valid_workflow_found=false name file filename
     normalize_workflows
+
+    if [ "$delivery_mode" = "centralized" ]; then
+        keep_files=""
+        if has_workflow all || [ "${#NORMALIZED_WORKFLOWS[@]}" -eq 0 ]; then
+            keep_files=" $central_workflow_name"
+            quality_kept=true
+            valid_workflow_found=true
+        elif has_workflow none; then
+            valid_workflow_found=true
+        else
+            for name in "${NORMALIZED_WORKFLOWS[@]}"; do
+                case "$name" in
+                    pull-request | quality)
+                        keep_files="$keep_files $central_workflow_name"
+                        quality_kept=true
+                        valid_workflow_found=true
+                        ;;
+                    codeql | ai-code-review)
+                        keep_files="$keep_files $name.yml"
+                        valid_workflow_found=true
+                        ;;
+                    maintenance)
+                        quality_kept=true
+                        for file in "${maintenance_files[@]}"; do
+                            keep_files="$keep_files $file"
+                        done
+                        keep_files="$keep_files $(release_file)"
+                        release_kept=true
+                        valid_workflow_found=true
+                        ;;
+                    release)
+                        keep_files="$keep_files $(release_file)"
+                        release_kept=true
+                        valid_workflow_found=true
+                        ;;
+                    *)
+                        echo "warning: unknown workflow name '$name' (ignored)" >&2
+                        ;;
+                esac
+            done
+        fi
+
+        [ "$valid_workflow_found" = true ] || {
+            echo "no valid workflow names found in '$workflows_input'" >&2
+            exit 1
+        }
+        for file in "$repository_dir"/.github/workflows/*.yml; do
+            filename="${file##*/}"
+            [[ " $keep_files " == *" $filename "* ]] && continue
+            rm -f "$file"
+        done
+        write_output "$quality_kept"
+        if [ "$release_kept" = false ]; then
+            if [ "$release_tool" = "release-please" ]; then
+                rm -f "$repository_dir/release-please-config.json" \
+                    "$repository_dir/.release-please-manifest.json"
+            else
+                rm -f "$repository_dir/cliff.toml"
+            fi
+        fi
+        return 0
+    fi
 
     if has_workflow all || [ "${#NORMALIZED_WORKFLOWS[@]}" -eq 0 ]; then
         write_output true
@@ -139,6 +203,9 @@ select_workflows() {
 
 bind_e2e() {
     local file substitutions release_path production_name e2e_name field
+    if [ "$delivery_mode" = "centralized" ]; then
+        return 0
+    fi
     local copilot_login="${E2E_COPILOT_REVIEWER_LOGIN:-}"
     [ -n "$copilot_login" ] || {
         echo "E2E Copilot reviewer login is required for E2E workflow binding" >&2

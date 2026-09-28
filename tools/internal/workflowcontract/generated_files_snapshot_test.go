@@ -19,7 +19,6 @@ func TestGeneratedRepositoryRequiredFilesSnapshot(t *testing.T) {
 
 	requiredFiles := extractBashArray(t, script, "REQUIRED_FILES")
 	wantRequiredFiles := []string{
-		".github/workflows/quality.yml",
 		".github/CODEOWNERS",
 		".github/dependabot.yml",
 		".pre-commit-config.yaml",
@@ -41,6 +40,15 @@ func TestGeneratedRepositoryRequiredFilesSnapshot(t *testing.T) {
 
 	if !reflect.DeepEqual(requiredFiles, wantRequiredFiles) {
 		t.Fatalf("REQUIRED_FILES drifted:\n got: %#v\nwant: %#v", requiredFiles, wantRequiredFiles)
+	}
+	for _, expected := range []string{
+		`REQUIRED_FILES+=(".github/workflows/pull-request.yml")`,
+		`REQUIRED_FILES+=(".github/workflows/quality.yml")`,
+		`if [ "${{ steps.validate-inputs.outputs.preset }}" = "centralized-monorepo" ]; then`,
+	} {
+		if !strings.Contains(script, expected) {
+			t.Fatalf("centralized/embedded required-file branch drifted; missing %q", expected)
+		}
 	}
 
 	checkRequiredFileSources(t, repoRoot, requiredFiles)
