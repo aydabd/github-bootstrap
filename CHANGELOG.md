@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.25.7](https://github.com/aydabd/github-bootstrap/compare/v2.25.6...v2.25.7) (2026-09-28)
+
+
+### Bug Fixes
+
+* simplify central workflow checkout paths ([#344](https://github.com/aydabd/github-bootstrap/issues/344)) ([581665c](https://github.com/aydabd/github-bootstrap/commit/581665c23419bda1cd7a6b79fb02b96001d9e6fa))
+
 ## [2.25.6](https://github.com/aydabd/github-bootstrap/compare/v2.25.5...v2.25.6) (2026-09-28)
 
 
