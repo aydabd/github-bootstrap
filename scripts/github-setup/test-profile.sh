@@ -731,7 +731,7 @@ fi
 grep -q -- "derive checks from validated workflow files under" \
     "$repo_root/scripts/github-setup/setup-ruleset.sh"
 grep -q -- "--installed-root" "$repo_root/scripts/github-setup/setup-ruleset.sh"
-grep -q -- 'find "$installed_root/.github/workflows"' \
+grep -q -- "find \"\$installed_root/.github/workflows\"" \
     "$repo_root/scripts/github-setup/setup-ruleset.sh"
 if grep -q -- ".github/workflows/signed-off-by.yml" \
     "$repo_root/scripts/github-setup/setup-ruleset.sh"; then
