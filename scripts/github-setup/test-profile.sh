@@ -731,11 +731,11 @@ fi
 grep -q -- "derive checks from validated workflow files under" \
     "$repo_root/scripts/github-setup/setup-ruleset.sh"
 grep -q -- "--installed-root" "$repo_root/scripts/github-setup/setup-ruleset.sh"
-grep -q -- ".github/workflows/commit-policy.yml" \
+grep -q -- 'find "$installed_root/.github/workflows"' \
     "$repo_root/scripts/github-setup/setup-ruleset.sh"
 if grep -q -- ".github/workflows/signed-off-by.yml" \
     "$repo_root/scripts/github-setup/setup-ruleset.sh"; then
-    echo "ruleset setup must use the commit-policy workflow" >&2
+    echo "ruleset setup must not use the removed signed-off-by workflow" >&2
     exit 1
 fi
 
