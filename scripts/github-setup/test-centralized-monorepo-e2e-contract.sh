@@ -56,6 +56,8 @@ jq -e '
     (.version | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) and
     .source_repository == "{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}" and
     (.reusable_workflows | sort) == [".github/workflows/pr-policy.yml", ".github/workflows/pull-request.yml", ".github/workflows/quality.yml"] and
+    ([.capabilities | keys[]] | sort) == ["maintenance-merge", "maintenance-safety", "release-please", "weekly-tooling-updates"] and
+    (all(.capabilities[]; .status == "contract-only" and .enabled_by_default == false)) and
     .ref_policy.type == "immutable" and
     (.ref_policy.allowed | sort) == ["commit-sha", "semver-release-tag"]
 ' "$manifest" > /dev/null || {
