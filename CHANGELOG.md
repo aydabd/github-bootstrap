@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.25.2](https://github.com/aydabd/github-bootstrap/compare/v2.25.1...v2.25.2) (2026-09-28)
+
+
+### Bug Fixes
+
+* align E2E repository dispatch inputs ([#334](https://github.com/aydabd/github-bootstrap/issues/334)) ([6671ed5](https://github.com/aydabd/github-bootstrap/commit/6671ed5774bb7ab2af667dc7c49d21a56f46df27))
+
 ## [2.25.1](https://github.com/aydabd/github-bootstrap/compare/v2.25.0...v2.25.1) (2026-09-28)
 
 
