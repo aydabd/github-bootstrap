@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.24.0](https://github.com/aydabd/github-bootstrap/compare/v2.23.0...v2.24.0) (2026-09-28)
+
+
+### Features
+
+* add portable token connector contract ([#323](https://github.com/aydabd/github-bootstrap/issues/323)) ([9145560](https://github.com/aydabd/github-bootstrap/commit/9145560d46e13173c65df65458d3177f1b1f1581))
+
 ## [2.23.0](https://github.com/aydabd/github-bootstrap/compare/v2.22.0...v2.23.0) (2026-09-25)
 
 
