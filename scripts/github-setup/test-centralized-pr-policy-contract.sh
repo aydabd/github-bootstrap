@@ -55,6 +55,13 @@ fi
 grep -q '^  pull_request:' "$consumer" || fail "consumer PR policy adapter must retain its event trigger"
 grep -q '{{CENTRAL_REPOSITORY}}/.github/workflows/pull-request.yml@{{CENTRAL_REF}}' "$consumer" ||
     fail "consumer PR adapter must call the immutable central aggregate workflow"
+aggregate_workflow="$seed_root/.github/workflows/pull-request.yml"
+grep -q '^  aggregate:' "$aggregate_workflow" ||
+    fail "central aggregate workflow must expose a stable aggregate job"
+grep -Fq 'needs: [policy, quality]' "$aggregate_workflow" ||
+    fail "central aggregate job must depend on policy and quality"
+grep -Fq 'Centralized policy and quality checks passed.' "$aggregate_workflow" ||
+    fail "central aggregate job must emit a passing check only after both jobs pass"
 test -f "$repo_root/templates/.github/workflows/commit-policy.yml" ||
     fail "embedded consumer PR policy workflow is missing"
 grep -Eq 'uses: \.\/\.github\/actions\/(verify-conventional-commits|verify-pull-request-title|verify-signed-off-by)' \
@@ -72,7 +79,7 @@ for creation_workflow in \
         fail "centralized creation path does not remove embedded PR policy actions: $creation_workflow"
     grep -q "inputs.delivery_mode == 'centralized'" "$creation_workflow" ||
         fail "centralized creation path does not require the aggregate pull-request check"
-    grep -q "'pull-request'" "$creation_workflow" ||
+    grep -q "'pull-request / aggregate'" "$creation_workflow" ||
         fail "centralized creation path does not pass the aggregate pull-request check to rulesets"
     grep -q 'inputs.delivery_mode' "$creation_workflow" ||
         fail "centralized creation path does not pass delivery mode to workflow selection"

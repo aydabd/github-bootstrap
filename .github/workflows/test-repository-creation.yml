@@ -734,8 +734,8 @@ jobs:
           echo "Required status checks: ${REQUIRED_CHECK_CONTEXTS:-none}"
 
           if [ "${{ steps.validate-inputs.outputs.preset }}" = "centralized-monorepo" ]; then
-            if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | sort) == ["pull-request"]' >/dev/null; then
-              echo "❌ Centralized status checks must be exactly pull-request (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
+            if ! echo "$DEFAULT_RULESET" | jq -e '.rules[]? | select(.type == "required_status_checks") | ([.parameters.required_status_checks[]?.context] | sort) == ["pull-request / aggregate"]' >/dev/null; then
+              echo "❌ Centralized status checks must be exactly pull-request / aggregate (found: ${REQUIRED_CHECK_CONTEXTS:-none})"
               exit 1
             fi
           else
@@ -1004,6 +1004,31 @@ jobs:
                     exit 1
                   fi
                   echo "✅ Consumer pull-request workflow passed: $run_url"
+                  pr_number="$(gh api \
+                    "/repos/${OWNER}/${REPO_NAME}/pulls?head=${OWNER}:${branch_name}&base=main&state=open" \
+                    --jq '.[0].number // empty')"
+                  [ -n "$pr_number" ] || {
+                    echo "centralized E2E pull request was not found after workflow success" >&2
+                    exit 1
+                  }
+                  check_runs="$(gh api "/repos/${OWNER}/${REPO_NAME}/commits/${head_sha}/check-runs" \
+                    --jq '[.check_runs[].name]')"
+                  jq -e 'index("pull-request / aggregate") != null' <<< "$check_runs" >/dev/null || {
+                    echo "centralized aggregate check was not emitted: $check_runs" >&2
+                    exit 1
+                  }
+                  for merge_attempt in {1..12}; do
+                    merge_state="$(gh api "/repos/${OWNER}/${REPO_NAME}/pulls/${pr_number}" --jq '.mergeable_state')"
+                    if [ "$merge_state" = "clean" ]; then
+                      echo "✅ Centralized required aggregate check made PR #${pr_number} mergeable."
+                      break
+                    fi
+                    [ "$merge_attempt" -lt 12 ] || {
+                      echo "centralized PR #${pr_number} remained ${merge_state}; required aggregate check is not mergeable" >&2
+                      exit 1
+                    }
+                    sleep 5
+                  done
                   break
                 fi
               fi

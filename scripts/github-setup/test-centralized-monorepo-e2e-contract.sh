@@ -24,6 +24,8 @@ grep -q 'gh run view "\$run_id" --repo "\${OWNER}/\${REPO_NAME}" --log-failed' "
 grep -q 'policy_content=' "$workflow" || fail "E2E must inspect the central PR policy workflow path"
 grep -q 'aggregate_content=' "$workflow" || fail "E2E must inspect the central aggregate workflow paths"
 grep -q 'obsolete centralized-pull-request adapter name' "$workflow" || fail "E2E must reject the obsolete consumer adapter path"
+grep -q 'pull-request / aggregate' "$workflow" || fail "E2E must require the emitted aggregate check context"
+grep -q 'mergeable_state' "$workflow" || fail "E2E must validate centralized PR mergeability"
 if ! grep -q 'git/refs' "$workflow" || ! grep -q 'contents' "$workflow" || ! grep -q 'pulls' "$workflow"; then
     echo "centralized E2E must create a disposable pull request for PR workflow validation" >&2
     exit 1

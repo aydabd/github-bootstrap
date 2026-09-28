@@ -46,3 +46,19 @@ jobs:
       central-ref: ${{ inputs['central-ref'] }}
     permissions:
       contents: read
+
+  aggregate:
+    name: aggregate
+    if: ${{ always() }}
+    needs: [policy, quality]
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Require centralized policy and quality
+        if: needs.policy.result != 'success' || needs.quality.result != 'success'
+        run: |
+          echo "Centralized policy result: ${{ needs.policy.result }}"
+          echo "Centralized quality result: ${{ needs.quality.result }}"
+          exit 1
+      - name: Centralized pull-request aggregate passed
+        run: echo "Centralized policy and quality checks passed."

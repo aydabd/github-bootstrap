@@ -1095,7 +1095,7 @@ jobs:
           owner: ${{ steps.set-owner.outputs.owner }}
           repo_name: ${{ inputs.repo_name }}
           gh_token: ${{ steps.resolve-token.outputs.token }}
-          required_status_checks: ${{ inputs.delivery_mode == 'centralized' && 'pull-request' || (steps.filter-workflows.outputs.quality_kept == 'true' && 'Signed-off-by trailers,quality' || 'Signed-off-by trailers') }}
+          required_status_checks: ${{ inputs.delivery_mode == 'centralized' && 'pull-request / aggregate' || (steps.filter-workflows.outputs.quality_kept == 'true' && 'Signed-off-by trailers,quality' || 'Signed-off-by trailers') }}
 
       - name: Summary
         run: |

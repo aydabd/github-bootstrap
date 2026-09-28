@@ -96,7 +96,7 @@ commit_sha="$(git -C "$temporary_root" rev-parse HEAD)"
     --owner "$owner" \
     --repo "$repository" \
     --ruleset-file "$repo_root/.github/config/ruleset-default.json" \
-    --required-status-checks pull-request
+    --required-status-checks 'pull-request / aggregate'
 gh api --method PUT \
     "/repos/$owner/$repository/actions/permissions" \
     --input - > /dev/null << 'JSON'
