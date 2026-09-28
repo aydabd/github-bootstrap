@@ -21,6 +21,9 @@ grep -q 'workflow_call' "$workflow"
 grep -q 'quality.yml' "$workflow"
 grep -Eq 'consumer.*quality|quality.*consumer' "$workflow"
 grep -q 'gh run view "\$run_id" --repo "\${OWNER}/\${REPO_NAME}" --log-failed' "$workflow"
+grep -q 'policy_content=' "$workflow" || fail "E2E must inspect the central PR policy workflow path"
+grep -q 'aggregate_content=' "$workflow" || fail "E2E must inspect the central aggregate workflow paths"
+grep -q 'obsolete centralized-pull-request adapter name' "$workflow" || fail "E2E must reject the obsolete consumer adapter path"
 if ! grep -q 'git/refs' "$workflow" || ! grep -q 'contents' "$workflow" || ! grep -q 'pulls' "$workflow"; then
     echo "centralized E2E must create a disposable pull request for PR workflow validation" >&2
     exit 1
@@ -69,11 +72,33 @@ grep -q 'test-centralized-monorepo:' "$makefile"
 grep -q 'preset=centralized-monorepo' "$makefile"
 grep -q 'languages=all' "$makefile"
 grep -q 'cleanup_after_test=false' "$makefile"
+grep -q 'BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID' "$makefile" || {
+    echo "centralized E2E Make target must resolve the provisioner client ID" >&2
+    exit 1
+}
+grep -q 'BOOTSTRAP_E2E_APP_OWNER' "$makefile" || {
+    echo "centralized E2E Make target must resolve the configured app owner" >&2
+    exit 1
+}
 
 test -f "$seed_root/.github/workflows/quality.yml"
 grep -q '^  workflow_call:' "$seed_root/.github/workflows/quality.yml"
 if grep -Eq '^  (push|pull_request|workflow_dispatch):' "$seed_root/.github/workflows/quality.yml"; then
     echo "central seed quality workflow has a repository event trigger" >&2
+    exit 1
+fi
+
+policy_workflow="$seed_root/.github/workflows/pr-policy.yml"
+aggregate_workflow="$seed_root/.github/workflows/pull-request.yml"
+grep -Fq 'uses: ./.github/workflows/pr-policy.yml' "$aggregate_workflow"
+grep -Fq 'uses: ./.github/workflows/quality.yml' "$aggregate_workflow"
+grep -Fq 'path: .central-workflows' "$policy_workflow"
+for action in verify-conventional-commits verify-pull-request-title verify-signed-off-by; do
+    grep -Fq "uses: ./.central-workflows/.github/actions/$action" "$policy_workflow"
+done
+if grep -Eq 'uses: \.?/?\.github/central-workflows|path: \.github/central-workflows' \
+    "$seed_root"/.github/workflows/*.yml; then
+    echo "central package contains a duplicated .github/central-workflows path" >&2
     exit 1
 fi
 

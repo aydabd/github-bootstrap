@@ -44,11 +44,15 @@ test-terraform-all-languages: ## Trigger test workflow with preset=terraform-all
 
 test-centralized-monorepo: ## Trigger isolated centralized monorepo E2E (preserves repositories)
 	@echo "Running centralized monorepo E2E workflow..."
-	@$(CMD_ECHO) "+ gh workflow run test-repository-creation.yml --field preset=centralized-monorepo --field languages=all --field cleanup_after_test=false"
-	@gh workflow run test-repository-creation.yml \
+	@$(CMD_ECHO) "+ gh workflow run test-repository-creation.yml --field preset=centralized-monorepo --field languages=all --field cleanup_after_test=false --field client_id=<e2e-provisioner-client-id> --field app_owner=<e2e-app-owner>"
+	@PROVISIONER_APP_CLIENT_ID="$$(gh variable get BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID --env e2e --json value --jq .value)" && \
+	E2E_APP_OWNER="$$(gh variable get BOOTSTRAP_E2E_APP_OWNER --env e2e --json value --jq .value)" && \
+	gh workflow run test-repository-creation.yml \
 		--field preset="centralized-monorepo" \
 		--field languages="all" \
-		--field cleanup_after_test="false"
+		--field cleanup_after_test="false" \
+		--field client_id="$$PROVISIONER_APP_CLIENT_ID" \
+		--field app_owner="$$E2E_APP_OWNER"
 	@echo "Test triggered. Check: gh run list --workflow=test-repository-creation.yml"
 
 test-local-setup-scripts: ## Trigger live E2E workflow for local GitHub setup scripts
