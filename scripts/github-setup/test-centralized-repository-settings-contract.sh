@@ -29,6 +29,9 @@ grep -Fq -- '--required-status-checks pull-request' "$seed_script" ||
 for endpoint in '/actions/permissions' '/actions/permissions/workflow' '/actions/permissions/access'; do
     grep -Fq "$endpoint" "$seed_script" || fail "seed script does not reconcile $endpoint"
 done
+if grep -Fq '"/rulesets"' "$seed_script"; then
+    fail "central seed must not duplicate shared ruleset API calls"
+fi
 for endpoint in \
     '/actions/permissions' \
     '/actions/permissions/workflow' \

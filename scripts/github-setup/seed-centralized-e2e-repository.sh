@@ -115,9 +115,6 @@ if [ "$visibility" != "public" ]; then
 {"enabled":true}
 JSON
 fi
-gh api --method POST \
-    "/repos/$owner/$repository/rulesets" \
-    --input "$temporary_root/.github/config/ruleset.json" > /dev/null
 
 echo "repository=$owner/$repository" >> "${GITHUB_OUTPUT:?GITHUB_OUTPUT is required}"
 echo "ref=$commit_sha" >> "$GITHUB_OUTPUT"

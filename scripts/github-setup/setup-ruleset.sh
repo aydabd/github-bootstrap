@@ -135,18 +135,23 @@ validate_selected_profile() {
 }
 
 derive_required_status_checks() {
-    local checks=()
-    if workflow_has_check "$installed_root/.github/workflows/pull-request.yml" "pull-request"; then
-        checks+=("pull-request")
-    fi
-    if workflow_has_check "$installed_root/.github/workflows/commit-policy.yml" "Signed-off-by trailers"; then
-        checks+=("Signed-off-by trailers")
-    fi
-    if workflow_has_check "$installed_root/.github/workflows/quality.yml" "quality"; then
-        checks+=("quality")
-    fi
-    if workflow_has_check "$installed_root/.github/workflows/maintenance-safety.yml" "Maintenance safety"; then
-        checks+=("Maintenance safety")
+    local checks=() workflow_file
+    while IFS= read -r workflow_file; do
+        if workflow_has_check "$workflow_file" "pull-request"; then
+            checks+=("pull-request")
+        fi
+        if workflow_has_check "$workflow_file" "Signed-off-by trailers"; then
+            checks+=("Signed-off-by trailers")
+        fi
+        if workflow_has_check "$workflow_file" "quality"; then
+            checks+=("quality")
+        fi
+        if workflow_has_check "$workflow_file" "Maintenance safety"; then
+            checks+=("Maintenance safety")
+        fi
+    done < <(find "$installed_root/.github/workflows" -maxdepth 1 -type f -name '*.yml' -print 2> /dev/null | sort)
+    if [ "${#checks[@]}" -gt 0 ]; then
+        mapfile -t checks < <(printf '%s\n' "${checks[@]}" | awk '!seen[$0]++')
     fi
     if [ "${#checks[@]}" -eq 0 ]; then
         echo "no validated profile workflows are installed under $installed_root" >&2
