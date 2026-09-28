@@ -8,6 +8,14 @@ on:
         required: false
         default: ""
         type: string
+      central-repository:
+        description: Immutable central workflow package repository in OWNER/REPOSITORY form.
+        required: true
+        type: string
+      central-ref:
+        description: Immutable central workflow package ref.
+        required: true
+        type: string
 
 permissions: {}
 
@@ -25,8 +33,15 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha }}
+      - name: Check out central workflow package
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs['central-repository'] }}
+          ref: ${{ inputs['central-ref'] }}
+          path: .github/central-workflows
+          persist-credentials: false
       - name: Verify Signed-off-by trailers
-        uses: ./.github/actions/verify-signed-off-by
+        uses: ./.github/central-workflows/.github/actions/verify-signed-off-by
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
@@ -45,8 +60,15 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha }}
+      - name: Check out central workflow package
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs['central-repository'] }}
+          ref: ${{ inputs['central-ref'] }}
+          path: .github/central-workflows
+          persist-credentials: false
       - name: Verify conventional commits
-        uses: ./.github/actions/verify-conventional-commits
+        uses: ./.github/central-workflows/.github/actions/verify-conventional-commits
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
@@ -65,8 +87,15 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha }}
+      - name: Check out central workflow package
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs['central-repository'] }}
+          ref: ${{ inputs['central-ref'] }}
+          path: .github/central-workflows
+          persist-credentials: false
       - name: Verify pull-request title
-        uses: ./.github/actions/verify-pull-request-title
+        uses: ./.github/central-workflows/.github/actions/verify-pull-request-title
         with:
           title: ${{ github.event.pull_request.title }}
           config-path: ${{ inputs.config-path }}

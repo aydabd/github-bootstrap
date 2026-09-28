@@ -1,0 +1,47 @@
+name: Centralized Pull Request
+
+on:
+  workflow_call:
+    inputs:
+      capabilities:
+        description: Comma-separated quality capability identifiers.
+        required: false
+        default: lint-markdown,lint-json,lint-yaml,lint-actions,lint-shell,lint-python,lint-terraform,lint-format,lint-tests
+        type: string
+      environment-manager:
+        description: Tooling provider configured by the calling repository.
+        required: false
+        default: system
+        type: string
+      central-repository:
+        description: Immutable central workflow package repository in OWNER/REPOSITORY form.
+        required: true
+        type: string
+      central-ref:
+        description: Immutable central workflow package ref.
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  policy:
+    name: policy
+    uses: ./.github/workflows/pr-policy.yml
+    with:
+      central-repository: ${{ inputs['central-repository'] }}
+      central-ref: ${{ inputs['central-ref'] }}
+    permissions:
+      contents: read
+      pull-requests: read
+
+  quality:
+    name: quality
+    uses: ./.github/workflows/quality.yml
+    with:
+      capabilities: ${{ inputs.capabilities }}
+      environment-manager: ${{ inputs['environment-manager'] }}
+      central-repository: ${{ inputs['central-repository'] }}
+      central-ref: ${{ inputs['central-ref'] }}
+    permissions:
+      contents: read

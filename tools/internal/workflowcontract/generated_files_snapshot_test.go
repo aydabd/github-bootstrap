@@ -19,7 +19,6 @@ func TestGeneratedRepositoryRequiredFilesSnapshot(t *testing.T) {
 
 	requiredFiles := extractBashArray(t, script, "REQUIRED_FILES")
 	wantRequiredFiles := []string{
-		".github/workflows/quality.yml",
 		".github/CODEOWNERS",
 		".github/dependabot.yml",
 		".pre-commit-config.yaml",

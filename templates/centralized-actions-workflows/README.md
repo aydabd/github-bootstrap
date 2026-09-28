@@ -5,7 +5,8 @@ that wants to share quality automation across multiple repositories. It is
 independent of `github-bootstrap` after creation.
 
 This seeded repository contains the reusable workflows at
-`.github/workflows/quality.yml` and `.github/workflows/pr-policy.yml`, their
+`.github/workflows/pull-request.yml`, `.github/workflows/quality.yml`, and
+`.github/workflows/pr-policy.yml`, their
 composite quality and PR-policy actions, setup actions, lint scripts, and lint
 configuration. The workflows intentionally declare only `workflow_call`; the
 consumer repository should define thin workflows with its own `push` or
@@ -14,6 +15,12 @@ files, repository source/configuration, Project identity, secrets, and final
 ruleset enforcement, but does not copy central quality or PR-policy
 implementation. Publish immutable release tags or use commit SHAs, then
 configure consumer repositories with:
+
+Repository settings and rulesets are not redefined in this package. Central
+repository provisioning uses the bootstrap repository's canonical
+`.github/config/repo-settings.json` and `ruleset-default.json` through the
+shared setup scripts. Only the centralized aggregate check name is supplied as
+an explicit binding for the central package.
 
 ```yaml
 delivery_mode: centralized
@@ -34,18 +41,25 @@ upgraded independently. See `examples/consumer-quality-versions.yml` for a
 release-tag-pinned consumer and a commit-SHA-pinned consumer using the same
 workflow interface.
 
-The PR-policy caller uses the same central repository and ref:
+The pull-request caller uses the same central repository and ref. It is the
+only required consumer workflow for the centralized baseline and fans out to
+the central PR-policy and quality workflows:
 
 ```yaml
-name: Commit policy
+name: Pull Request
 
 on:
   pull_request:
     branches: [main]
 
 jobs:
-  policy:
-    uses: "OWNER/REPOSITORY/.github/workflows/pr-policy.yml@IMMUTABLE_REF"
+  pull-request:
+    uses: "OWNER/REPOSITORY/.github/workflows/pull-request.yml@IMMUTABLE_REF"
+    with:
+      capabilities: "lint-markdown,lint-json,lint-yaml,lint-actions,lint-shell,lint-python,lint-terraform,lint-format,lint-tests"
+      environment-manager: system
+      central-repository: "OWNER/REPOSITORY"
+      central-ref: "IMMUTABLE_REF"
     permissions:
       contents: read
       pull-requests: read

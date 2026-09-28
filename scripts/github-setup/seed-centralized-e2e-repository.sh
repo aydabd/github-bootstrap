@@ -4,6 +4,7 @@ set -euo pipefail
 owner=""
 repository=""
 seed_root=""
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 usage() {
     cat << 'USAGE'
@@ -86,6 +87,38 @@ git -C "$temporary_root" remote add origin "https://github.com/$owner/$repositor
 git -C "$temporary_root" push "https://x-access-token:${GH_TOKEN}@github.com/$owner/$repository.git" main > /dev/null
 
 commit_sha="$(git -C "$temporary_root" rev-parse HEAD)"
+
+"$repo_root/scripts/github-setup/setup-repo-settings.sh" \
+    --owner "$owner" \
+    --repo "$repository" \
+    --settings-file "$repo_root/.github/config/repo-settings.json"
+"$repo_root/scripts/github-setup/setup-ruleset.sh" \
+    --owner "$owner" \
+    --repo "$repository" \
+    --ruleset-file "$repo_root/.github/config/ruleset-default.json" \
+    --required-status-checks pull-request
+gh api --method PUT \
+    "/repos/$owner/$repository/actions/permissions" \
+    --input - > /dev/null << 'JSON'
+{"enabled":true,"allowed_actions":"all","sha_pinning_required":true}
+JSON
+gh api --method PUT \
+    "/repos/$owner/$repository/actions/permissions/workflow" \
+    --input - > /dev/null << 'JSON'
+{"default_workflow_permissions":"read","can_approve_pull_request_reviews":false}
+JSON
+visibility="$(gh api "/repos/$owner/$repository" --jq .visibility)"
+if [ "$visibility" != "public" ]; then
+    gh api --method PUT \
+        "/repos/$owner/$repository/actions/permissions/access" \
+        --input - > /dev/null << 'JSON'
+{"enabled":true}
+JSON
+fi
+gh api --method POST \
+    "/repos/$owner/$repository/rulesets" \
+    --input "$temporary_root/.github/config/ruleset.json" > /dev/null
+
 echo "repository=$owner/$repository" >> "${GITHUB_OUTPUT:?GITHUB_OUTPUT is required}"
 echo "ref=$commit_sha" >> "$GITHUB_OUTPUT"
 echo "Central workflow seed published at $owner/$repository@$commit_sha"
