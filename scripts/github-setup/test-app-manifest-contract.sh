@@ -251,6 +251,7 @@ expected = {
             "environments": "write",
             "issues": "write",
             "metadata": "read",
+            "pull_requests": "write",
             "secrets": "write",
             "actions_variables": "write",
             "workflows": "write",

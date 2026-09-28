@@ -21,6 +21,14 @@ grep -q 'workflow_call' "$workflow"
 grep -q 'quality.yml' "$workflow"
 grep -Eq 'consumer.*quality|quality.*consumer' "$workflow"
 grep -q 'gh run view "\$run_id" --repo "\${OWNER}/\${REPO_NAME}" --log-failed' "$workflow"
+if ! grep -q 'git/refs' "$workflow" || ! grep -q 'contents' "$workflow" || ! grep -q 'pulls' "$workflow"; then
+    echo "centralized E2E must create a disposable pull request for PR workflow validation" >&2
+    exit 1
+fi
+grep -q 'runs?event=pull_request&per_page=20' "$workflow" || {
+    echo "centralized E2E must poll the pull-request run it triggered" >&2
+    exit 1
+}
 grep -q 'cleanup_after_test' "$workflow"
 grep -q 'app_owner=.*REPO_OWNER' "$workflow"
 grep -q 'allowed_repo_owners=.*REPO_OWNER' "$workflow"
