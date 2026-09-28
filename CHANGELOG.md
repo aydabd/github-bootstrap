@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.25.6](https://github.com/aydabd/github-bootstrap/compare/v2.25.5...v2.25.6) (2026-09-28)
+
+
+### Bug Fixes
+
+* clean centralized repository settings ([658ef06](https://github.com/aydabd/github-bootstrap/commit/658ef068534fa37873a1567e0702b5504dd5cea7))
+* clean repository settings temp files safely ([#342](https://github.com/aydabd/github-bootstrap/issues/342)) ([658ef06](https://github.com/aydabd/github-bootstrap/commit/658ef068534fa37873a1567e0702b5504dd5cea7))
+
 ## [2.25.5](https://github.com/aydabd/github-bootstrap/compare/v2.25.4...v2.25.5) (2026-09-28)
 
 
