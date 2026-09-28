@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.25.4](https://github.com/aydabd/github-bootstrap/compare/v2.25.3...v2.25.4) (2026-09-28)
+
+
+### Bug Fixes
+
+* retain consumer lint config for centralized quality ([#338](https://github.com/aydabd/github-bootstrap/issues/338)) ([eca952d](https://github.com/aydabd/github-bootstrap/commit/eca952d14eb67153300c3067e3208dfa44578e45))
+
 ## [2.25.3](https://github.com/aydabd/github-bootstrap/compare/v2.25.2...v2.25.3) (2026-09-28)
 
 
