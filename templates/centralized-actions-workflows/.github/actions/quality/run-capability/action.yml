@@ -14,7 +14,7 @@ runs:
   using: composite
   steps:
     - name: Run selected capability
-      uses: $/.github/actions/quality/run-quality
+      uses: ./.github/actions/quality/run-quality
       with:
         capabilities: ${{ inputs.capability }}
         environment-manager: ${{ inputs['environment-manager'] }}

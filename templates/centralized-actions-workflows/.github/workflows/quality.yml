@@ -31,10 +31,10 @@ jobs:
           fetch-depth: 0
       - name: Setup mise tooling
         if: inputs['environment-manager'] == 'mise'
-        uses: $/.github/actions/setup-lint-mise
+        uses: ./.github/actions/setup-lint-mise
       - name: Setup system tooling
         if: inputs['environment-manager'] == 'system'
-        uses: $/.github/actions/setup-lint-system
+        uses: ./.github/actions/setup-lint-system
       - name: Bootstrap consumer toolchain
         shell: bash
         env:
@@ -44,7 +44,7 @@ jobs:
           [ -f Makefile ] || { echo "Consumer repository is missing its provider Makefile" >&2; exit 1; }
           ENV_MANAGER="$ENVIRONMENT_MANAGER" make install
       - name: Run consumer quality capabilities
-        uses: $/.github/actions/quality/run-quality
+        uses: ./.github/actions/quality/run-quality
         with:
           capabilities: ${{ inputs.capabilities }}
           environment-manager: ${{ inputs['environment-manager'] }}

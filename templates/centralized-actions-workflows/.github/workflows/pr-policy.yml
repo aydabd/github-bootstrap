@@ -26,7 +26,7 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Verify Signed-off-by trailers
-        uses: $/.github/actions/verify-signed-off-by
+        uses: ./.github/actions/verify-signed-off-by
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
@@ -46,7 +46,7 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Verify conventional commits
-        uses: $/.github/actions/verify-conventional-commits
+        uses: ./.github/actions/verify-conventional-commits
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
@@ -66,7 +66,7 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Verify pull-request title
-        uses: $/.github/actions/verify-pull-request-title
+        uses: ./.github/actions/verify-pull-request-title
         with:
           title: ${{ github.event.pull_request.title }}
           config-path: ${{ inputs.config-path }}
