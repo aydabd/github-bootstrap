@@ -58,11 +58,11 @@ if grep -Eq '^  (push|pull_request|workflow_dispatch):' "$repo_root/templates/ce
     echo "centralized seed quality workflow must not have repository event triggers" >&2
     exit 1
 fi
-grep -Fq 'uses: $/.github/actions/setup-lint-mise' \
+grep -Fq 'uses: ./.github/actions/setup-lint-mise' \
     "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
-grep -Fq 'uses: $/.github/actions/setup-lint-system' \
+grep -Fq 'uses: ./.github/actions/setup-lint-system' \
     "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
-grep -Fq 'uses: $/.github/actions/quality/run-quality' \
+grep -Fq 'uses: ./.github/actions/quality/run-quality' \
     "$repo_root/templates/centralized-actions-workflows/.github/workflows/quality.yml"
 grep -Fq 'GITHUB_ACTION_PATH/config' \
     "$repo_root/templates/centralized-actions-workflows/.github/actions/quality/run-quality/action.yml"

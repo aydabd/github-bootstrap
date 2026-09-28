@@ -28,12 +28,12 @@ grep -q '^  environment-manager:' "$run_capability" || fail "single-capability w
 grep -q '^  workflow_call:' "$workflow" || fail "reusable workflow must expose workflow_call"
 grep -q '^      capabilities:' "$workflow" || fail "workflow must expose capabilities input"
 grep -q '^      environment-manager:' "$workflow" || fail "workflow must expose environment-manager input"
-grep -Fq 'uses: $/.github/actions/setup-lint-mise' "$workflow" || fail "workflow must resolve mise setup from central package"
-grep -Fq 'uses: $/.github/actions/setup-lint-system' "$workflow" || fail "workflow must resolve system setup from central package"
-grep -Fq 'uses: $/.github/actions/quality/run-quality' "$workflow" || fail "workflow must resolve quality runner from central package"
+grep -Fq 'uses: ./.github/actions/setup-lint-mise' "$workflow" || fail "workflow must resolve mise setup from central package"
+grep -Fq 'uses: ./.github/actions/setup-lint-system' "$workflow" || fail "workflow must resolve system setup from central package"
+grep -Fq 'uses: ./.github/actions/quality/run-quality' "$workflow" || fail "workflow must resolve quality runner from central package"
 
-if grep -RFn './.github/actions' "$seed_root/.github"; then
-    fail "central package must not resolve an action through the consumer workspace"
+if grep -RF -n '$/.github/actions' "$seed_root/.github"; then
+    fail "central package must not use an invalid action path"
 fi
 
 test -f "$versions" || fail "two-version consumer fixture is missing"

@@ -23,15 +23,15 @@ for action in verify-conventional-commits verify-pull-request-title verify-signe
     grep -q '^runs:' "$action_file" || fail "central policy action is not executable: $action"
 done
 
-grep -Fq 'uses: $/.github/actions/verify-conventional-commits' "$workflow" ||
+grep -Fq 'uses: ./.github/actions/verify-conventional-commits' "$workflow" ||
     fail "reusable policy workflow must resolve central conventional-commit action"
-grep -Fq 'uses: $/.github/actions/verify-pull-request-title' "$workflow" ||
+grep -Fq 'uses: ./.github/actions/verify-pull-request-title' "$workflow" ||
     fail "reusable policy workflow must resolve central PR-title action"
-grep -Fq 'uses: $/.github/actions/verify-signed-off-by' "$workflow" ||
+grep -Fq 'uses: ./.github/actions/verify-signed-off-by' "$workflow" ||
     fail "reusable policy workflow must resolve central signed-off-by action"
 
-if grep -RFn './.github/actions' "$workflow"; then
-    fail "central PR policy workflow must not resolve actions through the consumer workspace"
+if grep -RF -n '$/.github/actions' "$workflow"; then
+    fail "central PR policy workflow must not use an invalid action path"
 fi
 
 jq -e '
