@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.24.1](https://github.com/aydabd/github-bootstrap/compare/v2.24.0...v2.24.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* synchronize Python tooling updates ([#328](https://github.com/aydabd/github-bootstrap/issues/328)) ([d82fd28](https://github.com/aydabd/github-bootstrap/commit/d82fd280acdc73f0a612d7c79db99fc6378bf771))
+
 ## [2.24.0](https://github.com/aydabd/github-bootstrap/compare/v2.23.0...v2.24.0) (2026-09-28)
 
 
