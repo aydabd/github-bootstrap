@@ -35,4 +35,4 @@ body:
     id: parent
     attributes:
       label: Parent epic
-      description: Use #123 when this Story belongs to an Epic.
+      description: "Use #123 when this Story belongs to an Epic."

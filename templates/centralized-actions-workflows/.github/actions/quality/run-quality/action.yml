@@ -35,10 +35,28 @@ runs:
         for capability in "${selected[@]}"; do
           capability="$(printf '%s' "$capability" | sed 's/^ *//;s/ *$//')"
           case "$capability" in
-            lint-markdown) provider_run markdownlint --config "$GITHUB_ACTION_PATH/config/.markdownlint.json" --ignore-path "$GITHUB_ACTION_PATH/config/.markdownlintignore" "$WORKING_DIRECTORY" ;;
-            lint-json) provider_run bash -c "cd \"$WORKING_DIRECTORY\" && find . -path './.git' -prune -o -path './node_modules' -prune -o -type f -name '*.json' -exec jq empty {} +" ;;
-            lint-yaml) provider_run bash "$GITHUB_ACTION_PATH/scripts/lint-yaml.sh" "$WORKING_DIRECTORY" "$GITHUB_ACTION_PATH/config/.yaml-lint.yml" "$GITHUB_ACTION_PATH/config/.yaml-lint-ignore" ;;
-            lint-actions) (cd "$WORKING_DIRECTORY" && provider_run actionlint -ignore 'SC[0-9]+'); provider_run uv run zizmor --pedantic "$WORKING_DIRECTORY/.github" ;;
+            lint-markdown)
+              provider_run markdownlint \
+                --config "$GITHUB_ACTION_PATH/config/.markdownlint.json" \
+                --ignore-path "$GITHUB_ACTION_PATH/config/.markdownlintignore" \
+                "$WORKING_DIRECTORY"
+              ;;
+            lint-json)
+              provider_run bash -c \
+                "cd \"$WORKING_DIRECTORY\" && find . -path './.git' -prune -o -path './node_modules' -prune -o \
+                  -type f -name '*.json' \
+                  -exec jq empty {} +"
+              ;;
+            lint-yaml)
+              provider_run bash "$GITHUB_ACTION_PATH/scripts/lint-yaml.sh" \
+                "$WORKING_DIRECTORY" \
+                "$GITHUB_ACTION_PATH/config/.yaml-lint.yml" \
+                "$GITHUB_ACTION_PATH/config/.yaml-lint-ignore"
+              ;;
+            lint-actions)
+              (cd "$WORKING_DIRECTORY" && provider_run actionlint -ignore 'SC[0-9]+')
+              provider_run uv run zizmor --pedantic "$WORKING_DIRECTORY/.github"
+              ;;
             lint-shell) provider_run bash "$GITHUB_ACTION_PATH/scripts/lint-shell.sh" "$WORKING_DIRECTORY" "$GITHUB_ACTION_PATH/config/.shell-lint-ignore" ;;
             lint-python) provider_run python3 -m compileall -q "$WORKING_DIRECTORY" ;;
             lint-terraform)

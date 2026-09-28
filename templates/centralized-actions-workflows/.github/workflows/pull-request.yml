@@ -14,7 +14,8 @@ on:
         default: system
         type: string
       central-repository:
-        description: Immutable central workflow package repository in OWNER/REPOSITORY form.
+        description: >-
+          Immutable central workflow package repository in OWNER/REPOSITORY form.
         required: true
         type: string
       central-ref:

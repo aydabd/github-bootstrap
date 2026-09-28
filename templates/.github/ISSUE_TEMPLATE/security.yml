@@ -39,4 +39,4 @@ body:
     id: parent
     attributes:
       label: Parent issue
-      description: Use #123 when this work belongs to a Story or Epic.
+      description: "Use #123 when this work belongs to a Story or Epic."
