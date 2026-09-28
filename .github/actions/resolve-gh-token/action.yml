@@ -38,9 +38,17 @@ inputs:
   app_owner:
     description: Owner bound to the App installation or user access token.
     required: true
+  app_installation_identity:
+    description: Non-secret configured identity for the App credential profile.
+    required: false
+    default: ""
   target_owner:
     description: Target repository owner; must match app_owner.
     required: true
+  token_mode:
+    description: Token mode; auto, installation, bootstrap-refresh, or legacy user alias.
+    required: false
+    default: auto
   permission_profile:
     description: Permission set required by the calling workflow phase.
     required: true
@@ -59,6 +67,12 @@ outputs:
   app_slug:
     description: Authenticated GitHub App slug for bot commit identity.
     value: ${{ steps.app-token.outputs.app-slug }}
+  token_mode:
+    description: Normalized non-secret token mode.
+    value: ${{ steps.finalize.outputs.token_mode }}
+  connector_metadata:
+    description: Normalized non-secret connector metadata as JSON.
+    value: ${{ steps.finalize.outputs.connector_metadata }}
 runs:
   using: composite
   steps:
@@ -73,7 +87,9 @@ runs:
         APP_CLIENT_SECRET: ${{ inputs.app_client_secret }}
         GH_TOKEN: ${{ github.token }}
         APP_OWNER: ${{ inputs.app_owner }}
+        APP_INSTALLATION_IDENTITY: ${{ inputs.app_installation_identity }}
         TARGET_OWNER: ${{ inputs.target_owner }}
+        TOKEN_MODE: ${{ inputs.token_mode }}
         PERMISSION_PROFILE: ${{ inputs.permission_profile }}
         REPOSITORIES: ${{ inputs.repositories }}
       run: |
@@ -82,9 +98,25 @@ runs:
           repository-creation|repository-setup|repository-cleanup|e2e-dispatch|e2e-fixture|weekly-tooling|maintenance-labeling|workflow-approval|maintenance-review|maintenance-merge|release-please|e2e-lifecycle) ;;
           *) echo "::error::Unsupported GitHub App permission profile '$PERMISSION_PROFILE'." >&2; exit 1 ;;
         esac
+        case "$TOKEN_MODE" in
+          auto|installation|bootstrap-refresh|user) ;;
+          *) echo "::error::Unsupported token mode '$TOKEN_MODE'. Allowed: auto, installation, bootstrap-refresh, user." >&2; exit 1 ;;
+        esac
+        if [ -n "$APP_INSTALLATION_IDENTITY" ] && ! [[ "$APP_INSTALLATION_IDENTITY" =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,99}$ ]]; then
+          echo "::error::app_installation_identity must be a GitHub-safe identifier." >&2
+          exit 1
+        fi
         if [ "$PERMISSION_PROFILE" != "repository-creation" ] && [ "$PERMISSION_PROFILE" != "e2e-lifecycle" ] && [ -z "$REPOSITORIES" ]; then
           echo "::error::Repository scoping is required for the '$PERMISSION_PROFILE' permission profile." >&2
           exit 1
+        fi
+        if [ -n "$REPOSITORIES" ]; then
+          while IFS= read -r repository; do
+            if [ -z "$repository" ] || [[ "$repository" == */* || "$repository" == *\** ]]; then
+              echo "::error::Cross-owner repository scope is not allowed; use repository names only." >&2
+              exit 1
+            fi
+          done < <(printf '%s\n' "$REPOSITORIES" | sed 's/,/\n/g')
         fi
         if [ -n "$APP_USER_REFRESH_TOKEN" ]; then
           echo "::add-mask::$APP_USER_REFRESH_TOKEN"
@@ -103,7 +135,14 @@ runs:
 
         case "$target_owner_type" in
           User)
-            if [ -n "$APP_USER_REFRESH_TOKEN" ] || [ -n "$APP_CLIENT_SECRET" ]; then
+            if [ "$TOKEN_MODE" = "auto" ] && { [ -n "$APP_USER_REFRESH_TOKEN" ] || [ -n "$APP_CLIENT_SECRET" ]; }; then
+              NORMALIZED_TOKEN_MODE=bootstrap-refresh
+            elif [ "$TOKEN_MODE" = "bootstrap-refresh" ] || [ "$TOKEN_MODE" = "user" ]; then
+              NORMALIZED_TOKEN_MODE=bootstrap-refresh
+            else
+              NORMALIZED_TOKEN_MODE=installation
+            fi
+            if [ "$NORMALIZED_TOKEN_MODE" = "bootstrap-refresh" ]; then
               if [ -z "$APP_USER_REFRESH_TOKEN" ] || [ -z "$APP_CLIENT_SECRET" ]; then
                 echo "::error::Personal-account creation requires both the App refresh token and client secret." >&2
                 exit 1
@@ -136,6 +175,11 @@ runs:
             fi
             ;;
           Organization)
+            if [ "$TOKEN_MODE" = "bootstrap-refresh" ] || [ "$TOKEN_MODE" = "user" ]; then
+              echo "::error::bootstrap-refresh is not allowed for runtime profiles or organization targets." >&2
+              exit 1
+            fi
+            NORMALIZED_TOKEN_MODE=installation
             AUTH_MODE=app bash ./scripts/github-setup/validate-app-auth.sh
             echo "mode=app" >> "$GITHUB_OUTPUT"
             ;;
@@ -144,6 +188,26 @@ runs:
             exit 1
             ;;
         esac
+        if [ "$TOKEN_MODE" = "installation" ] && [ -z "$APP_INSTALLATION_IDENTITY" ]; then
+          echo "::error::app_installation_identity is required for explicit installation mode." >&2
+          exit 1
+        fi
+        if [ -z "$APP_INSTALLATION_IDENTITY" ]; then
+          APP_INSTALLATION_IDENTITY="legacy-${APP_OWNER}"
+        fi
+        scope_json="$(printf '%s\n' "$REPOSITORIES" | sed 's/,/\n/g' | jq -Rsc 'split("\n") | map(select(length > 0))')"
+        connector_metadata="$(jq -cn \
+          --arg identity "$APP_INSTALLATION_IDENTITY" \
+          --arg app_owner "$APP_OWNER" \
+          --arg target_owner "$TARGET_OWNER" \
+          --arg permission_profile "$PERMISSION_PROFILE" \
+          --arg token_mode "$NORMALIZED_TOKEN_MODE" \
+          --argjson repositories "$scope_json" \
+          '{app_installation_identity: $identity, app_owner: $app_owner, target_owner: $target_owner, permission_profile: $permission_profile, token_mode: $token_mode, repositories: $repositories}')"
+        {
+          echo "token_mode=$NORMALIZED_TOKEN_MODE"
+          echo "connector_metadata=$connector_metadata"
+        } >> "$GITHUB_OUTPUT"
 
     - name: Create GitHub App installation token
       id: app-token
@@ -219,6 +283,8 @@ runs:
       shell: bash
       env:
         AUTH_MODE: ${{ steps.validate-auth-mode.outputs.mode }}
+        TOKEN_MODE: ${{ steps.validate-auth-mode.outputs.token_mode }}
+        CONNECTOR_METADATA: ${{ steps.validate-auth-mode.outputs.connector_metadata }}
         APP_TOKEN: ${{ steps.app-token.outputs.token }}
         APP_USER_TOKEN: ${{ steps.refresh-user-token.outputs.token }}
       run: |
@@ -244,3 +310,5 @@ runs:
         else
           echo "auth_mode=$AUTH_MODE" >> "$GITHUB_OUTPUT"
         fi
+        echo "token_mode=$TOKEN_MODE" >> "$GITHUB_OUTPUT"
+        echo "connector_metadata=$CONNECTOR_METADATA" >> "$GITHUB_OUTPUT"

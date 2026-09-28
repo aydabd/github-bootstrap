@@ -46,9 +46,8 @@ done
 resolve_token_block="$(sed -n '/^      - name: Resolve GitHub token/,/^      - name:/p' "$api_workflow")"
 printf '%s\n' "$resolve_token_block" | grep -Fq 'app_owner: ${{ inputs.app_owner }}' ||
     fail "repository token resolution must remain bound to inputs.app_owner"
-if printf '%s\n' "$resolve_token_block" | grep -Fq 'app_installation_identity'; then
-    fail "app_installation_identity must remain metadata-only in this slice"
-fi
+printf '%s\n' "$resolve_token_block" | grep -Fq 'app_installation_identity: ${{ needs.validate-portable-configuration.outputs.app_installation_identity }}' ||
+    fail "repository token resolution must pass the portable App identity"
 
 for variable in owner_type app_installation_identity app_permission_profile project_owner project_number token_mode; do
     grep -Fq "variable \"${variable}\"" "$terraform_variables" ||
