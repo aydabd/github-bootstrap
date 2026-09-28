@@ -100,7 +100,7 @@ runs:
         esac
         case "$TOKEN_MODE" in
           auto|installation|bootstrap-refresh|user) ;;
-          *) echo "::error::Unsupported token mode '$TOKEN_MODE'. Allowed: auto, installation, bootstrap-refresh." >&2; exit 1 ;;
+          *) echo "::error::Unsupported token mode '$TOKEN_MODE'. Allowed: auto, installation, bootstrap-refresh, user." >&2; exit 1 ;;
         esac
         if [ -n "$APP_INSTALLATION_IDENTITY" ] && ! [[ "$APP_INSTALLATION_IDENTITY" =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,99}$ ]]; then
           echo "::error::app_installation_identity must be a GitHub-safe identifier." >&2

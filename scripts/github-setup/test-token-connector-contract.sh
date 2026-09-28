@@ -27,6 +27,8 @@ grep -Fq 'TOKEN_MODE: ${{ inputs.token_mode }}' "$action" ||
     fail "token mode is not passed to validation"
 grep -Fq 'auto|installation|bootstrap-refresh|user' "$action" ||
     fail "legacy user token mode alias is not accepted"
+grep -Fq "Allowed: auto, installation, bootstrap-refresh, user." "$action" ||
+    fail "token mode error message omits the legacy user alias"
 grep -Fq 'app_installation_identity: ${{ needs.validate-portable-configuration.outputs.app_installation_identity }}' "$repo_root/.github/workflows/create-repository.yml" ||
     fail "API repository creation does not pass the portable App identity"
 grep -Fq 'token_mode: ${{ needs.validate-portable-configuration.outputs.token_mode || '\''auto'\'' }}' "$repo_root/.github/workflows/create-repository.yml" ||
