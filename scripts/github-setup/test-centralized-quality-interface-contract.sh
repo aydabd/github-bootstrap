@@ -8,6 +8,7 @@ run_quality="$seed_root/.github/actions/quality/run-quality/action.yml"
 run_capability="$seed_root/.github/actions/quality/run-capability/action.yml"
 validate_quality="$seed_root/.github/actions/quality/action.yml"
 versions="$seed_root/examples/consumer-quality-versions.yml"
+caller="$repo_root/templates/.github/workflows/centralized-quality.yml"
 
 fail() {
     echo "centralized quality interface contract: $*" >&2
@@ -28,9 +29,25 @@ grep -q '^  environment-manager:' "$run_capability" || fail "single-capability w
 grep -q '^  workflow_call:' "$workflow" || fail "reusable workflow must expose workflow_call"
 grep -q '^      capabilities:' "$workflow" || fail "workflow must expose capabilities input"
 grep -q '^      environment-manager:' "$workflow" || fail "workflow must expose environment-manager input"
-grep -Fq 'uses: ./.github/actions/setup-lint-mise' "$workflow" || fail "workflow must resolve mise setup from central package"
-grep -Fq 'uses: ./.github/actions/setup-lint-system' "$workflow" || fail "workflow must resolve system setup from central package"
-grep -Fq 'uses: ./.github/actions/quality/run-quality' "$workflow" || fail "workflow must resolve quality runner from central package"
+grep -q '^      central-repository:' "$workflow" || fail "workflow must expose central-repository input"
+grep -q '^      central-ref:' "$workflow" || fail "workflow must expose central-ref input"
+grep -Fq 'path: .github/central-workflows' "$workflow" || fail "workflow must checkout central package into dedicated path"
+grep -Fq 'persist-credentials: false' "$workflow" || fail "central package checkout must not persist credentials"
+grep -Fq 'uses: ./.github/central-workflows/.github/actions/setup-lint-mise' "$workflow" || fail "workflow must resolve mise setup from central checkout"
+grep -Fq 'uses: ./.github/central-workflows/.github/actions/setup-lint-system' "$workflow" || fail "workflow must resolve system setup from central checkout"
+grep -Fq 'uses: ./.github/central-workflows/.github/actions/quality/run-quality' "$workflow" || fail "workflow must resolve quality runner from central checkout"
+grep -Fq "inputs['central-repository']" "$workflow" || fail "workflow must use bracket notation for central-repository input"
+grep -Fq "inputs['central-ref']" "$workflow" || fail "workflow must use bracket notation for central-ref input"
+if grep -Eq 'inputs\.central-(repository|ref)' "$workflow"; then
+    fail "workflow must not use dot notation for hyphenated central inputs"
+fi
+
+grep -q '^      central-repository: "{{CENTRAL_REPOSITORY}}"$' "$caller" || fail "caller must pass central repository"
+grep -q '^      central-ref: "{{CENTRAL_REF}}"$' "$caller" || fail "caller must pass central ref"
+
+if grep -E -q 'uses: /?\./\.github/actions/(setup-lint|quality/run-quality)' "$workflow"; then
+    fail "central workflow must not resolve centralized actions from consumer root"
+fi
 
 if grep -RF -n '$/.github/actions' "$seed_root/.github"; then
     fail "central package must not use an invalid action path"

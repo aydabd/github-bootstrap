@@ -13,6 +13,14 @@ on:
         required: false
         default: system
         type: string
+      central-repository:
+        description: Immutable central workflow package repository in OWNER/REPOSITORY form.
+        required: true
+        type: string
+      central-ref:
+        description: Immutable central workflow package ref.
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -29,12 +37,19 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Checkout central workflow package
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs['central-repository'] }}
+          ref: ${{ inputs['central-ref'] }}
+          path: .github/central-workflows
+          persist-credentials: false
       - name: Setup mise tooling
         if: inputs['environment-manager'] == 'mise'
-        uses: ./.github/actions/setup-lint-mise
+        uses: ./.github/central-workflows/.github/actions/setup-lint-mise
       - name: Setup system tooling
         if: inputs['environment-manager'] == 'system'
-        uses: ./.github/actions/setup-lint-system
+        uses: ./.github/central-workflows/.github/actions/setup-lint-system
       - name: Bootstrap consumer toolchain
         shell: bash
         env:
@@ -44,7 +59,7 @@ jobs:
           [ -f Makefile ] || { echo "Consumer repository is missing its provider Makefile" >&2; exit 1; }
           ENV_MANAGER="$ENVIRONMENT_MANAGER" make install
       - name: Run consumer quality capabilities
-        uses: ./.github/actions/quality/run-quality
+        uses: ./.github/central-workflows/.github/actions/quality/run-quality
         with:
           capabilities: ${{ inputs.capabilities }}
           environment-manager: ${{ inputs['environment-manager'] }}
