@@ -38,10 +38,10 @@ jobs:
         with:
           repository: ${{ inputs['central-repository'] }}
           ref: ${{ inputs['central-ref'] }}
-          path: .github/central-workflows
+          path: .central-workflows
           persist-credentials: false
       - name: Verify Signed-off-by trailers
-        uses: ./.github/central-workflows/.github/actions/verify-signed-off-by
+        uses: ./.central-workflows/.github/actions/verify-signed-off-by
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
@@ -65,10 +65,10 @@ jobs:
         with:
           repository: ${{ inputs['central-repository'] }}
           ref: ${{ inputs['central-ref'] }}
-          path: .github/central-workflows
+          path: .central-workflows
           persist-credentials: false
       - name: Verify conventional commits
-        uses: ./.github/central-workflows/.github/actions/verify-conventional-commits
+        uses: ./.central-workflows/.github/actions/verify-conventional-commits
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
@@ -92,10 +92,10 @@ jobs:
         with:
           repository: ${{ inputs['central-repository'] }}
           ref: ${{ inputs['central-ref'] }}
-          path: .github/central-workflows
+          path: .central-workflows
           persist-credentials: false
       - name: Verify pull-request title
-        uses: ./.github/central-workflows/.github/actions/verify-pull-request-title
+        uses: ./.central-workflows/.github/actions/verify-pull-request-title
         with:
           title: ${{ github.event.pull_request.title }}
           config-path: ${{ inputs.config-path }}

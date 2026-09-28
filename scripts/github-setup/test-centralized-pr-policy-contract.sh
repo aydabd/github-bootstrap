@@ -28,11 +28,11 @@ grep -q '^      central-repository:' "$workflow" || fail "central PR policy must
 grep -q '^      central-ref:' "$workflow" || fail "central PR policy must accept its immutable package ref"
 
 for action in verify-conventional-commits verify-pull-request-title verify-signed-off-by; do
-    grep -Fq "uses: ./.github/central-workflows/.github/actions/$action" "$workflow" ||
+    grep -Fq "uses: ./.central-workflows/.github/actions/$action" "$workflow" ||
         fail "reusable policy workflow must resolve central $action from its package checkout"
 done
 
-grep -Fq 'path: .github/central-workflows' "$workflow" ||
+grep -Fq 'path: .central-workflows' "$workflow" ||
     fail "reusable policy workflow must check out the central package"
 
 if grep -E -n 'uses: \.?/?\.github/actions/(verify|setup)' "$workflow"; then

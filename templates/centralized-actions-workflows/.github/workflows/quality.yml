@@ -42,14 +42,14 @@ jobs:
         with:
           repository: ${{ inputs['central-repository'] }}
           ref: ${{ inputs['central-ref'] }}
-          path: .github/central-workflows
+          path: .central-workflows
           persist-credentials: false
       - name: Setup mise tooling
         if: inputs['environment-manager'] == 'mise'
-        uses: ./.github/central-workflows/.github/actions/setup-lint-mise
+        uses: ./.central-workflows/.github/actions/setup-lint-mise
       - name: Setup system tooling
         if: inputs['environment-manager'] == 'system'
-        uses: ./.github/central-workflows/.github/actions/setup-lint-system
+        uses: ./.central-workflows/.github/actions/setup-lint-system
       - name: Bootstrap consumer toolchain
         shell: bash
         env:
@@ -59,7 +59,7 @@ jobs:
           [ -f Makefile ] || { echo "Consumer repository is missing its provider Makefile" >&2; exit 1; }
           ENV_MANAGER="$ENVIRONMENT_MANAGER" make install
       - name: Run consumer quality capabilities
-        uses: ./.github/central-workflows/.github/actions/quality/run-quality
+        uses: ./.central-workflows/.github/actions/quality/run-quality
         with:
           capabilities: ${{ inputs.capabilities }}
           environment-manager: ${{ inputs['environment-manager'] }}
