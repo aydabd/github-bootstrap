@@ -897,7 +897,7 @@ jobs:
               -e "s|{{CENTRAL_REPOSITORY}}|$CENTRAL_REPOSITORY|g" \
               -e "s|{{CENTRAL_REF}}|$CENTRAL_REF|g" \
               .github/config/bootstrap-profile.json
-            rm -rf .github/actions/quality .github/actions/setup-lint-* .github/linters \
+            rm -rf .github/actions/quality .github/actions/setup-lint-* \
               scripts/lint-shell.sh scripts/lint-yaml.sh \
               .github/actions/verify-conventional-commits \
               .github/actions/verify-pull-request-title \
