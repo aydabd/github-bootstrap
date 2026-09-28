@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.25.0](https://github.com/aydabd/github-bootstrap/compare/v2.24.1...v2.25.0) (2026-09-28)
+
+
+### Features
+
+* centralize pull request policy workflows ([#330](https://github.com/aydabd/github-bootstrap/issues/330)) ([8aff93b](https://github.com/aydabd/github-bootstrap/commit/8aff93b6493c15b133c210263861a3ad780d787c))
+
 ## [2.24.1](https://github.com/aydabd/github-bootstrap/compare/v2.24.0...v2.24.1) (2026-09-28)
 
 
