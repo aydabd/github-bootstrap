@@ -43,7 +43,7 @@ jq -e '
     .package == "centralized-actions-workflows" and
     (.version | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")) and
     .source_repository == "{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}" and
-    .reusable_workflows == [".github/workflows/quality.yml"] and
+    (.reusable_workflows | sort) == [".github/workflows/pr-policy.yml", ".github/workflows/quality.yml"] and
     .ref_policy.type == "immutable" and
     (.ref_policy.allowed | sort) == ["commit-sha", "semver-release-tag"]
 ' "$manifest" > /dev/null || {

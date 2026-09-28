@@ -3,7 +3,12 @@
   "package": "centralized-actions-workflows",
   "version": "v1.0.0",
   "source_repository": "{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}",
-  "reusable_workflows": [".github/workflows/quality.yml"],
+  "reusable_workflows": [".github/workflows/pr-policy.yml", ".github/workflows/quality.yml"],
+  "reusable_actions": [
+    ".github/actions/verify-conventional-commits",
+    ".github/actions/verify-pull-request-title",
+    ".github/actions/verify-signed-off-by"
+  ],
   "ref_policy": {
     "type": "immutable",
     "allowed": ["semver-release-tag", "commit-sha"]

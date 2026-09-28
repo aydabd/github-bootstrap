@@ -4,14 +4,16 @@ This directory is a seed for a repository owned by the user or organization
 that wants to share quality automation across multiple repositories. It is
 independent of `github-bootstrap` after creation.
 
-This seeded repository contains the reusable workflow at
-`.github/workflows/quality.yml`, its composite quality actions, setup actions,
-lint scripts, and lint configuration. The workflow intentionally declares
-only `workflow_call`; the consumer repository should define its own workflow
-with `push` and `pull_request` triggers. The consumer retains its own
-Makefile, provider files, and repository source/configuration, but does not
-copy the central quality actions or lint scripts. Publish immutable release
-tags or use commit SHAs, then configure consumer repositories with:
+This seeded repository contains the reusable workflows at
+`.github/workflows/quality.yml` and `.github/workflows/pr-policy.yml`, their
+composite quality and PR-policy actions, setup actions, lint scripts, and lint
+configuration. The workflows intentionally declare only `workflow_call`; the
+consumer repository should define thin workflows with its own `push` or
+`pull_request` triggers. The consumer retains its own Makefile, provider
+files, repository source/configuration, Project identity, secrets, and final
+ruleset enforcement, but does not copy central quality or PR-policy
+implementation. Publish immutable release tags or use commit SHAs, then
+configure consumer repositories with:
 
 ```yaml
 delivery_mode: centralized
@@ -31,6 +33,23 @@ Consumers can remain on different immutable package versions while they are
 upgraded independently. See `examples/consumer-quality-versions.yml` for a
 release-tag-pinned consumer and a commit-SHA-pinned consumer using the same
 workflow interface.
+
+The PR-policy caller uses the same central repository and ref:
+
+```yaml
+name: Commit policy
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  policy:
+    uses: "OWNER/REPOSITORY/.github/workflows/pr-policy.yml@IMMUTABLE_REF"
+    permissions:
+      contents: read
+      pull-requests: read
+```
 
 The machine-readable package identity and release policy are recorded in
 `.github/centralized-workflows.json`. The seed process materializes its
