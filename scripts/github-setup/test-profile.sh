@@ -501,7 +501,11 @@ grep -Fq -- '-type f -name \"*.json\" -exec jq empty {} +' \
     "$repo_root/templates/.github/actions/quality/run-quality/action.yml"
 grep -Fq -- '-type f -name \"*.json\" -exec jq empty {} +' \
     "$repo_root/templates/.github/actions/quality/run-capability/action.yml"
-grep -q 'zizmor==1.30.0' "$repo_root/pyproject.toml"
+zizmor_version="$(sed -n 's/^[[:space:]]*"zizmor==\([^"]*\)".*/\1/p' "$repo_root/pyproject.toml")"
+[ -n "$zizmor_version" ] || {
+    echo "root pyproject.toml is missing an exact zizmor pin" >&2
+    exit 1
+}
 grep -q '\- uv=' "$repo_root/environment.yml"
 grep -q 'uv = "' "$repo_root/mise.toml"
 grep -q 'actionlint=1.7.12' "$repo_root/environment.yml"
@@ -616,7 +620,7 @@ for provider_file in "$repo_root"/templates/languages/*/providers/mise/mise.toml
     grep -q 'uv = "' "$provider_file"
 done
 for lang_dir in "$repo_root"/templates/languages/*/; do
-    grep -q 'zizmor==1.30.0' "$lang_dir/pyproject.toml"
+    grep -Fq "\"zizmor==$zizmor_version\"" "$lang_dir/pyproject.toml"
 done
 for provider_file in "$repo_root"/templates/languages/*/providers/micromamba/environment.yml; do
     grep -q 'terraform' "$provider_file"

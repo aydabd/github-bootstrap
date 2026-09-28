@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -20,8 +21,9 @@ func TestParseUpdaters_All(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseUpdaters(all) returned error: %v", err)
 	}
-	if len(got) != 4 {
-		t.Fatalf("expected 4 updaters, got %d: %v", len(got), got)
+	want := []string{"micromamba", "mise", "system", "pre-commit", "uv"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("expected updaters %v, got %v", want, got)
 	}
 }
 

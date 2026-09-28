@@ -44,17 +44,22 @@ assert_contains "quality-actions" "$repo_root/make/lint.mk"
 for workflow in create-repository.yml terraform-create-repository.yml; do
     assert_not_contains "default: lint-markdown,lint-json,lint-yaml,lint-actions" "$repo_root/.github/workflows/$workflow"
 done
+assert_not_contains 'package-ecosystem: "uv"' "$repo_root/.github/dependabot.yml"
+assert_not_contains 'package-ecosystem: "uv"' "$repo_root/templates/.github/dependabot.yml"
 
 for manifest in "$repo_root/environment.yml" \
     "$repo_root/templates/languages/agnostic/providers/micromamba/environment.yml"; do
     assert_contains "- actionlint=1.7.12" "$manifest"
 done
 
-# zizmor is a uv-managed Python tool, pinned in the uv lockfile rather than the
-# conda environment.
-for project in "$repo_root/pyproject.toml" \
-    "$repo_root/templates/languages/agnostic/pyproject.toml"; do
-    assert_contains "zizmor==1.30.0" "$project"
-done
+# zizmor is a uv-managed Python tool. Its exact version is synchronized from
+# the root project into generated templates by the weekly tooling updater.
+zizmor_version="$(sed -n 's/^[[:space:]]*"zizmor==\([^"]*\)".*/\1/p' "$repo_root/pyproject.toml")"
+[ -n "$zizmor_version" ] || {
+    echo "root pyproject.toml is missing an exact zizmor pin" >&2
+    exit 1
+}
+assert_contains "\"zizmor==$zizmor_version\"" \
+    "$repo_root/templates/languages/agnostic/pyproject.toml"
 
 echo "Action lint contract checks passed."

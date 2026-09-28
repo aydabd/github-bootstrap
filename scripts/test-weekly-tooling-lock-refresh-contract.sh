@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 workflow="$repo_root/.github/workflows/weekly-tooling-updates.yml"
 refresh="$repo_root/scripts/regenerate-tooling-locks.sh"
 drift="$repo_root/scripts/validate-tooling-lock-drift.sh"
+runner="$repo_root/tools/internal/toolingupdater/runner/runner.go"
 
 [ -f "$refresh" ] || {
     echo "missing unified tooling lock refresh script" >&2
@@ -17,6 +18,10 @@ drift="$repo_root/scripts/validate-tooling-lock-drift.sh"
 
 grep -Fq 'scripts/regenerate-tooling-locks.sh' "$workflow" || {
     echo "weekly workflow does not use the unified lock refresh" >&2
+    exit 1
+}
+grep -Fq '"uv"' "$runner" || {
+    echo "weekly tooling updater does not include the synchronized uv updater" >&2
     exit 1
 }
 for command in 'conda-lock' 'mise lock' 'npm ci' 'uv lock --upgrade' 'pre-commit autoupdate --freeze'; do
