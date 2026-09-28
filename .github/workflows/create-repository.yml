@@ -892,11 +892,20 @@ jobs:
             sed -i \
               -e "s|{{CENTRAL_REPOSITORY}}|$CENTRAL_REPOSITORY|g" \
               -e "s|{{CENTRAL_REF}}|$CENTRAL_REF|g" \
+              .github/workflows/centralized-commit-policy.yml
+            sed -i \
+              -e "s|{{CENTRAL_REPOSITORY}}|$CENTRAL_REPOSITORY|g" \
+              -e "s|{{CENTRAL_REF}}|$CENTRAL_REF|g" \
               .github/config/bootstrap-profile.json
             rm -rf .github/actions/quality .github/actions/setup-lint-* .github/linters \
               scripts/lint-shell.sh scripts/lint-yaml.sh \
-              .github/workflows/quality.yml .github/workflows/quality-capability.yml
+              .github/actions/verify-conventional-commits \
+              .github/actions/verify-pull-request-title \
+              .github/actions/verify-signed-off-by \
+              .github/workflows/quality.yml .github/workflows/quality-capability.yml \
+              .github/workflows/commit-policy.yml
             mv .github/workflows/centralized-quality.yml .github/workflows/quality.yml
+            mv .github/workflows/centralized-commit-policy.yml .github/workflows/commit-policy.yml
             echo "✅ Quality implementation centralized at $CENTRAL_REPOSITORY@$CENTRAL_REF" >> "$GITHUB_STEP_SUMMARY"
           else
             sed -i \
@@ -909,6 +918,7 @@ jobs:
               -e "s|{{CENTRAL_REF}}||g" \
               .github/config/bootstrap-profile.json
             rm -f .github/workflows/centralized-quality.yml
+            rm -f .github/workflows/centralized-commit-policy.yml
             echo "✅ Quality implementation embedded in generated repository" >> "$GITHUB_STEP_SUMMARY"
           fi
           sed -i \

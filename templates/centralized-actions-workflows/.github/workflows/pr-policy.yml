@@ -1,0 +1,72 @@
+name: Centralized PR policy
+
+on:
+  workflow_call:
+    inputs:
+      config-path:
+        description: Optional consumer commitlint configuration path
+        required: false
+        default: ""
+        type: string
+
+permissions: {}
+
+jobs:
+  signed-off-by:
+    name: Signed-off-by trailers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check out pull-request revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify Signed-off-by trailers
+        uses: $/.github/actions/verify-signed-off-by
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+
+  conventional-commits:
+    name: Conventional commits
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check out pull-request revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify conventional commits
+        uses: $/.github/actions/verify-conventional-commits
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+          config-path: ${{ inputs.config-path }}
+
+  pull-request-title:
+    name: Pull-request title
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out pull-request revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify pull-request title
+        uses: $/.github/actions/verify-pull-request-title
+        with:
+          title: ${{ github.event.pull_request.title }}
+          config-path: ${{ inputs.config-path }}

@@ -1,0 +1,17 @@
+name: Commit policy
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  policy:
+    name: Centralized PR policy
+    uses: "{{CENTRAL_REPOSITORY}}/.github/workflows/pr-policy.yml@{{CENTRAL_REF}}"
+    with:
+      config-path: ""
+    permissions:
+      contents: read
+      pull-requests: read
