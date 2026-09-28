@@ -54,6 +54,21 @@ var GoVersionPatterns = map[string]string{
 	"github.com/golangci/golangci-lint/cmd/golangci-lint": `github.com/golangci/golangci-lint/cmd/golangci-lint@[0-9A-Za-z.\-]+`,
 }
 
+// UpdatePythonProjectText updates only exact pins for the managed Python
+// tooling packages. Unpinned and range-constrained dependencies are left
+// untouched so language-specific project choices remain authoritative.
+func UpdatePythonProjectText(text string, versions map[string]string) (string, error) {
+	updated := text
+	for packageName, version := range versions {
+		if strings.TrimSpace(packageName) == "" || strings.TrimSpace(version) == "" {
+			return "", fmt.Errorf("python package and version must be non-empty")
+		}
+		pattern := regexp.MustCompile(`"` + regexp.QuoteMeta(packageName) + `==[0-9A-Za-z.\-]+"`)
+		updated = pattern.ReplaceAllString(updated, `"`+packageName+`==`+version+`"`)
+	}
+	return updated, nil
+}
+
 func EnsureCommandAvailable(command string) error {
 	if _, err := exec.LookPath(command); err != nil {
 		return fmt.Errorf("missing required command: %s", command)

@@ -1,6 +1,7 @@
 package toolinglib
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
@@ -163,5 +164,37 @@ func TestCooldownCutoff(t *testing.T) {
 	age := time.Since(got)
 	if age < 13*24*time.Hour || age > 15*24*time.Hour {
 		t.Errorf("cooldownCutoff(14) is %v ago, expected ~14 days", age)
+	}
+}
+
+func TestPythonPackagesForUpdaters(t *testing.T) {
+	tests := []struct {
+		name     string
+		selected []string
+		want     []string
+	}{
+		{
+			name:     "mise only",
+			selected: []string{"mise"},
+			want:     []string{"editorconfig-checker", "pre-commit", "yamllint"},
+		},
+		{
+			name:     "uv only",
+			selected: []string{"uv"},
+			want:     []string{"editorconfig-checker", "jsonschema", "pre-commit", "rfc3339-validator", "rfc8785", "yamllint", "zizmor"},
+		},
+		{
+			name:     "mise and uv",
+			selected: []string{"mise", "uv"},
+			want:     []string{"editorconfig-checker", "jsonschema", "pre-commit", "rfc3339-validator", "rfc8785", "yamllint", "zizmor"},
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := pythonPackagesForUpdaters(testCase.selected); !reflect.DeepEqual(got, testCase.want) {
+				t.Fatalf("pythonPackagesForUpdaters(%v) = %v, want %v", testCase.selected, got, testCase.want)
+			}
+		})
 	}
 }

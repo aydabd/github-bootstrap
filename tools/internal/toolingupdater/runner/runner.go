@@ -56,11 +56,20 @@ var registry = map[string]updaterEntry{
 			return updaters.RunPreCommit(root, scope, write)
 		},
 	},
+	"uv": {
+		needsVersions: true,
+		run: func(root string, scope string, write bool, versions *toolinglib.Versions) ([]string, error) {
+			if versions == nil {
+				return nil, fmt.Errorf("uv updater requires version data")
+			}
+			return updaters.RunPython(root, scope, *versions, write)
+		},
+	},
 }
 
 func parseUpdaters(raw string) ([]string, error) {
 	if strings.TrimSpace(raw) == "all" {
-		return []string{"micromamba", "mise", "system", "pre-commit"}, nil
+		return []string{"micromamba", "mise", "system", "pre-commit", "uv"}, nil
 	}
 	parts := strings.Split(raw, ",")
 	selected := make([]string, 0, len(parts))

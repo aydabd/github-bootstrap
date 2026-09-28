@@ -6,6 +6,47 @@ import (
 	"testing"
 )
 
+func TestUpdatePythonProjectTextUpdatesManagedExactPins(t *testing.T) {
+	source := `[dependency-groups]
+dev = [
+	"pre-commit==4.6.2",
+	"zizmor==1.30.0",
+	"ruff",
+]
+`
+
+	updated, err := UpdatePythonProjectText(source, map[string]string{
+		"pre-commit": "4.6.3",
+		"zizmor":     "1.30.1",
+	})
+	if err != nil {
+		t.Fatalf("UpdatePythonProjectText returned error: %v", err)
+	}
+	if !strings.Contains(updated, `"pre-commit==4.6.3"`) ||
+		!strings.Contains(updated, `"zizmor==1.30.1"`) {
+		t.Fatalf("managed exact pins were not updated: %s", updated)
+	}
+	if !strings.Contains(updated, `"ruff"`) {
+		t.Fatalf("unpinned dependency was changed: %s", updated)
+	}
+}
+
+func TestUpdatePythonProjectTextLeavesUnmatchedPinsAndFormatting(t *testing.T) {
+	source := "dev = [\n  \"zizmor==1.30.0\",\n  \"jsonschema>=4.0\",\n]\n"
+	updated, err := UpdatePythonProjectText(source, map[string]string{
+		"zizmor":     "1.30.1",
+		"jsonschema": "4.26.0",
+		"missing":    "9.9.9",
+	})
+	if err != nil {
+		t.Fatalf("UpdatePythonProjectText returned error: %v", err)
+	}
+	want := "dev = [\n  \"zizmor==1.30.1\",\n  \"jsonschema>=4.0\",\n]\n"
+	if updated != want {
+		t.Fatalf("unexpected project transformation:\n%s", updated)
+	}
+}
+
 func TestUpdateEnvText(t *testing.T) {
 	source := "dependencies:\n  - pre-commit=4.0.0\n  - prettier=1.0.0\n"
 	updated, err := UpdateEnvText(source, map[string]string{"pre-commit": "4.6.2", "prettier": "3.9.6"})

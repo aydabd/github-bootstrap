@@ -49,11 +49,44 @@ var condaToolPackages = []string{
 	"coreutils",
 }
 
+var pythonToolPackages = []string{
+	"pre-commit",
+	"editorconfig-checker",
+	"yamllint",
+	"zizmor",
+	"jsonschema",
+	"rfc8785",
+	"rfc3339-validator",
+}
+
 func allCondaPackages() []string {
 	packages := make([]string, 0, len(condaRuntimePackages)+len(condaToolPackages))
 	packages = append(packages, condaRuntimePackages...)
 	packages = append(packages, condaToolPackages...)
 	return packages
+}
+
+func pythonPackagesForUpdaters(selectedUpdaters []string) []string {
+	packages := map[string]bool{}
+	for _, updater := range selectedUpdaters {
+		switch updater {
+		case "mise":
+			for packageName := range PipVersionPatterns {
+				packages[packageName] = true
+			}
+		case "uv":
+			for _, packageName := range pythonToolPackages {
+				packages[packageName] = true
+			}
+		}
+	}
+
+	selected := make([]string, 0, len(packages))
+	for packageName := range packages {
+		selected = append(selected, packageName)
+	}
+	sort.Strings(selected)
+	return selected
 }
 
 func retryBackoff(attempt int) {
@@ -522,18 +555,17 @@ func CollectVersions(selectedUpdaters []string, cooldownDays int) (Versions, err
 	python := map[string]string{}
 	npm := map[string]string{}
 	goModules := map[string]string{}
+	for _, pkg := range pythonPackagesForUpdaters(selectedUpdaters) {
+		v, err := latestPyPIVersion(pkg, cutoff)
+		if err != nil {
+			return Versions{}, err
+		}
+		python[pkg] = v
+	}
 	if needsMise {
 		goModuleLookup := map[string]string{
 			"github.com/daixiang0/gci":                            "github.com/daixiang0/gci",
 			"github.com/golangci/golangci-lint/cmd/golangci-lint": "github.com/golangci/golangci-lint",
-		}
-
-		for _, pkg := range []string{"pre-commit", "editorconfig-checker", "yamllint"} {
-			v, err := latestPyPIVersion(pkg, cutoff)
-			if err != nil {
-				return Versions{}, err
-			}
-			python[pkg] = v
 		}
 
 		for _, pkg := range []string{"prettier", "markdownlint-cli"} {
