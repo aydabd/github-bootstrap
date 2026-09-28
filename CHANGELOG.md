@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.25.8](https://github.com/aydabd/github-bootstrap/compare/v2.25.7...v2.25.8) (2026-09-28)
+
+
+### Bug Fixes
+
+* sign off centralized e2e marker commit ([081a250](https://github.com/aydabd/github-bootstrap/commit/081a2506e123cc8ea70d9c91b5ba17472389e661))
+* sign off centralized E2E marker commit ([#346](https://github.com/aydabd/github-bootstrap/issues/346)) ([081a250](https://github.com/aydabd/github-bootstrap/commit/081a2506e123cc8ea70d9c91b5ba17472389e661))
+
 ## [2.25.7](https://github.com/aydabd/github-bootstrap/compare/v2.25.6...v2.25.7) (2026-09-28)
 
 
