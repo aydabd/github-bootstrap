@@ -9,6 +9,9 @@ run_capability="$seed_root/.github/actions/quality/run-capability/action.yml"
 validate_quality="$seed_root/.github/actions/quality/action.yml"
 versions="$seed_root/examples/consumer-quality-versions.yml"
 caller="$repo_root/templates/.github/workflows/centralized-quality.yml"
+yaml_lint="$seed_root/scripts/lint-yaml.sh"
+yaml_config="$seed_root/.github/actions/quality/run-quality/config/.yaml-lint.yml"
+yaml_ignore="$seed_root/.github/actions/quality/run-quality/config/.yaml-lint-ignore"
 
 fail() {
     echo "centralized quality interface contract: $*" >&2
@@ -53,11 +56,26 @@ if grep -RF -n '$/.github/actions' "$seed_root/.github"; then
     fail "central package must not use an invalid action path"
 fi
 
+centralized_delivery_branch="$({
+    awk '
+        /- name: Configure quality profile delivery/ { in_step = 1 }
+        in_step && /if \[ "\$DELIVERY_MODE" = "centralized" \]; then/ { in_branch = 1 }
+        in_branch { print }
+        in_branch && /^          else$/ { exit }
+    ' "$repo_root/.github/workflows/create-repository.yml"
+})"
+if grep -Fq '.github/linters' <<< "$centralized_delivery_branch"; then
+    fail "centralized delivery must retain consumer linter configuration for pre-commit"
+fi
+
 test -f "$versions" || fail "two-version consumer fixture is missing"
 refs="$(grep -Eo '@(v[0-9]+\.[0-9]+\.[0-9]+|[0-9a-fA-F]{40})' "$versions" | sort -u)"
 ref_count="$(printf '%s\n' "$refs" | sed '/^$/d' | wc -l | tr -d ' ')"
 [ "$ref_count" -eq 2 ] || fail "expected two distinct immutable consumer refs"
 grep -Fq 'uses: "{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}/.github/workflows/quality.yml@' "$versions" ||
     fail "consumer fixture must use the full repository placeholders"
+
+"$yaml_lint" "$repo_root/templates/.github" "$yaml_config" "$yaml_ignore" ||
+    fail "generated consumer GitHub YAML must pass the centralized YAML lint contract"
 
 echo "centralized quality interface contract checks passed."
