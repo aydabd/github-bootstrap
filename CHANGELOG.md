@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.25.3](https://github.com/aydabd/github-bootstrap/compare/v2.25.2...v2.25.3) (2026-09-28)
+
+
+### Bug Fixes
+
+* resolve central quality action paths ([#336](https://github.com/aydabd/github-bootstrap/issues/336)) ([d5d7a4a](https://github.com/aydabd/github-bootstrap/commit/d5d7a4a18b7b64d64ea895b4cbc0568981d527fd))
+
 ## [2.25.2](https://github.com/aydabd/github-bootstrap/compare/v2.25.1...v2.25.2) (2026-09-28)
 
 
