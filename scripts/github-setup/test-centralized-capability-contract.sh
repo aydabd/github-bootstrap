@@ -34,10 +34,11 @@ jq -e '
 jq -e '
     .capabilities["maintenance-safety"].status == "available" and
     ([.capabilities | to_entries[] |
-        select(.key != "maintenance-safety" and .key != "maintenance-merge" and .key != "release-please") | .value.status] |
+        select(.key != "maintenance-safety" and .key != "maintenance-merge" and .key != "release-please" and .key != "weekly-tooling-updates") | .value.status] |
         all(. == "contract-only")) and
     .capabilities["maintenance-merge"].status == "available" and
-    .capabilities["release-please"].status == "available"
+    .capabilities["release-please"].status == "available" and
+    .capabilities["weekly-tooling-updates"].status == "available"
 ' "$manifest" > /dev/null || fail "maintenance-safety availability boundary is invalid"
 
 jq -e '
@@ -63,7 +64,7 @@ jq -e '
         "pull-requests": "read"
     } and
     .capabilities["weekly-tooling-updates"].workflow == ".github/workflows/weekly-tooling-updates.yml" and
-    .capabilities["weekly-tooling-updates"].required_inputs == ["repository", "explicit-breaking"] and
+    .capabilities["weekly-tooling-updates"].required_inputs == ["repository", "explicit-breaking", "central-repository", "central-ref"] and
     .capabilities["weekly-tooling-updates"].minimum_permissions == {
         "contents": "write",
         "issues": "read",
