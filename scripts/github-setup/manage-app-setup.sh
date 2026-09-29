@@ -35,7 +35,7 @@ check_profile() {
         e2e-fixture)
             required_keys='["app_slug_variable","client_id_variable","client_secret_secret","environment","private_key_secret","refresh_token_secret"]'
             ;;
-        e2e-writer | e2e-reviewer | production-writer | production-reviewer)
+        e2e-writer | e2e-reviewer | production-writer | production-reviewer | central-e2e-governance | central-e2e-reviewer | central-e2e-writer | central-production-governance | central-production-reviewer | central-production-writer)
             required_keys='["app_slug_variable","client_id_variable","environment","private_key_secret"]'
             ;;
         e2e-admin)
@@ -73,14 +73,19 @@ check_isolation() {
         .["production-provisioner"].refresh_token_secret != .["e2e-provisioner"].refresh_token_secret and
         .["production-writer"].private_key_secret != .["e2e-writer"].private_key_secret and
         .["production-reviewer"].private_key_secret != .["e2e-reviewer"].private_key_secret and
-        ([.profile_metadata[] | select((.owner | if . == "{{REPOSITORY_OWNER}}" then $owner else . end) != $owner or .visibility != "private" or
-            .installation_scope != "repository" or .api_method != "POST" or
-            (.events | type != "array"))] | length) == 0
+        ([.profile_metadata[] | select(
+            ((.owner | if . == "{{REPOSITORY_OWNER}}" then $owner else . end) != $owner) or
+            (.api_method != "POST") or (.events | type != "array") or
+            ((.installation_scope == "repository" and .visibility != "private") or
+            (.installation_scope == "selected-repositories" and
+                (.visibility != "private" and .visibility != "public")) or
+            (.installation_scope != "repository" and .installation_scope != "selected-repositories"))
+        )] | length) == 0
     ' "$profile_file" > /dev/null
 }
 
 check_command() {
-    local expected_roles='["e2e-admin","e2e-fixture","e2e-reviewer","e2e-writer","e2e-provisioner","production-reviewer","production-writer","production-provisioner"]'
+    local expected_roles='["e2e-admin","e2e-fixture","e2e-reviewer","e2e-writer","e2e-provisioner","production-reviewer","production-writer","production-provisioner","central-e2e-governance","central-e2e-reviewer","central-e2e-writer","central-production-governance","central-production-reviewer","central-production-writer"]'
     local checks='[]' role result overall="PASS"
     jq -e --argjson expected "$expected_roles" '.role_order == $expected' "$profile_file" > /dev/null || overall="FAIL"
     while IFS= read -r role; do
@@ -154,7 +159,7 @@ install_command() {
                 '{schema_version:1,result:"PASS",repository:$repository,checks:[{result:"PASS",role:$role,check:"install",evidence:"protected installer completed"}],summary:{passed:1,failed:0,skipped:0}}'
             return 0
             ;;
-        e2e-writer | e2e-reviewer | production-writer | production-reviewer)
+        e2e-writer | e2e-reviewer | production-writer | production-reviewer | central-e2e-governance | central-e2e-reviewer | central-e2e-writer | central-production-governance | central-production-reviewer | central-production-writer)
             for credential_file in app-client-id app-slug app-private-key.pem; do
                 if [ ! -f "$APP_CREDENTIAL_DIR/$credential_file" ]; then
                     emit_failure "$role" credentials MISSING_CREDENTIALS "provide all protected credential files"
@@ -226,7 +231,7 @@ rotate_command() {
     fi
     case "$role" in
         production-provisioner | e2e-provisioner) ;;
-        e2e-writer | e2e-reviewer | production-writer | production-reviewer | e2e-admin)
+        e2e-writer | e2e-reviewer | production-writer | production-reviewer | central-e2e-governance | central-e2e-reviewer | central-e2e-writer | central-production-governance | central-production-reviewer | central-production-writer | e2e-admin)
             install_command "$role"
             return
             ;;
@@ -265,7 +270,7 @@ rotate_command() {
 cleanup_command() {
     local role="${APP_CREDENTIAL_ROLE:-}" file
     case "$role" in
-        production-provisioner | e2e-provisioner | e2e-fixture | e2e-writer | e2e-reviewer | production-writer | production-reviewer | e2e-admin) ;;
+        production-provisioner | e2e-provisioner | e2e-fixture | e2e-writer | e2e-reviewer | production-writer | production-reviewer | central-e2e-governance | central-e2e-reviewer | central-e2e-writer | central-production-governance | central-production-reviewer | central-production-writer | e2e-admin) ;;
         *) emit_failure "$role" cleanup INVALID_ROLE "set APP_CREDENTIAL_ROLE to a supported profile" ;;
     esac
     if [ -z "${APP_CREDENTIAL_DIR:-}" ] || [ ! -d "$APP_CREDENTIAL_DIR" ]; then

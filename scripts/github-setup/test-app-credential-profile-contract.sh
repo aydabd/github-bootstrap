@@ -18,19 +18,27 @@ jq -e '.role_order == [
     "e2e-provisioner",
     "production-reviewer",
     "production-writer",
-    "production-provisioner"
+    "production-provisioner",
+    "central-e2e-governance",
+    "central-e2e-reviewer",
+    "central-e2e-writer",
+    "central-production-governance",
+    "central-production-reviewer",
+    "central-production-writer"
 ]' "$manifest" > /dev/null || {
-    echo "credential profile manifest must contain exactly the eight supported profiles" >&2
+    echo "credential profile manifest must contain exactly the supported profiles" >&2
     exit 1
 }
 
 jq -e '.schema_version == 1 and .repository_owner == "{{REPOSITORY_OWNER}}" and
-    ([.role_order[] | .] | length) == 8 and
-    ([.profile_metadata[] | select(.owner == "{{REPOSITORY_OWNER}}" and .visibility == "private" and
-        .installation_scope == "repository" and .api_method == "POST" and
+    ([.role_order[] | .] | length) == 14 and
+    ([.profile_metadata[] | select(.owner == "{{REPOSITORY_OWNER}}" and
+        ((.visibility == "private" and (.installation_scope == "repository" or .installation_scope == "selected-repositories")) or
+            (.visibility == "public" and .installation_scope == "selected-repositories")) and
+        .api_method == "POST" and
         (.api_endpoint | endswith("/conversions")) and (.permissions | type == "array") and
         (.events | type == "array") and (.rotation | type == "string") and
-        (.cleanup == "exact-role-directory"))] | length) == 8' "$manifest" > /dev/null || {
+        (.cleanup == "exact-role-directory"))] | length) == 14' "$manifest" > /dev/null || {
     echo "profile metadata must define deterministic install and cleanup policy" >&2
     exit 1
 }

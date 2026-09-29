@@ -1,0 +1,11 @@
+{
+  "name": "Central E2E Reviewer",
+  "url": "https://github.com",
+  "public": false,
+  "default_events": ["workflow_run"],
+  "default_permissions": {
+    "actions": "write",
+    "metadata": "read",
+    "pull_requests": "write"
+  }
+}

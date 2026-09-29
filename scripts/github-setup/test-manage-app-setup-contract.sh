@@ -15,7 +15,7 @@ printf '%s' "$output" | jq -e '
     .result == "PASS" and
     .repository == "aydabd/github-bootstrap" and
     (.checks | length) > 0 and
-    ([.checks[] | select(.check == "manifest") ] | length) == 8 and
+    ([.checks[] | select(.check == "manifest") ] | length) == 14 and
     (all(.checks[] | select(.check == "manifest"); .result == "PASS")) and
     ([.checks[] | select(.check == "production-e2e-isolation") ] | length) == 1 and
     (all(.checks[] | select(.check == "production-e2e-isolation"); .result == "PASS")) and
@@ -147,6 +147,30 @@ grep -Fq 'variable set BOOTSTRAP_PRODUCTION_WRITER_APP_SLUG --repo aydabd/github
 grep -Fq 'secret set BOOTSTRAP_PRODUCTION_WRITER_APP_PRIVATE_KEY --repo aydabd/github-bootstrap --env production' "$FAKE_GH_LOG"
 if grep -Eiq 'fixture-token|BEGIN PRIVATE KEY|654321|bootstrap-writer' "$fixture_root/production-install.json"; then
     echo "production install output leaked credential-like material" >&2
+    exit 1
+fi
+
+central_credentials="$fixture_root/github-bootstrap/central-production-governance"
+mkdir -p "$central_credentials"
+chmod 700 "$central_credentials"
+printf '777777\n' > "$central_credentials/app-client-id"
+printf 'central-production-governance\n' > "$central_credentials/app-slug"
+printf '%s\n' '-----BEGIN PRIVATE KEY-----' 'central-key' '-----END PRIVATE KEY-----' > \
+    "$central_credentials/app-private-key.pem"
+chmod 600 "$central_credentials"/*
+PATH="$fake_bin:$PATH" GH_TOKEN=fixture-token GITHUB_REPOSITORY=aydabd/github-bootstrap \
+    APP_CREDENTIAL_DIR="$central_credentials" "$orchestrator" install central-production-governance \
+    > "$fixture_root/central-install.json"
+jq -e '
+    .result == "PASS" and
+    .checks[0].check == "install" and
+    .summary == {passed: 1, failed: 0, skipped: 0}
+' "$fixture_root/central-install.json" > /dev/null
+grep -Fq 'variable set CENTRAL_PRODUCTION_GOVERNANCE_APP_CLIENT_ID --repo aydabd/github-bootstrap --env production --body 777777' "$FAKE_GH_LOG"
+grep -Fq 'variable set CENTRAL_PRODUCTION_GOVERNANCE_APP_SLUG --repo aydabd/github-bootstrap --env production --body central-production-governance' "$FAKE_GH_LOG"
+grep -Fq 'secret set CENTRAL_PRODUCTION_GOVERNANCE_APP_PRIVATE_KEY --repo aydabd/github-bootstrap --env production' "$FAKE_GH_LOG"
+if grep -Eiq 'fixture-token|BEGIN PRIVATE KEY|777777' "$fixture_root/central-install.json"; then
+    echo "central install output leaked credential-like material" >&2
     exit 1
 fi
 

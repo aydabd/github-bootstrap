@@ -57,7 +57,7 @@ main() {
                 redirect_url="${3:-$registration_url}"
             fi
             case "$role" in
-                bootstrap-e2e-admin | bootstrap-provisioner | bootstrap-e2e-provisioner | bootstrap-writer | bootstrap-reviewer | bootstrap-e2e-writer | bootstrap-e2e-reviewer | bootstrap-e2e-fixture) ;;
+                bootstrap-e2e-admin | bootstrap-provisioner | bootstrap-e2e-provisioner | bootstrap-writer | bootstrap-reviewer | bootstrap-e2e-writer | bootstrap-e2e-reviewer | bootstrap-e2e-fixture | central-e2e-governance | central-e2e-reviewer | central-e2e-writer | central-production-governance | central-production-reviewer | central-production-writer) ;;
                 *)
                     echo "unsupported App manifest role: ${role:-missing}" >&2
                     exit 2

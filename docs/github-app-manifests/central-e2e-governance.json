@@ -1,0 +1,14 @@
+{
+  "name": "Central E2E Governance",
+  "url": "https://github.com",
+  "public": false,
+  "default_events": ["pull_request", "check_run", "workflow_run", "branch_protection_rule"],
+  "default_permissions": {
+    "actions": "read",
+    "checks": "write",
+    "contents": "read",
+    "metadata": "read",
+    "pull_requests": "read",
+    "statuses": "write"
+  }
+}

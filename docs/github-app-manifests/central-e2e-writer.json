@@ -1,0 +1,12 @@
+{
+  "name": "Central E2E Writer",
+  "url": "https://github.com",
+  "public": false,
+  "default_events": [],
+  "default_permissions": {
+    "actions": "read",
+    "contents": "write",
+    "metadata": "read",
+    "pull_requests": "write"
+  }
+}

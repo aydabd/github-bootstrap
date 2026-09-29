@@ -1,0 +1,12 @@
+{
+  "name": "Central Production Writer",
+  "url": "https://github.com",
+  "public": true,
+  "default_events": [],
+  "default_permissions": {
+    "actions": "read",
+    "contents": "write",
+    "metadata": "read",
+    "pull_requests": "write"
+  }
+}

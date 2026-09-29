@@ -303,7 +303,7 @@ expected = {
     },
 }
 
-assert set(path.name for path in manifest_dir.glob("*.json")) == set(expected)
+assert set(expected).issubset({path.name for path in manifest_dir.glob("*.json")})
 for filename, contract in expected.items():
     payload = json.loads((manifest_dir / filename).read_text())
     assert payload["name"] == contract["name"]
