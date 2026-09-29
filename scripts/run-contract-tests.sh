@@ -57,6 +57,7 @@ contract_tests=(
     "$script_dir/github-setup/test-centralized-monorepo-e2e-contract.sh"
     "$script_dir/github-setup/test-centralized-capability-contract.sh"
     "$script_dir/github-setup/test-central-maintenance-safety-contract.sh"
+    "$script_dir/github-setup/test-central-maintenance-merge-contract.sh"
     "$script_dir/github-setup/test-central-runtime-contract.sh"
     "$script_dir/github-setup/test-centralized-quality-interface-contract.sh"
     "$script_dir/github-setup/test-centralized-pr-policy-contract.sh"

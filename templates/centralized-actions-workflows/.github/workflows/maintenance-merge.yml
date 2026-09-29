@@ -1,0 +1,63 @@
+name: Centralized Maintenance Merge
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: Consumer repository in OWNER/REPOSITORY form.
+        required: true
+        type: string
+      head-sha:
+        description: Exact pull-request head SHA to validate and merge.
+        required: true
+        type: string
+      pull-request-number:
+        description: Pull-request number being merged.
+        required: true
+        type: number
+      reviewer-app-slug:
+        description: Reviewer App slug, without the [bot] suffix.
+        required: true
+        type: string
+      central-repository:
+        description: Immutable central package repository in OWNER/REPOSITORY form.
+        required: true
+        type: string
+      central-ref:
+        description: Immutable central package ref.
+        required: true
+        type: string
+    secrets:
+      reviewer-token:
+        required: true
+      writer-token:
+        required: true
+
+permissions: {}
+
+jobs:
+  maintenance-merge:
+    name: Maintenance merge
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out central workflow package
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs['central-repository'] }}
+          ref: ${{ inputs['central-ref'] }}
+          path: .central-workflows
+          persist-credentials: false
+      - name: Run central maintenance merge
+        uses: ./.central-workflows/.github/actions/maintenance-merge
+        with:
+          repository: ${{ inputs.repository }}
+          head_sha: ${{ inputs['head-sha'] }}
+          pull_request_number: ${{ inputs['pull-request-number'] }}
+          reviewer_app_slug: ${{ inputs['reviewer-app-slug'] }}
+          reviewer_token: ${{ secrets['reviewer-token'] }}
+          writer_token: ${{ secrets['writer-token'] }}

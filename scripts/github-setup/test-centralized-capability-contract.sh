@@ -34,8 +34,9 @@ jq -e '
 jq -e '
     .capabilities["maintenance-safety"].status == "available" and
     ([.capabilities | to_entries[] |
-        select(.key != "maintenance-safety") | .value.status] |
-        all(. == "contract-only"))
+        select(.key != "maintenance-safety" and .key != "maintenance-merge") | .value.status] |
+        all(. == "contract-only")) and
+    .capabilities["maintenance-merge"].status == "available"
 ' "$manifest" > /dev/null || fail "maintenance-safety availability boundary is invalid"
 
 jq -e '
@@ -47,12 +48,12 @@ jq -e '
         "issues": "write",
         "pull-requests": "write"
     } and
-    .capabilities["maintenance-merge"].workflow == ".github/workflows/merge-maintenance-pr.yml" and
-    .capabilities["maintenance-merge"].required_inputs == ["repository", "head-sha", "pull-request-number"] and
+    .capabilities["maintenance-merge"].workflow == ".github/workflows/maintenance-merge.yml" and
+    .capabilities["maintenance-merge"].required_inputs == ["repository", "head-sha", "pull-request-number", "central-repository", "central-ref"] and
     .capabilities["maintenance-merge"].minimum_permissions == {
         "actions": "read",
         "contents": "read",
-        "pull-requests": "read"
+        "pull-requests": "write"
     } and
     .capabilities["release-please"].workflow == ".github/workflows/release-please.yml" and
     .capabilities["release-please"].required_inputs == ["repository", "release-config", "manifest-file"] and
