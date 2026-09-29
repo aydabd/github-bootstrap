@@ -3,6 +3,7 @@ on:
   workflow_call:
     inputs:
       repository:
+        description: Consumer repository in OWNER/REPOSITORY form.
         required: true
         type: string
       explicit-breaking:
