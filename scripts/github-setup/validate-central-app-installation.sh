@@ -66,8 +66,8 @@ forbidden_json='[]'
 if [ "${#forbidden_repositories[@]}" -gt 0 ]; then
     forbidden_json="$(printf '%s\n' "${forbidden_repositories[@]}" | jq -R . | jq -s .)"
 fi
-missing_forbidden_json="$(jq -c --argjson forbidden "$forbidden_json" --argjson visible "$repositories_json" \
-    '[.[] as $repository | select(($visible | index($repository)) != null)]' <<< "$forbidden_json")"
+visible_forbidden_json="$(jq -c --argjson visible "$repositories_json" \
+    '[.[] | select(. as $repository | ($visible | index($repository)) != null)]' <<< "$forbidden_json")"
 checks='[]'
 result="PASS"
 if [ "$target_visible" = true ]; then
@@ -76,7 +76,7 @@ else
     result="FAIL"
     checks="$(jq -c '. + [{result:"FAIL",check:"target-visible",error_code:"TARGET_NOT_VISIBLE"}]' <<< "$checks")"
 fi
-if [ "$(jq 'length' <<< "$missing_forbidden_json")" -eq 0 ]; then
+if [ "$(jq 'length' <<< "$visible_forbidden_json")" -eq 0 ]; then
     checks="$(jq -c '. + [{result:"PASS",check:"forbidden-repositories-hidden"}]' <<< "$checks")"
 else
     result="FAIL"

@@ -18,7 +18,11 @@ mkdir -p "$fake_bin"
 cat > "$fake_bin/gh" << 'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' '{"repositories":[{"full_name":"owner/canary"},{"full_name":"other/visible"}]}'
+if [ "${FAKE_VISIBLE_FORBIDDEN:-false}" = true ]; then
+    printf '%s\n' '{"repositories":[{"full_name":"owner/canary"},{"full_name":"other/hidden"}]}'
+else
+    printf '%s\n' '{"repositories":[{"full_name":"owner/canary"},{"full_name":"other/visible"}]}'
+fi
 EOF
 chmod 700 "$fake_bin/gh"
 
@@ -48,6 +52,15 @@ set -e
 [ "$missing_status" -eq 1 ] || fail "missing target must fail"
 printf '%s' "$missing_output" | jq -e '.result == "FAIL" and .checks[0].check == "target-visible" and .checks[0].error_code == "TARGET_NOT_VISIBLE"' > /dev/null ||
     fail "missing target failure is not deterministic"
+
+set +e
+visible_forbidden_output="$(PATH="$fake_bin:$PATH" FAKE_VISIBLE_FORBIDDEN=true GH_TOKEN=installation-token \
+    "$validator" central-production-governance owner/canary other/hidden 2> "$fixture_root/visible-forbidden.err")"
+visible_forbidden_status="$?"
+set -e
+[ "$visible_forbidden_status" -eq 1 ] || fail "visible forbidden repository must fail"
+printf '%s' "$visible_forbidden_output" | jq -e '.result == "FAIL" and any(.checks[]; .check == "forbidden-repositories-hidden" and .error_code == "FORBIDDEN_REPOSITORY_VISIBLE")' > /dev/null ||
+    fail "visible forbidden repository failure is not deterministic"
 
 if PATH="$fake_bin:$PATH" env -u GH_TOKEN "$validator" central-production-governance owner/canary > /dev/null 2> "$fixture_root/token.err"; then
     fail "missing installation token must fail"
