@@ -101,7 +101,7 @@ if [ "$#" -eq 4 ]; then
 fi
 if [ "$#" -eq 5 ]; then
     case "$profile" in
-        e2e-writer | e2e-reviewer | e2e-fixture | production-writer | production-reviewer) ;;
+        e2e-writer | e2e-reviewer | e2e-fixture | production-writer | production-reviewer | central-e2e-governance | central-e2e-reviewer | central-e2e-writer | central-production-governance | central-production-reviewer | central-production-writer) ;;
         *)
             echo "five-file installation requires a maintenance profile" >&2
             exit 1

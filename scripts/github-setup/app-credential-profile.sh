@@ -42,7 +42,7 @@ case "$profile" in
     e2e-writer | e2e-reviewer)
         required_fields='["app_slug_variable", "client_id_variable", "environment", "private_key_secret"]'
         ;;
-    production-writer | production-reviewer)
+    production-writer | production-reviewer | central-e2e-governance | central-e2e-reviewer | central-e2e-writer | central-production-governance | central-production-reviewer | central-production-writer)
         required_fields='["app_slug_variable", "client_id_variable", "environment", "private_key_secret"]'
         ;;
     e2e-fixture)
