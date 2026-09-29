@@ -143,7 +143,7 @@ if [ "$#" -eq 5 ]; then
     GH_TOKEN="$GH_TOKEN" gh variable set "$client_id_variable" --repo "$repo" --env "$environment" --body "$client_id"
     GH_TOKEN="$GH_TOKEN" gh variable set "$app_slug_variable" --repo "$repo" --env "$environment" --body "$app_slug"
     GH_TOKEN="$GH_TOKEN" gh secret set "$private_key_secret" --repo "$repo" --env "$environment" < "$sanitized_private_key_file"
-    printf 'Installed E2E maintenance App credentials for %s\n' "$repo"
+    printf 'Installed App credentials for profile %s in %s\n' "$profile" "$repo"
     exit 0
 fi
 if [ "$#" -eq 7 ]; then

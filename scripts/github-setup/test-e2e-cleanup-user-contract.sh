@@ -10,7 +10,12 @@ grep -Fq "source \"\$script_dir/cleanup-e2e-repositories-common.sh\"" "$user_scr
 grep -Fq "cleanup_archived_e2e_repositories \"/users/\$APP_OWNER/repos\"" "$user_script"
 grep -Fq 'cleanup-e2e-user-repositories.sh' "$workflow"
 grep -Fq 'permission_profile: e2e-lifecycle' "$workflow"
-grep -Fq 'BOOTSTRAP_E2E_ADMIN_APP_PRIVATE_KEY' "$workflow"
+grep -Fq 'BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID' "$workflow"
+grep -Fq 'BOOTSTRAP_E2E_PROVISIONER_APP_PRIVATE_KEY' "$workflow"
+if grep -Fq 'BOOTSTRAP_E2E_ADMIN_APP_' "$workflow"; then
+    echo "archived E2E cleanup must not require the legacy E2E Admin App" >&2
+    exit 1
+fi
 grep -Fq 'E2E_GH_TOKEN' "$workflow"
 grep -Fq 'BOOTSTRAP_E2E_ALLOWED_OWNERS' "$workflow"
 grep -Fq 'BOOTSTRAP_E2E_CENTRAL_REPOSITORY' "$workflow"
