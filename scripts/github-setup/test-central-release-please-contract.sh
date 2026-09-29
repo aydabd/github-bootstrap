@@ -5,7 +5,10 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 manifest="$repo_root/templates/centralized-actions-workflows/.github/centralized-workflows.json"
 workflow="$repo_root/templates/centralized-actions-workflows/.github/workflows/release-please.yml"
 
-fail() { echo "central release-please contract: $*" >&2; exit 1; }
+fail() {
+    echo "central release-please contract: $*" >&2
+    exit 1
+}
 test -f "$manifest" || fail "central manifest is missing"
 test -f "$workflow" || fail "central release-please workflow is missing"
 jq -e '
@@ -17,7 +20,7 @@ jq -e '
         "required_inputs": ["repository", "release-config", "manifest-file"],
         "minimum_permissions": {"contents": "read", "pull-requests": "write"}
     }
-' "$manifest" >/dev/null || fail "release-please capability manifest is invalid"
+' "$manifest" > /dev/null || fail "release-please capability manifest is invalid"
 grep -Fq 'workflow_call:' "$workflow" || fail "workflow must be reusable"
 grep -Fq 'release-config:' "$workflow" || fail "workflow must accept release config path"
 grep -Fq 'manifest-file:' "$workflow" || fail "workflow must accept manifest path"
