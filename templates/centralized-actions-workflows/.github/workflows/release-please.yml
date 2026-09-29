@@ -1,0 +1,59 @@
+name: Centralized Release Please
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: Consumer repository in OWNER/REPOSITORY form.
+        required: true
+        type: string
+      release-config:
+        description: Consumer-owned release-please configuration path.
+        required: true
+        type: string
+      manifest-file:
+        description: Consumer-owned release-please manifest path.
+        required: true
+        type: string
+    secrets:
+      writer-token:
+        required: true
+
+permissions: {}
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Validate release inputs before token use
+        shell: bash
+        env:
+          RELEASE_CONFIG: ${{ inputs['release-config'] }}
+          MANIFEST_FILE: ${{ inputs['manifest-file'] }}
+        run: |
+          set -euo pipefail
+          for path in "$RELEASE_CONFIG" "$MANIFEST_FILE"; do
+            case "$path" in
+              /*|../*|*/../*|*\\*|*:*|'')
+                echo "unsafe release path or path traversal: $path" >&2
+                exit 1
+                ;;
+            esac
+          done
+      - name: Check out consumer repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          repository: ${{ inputs.repository }}
+          ref: ${{ github.sha }}
+      - name: Run Release Please with Writer installation token
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets['writer-token'] }}
+          config-file: ${{ inputs['release-config'] }}
+          manifest-file: ${{ inputs['manifest-file'] }}
