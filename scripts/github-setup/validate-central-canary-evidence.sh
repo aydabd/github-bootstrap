@@ -20,7 +20,7 @@ if [[ ! -f "$evidence_file" ]]; then
     exit 1
 fi
 
-if ! evidence="$(<"$evidence_file")" || ! jq -e . >/dev/null 2>&1 <<< "$evidence"; then
+if ! evidence="$(< "$evidence_file")" || ! jq -e . > /dev/null 2>&1 <<< "$evidence"; then
     jq -n --arg file "$evidence_file" '{
         schema_version: 1,
         result: "FAIL",
@@ -55,7 +55,7 @@ if jq -e '
     (.head_sha | type == "string" and test("^[0-9a-f]{40}$")) and
     (.flows | type == "object") and
     (.safety | type == "object")
-' <<< "$evidence" >/dev/null; then
+' <<< "$evidence" > /dev/null; then
     add_check PASS "shape"
 else
     add_check FAIL "shape" "INVALID_EVIDENCE_SHAPE"
@@ -80,7 +80,7 @@ else
     add_check FAIL "flow-results" "FLOW_NOT_PASS" "$failed_flows"
 fi
 
-if jq -e '.safety.secrets_exposed == false and .safety.token_values_recorded == false' <<< "$evidence" >/dev/null; then
+if jq -e '.safety.secrets_exposed == false and .safety.token_values_recorded == false' <<< "$evidence" > /dev/null; then
     add_check PASS "secret-safety"
 else
     add_check FAIL "secret-safety" "UNSAFE_EVIDENCE"
@@ -88,13 +88,13 @@ fi
 
 secret_keys="$(jq -r '
     [paths(scalars) as $path
-     | ($path[-1] | strings)
-     | select(test("(^|_)(private_key|client_secret|refresh_token|access_token|token_value|password|credential_value)$"; "i"))]
+    | ($path[-1] | strings)
+    | select(test("(^|_)(private_key|client_secret|refresh_token|access_token|token_value|password|credential_value)$"; "i"))]
     | unique | join(",")
 ' <<< "$evidence")"
 secret_values="$(jq -r '
     [.. | strings
-     | select(test("ghs_|ghp_|github_pat_|-----BEGIN [A-Z ]*PRIVATE KEY-----"; "i"))]
+    | select(test("ghs_|ghp_|github_pat_|-----BEGIN [A-Z ]*PRIVATE KEY-----"; "i"))]
     | length
 ' <<< "$evidence")"
 if [[ -z "$secret_keys" && "$secret_values" -eq 0 ]]; then
