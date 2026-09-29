@@ -78,20 +78,42 @@ in a reviewed pull request.
 
 The manifest also records the contract boundary for optional maintenance and
 release capabilities: `maintenance-safety`, `maintenance-merge`,
-`release-please`, and `weekly-tooling-updates`. These entries are currently
-`contract-only` and disabled by default. They describe stable capability names,
-contract versions, future workflow paths, required inputs, and minimum caller
-permissions; they do not add workflows to a consumer or grant access to its
-secrets, environments, variables, Apps, settings, rulesets, or repository
-policy.
+`release-please`, and `weekly-tooling-updates`. Available capabilities are
+opt-in reusable workflows and remain disabled by default. They do not grant
+access to consumer secrets, environments, variables, Apps, settings, rulesets,
+or repository policy.
 
-An optional capability becomes `available` only in a later immutable package
-release after its reusable implementation and E2E contract are validated.
-Consumers must opt in explicitly, and capability contract changes require a
-contract-version increment. The local consumer workflow remains responsible
-for its event trigger and filename, so a repository may use `pull-request.yml`,
-`pr.yml`, `ci.yml`, or another configured name without changing the central
-capability identifiers.
+Consumers opt into maintenance safety with a thin, event-owning workflow
+pinned to an immutable central ref:
+
+```yaml
+jobs:
+  maintenance-safety:
+    uses: OWNER/REPOSITORY/.github/workflows/maintenance-safety.yml@IMMUTABLE_REF
+    with:
+      repository: OWNER/CONSUMER
+      head-sha: ${{ github.event.pull_request.head.sha }}
+      pull-request-number: ${{ github.event.pull_request.number }}
+      central-repository: OWNER/CENTRAL-ACTIONS
+      central-ref: IMMUTABLE_REF
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      pull-requests: write
+```
+
+The central action validates the exact pull-request head, required workflow
+conclusions, and blocked lifecycle state before publishing `automation:
+accepted`. Its token is the caller's short-lived workflow token; production
+App installation and canary migration remain operator-gated runtime work.
+
+Maintenance merge uses the same central repository/ref inputs plus
+`reviewer-app-slug`, `reviewer-token`, and `writer-token` secrets. The Reviewer
+installation token validates the exact head and approval; the separate Writer
+installation token performs the squash merge.
+Capability contract changes require a contract-version increment. The local
+consumer workflow remains responsible for its event trigger and filename.
 
 ## Ownership and releases
 
