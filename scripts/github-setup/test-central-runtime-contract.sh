@@ -42,6 +42,7 @@ jq -e '
         .secret_custody == "operator-only" and
         (.events | type == "array") and
         (.permissions | type == "object") and
+        all(.permissions | to_entries[]; .key | test("^(actions|checks|contents|metadata|pull-requests|statuses)$")) and
         all(.permissions | to_entries[]; .value == "read" or .value == "write") and
         (keys | all(.[]; test("^(identity|events|permissions|installation_scope|token_mode|ruleset_bypass|secret_custody)$")))
     )
