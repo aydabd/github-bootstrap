@@ -79,9 +79,10 @@ jq -e '
     ([.capabilities | keys[]] | sort) == ["maintenance-merge", "maintenance-safety", "release-please", "weekly-tooling-updates"] and
     (.capabilities["maintenance-safety"].status == "available" and
         ([.capabilities | to_entries[] |
-            select(.key != "maintenance-safety" and .key != "maintenance-merge") | .value.status] |
+            select(.key != "maintenance-safety" and .key != "maintenance-merge" and .key != "release-please") | .value.status] |
             all(. == "contract-only")) and
         .capabilities["maintenance-merge"].status == "available" and
+        .capabilities["release-please"].status == "available" and
         all(.capabilities[]; .enabled_by_default == false)) and
     .ref_policy.type == "immutable" and
     (.ref_policy.allowed | sort) == ["commit-sha", "semver-release-tag"]

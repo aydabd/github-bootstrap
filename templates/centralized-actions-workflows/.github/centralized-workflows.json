@@ -52,10 +52,10 @@
       }
     },
     "release-please": {
-      "status": "contract-only",
+      "status": "available",
       "enabled_by_default": false,
       "workflow": ".github/workflows/release-please.yml",
-      "contract_version": 1,
+      "contract_version": 2,
       "required_inputs": ["repository", "release-config", "manifest-file"],
       "minimum_permissions": {
         "contents": "read",
