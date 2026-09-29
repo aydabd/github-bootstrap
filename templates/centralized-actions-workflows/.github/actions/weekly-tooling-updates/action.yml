@@ -2,11 +2,14 @@ name: Central weekly tooling updates
 description: Verify Writer installation scope before an opt-in tooling update run.
 inputs:
   repository:
+    description: Consumer repository in OWNER/REPOSITORY form.
     required: true
   explicit_breaking:
+    description: Treat this update as explicitly breaking.
     required: false
     default: "false"
   token:
+    description: Short-lived Writer installation token.
     required: true
 runs:
   using: composite

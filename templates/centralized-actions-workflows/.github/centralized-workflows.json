@@ -67,7 +67,7 @@
       "enabled_by_default": false,
       "workflow": ".github/workflows/weekly-tooling-updates.yml",
       "contract_version": 2,
-      "required_inputs": ["repository", "explicit-breaking"],
+      "required_inputs": ["repository", "explicit-breaking", "central-repository", "central-ref"],
       "minimum_permissions": {
         "contents": "write",
         "issues": "read",

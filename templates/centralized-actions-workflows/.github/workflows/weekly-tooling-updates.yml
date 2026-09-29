@@ -6,9 +6,18 @@ on:
         required: true
         type: string
       explicit-breaking:
+        description: Treat this update as explicitly breaking and require the breaking-change safety path.
         required: false
         default: false
         type: boolean
+      central-repository:
+        description: Immutable central package repository in OWNER/REPOSITORY form.
+        required: true
+        type: string
+      central-ref:
+        description: Immutable central package ref.
+        required: true
+        type: string
     secrets:
       writer-token:
         required: true
@@ -21,7 +30,14 @@ jobs:
       issues: read
       pull-requests: write
     steps:
-      - uses: ./.github/actions/weekly-tooling-updates
+      - name: Check out central workflow package
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs['central-repository'] }}
+          ref: ${{ inputs['central-ref'] }}
+          path: .central-workflows
+          persist-credentials: false
+      - uses: ./.central-workflows/.github/actions/weekly-tooling-updates
         with:
           repository: ${{ inputs.repository }}
           explicit_breaking: ${{ inputs['explicit-breaking'] }}

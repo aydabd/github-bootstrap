@@ -13,7 +13,10 @@ jq -e '.capabilities["weekly-tooling-updates"].status == "available" and .capabi
 grep -Fq 'workflow_call:' "$workflow" || fail "workflow must be reusable"
 grep -Fq 'explicit-breaking:' "$workflow" || fail "workflow must accept explicit breaking input"
 grep -Fq 'writer-token:' "$workflow" || fail "workflow must require Writer installation token"
-grep -Fq 'uses: ./.github/actions/weekly-tooling-updates' "$workflow" || fail "workflow must use packaged action"
+grep -Fq 'central-repository:' "$workflow" || fail "workflow must require central repository"
+grep -Fq 'central-ref:' "$workflow" || fail "workflow must require immutable central ref"
+grep -Fq 'path: .central-workflows' "$workflow" || fail "workflow must check out the package"
+grep -Fq 'uses: ./.central-workflows/.github/actions/weekly-tooling-updates' "$workflow" || fail "workflow must use packaged action"
 if grep -Eq '^  (schedule|push|pull_request|workflow_dispatch):' "$workflow"; then fail "central workflow must not own scheduling or consumer triggers"; fi
 grep -Fq 'installation/repositories' "$action" || fail "action must verify installation scope"
 grep -Fq 'TOOLING_UPDATE_EXPLICIT_BREAKING' "$action" || fail "action must preserve breaking-change input"
