@@ -18,7 +18,7 @@ jq -e '
         "workflow": ".github/workflows/release-please.yml",
         "contract_version": 2,
         "required_inputs": ["repository", "release-config", "manifest-file"],
-        "minimum_permissions": {"contents": "read", "pull-requests": "write"}
+    "minimum_permissions": {"contents": "read", "pull-requests": "read"}
     }
 ' "$manifest" > /dev/null || fail "release-please capability manifest is invalid"
 grep -Fq 'workflow_call:' "$workflow" || fail "workflow must be reusable"
@@ -29,7 +29,8 @@ grep -Fq '45996ed1f6d02564a971a2fa1b5860e934307cf7' "$workflow" || fail "release
 grep -Fq 'release-please-action@' "$workflow" || fail "workflow must run release-please"
 grep -Fq 'path traversal' "$workflow" || fail "workflow must validate safe configuration paths"
 grep -Fq 'contents: read' "$workflow" || fail "workflow must declare least-privilege contents access"
-grep -Fq 'pull-requests: write' "$workflow" || fail "workflow must declare PR write access"
+grep -Fq 'pull-requests: read' "$workflow" || fail "workflow must declare least-privilege PR access"
+grep -Fq 'EXPECTED_REPOSITORY' "$workflow" || fail "workflow must validate repository scope"
 if grep -Eq '^  (push|pull_request|pull_request_target|schedule|repository_dispatch):' "$workflow"; then
     fail "central workflow must not own consumer event triggers"
 fi

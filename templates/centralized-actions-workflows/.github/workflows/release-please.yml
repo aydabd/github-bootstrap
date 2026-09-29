@@ -28,15 +28,21 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: read
     steps:
       - name: Validate release inputs before token use
         shell: bash
         env:
+          REPOSITORY: ${{ inputs.repository }}
+          EXPECTED_REPOSITORY: ${{ github.repository }}
           RELEASE_CONFIG: ${{ inputs['release-config'] }}
           MANIFEST_FILE: ${{ inputs['manifest-file'] }}
         run: |
           set -euo pipefail
+          [ "$REPOSITORY" = "$EXPECTED_REPOSITORY" ] || {
+            echo "release repository must match the calling repository" >&2
+            exit 1
+          }
           for path in "$RELEASE_CONFIG" "$MANIFEST_FILE"; do
             case "$path" in
               /*|../*|*/../*|*\\*|*:*|'')
@@ -45,12 +51,6 @@ jobs:
                 ;;
             esac
           done
-      - name: Check out consumer repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          repository: ${{ inputs.repository }}
-          ref: ${{ github.sha }}
       - name: Run Release Please with Writer installation token
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:

@@ -47,7 +47,7 @@ jq -e '
         "actions": "read",
         "contents": "read",
         "issues": "write",
-        "pull-requests": "write"
+        "pull-requests": "read"
     } and
     .capabilities["maintenance-merge"].workflow == ".github/workflows/maintenance-merge.yml" and
     .capabilities["maintenance-merge"].required_inputs == ["repository", "head-sha", "pull-request-number", "central-repository", "central-ref"] and
