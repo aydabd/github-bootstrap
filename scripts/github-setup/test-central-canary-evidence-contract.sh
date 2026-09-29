@@ -57,6 +57,11 @@ secret_key_output="$("$validator" "$tmp_dir/secret-key.json" || true)"
 printf '%s\n' "$secret_key_output" | jq -e '.result == "FAIL" and any(.checks[]; .check == "secret-safety" and .error_code == "SECRET_NAMED_FIELD")' > /dev/null ||
     fail "secret-named evidence field was not rejected"
 
+jq '.flows.human.note = "ghr_should-never-be-recorded"' "$tmp_dir/valid.json" > "$tmp_dir/secret-value.json"
+secret_value_output="$("$validator" "$tmp_dir/secret-value.json" || true)"
+printf '%s\n' "$secret_value_output" | jq -e '.result == "FAIL" and any(.checks[]; .check == "secret-safety" and .error_code == "SECRET_VALUE_PATTERN")' > /dev/null ||
+    fail "secret-value evidence was not rejected"
+
 if GH_TOKEN='ghs_should_not_be_printed' "$validator" "$tmp_dir/valid.json" | grep -Fq 'ghs_should_not_be_printed'; then
     fail "validator leaked an environment token"
 fi

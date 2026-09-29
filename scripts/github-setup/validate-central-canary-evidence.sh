@@ -94,7 +94,7 @@ secret_keys="$(jq -r '
 ' <<< "$evidence")"
 secret_values="$(jq -r '
     [.. | strings
-    | select(test("ghs_|ghp_|github_pat_|-----BEGIN [A-Z ]*PRIVATE KEY-----"; "i"))]
+    | select(test("gh[pousr]_|github_pat_|-----BEGIN [A-Z ]*PRIVATE KEY-----"; "i"))]
     | length
 ' <<< "$evidence")"
 if [[ -z "$secret_keys" && "$secret_values" -eq 0 ]]; then
