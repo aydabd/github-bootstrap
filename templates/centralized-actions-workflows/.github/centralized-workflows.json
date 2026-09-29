@@ -38,7 +38,13 @@
       "enabled_by_default": false,
       "workflow": ".github/workflows/maintenance-merge.yml",
       "contract_version": 2,
-      "required_inputs": ["repository", "head-sha", "pull-request-number", "central-repository", "central-ref"],
+      "required_inputs": [
+        "repository",
+        "head-sha",
+        "pull-request-number",
+        "central-repository",
+        "central-ref"
+      ],
       "minimum_permissions": {
         "actions": "read",
         "contents": "read",
