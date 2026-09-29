@@ -47,7 +47,7 @@ jq -e '
         "actions": "read",
         "contents": "read",
         "issues": "write",
-        "pull-requests": "read"
+        "pull-requests": "write"
     } and
     .capabilities["maintenance-merge"].workflow == ".github/workflows/maintenance-merge.yml" and
     .capabilities["maintenance-merge"].required_inputs == ["repository", "head-sha", "pull-request-number", "central-repository", "central-ref"] and
@@ -60,7 +60,7 @@ jq -e '
     .capabilities["release-please"].required_inputs == ["repository", "release-config", "manifest-file"] and
     .capabilities["release-please"].minimum_permissions == {
         "contents": "read",
-        "pull-requests": "write"
+        "pull-requests": "read"
     } and
     .capabilities["weekly-tooling-updates"].workflow == ".github/workflows/weekly-tooling-updates.yml" and
     .capabilities["weekly-tooling-updates"].required_inputs == ["repository", "explicit-breaking"] and
