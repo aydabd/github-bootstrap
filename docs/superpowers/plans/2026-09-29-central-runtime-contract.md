@@ -31,10 +31,12 @@
 ### Task 1: Add the runtime manifest contract and focused test
 
 **Files:**
+
 - Modify: `templates/centralized-actions-workflows/.github/centralized-workflows.json`
 - Create: `scripts/github-setup/test-central-runtime-contract.sh`
 
 **Interfaces:**
+
 - Consumes: existing package manifest schema and `ref_policy`.
 - Produces: `runtime` object with `service_layout`, `release_policy`, and exactly `governance`, `reviewer`, and `writer` roles.
 
@@ -65,11 +67,13 @@
 ### Task 2: Document the central adapter and register the contract test
 
 **Files:**
+
 - Modify: `templates/centralized-actions-workflows/README.md`
 - Modify: `docs/github-app-trust-boundaries.md`
 - Modify: `scripts/run-contract-tests.sh`
 
 **Interfaces:**
+
 - Consumes: Task 1’s `runtime` manifest fields and focused contract test.
 - Produces: operator/consumer documentation and deterministic suite coverage.
 
@@ -100,9 +104,11 @@
 ### Task 3: Run repository quality and handoff verification
 
 **Files:**
+
 - Test: all files changed by Tasks 1–2.
 
 **Interfaces:**
+
 - Consumes: completed runtime manifest, documentation, and contract-suite registration.
 - Produces: fresh machine-readable validation evidence for issue #352.
 

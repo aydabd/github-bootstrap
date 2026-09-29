@@ -83,12 +83,7 @@
     "roles": {
       "governance": {
         "identity": "governance",
-        "events": [
-          "pull_request",
-          "check_run",
-          "workflow_run",
-          "branch_protection_rule"
-        ],
+        "events": ["pull_request", "check_run", "workflow_run", "branch_protection_rule"],
         "permissions": {
           "actions": "read",
           "checks": "write",
