@@ -63,10 +63,10 @@
       }
     },
     "weekly-tooling-updates": {
-      "status": "contract-only",
+      "status": "available",
       "enabled_by_default": false,
       "workflow": ".github/workflows/weekly-tooling-updates.yml",
-      "contract_version": 1,
+      "contract_version": 2,
       "required_inputs": ["repository", "explicit-breaking"],
       "minimum_permissions": {
         "contents": "write",

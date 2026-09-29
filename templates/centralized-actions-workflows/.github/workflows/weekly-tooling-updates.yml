@@ -1,0 +1,28 @@
+name: Centralized Weekly Tooling Updates
+on:
+  workflow_call:
+    inputs:
+      repository:
+        required: true
+        type: string
+      explicit-breaking:
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      writer-token:
+        required: true
+permissions: {}
+jobs:
+  weekly-tooling-updates:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: write
+    steps:
+      - uses: ./.github/actions/weekly-tooling-updates
+        with:
+          repository: ${{ inputs.repository }}
+          explicit_breaking: ${{ inputs['explicit-breaking'] }}
+          token: ${{ secrets['writer-token'] }}

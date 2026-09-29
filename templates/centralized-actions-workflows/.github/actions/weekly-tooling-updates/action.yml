@@ -1,0 +1,24 @@
+name: Central weekly tooling updates
+description: Verify Writer installation scope before an opt-in tooling update run.
+inputs:
+  repository:
+    required: true
+  explicit_breaking:
+    required: false
+    default: "false"
+  token:
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        TARGET_REPOSITORY: ${{ inputs.repository }}
+        TOOLING_UPDATE_EXPLICIT_BREAKING: ${{ inputs.explicit_breaking }}
+      run: |
+        set -euo pipefail
+        access="$(gh api --paginate --slurp /installation/repositories | jq -c --arg target "$TARGET_REPOSITORY" '[.[] | .repositories[] | select(.full_name == $target)] | length')"
+        [ "$access" = 1 ] || { echo "Writer installation cannot see $TARGET_REPOSITORY" >&2; exit 1; }
+        gh api "/repos/$TARGET_REPOSITORY/git/ref/heads/main" --jq '.object.sha' >/dev/null
+        echo "Writer installation scope verified for $TARGET_REPOSITORY (explicit_breaking=$TOOLING_UPDATE_EXPLICIT_BREAKING)."
