@@ -1,0 +1,75 @@
+name: Central maintenance merge
+description: Revalidate and squash-merge an approved maintenance pull request.
+inputs:
+  repository:
+    description: Repository in OWNER/REPOSITORY form.
+    required: true
+  head_sha:
+    description: Exact pull-request head SHA to validate and merge.
+    required: true
+  pull_request_number:
+    description: Pull-request number being merged.
+    required: true
+  reviewer_token:
+    description: Short-lived Reviewer installation token.
+    required: true
+  writer_token:
+    description: Short-lived Writer installation token.
+    required: true
+  reviewer_app_slug:
+    description: Expected Reviewer App slug, without the [bot] suffix.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Revalidate and merge maintenance pull request
+      shell: bash
+      env:
+        REVIEWER_TOKEN: ${{ inputs.reviewer_token }}
+        WRITER_TOKEN: ${{ inputs.writer_token }}
+        REPOSITORY: ${{ inputs.repository }}
+        EXPECTED_HEAD_SHA: ${{ inputs.head_sha }}
+        PULL_REQUEST_NUMBER: ${{ inputs.pull_request_number }}
+        REVIEWER_APP_SLUG: ${{ inputs.reviewer_app_slug }}
+      run: |
+        set -euo pipefail
+
+        fail() {
+          echo "Central maintenance merge deferred: $*" >&2
+          exit 1
+        }
+
+        reviewer_api() {
+          GH_TOKEN="$REVIEWER_TOKEN" gh api "$@"
+        }
+
+        pr_json="$(reviewer_api "/repos/${REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}")" ||
+          fail "pull request could not be read with Reviewer installation token"
+        jq -e --arg sha "$EXPECTED_HEAD_SHA" '
+          .state == "open" and .draft == false and .base.ref == "main" and .head.sha == $sha
+        ' <<<"${pr_json}" >/dev/null || fail "pull request is not open at the requested exact head"
+
+        checks_json="$(reviewer_api "/repos/${REPOSITORY}/commits/${EXPECTED_HEAD_SHA}/check-runs?per_page=100")" ||
+          fail "exact-head checks could not be read"
+        for check_name in "Quality" "Commit policy" "Test Quality Providers" "CodeQL Security Scan"; do
+          jq -e --arg name "$check_name" '
+            any(.check_runs[]?; .name == $name and .status == "completed" and .conclusion == "success")
+          ' <<<"${checks_json}" >/dev/null || fail "required exact-head check is not successful: ${check_name}"
+        done
+
+        reviews_json="$(reviewer_api "/repos/${REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}/reviews?per_page=100")" ||
+          fail "pull request reviews could not be read"
+        jq -e --arg sha "$EXPECTED_HEAD_SHA" --arg reviewer "${REVIEWER_APP_SLUG}[bot]" '
+          any(.[]?; .user.login == $reviewer and .state == "APPROVED" and .commit_id == $sha)
+        ' <<<"${reviews_json}" >/dev/null || fail "Reviewer approval is missing for the exact head"
+
+        final_json="$(reviewer_api "/repos/${REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}")" ||
+          fail "final pull request state could not be read"
+        jq -e --arg sha "$EXPECTED_HEAD_SHA" '.state == "open" and .head.sha == $sha' <<<"${final_json}" >/dev/null ||
+          fail "final state changed before Writer merge"
+
+        GH_TOKEN="$WRITER_TOKEN" gh api --method PUT \
+          "/repos/${REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}/merge" \
+          -f sha="$EXPECTED_HEAD_SHA" \
+          -f merge_method=squash >/dev/null || fail "Writer installation token could not enable squash merge"
+        echo "Central maintenance merge completed for ${REPOSITORY}#${PULL_REQUEST_NUMBER}."

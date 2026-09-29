@@ -34,15 +34,15 @@
       }
     },
     "maintenance-merge": {
-      "status": "contract-only",
+      "status": "available",
       "enabled_by_default": false,
-      "workflow": ".github/workflows/merge-maintenance-pr.yml",
-      "contract_version": 1,
+      "workflow": ".github/workflows/maintenance-merge.yml",
+      "contract_version": 2,
       "required_inputs": ["repository", "head-sha", "pull-request-number"],
       "minimum_permissions": {
         "actions": "read",
         "contents": "read",
-        "pull-requests": "read"
+        "pull-requests": "write"
       }
     },
     "release-please": {
