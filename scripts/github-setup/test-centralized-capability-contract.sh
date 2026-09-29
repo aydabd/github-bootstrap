@@ -20,7 +20,7 @@ jq -e '
         "weekly-tooling-updates"
     ] and
     all(.capabilities[];
-        .status == "contract-only" and
+        (.status == "available" or .status == "contract-only") and
         .enabled_by_default == false and
         (.contract_version | type == "number" and . > 0 and floor == .) and
         (.workflow | type == "string" and test("^\\.github/workflows/[A-Za-z0-9._-]+\\.yml$")) and
@@ -30,6 +30,13 @@ jq -e '
             all(to_entries[]; .value | . == "read" or . == "write"))
     )
 ' "$manifest" > /dev/null || fail "optional centralized capability inventory is invalid"
+
+jq -e '
+    .capabilities["maintenance-safety"].status == "available" and
+    ([.capabilities | to_entries[] |
+        select(.key != "maintenance-safety") | .value.status] |
+        all(. == "contract-only"))
+' "$manifest" > /dev/null || fail "maintenance-safety availability boundary is invalid"
 
 jq -e '
     .capabilities["maintenance-safety"].workflow == ".github/workflows/maintenance-safety.yml" and

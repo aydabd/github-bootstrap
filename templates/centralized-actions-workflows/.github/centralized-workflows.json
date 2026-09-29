@@ -15,10 +15,10 @@
   ],
   "capabilities": {
     "maintenance-safety": {
-      "status": "contract-only",
+      "status": "available",
       "enabled_by_default": false,
       "workflow": ".github/workflows/maintenance-safety.yml",
-      "contract_version": 1,
+      "contract_version": 2,
       "required_inputs": ["repository", "head-sha", "pull-request-number"],
       "minimum_permissions": {
         "actions": "read",
