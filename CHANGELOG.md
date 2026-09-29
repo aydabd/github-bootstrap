@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.1](https://github.com/aydabd/github-bootstrap/compare/v2.29.0...v2.29.1) (2026-09-29)
+
+
+### Bug Fixes
+
+* **e2e:** use provisioner App for lifecycle cleanup ([#374](https://github.com/aydabd/github-bootstrap/issues/374)) ([f61d208](https://github.com/aydabd/github-bootstrap/commit/f61d20899abc765246c0e557aa9a48aa1d302f66))
+
 ## [2.29.0](https://github.com/aydabd/github-bootstrap/compare/v2.28.0...v2.29.0) (2026-09-29)
 
 
