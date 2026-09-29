@@ -140,3 +140,14 @@ thin repository workflow adapter and versioned capability implementations; it
 does not receive tenant private keys, client secrets, refresh tokens, or
 ruleset-bypass authority. A live App installation and canary migration remain
 operator-gated and are not implied by this seed contract.
+
+## Canary, rollback, and retirement
+
+Before a consumer canary, run `scripts/github-setup/validate-central-capability-canary.sh` with evidence for
+the exact head SHAs, approval actor, merge actor, enforced ruleset state, and cleanup decision. The validator
+rejects unauthorized issue ownership, capability permissions, credential-like evidence, and non-operator cleanup.
+
+Rollback is to the consumer's last known-good bootstrap runtime ref: restore the bootstrap adapter, disable the
+central capability selection, and rerun required checks before retiring any canary resources. Retirement requires
+operator confirmation, clean rollback evidence, and verified cleanup. Live App creation, installation, credentials,
+and migrations remain operator-gated.
