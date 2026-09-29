@@ -4,9 +4,12 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 manifest="$root/templates/centralized-actions-workflows/.github/centralized-workflows.json"
 workflow="$root/templates/centralized-actions-workflows/.github/workflows/weekly-tooling-updates.yml"
 action="$root/templates/centralized-actions-workflows/.github/actions/weekly-tooling-updates/action.yml"
-fail() { echo "central weekly tooling contract: $*" >&2; exit 1; }
+fail() {
+    echo "central weekly tooling contract: $*" >&2
+    exit 1
+}
 for f in "$manifest" "$workflow" "$action"; do test -e "$f" || fail "missing asset: $f"; done
-jq -e '.capabilities["weekly-tooling-updates"].status == "available" and .capabilities["weekly-tooling-updates"].enabled_by_default == false and .capabilities["weekly-tooling-updates"].contract_version == 2' "$manifest" >/dev/null || fail "manifest capability is invalid"
+jq -e '.capabilities["weekly-tooling-updates"].status == "available" and .capabilities["weekly-tooling-updates"].enabled_by_default == false and .capabilities["weekly-tooling-updates"].contract_version == 2' "$manifest" > /dev/null || fail "manifest capability is invalid"
 grep -Fq 'workflow_call:' "$workflow" || fail "workflow must be reusable"
 grep -Fq 'explicit-breaking:' "$workflow" || fail "workflow must accept explicit breaking input"
 grep -Fq 'writer-token:' "$workflow" || fail "workflow must require Writer installation token"
