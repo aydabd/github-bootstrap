@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.28.0](https://github.com/aydabd/github-bootstrap/compare/v2.27.0...v2.28.0) (2026-09-29)
+
+
+### Features
+
+* **central:** add maintenance merge capability ([#361](https://github.com/aydabd/github-bootstrap/issues/361)) ([aad41d3](https://github.com/aydabd/github-bootstrap/commit/aad41d32417cf667e342db4dc6d302541ffabafc))
+* **central:** add maintenance safety capability ([#360](https://github.com/aydabd/github-bootstrap/issues/360)) ([b35fbf1](https://github.com/aydabd/github-bootstrap/commit/b35fbf160cf3590db9bf0f9d9a6627309fdfea80))
+* **central:** add release please capability ([#362](https://github.com/aydabd/github-bootstrap/issues/362)) ([ca5a4a3](https://github.com/aydabd/github-bootstrap/commit/ca5a4a39ddfb9df70578ca61dc7d4ff88dcea565))
+* **central:** add weekly tooling capability ([#363](https://github.com/aydabd/github-bootstrap/issues/363)) ([f0ea8b7](https://github.com/aydabd/github-bootstrap/commit/f0ea8b7bc20cbb4df16affef82501dcb4c4d4029))
+
 ## [2.27.0](https://github.com/aydabd/github-bootstrap/compare/v2.26.1...v2.27.0) (2026-09-29)
 
 
