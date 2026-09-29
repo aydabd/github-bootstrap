@@ -28,7 +28,7 @@ jq -e '
             "pull-requests": "write"
         }
     }
-' "$manifest" >/dev/null || fail "maintenance-merge manifest contract is not available and least privilege"
+' "$manifest" > /dev/null || fail "maintenance-merge manifest contract is not available and least privilege"
 
 grep -Fq 'workflow_call:' "$workflow" || fail "central workflow must be reusable"
 grep -Fq 'repository:' "$workflow" || fail "central workflow must require repository"
