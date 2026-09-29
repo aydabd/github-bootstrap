@@ -21,7 +21,7 @@ jq -e '
         "enabled_by_default": false,
         "workflow": ".github/workflows/maintenance-safety.yml",
         "contract_version": 2,
-        "required_inputs": ["repository", "head-sha", "pull-request-number"],
+        "required_inputs": ["repository", "head-sha", "pull-request-number", "central-repository", "central-ref"],
         "minimum_permissions": {
             "actions": "read",
             "contents": "read",
@@ -35,13 +35,16 @@ grep -Fq 'workflow_call:' "$workflow" || fail "central workflow must be reusable
 grep -Fq 'repository:' "$workflow" || fail "central workflow must require repository"
 grep -Fq 'head-sha:' "$workflow" || fail "central workflow must require exact head SHA"
 grep -Fq 'pull-request-number:' "$workflow" || fail "central workflow must require pull request number"
+grep -Fq 'central-repository:' "$workflow" || fail "central workflow must require central repository"
+grep -Fq 'central-ref:' "$workflow" || fail "central workflow must require immutable central ref"
 if grep -Eq '^  (pull_request|pull_request_target|workflow_run|repository_dispatch):' "$workflow"; then
     fail "central workflow must not own consumer event triggers"
 fi
 grep -Fq 'actions: read' "$workflow" || fail "central workflow must request actions read"
 grep -Fq 'issues: write' "$workflow" || fail "central workflow must request issues write"
 grep -Fq 'pull-requests: write' "$workflow" || fail "central workflow must request pull requests write"
-grep -Fq 'uses: ./.github/actions/maintenance-safety' "$workflow" ||
+grep -Fq 'path: .central-workflows' "$workflow" || fail "central workflow must check out the package"
+grep -Fq 'uses: ./.central-workflows/.github/actions/maintenance-safety' "$workflow" ||
     fail "central workflow must delegate to the packaged action"
 grep -Fq '.head.sha' "$action" || fail "action must validate the exact PR head"
 grep -Fq 'EXPECTED_HEAD_SHA' "$action" || fail "action must compare against the requested head SHA"

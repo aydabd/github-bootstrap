@@ -78,11 +78,10 @@ in a reviewed pull request.
 
 The manifest also records the contract boundary for optional maintenance and
 release capabilities: `maintenance-safety`, `maintenance-merge`,
-`release-please`, and `weekly-tooling-updates`. Maintenance safety is
-available as an opt-in reusable workflow; the other entries remain
-`contract-only` until their implementations are validated. All capabilities
-remain disabled by default. They do not grant access to consumer secrets,
-environments, variables, Apps, settings, rulesets, or repository policy.
+`release-please`, and `weekly-tooling-updates`. Available capabilities are
+opt-in reusable workflows and remain disabled by default. They do not grant
+access to consumer secrets, environments, variables, Apps, settings, rulesets,
+or repository policy.
 
 Consumers opt into maintenance safety with a thin, event-owning workflow
 pinned to an immutable central ref:
@@ -95,6 +94,8 @@ jobs:
       repository: OWNER/CONSUMER
       head-sha: ${{ github.event.pull_request.head.sha }}
       pull-request-number: ${{ github.event.pull_request.number }}
+      central-repository: OWNER/CENTRAL-ACTIONS
+      central-ref: IMMUTABLE_REF
     permissions:
       actions: read
       contents: read
@@ -106,6 +107,11 @@ The central action validates the exact pull-request head, required workflow
 conclusions, and blocked lifecycle state before publishing `automation:
 accepted`. Its token is the caller's short-lived workflow token; production
 App installation and canary migration remain operator-gated runtime work.
+
+Maintenance merge uses the same central repository/ref inputs plus
+`reviewer-app-slug`, `reviewer-token`, and `writer-token` secrets. The Reviewer
+installation token validates the exact head and approval; the separate Writer
+installation token performs the squash merge.
 Capability contract changes require a contract-version increment. The local
 consumer workflow remains responsible for its event trigger and filename.
 

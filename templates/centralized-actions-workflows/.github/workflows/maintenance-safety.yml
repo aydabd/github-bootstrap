@@ -15,6 +15,14 @@ on:
         description: Pull-request number being validated.
         required: true
         type: number
+      central-repository:
+        description: Immutable central package repository in OWNER/REPOSITORY form.
+        required: true
+        type: string
+      central-ref:
+        description: Immutable central package ref.
+        required: true
+        type: string
 
 permissions: {}
 
@@ -29,8 +37,15 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      - name: Check out central workflow package
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs['central-repository'] }}
+          ref: ${{ inputs['central-ref'] }}
+          path: .central-workflows
+          persist-credentials: false
       - name: Run central maintenance safety
-        uses: ./.github/actions/maintenance-safety
+        uses: ./.central-workflows/.github/actions/maintenance-safety
         with:
           repository: ${{ inputs.repository }}
           head_sha: ${{ inputs['head-sha'] }}

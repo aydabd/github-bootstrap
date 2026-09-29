@@ -40,7 +40,7 @@ jq -e '
 
 jq -e '
     .capabilities["maintenance-safety"].workflow == ".github/workflows/maintenance-safety.yml" and
-    .capabilities["maintenance-safety"].required_inputs == ["repository", "head-sha", "pull-request-number"] and
+    .capabilities["maintenance-safety"].required_inputs == ["repository", "head-sha", "pull-request-number", "central-repository", "central-ref"] and
     .capabilities["maintenance-safety"].minimum_permissions == {
         "actions": "read",
         "contents": "read",
