@@ -74,8 +74,9 @@ jq -e '
 ' "$manifest" > /dev/null || fail "runtime role permissions or event subscriptions do not match the contract"
 
 if jq -e '
-    .. | objects | keys[] |
-    test("(private.key|client.secret|refresh.token|access.token|credential.value)"; "i")
+    any(.. | objects; any(keys[];
+        test("(private.key|client.secret|refresh.token|access.token|credential.value)"; "i")
+    ))
 ' "$manifest" > /dev/null; then
     fail "runtime manifest contains secret-like fields"
 fi
