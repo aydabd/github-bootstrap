@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.29.0](https://github.com/aydabd/github-bootstrap/compare/v2.28.0...v2.29.0) (2026-09-29)
+
+
+### Features
+
+* define central e2e and production app roles ([#369](https://github.com/aydabd/github-bootstrap/issues/369)) ([002ef5c](https://github.com/aydabd/github-bootstrap/commit/002ef5c2fed4384499f7a964fd5925a248f16c78))
+* validate central app installation scope ([#370](https://github.com/aydabd/github-bootstrap/issues/370)) ([2e46a00](https://github.com/aydabd/github-bootstrap/commit/2e46a00b41c3a464549c36aff6931a3d0b2a8742))
+* validate central canary parity evidence ([#372](https://github.com/aydabd/github-bootstrap/issues/372)) ([7740f99](https://github.com/aydabd/github-bootstrap/commit/7740f991b1423364f1a5adbe63360ea32ffa1ffd))
+
 ## [2.28.0](https://github.com/aydabd/github-bootstrap/compare/v2.27.0...v2.28.0) (2026-09-29)
 
 
