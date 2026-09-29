@@ -66,5 +66,64 @@
   "ref_policy": {
     "type": "immutable",
     "allowed": ["semver-release-tag", "commit-sha"]
+  },
+  "runtime": {
+    "registration_owner": "{{APP_REGISTRATION_OWNER}}",
+    "installation_owner": "{{INSTALLATION_OWNER}}",
+    "service_layout": {
+      "repository": "{{REPOSITORY_OWNER}}/{{REPOSITORY_NAME}}",
+      "release_ref": "immutable-package-ref",
+      "consumer_adapter": "thin-repository-workflow"
+    },
+    "release_policy": {
+      "type": "immutable",
+      "allowed": ["semver-release-tag", "commit-sha"],
+      "contract_versioning": "increment-and-release"
+    },
+    "roles": {
+      "governance": {
+        "identity": "governance",
+        "events": ["pull_request", "check_run", "workflow_run", "branch_protection_rule"],
+        "permissions": {
+          "actions": "read",
+          "checks": "write",
+          "contents": "read",
+          "metadata": "read",
+          "pull-requests": "read",
+          "statuses": "write"
+        },
+        "installation_scope": "selected-repositories",
+        "token_mode": "installation",
+        "ruleset_bypass": false,
+        "secret_custody": "operator-only"
+      },
+      "reviewer": {
+        "identity": "reviewer",
+        "events": ["workflow_run"],
+        "permissions": {
+          "actions": "write",
+          "metadata": "read",
+          "pull-requests": "write"
+        },
+        "installation_scope": "selected-repositories",
+        "token_mode": "installation",
+        "ruleset_bypass": false,
+        "secret_custody": "operator-only"
+      },
+      "writer": {
+        "identity": "writer",
+        "events": [],
+        "permissions": {
+          "actions": "read",
+          "contents": "write",
+          "metadata": "read",
+          "pull-requests": "write"
+        },
+        "installation_scope": "selected-repositories",
+        "token_mode": "installation",
+        "ruleset_bypass": false,
+        "secret_custody": "operator-only"
+      }
+    }
   }
 }

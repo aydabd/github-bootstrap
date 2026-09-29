@@ -103,3 +103,18 @@ the production ref. The bootstrap validator accepts only a complete
 40-character commit SHA. Each consumer may pin a different release or SHA;
 upgrading changes only its `central_ref` after the central repository has
 published and validated the new version.
+
+## Central runtime boundary
+
+The optional runtime contract in `.github/centralized-workflows.json` defines
+separate Governance, Reviewer, and Writer App identities. Runtime jobs use
+independent short-lived installation tokens from selected-repository
+installations; personal-account refresh-token exchange remains limited to
+bootstrap and disposable E2E provisioning.
+
+Consumer-owned triggers, secrets, environments, variables, repository
+settings, rulesets, and policy remain local. The central package supplies a
+thin repository workflow adapter and versioned capability implementations; it
+does not receive tenant private keys, client secrets, refresh tokens, or
+ruleset-bypass authority. A live App installation and canary migration remain
+operator-gated and are not implied by this seed contract.
