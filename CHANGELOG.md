@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.27.0](https://github.com/aydabd/github-bootstrap/compare/v2.26.1...v2.27.0) (2026-09-29)
+
+
+### Features
+
+* define central governance runtime contract ([#353](https://github.com/aydabd/github-bootstrap/issues/353)) ([686ed9d](https://github.com/aydabd/github-bootstrap/commit/686ed9dad4e637cc452c46f52f37732c074af2d3))
+
 ## [2.26.1](https://github.com/aydabd/github-bootstrap/compare/v2.26.0...v2.26.1) (2026-09-28)
 
 
