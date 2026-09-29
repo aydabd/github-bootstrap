@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-fail() { echo "Central capability canary contract failure: $*" >&2; exit 1; }
+fail() {
+    echo "Central capability canary contract failure: $*" >&2
+    exit 1
+}
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 validator="$root/scripts/github-setup/validate-central-capability-canary.sh"
 tmp="$(mktemp -d)"
@@ -12,10 +15,10 @@ EOF
 for mutation in owner permissions credentials cleanup; do
     cp "$tmp/valid.json" "$tmp/mutated.json"
     case "$mutation" in
-        owner) sed -i.bak 's/"issue":357/"issue":999/' "$tmp/mutated.json" ;;
-        permissions) sed -i.bak 's/"operator_gate":true/"operator_gate":false/' "$tmp/mutated.json" ;;
-        credentials) sed -i.bak 's/"bootstrap_runtime_ref":"main"/"bootstrap_runtime_ref":"refresh-token"/' "$tmp/mutated.json" ;;
-        cleanup) sed -i.bak 's/"performed":false/"performed":true/' "$tmp/mutated.json" ;;
+    owner) sed -i.bak 's/"issue":357/"issue":999/' "$tmp/mutated.json" ;;
+    permissions) sed -i.bak 's/"operator_gate":true/"operator_gate":false/' "$tmp/mutated.json" ;;
+    credentials) sed -i.bak 's/"bootstrap_runtime_ref":"main"/"bootstrap_runtime_ref":"refresh-token"/' "$tmp/mutated.json" ;;
+    cleanup) sed -i.bak 's/"performed":false/"performed":true/' "$tmp/mutated.json" ;;
     esac
     if "$validator" --evidence-file "$tmp/mutated.json" >/dev/null; then
         fail "$mutation mutation was accepted"
