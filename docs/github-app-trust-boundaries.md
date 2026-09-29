@@ -26,6 +26,12 @@ and Reviewer are separate Apps even when they are installed on the same target
 repository. No App is a ruleset bypass actor: rulesets remain authoritative
 for signatures, approvals, required checks, linear history, and merge method.
 
+The centralized runtime uses separate Governance, Reviewer, and Writer Apps
+with selected-repository installation scope and independent short-lived
+installation tokens. Runtime Apps have no ruleset-bypass authority. Shared
+runtime credentials remain operator-only; a tenant repository receives only
+the thin adapter and its non-secret policy/configuration.
+
 ## Permission contract
 
 The payloads intentionally have no webhook events and are private Apps. Their

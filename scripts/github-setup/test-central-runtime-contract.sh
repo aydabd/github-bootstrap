@@ -3,6 +3,8 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 manifest="$repo_root/templates/centralized-actions-workflows/.github/centralized-workflows.json"
+readme="$repo_root/templates/centralized-actions-workflows/README.md"
+trust_boundaries="$repo_root/docs/github-app-trust-boundaries.md"
 
 fail() {
     echo "central runtime contract: $*" >&2
@@ -80,5 +82,22 @@ fi
 if jq -e '.runtime.roles[] | .token_mode == "bootstrap-refresh" or .ruleset_bypass == true' "$manifest" > /dev/null; then
     fail "runtime roles permit refresh-token mode or ruleset bypass"
 fi
+
+grep -Fq 'Runtime jobs use' "$readme" ||
+    fail "central package README does not define installation-token runtime auth"
+grep -Fq 'independent short-lived installation tokens' "$readme" ||
+    fail "central package README does not define installation-token runtime auth"
+grep -Fq 'Consumer-owned triggers, secrets, environments, variables, repository' "$readme" ||
+    fail "central package README does not define the thin adapter boundary"
+grep -Fq 'settings, rulesets, and policy remain local.' "$readme" ||
+    fail "central package README does not define the thin adapter boundary"
+grep -Fq 'Shared' "$trust_boundaries" ||
+    fail "trust-boundary documentation does not define shared credential custody"
+grep -Fq 'runtime credentials remain operator-only' "$trust_boundaries" ||
+    fail "trust-boundary documentation does not define shared credential custody"
+grep -Fq 'Runtime Apps have no ruleset-bypass authority' "$trust_boundaries" ||
+    fail "trust-boundary documentation does not prohibit runtime ruleset bypass"
+grep -Fq 'selected-repository installation scope' "$trust_boundaries" ||
+    fail "trust-boundary documentation does not define selected-repository scope"
 
 echo "Central runtime contract checks passed."
