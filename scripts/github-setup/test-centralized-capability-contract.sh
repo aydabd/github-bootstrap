@@ -64,7 +64,7 @@ jq -e '
         "pull-requests": "read"
     } and
     .capabilities["weekly-tooling-updates"].workflow == ".github/workflows/weekly-tooling-updates.yml" and
-    .capabilities["weekly-tooling-updates"].required_inputs == ["repository", "explicit-breaking"] and
+    .capabilities["weekly-tooling-updates"].required_inputs == ["repository", "explicit-breaking", "central-repository", "central-ref"] and
     .capabilities["weekly-tooling-updates"].minimum_permissions == {
         "contents": "write",
         "issues": "read",
