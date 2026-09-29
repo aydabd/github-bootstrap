@@ -53,8 +53,9 @@ runs:
           fail "exact-head checks could not be read"
         for check_name in "Quality" "Commit policy" "Test Quality Providers" "CodeQL Security Scan"; do
           jq -e --arg name "$check_name" '
-            any(.check_runs[]?; .name == $name and .status == "completed" and .conclusion == "success")
-          ' <<<"${checks_json}" >/dev/null || fail "required exact-head check is not successful: ${check_name}"
+            ([.check_runs[]? | select(.name == $name)] | sort_by(.started_at // .completed_at // "") | last)
+            | (.status == "completed" and .conclusion == "success")
+          ' <<<"${checks_json}" >/dev/null || fail "latest required exact-head check is not successful: ${check_name}"
         done
 
         reviews_json="$(reviewer_api "/repos/${REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}/reviews?per_page=100")" ||
