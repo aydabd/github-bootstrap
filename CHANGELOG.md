@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.2](https://github.com/aydabd/github-bootstrap/compare/v2.29.1...v2.29.2) (2026-10-12)
+
+
+### Bug Fixes
+
+* **deps:** delay npm Dependabot updates ([#379](https://github.com/aydabd/github-bootstrap/issues/379)) ([2b445c7](https://github.com/aydabd/github-bootstrap/commit/2b445c7d80e775e22f5ff4da80d8ec9331f3feb5))
+
 ## [2.29.1](https://github.com/aydabd/github-bootstrap/compare/v2.29.0...v2.29.1) (2026-09-29)
 
 
