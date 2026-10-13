@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.3](https://github.com/aydabd/github-bootstrap/compare/v2.29.2...v2.29.3) (2026-10-13)
+
+
+### Bug Fixes
+
+* **deps:** remediate all open Dependabot alerts ([#383](https://github.com/aydabd/github-bootstrap/issues/383)) ([b9804f0](https://github.com/aydabd/github-bootstrap/commit/b9804f03634e90bf9335859a87d1ed4e66a26a02))
+
 ## [2.29.2](https://github.com/aydabd/github-bootstrap/compare/v2.29.1...v2.29.2) (2026-10-12)
 
 
