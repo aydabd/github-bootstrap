@@ -131,6 +131,8 @@ on:
         required: true
         type: string
 
+permissions: {}
+
 jobs:
   create-test-repo:
     name: Create Test Repository
