@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.29.4](https://github.com/aydabd/github-bootstrap/compare/v2.29.3...v2.29.4) (2026-10-14)
+
+
+### Bug Fixes
+
+* **actions:** declare root workflow permissions ([#385](https://github.com/aydabd/github-bootstrap/issues/385)) ([1a85325](https://github.com/aydabd/github-bootstrap/commit/1a853250ff104cf3c82269d696937e888be459d0))
+
 ## [2.29.3](https://github.com/aydabd/github-bootstrap/compare/v2.29.2...v2.29.3) (2026-10-13)
 
 
