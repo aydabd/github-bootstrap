@@ -25,7 +25,6 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Verify Signed-off-by trailers
-        # Keep ./ until the pinned actionlint release accepts the GitHub $/ syntax.
         uses: ./.github/actions/verify-signed-off-by
         with:
           token: ${{ github.token }}
