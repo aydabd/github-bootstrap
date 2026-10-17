@@ -8,15 +8,24 @@ This seeded repository contains the reusable workflows at
 `.github/workflows/pull-request.yml`, `.github/workflows/quality.yml`, and
 `.github/workflows/pr-policy.yml`, their
 composite quality and PR-policy actions, setup actions, lint scripts, and lint
-configuration. The workflows intentionally declare only `workflow_call`; the
-consumer repository should define thin workflows with its own `push` or
-`pull_request` triggers. The consumer retains its own Makefile, provider
-files, repository source/configuration, Project identity, secrets, and final
-ruleset enforcement, but does not copy central quality or PR-policy
-implementation. Publish immutable release tags or use commit SHAs, then
-configure consumer repositories with:
+configuration. The reusable workflows declare `workflow_call`; the consumer
+repository should define thin workflows with its own `push` or `pull_request`
+triggers. The package also contains the central-repository-only
+`publish-release.yml` workflow, which publishes semantic releases from `main`.
+Candidate or pre-release deployments should use the `development` environment;
+stable semantic releases use the reviewer-protected `production` environment.
+The bootstrap-only `production-provisioning` environment is separate and is
+used only while creating and configuring the central repository.
+The consumer retains its own Makefile, provider files, repository
+source/configuration, Project identity, secrets, and final ruleset enforcement,
+but does not copy central quality or PR-policy implementation. Publish
+immutable release tags or use commit SHAs, then configure consumer repositories
+with:
 
-Repository settings and rulesets are not redefined in this package. Central
+The central repository also contains `central-pull-request.yml`, a repository
+event workflow that produces the required `pull-request / aggregate` check for
+its protected `main` branch. It is intentionally not a reusable consumer
+workflow. Repository settings and rulesets are not redefined in this package. Central
 repository provisioning uses the bootstrap repository's canonical
 `.github/config/repo-settings.json` and `ruleset-default.json` through the
 shared setup scripts. Only the centralized aggregate check name is supplied as

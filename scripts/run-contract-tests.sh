@@ -61,6 +61,7 @@ contract_tests=(
     "$script_dir/github-setup/test-central-release-please-contract.sh"
     "$script_dir/github-setup/test-central-weekly-tooling-contract.sh"
     "$script_dir/github-setup/test-central-runtime-contract.sh"
+    "$script_dir/github-setup/test-central-workflow-repository-contract.sh"
     "$script_dir/github-setup/test-central-app-manifest-contract.sh"
     "$script_dir/github-setup/test-central-app-installation-contract.sh"
     "$script_dir/github-setup/test-central-canary-evidence-contract.sh"

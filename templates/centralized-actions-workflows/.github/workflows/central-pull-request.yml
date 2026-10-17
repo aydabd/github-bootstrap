@@ -1,0 +1,37 @@
+name: pull-request
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  aggregate:
+    name: aggregate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out central workflow package
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate central workflow package
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '.package == "centralized-actions-workflows" and .ref_policy.type == "immutable"' \
+            .github/centralized-workflows.json >/dev/null
+          for workflow in .github/workflows/*.yml; do
+            case "$workflow" in
+              .github/workflows/central-pull-request.yml|.github/workflows/publish-release.yml)
+                continue
+                ;;
+            esac
+            grep -q '^  workflow_call:' "$workflow"
+          done
+          if grep -REn 'uses: [^#@]+@(main|master|latest|v[0-9]+)$' .github; then
+            echo "mutable GitHub Actions references are not allowed" >&2
+            exit 1
+          fi
+          git diff --check
