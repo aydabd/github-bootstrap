@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.30.0](https://github.com/aydabd/github-bootstrap/compare/v2.29.4...v2.30.0) (2026-10-17)
+
+
+### Features
+
+* add central workflow repository provisioning ([9155c04](https://github.com/aydabd/github-bootstrap/commit/9155c0439f4ee41ac4785cb32868042d7b974550))
+* provision central workflow repository ([#387](https://github.com/aydabd/github-bootstrap/issues/387)) ([9155c04](https://github.com/aydabd/github-bootstrap/commit/9155c0439f4ee41ac4785cb32868042d7b974550))
+
+
+### Bug Fixes
+
+* avoid pipefail in generated e2e contract ([#400](https://github.com/aydabd/github-bootstrap/issues/400)) ([5654b7f](https://github.com/aydabd/github-bootstrap/commit/5654b7fb554e267a6d328e082acf39e2a566d0d8))
+* **release:** restore root release-please configuration ([#397](https://github.com/aydabd/github-bootstrap/issues/397)) ([59f4741](https://github.com/aydabd/github-bootstrap/commit/59f47411e063e7341978acea26cde4d23b904f9a))
+* **workflow:** enforce complete project tracking ([#395](https://github.com/aydabd/github-bootstrap/issues/395)) ([7bb3161](https://github.com/aydabd/github-bootstrap/commit/7bb3161e6c34cdf5281d008216e5ea2bcfdba936))
+
 ## [2.29.4](https://github.com/aydabd/github-bootstrap/compare/v2.29.3...v2.29.4) (2026-10-14)
 
 
