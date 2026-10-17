@@ -133,6 +133,16 @@ for setup_action in \
 done
 
 for seed_workflow in "$seed_root"/.github/workflows/*.yml; do
+    case "$(basename "$seed_workflow")" in
+        central-pull-request.yml)
+            grep -q '^  pull_request:' "$seed_workflow"
+            continue
+            ;;
+        publish-release.yml)
+            grep -q '^  push:' "$seed_workflow"
+            continue
+            ;;
+    esac
     grep -q '^  workflow_call:' "$seed_workflow"
     if grep -Eq '^  (push|pull_request|workflow_dispatch):' "$seed_workflow"; then
         echo "central seed workflow has a repository event trigger: $seed_workflow" >&2

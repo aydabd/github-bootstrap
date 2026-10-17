@@ -1,0 +1,192 @@
+name: Create Central Workflow Repository
+run-name: Create Central Workflow Repository - ${{ inputs.repo_owner }}/${{ inputs.repo_name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_owner:
+        description: "Organization that owns the central workflow repository"
+        required: true
+        default: "leniva-ab"
+        type: string
+      repo_name:
+        description: "Central workflow repository name"
+        required: true
+        default: "central-actions-workflows"
+        type: string
+      release_reviewer:
+        description: "GitHub user who must approve the release environment"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate central repository request
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Validate request
+        env:
+          OWNER: ${{ inputs.repo_owner }}
+          REPOSITORY: ${{ inputs.repo_name }}
+          REVIEWER: ${{ inputs.release_reviewer }}
+        run: |
+          set -euo pipefail
+          [ "$OWNER" = "leniva-ab" ] || {
+            echo "::error::The central workflow repository must be owned by leniva-ab." >&2
+            exit 1
+          }
+          [ "$REPOSITORY" = "central-actions-workflows" ] || {
+            echo "::error::The central workflow repository name is fixed to central-actions-workflows." >&2
+            exit 1
+          }
+          [[ "$REVIEWER" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$ ]] || {
+            echo "::error::release_reviewer must be a GitHub user login." >&2
+            exit 1
+          }
+
+  provision:
+    name: Provision central workflow repository
+    runs-on: ubuntu-24.04
+    needs: validate
+    environment: production-provisioning
+    permissions:
+      contents: read
+    steps:
+      - name: Check out bootstrap repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Resolve organization provisioner token
+        id: token
+        uses: ./.github/actions/resolve-gh-token
+        with:
+          client_id: ${{ vars.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_CLIENT_ID }}
+          app_private_key: ${{ secrets.BOOTSTRAP_PRODUCTION_PROVISIONER_APP_PRIVATE_KEY }}
+          refresh_token_secret: ""
+          app_owner: ${{ inputs.repo_owner }}
+          target_owner: ${{ inputs.repo_owner }}
+          permission_profile: repository-creation
+          repositories: ""
+
+      - name: Create empty public repository
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          OWNER: ${{ inputs.repo_owner }}
+          REPOSITORY: ${{ inputs.repo_name }}
+        run: |
+          set -euo pipefail
+          if gh repo view "$OWNER/$REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Repository already exists: $OWNER/$REPOSITORY" >&2
+            exit 1
+          fi
+          gh repo create "$OWNER/$REPOSITORY" \
+            --public \
+            --description "Versioned reusable GitHub Actions and workflows"
+
+      - name: Seed centralized workflow package
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          OWNER: ${{ inputs.repo_owner }}
+          REPOSITORY: ${{ inputs.repo_name }}
+        run: |
+          set -euo pipefail
+          temporary_root="$(mktemp -d)"
+          trap 'rm -rf "$temporary_root"' EXIT
+          cp -R templates/centralized-actions-workflows/. "$temporary_root"/
+          manifest="$temporary_root/.github/centralized-workflows.json"
+          sed \
+            -e "s/{{REPOSITORY_OWNER}}/$OWNER/g" \
+            -e "s/{{REPOSITORY_NAME}}/$REPOSITORY/g" \
+            -e "s/{{APP_REGISTRATION_OWNER}}/$OWNER/g" \
+            -e "s/{{INSTALLATION_OWNER}}/$OWNER/g" \
+            "$manifest" > "$manifest.tmp"
+          mv "$manifest.tmp" "$manifest"
+          git -C "$temporary_root" init --initial-branch=main >/dev/null
+          git -C "$temporary_root" config user.name "github-actions[bot]"
+          git -C "$temporary_root" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$temporary_root" add .
+          git -C "$temporary_root" commit -m "chore: initialize central workflow package" >/dev/null
+          auth_header="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\r\n')"
+          printf '::add-mask::%s\n' "$auth_header"
+          git -C "$temporary_root" -c http.extraheader="AUTHORIZATION: basic $auth_header" \
+            remote add origin "https://github.com/$OWNER/$REPOSITORY.git"
+          git -C "$temporary_root" -c http.extraheader="AUTHORIZATION: basic $auth_header" \
+            push origin main
+
+      - name: Apply repository settings and environments
+        uses: ./.github/actions/apply-repo-settings
+        with:
+          owner: ${{ inputs.repo_owner }}
+          repo_name: ${{ inputs.repo_name }}
+          enable_repo_settings: "true"
+          manage_environments: "false"
+          gh_token: ${{ steps.token.outputs.token }}
+
+      - name: Apply protected main ruleset
+        uses: ./.github/actions/apply-repository-ruleset
+        with:
+          owner: ${{ inputs.repo_owner }}
+          repo_name: ${{ inputs.repo_name }}
+          gh_token: ${{ steps.token.outputs.token }}
+          ruleset_file: .github/config/ruleset-default.json
+          required_status_checks: "pull-request / aggregate"
+
+      - name: Apply protected semantic release-tag ruleset
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          OWNER: ${{ inputs.repo_owner }}
+          REPOSITORY: ${{ inputs.repo_name }}
+        run: |
+          set -euo pipefail
+          existing_id="$(gh api --paginate "/repos/$OWNER/$REPOSITORY/rulesets" \
+            --jq '.[] | select(.name == "protected-semver-tags") | .id' | head -n 1)"
+          if [ -n "$existing_id" ]; then
+            gh api --method PUT "/repos/$OWNER/$REPOSITORY/rulesets/$existing_id" \
+              --input .github/config/ruleset-central-tags.json >/dev/null
+          else
+            gh api --method POST "/repos/$OWNER/$REPOSITORY/rulesets" \
+              --input .github/config/ruleset-central-tags.json >/dev/null
+          fi
+
+      - name: Create development environment
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          OWNER: ${{ inputs.repo_owner }}
+          REPOSITORY: ${{ inputs.repo_name }}
+        run: |
+          set -euo pipefail
+          jq -n '{deployment_branch_policy: {protected_branches: false, custom_branch_policies: false}}' \
+            | gh api --method PUT \
+              "/repos/$OWNER/$REPOSITORY/environments/development" \
+              --input - >/dev/null
+
+      - name: Protect production environment
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          OWNER: ${{ inputs.repo_owner }}
+          REPOSITORY: ${{ inputs.repo_name }}
+          RELEASE_REVIEWER: ${{ inputs.release_reviewer }}
+        run: |
+          set -euo pipefail
+          reviewer_id="$(gh api "/users/$RELEASE_REVIEWER" --jq .id)"
+          jq -n --argjson reviewer_id "$reviewer_id" \
+            '{reviewers: [{type: "User", id: $reviewer_id}], deployment_branch_policy: {protected_branches: true, custom_branch_policies: false}}' \
+            | gh api --method PUT \
+              "/repos/$OWNER/$REPOSITORY/environments/production" \
+              --input - >/dev/null
+
+      - name: Verify central repository contract
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          OWNER: ${{ inputs.repo_owner }}
+          REPOSITORY: ${{ inputs.repo_name }}
+        run: |
+          set -euo pipefail
+          test "$(gh api "/repos/$OWNER/$REPOSITORY" --jq .visibility)" = public
+          test "$(gh api "/repos/$OWNER/$REPOSITORY/actions/permissions" --jq .sha_pinning_required)" = true
+          gh api "/repos/$OWNER/$REPOSITORY/contents/.github/centralized-workflows.json" >/dev/null
+          gh api "/repos/$OWNER/$REPOSITORY/environments/development" >/dev/null
+          gh api "/repos/$OWNER/$REPOSITORY/environments/production" >/dev/null
