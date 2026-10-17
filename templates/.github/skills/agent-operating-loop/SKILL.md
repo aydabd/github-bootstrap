@@ -55,8 +55,14 @@ repository and generated repositories.
 6. Rank work in this order: security/production incident, core blocker,
    structural defect prevention, failing required evidence, committed release
    work, maintenance, then new features.
-7. Select one issue or independent issues only after checking dependencies and
-   actual file/module overlap. Emit the ranking and decision as JSON.
+7. Run `.github/scripts/select-next-work.sh` against the live Project
+   (or an equivalent deterministic Project snapshot) before reading candidate
+   Issues. A non-zero result is a tracking blocker, not an empty backlog.
+8. Require every actionable or blocked item to have all required Project
+   fields, a valid parent link for non-epics, and reconciled sub-issue
+   progress. Select one issue or independent issues only after checking
+   dependencies and actual file/module overlap. Emit the ranking and decision
+   as JSON.
 
 ## Issue contract
 

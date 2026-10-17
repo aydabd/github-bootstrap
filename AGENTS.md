@@ -48,3 +48,8 @@ The evidence must include `issue.acceptance_complete`, the linked PR number and
 base branch, `project.fields` with every required Project field, fresh
 validation counts, and the handoff/process-refinement data. A non-zero result
 or any missing required evidence blocks handoff.
+
+Before selecting work, run `scripts/github-setup/select-next-work.sh` against
+the live Project. Treat a non-zero result as a tracking blocker: repair missing
+required Project fields, non-epic parent links, or sub-issue progress before
+recommending an Issue.

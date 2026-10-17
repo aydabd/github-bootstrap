@@ -15,6 +15,8 @@ fail() {
 [ -f "$manifest" ] || fail "missing workflow manifest"
 [ -x "$validator" ] || fail "missing executable workflow validator"
 [ -x "$project_verifier" ] || fail "missing executable project verifier"
+[ -x "$repo_root/templates/.github/scripts/select-next-work.sh" ] ||
+    fail "missing generated-repository next-work selector"
 
 jq -e '
     .schema_version == 1 and
@@ -93,6 +95,8 @@ for instructions in "$repo_root/AGENTS.md" "$repo_root/templates/AGENTS.md" "$re
         fail "closeout acceptance evidence requirement is missing from $instructions"
     grep -Fq 'project.fields' "$instructions" ||
         fail "closeout Project-field evidence requirement is missing from $instructions"
+    grep -Fq 'select-next-work.sh' "$instructions" ||
+        fail "next-work tracking validation is missing from $instructions"
 done
 
 for instructions in "$repo_root/AGENTS.md" "$repo_root/.github/skills/agent-operating-loop/SKILL.md"; do
@@ -112,6 +116,11 @@ for instructions in "$repo_root/templates/AGENTS.md" "$repo_root/templates/.gith
     grep -Fq -- '--evidence-file PATH/TO/closeout-evidence.json' "$instructions" ||
         fail "generated-repository closeout evidence-file argument is missing from $instructions"
 done
+
+grep -Fq '.github/scripts/select-next-work.sh' "$repo_root/templates/AGENTS.md" ||
+    fail "generated-repository AGENTS.md uses the bootstrap selector path"
+grep -Fq '.github/scripts/select-next-work.sh' "$repo_root/templates/.github/skills/agent-operating-loop/SKILL.md" ||
+    fail "generated-repository operating-loop skill uses the bootstrap selector path"
 
 for workflow in .github/workflows/create-repository.yml .github/workflows/terraform-create-repository.yml; do
     grep -Fq 'cp templates/AGENTS.md new-repo/AGENTS.md' "$repo_root/$workflow" ||
