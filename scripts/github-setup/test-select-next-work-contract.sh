@@ -11,6 +11,9 @@ fail() {
     exit 1
 }
 
+grep -Fq 'gh issue view "$issue_number" --repo "$repository"' "$selector" ||
+    fail "live issue enrichment is not scoped to the requested repository"
+
 cat > "$fixture" << 'JSON'
 {"items":[
     {"number":10,"title":"Low priority feature","status":"Spec Ready","priority":"P4","target_release":"Unscheduled","area":"Templates","work_type":"Story","risk":"Low","effort":"S","parent_issue":20,"sub_issues_progress":"0/0","labels":[]},

@@ -18,7 +18,7 @@ for priority, readiness, release, ownership, dependencies, and parent/child
 relationships. Do not create local planning or specification files for normal
 implementation work.
 
-Before selecting work, run `scripts/github-setup/select-next-work.sh` against
+Before selecting work, run `.github/scripts/select-next-work.sh` against
 the live Project. A non-zero result is a tracking blocker; repair missing
 required Project fields, non-epic parent links, or sub-issue progress before
 recommending an Issue.

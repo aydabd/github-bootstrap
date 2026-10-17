@@ -55,7 +55,7 @@ repository and generated repositories.
 6. Rank work in this order: security/production incident, core blocker,
    structural defect prevention, failing required evidence, committed release
    work, maintenance, then new features.
-7. Run `scripts/github-setup/select-next-work.sh` against the live Project
+7. Run `.github/scripts/select-next-work.sh` against the live Project
    (or an equivalent deterministic Project snapshot) before reading candidate
    Issues. A non-zero result is a tracking blocker, not an empty backlog.
 8. Require every actionable or blocked item to have all required Project

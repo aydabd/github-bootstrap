@@ -38,7 +38,11 @@ done
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$script_dir/../.." && pwd)"
-manifest="$repo_root/templates/.github/config/agent-workflow.json"
+if [ -f "$repo_root/templates/.github/config/agent-workflow.json" ]; then
+    manifest="$repo_root/templates/.github/config/agent-workflow.json"
+else
+    manifest="$repo_root/.github/config/agent-workflow.json"
+fi
 policy="$(jq -c '.selection' "$manifest")"
 
 if [ -n "$items_file" ]; then
@@ -53,7 +57,7 @@ else
     trap 'rm -f "$enriched_items"' EXIT
     printf '%s' "$items_json" | jq -c '.items[]' | while IFS= read -r item; do
         issue_number="$(printf '%s' "$item" | jq -r '.content.number // .number')"
-        issue_data="$(gh issue view "$issue_number" --json state,parent,subIssuesSummary)"
+        issue_data="$(gh issue view "$issue_number" --repo "$repository" --json state,parent,subIssuesSummary)"
         printf '%s' "$item" | jq -c --argjson issue_data "$issue_data" '
             . + {
                 issue_state: $issue_data.state,
