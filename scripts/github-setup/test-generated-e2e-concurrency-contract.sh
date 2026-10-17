@@ -21,46 +21,46 @@ lifecycle_resolver="$(printf '%s\n' "$generated_repository_job" | awk '
     in_block { print }
 ')"
 
-printf '%s\n' "$generated_repository_job" | grep -Fq 'max-parallel: 1' || {
+grep -Fq 'max-parallel: 1' <<< "$generated_repository_job" || {
     echo "generated repository E2E matrix must serialize personal refresh-token use" >&2
     exit 1
 }
 
-printf '%s\n' "$generated_repository_job" | grep -Fq -- '--field provisioner_profile=e2e-provisioner' || {
+grep -Fq -- '--field provisioner_profile=e2e-provisioner' <<< "$generated_repository_job" || {
     echo "generated repository E2E dispatch must select the E2E provisioner profile" >&2
     exit 1
 }
 
-if printf '%s\n' "$generated_repository_job" | grep -Fq 'refresh_token_secret_environment:'; then
+if grep -Fq 'refresh_token_secret_environment:' <<< "$generated_repository_job"; then
     echo "generated repository E2E dispatch resolver must not rotate the E2E refresh token" >&2
     exit 1
 fi
 
-printf '%s\n' "$generated_repository_job" | grep -Fq 'refresh_token_secret: ""' || {
+grep -Fq 'refresh_token_secret: ""' <<< "$generated_repository_job" || {
     echo "generated repository E2E dispatch must use an installation token" >&2
     exit 1
 }
 
-printf '%s\n' "$generated_repository_job" | grep -Fq "client_id: \${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}" || {
+grep -Fq "client_id: \${{ vars.BOOTSTRAP_E2E_PROVISIONER_APP_CLIENT_ID }}" <<< "$generated_repository_job" || {
     echo "generated repository E2E resolver must use the supplied E2E client ID" >&2
     exit 1
 }
 
-if printf '%s\n' "$generated_repository_job" | grep -Fq 'BOOTSTRAP_PRODUCTION_PROVISIONER_APP_'; then
+if grep -Fq 'BOOTSTRAP_PRODUCTION_PROVISIONER_APP_' <<< "$generated_repository_job"; then
     echo "generated repository E2E must not use legacy shared provisioner credentials" >&2
     exit 1
 fi
 
-if printf '%s\n' "$lifecycle_resolver" | grep -Eq 'refresh_token_secret: +"?BOOTSTRAP_'; then
+if grep -Eq 'refresh_token_secret: +"?BOOTSTRAP_' <<< "$lifecycle_resolver"; then
     echo "generated repository E2E lifecycle resolver must not receive a provisioner refresh-secret name" >&2
     exit 1
 fi
 
-printf '%s\n' "$generated_repository_job" | grep -Fq 'for file in Makefile scripts/provider-run.sh; do' || {
+grep -Fq 'for file in Makefile scripts/provider-run.sh; do' <<< "$generated_repository_job" || {
     echo "generated repository E2E must always require only consumer provider assets" >&2
     exit 1
 }
-printf '%s\n' "$generated_repository_job" | grep -Fq "if [ \"\$DELIVERY\" = embedded ]; then" || {
+grep -Fq "if [ \"\$DELIVERY\" = embedded ]; then" <<< "$generated_repository_job" || {
     echo "generated repository E2E must gate embedded-only setup assets by delivery mode" >&2
     exit 1
 }
