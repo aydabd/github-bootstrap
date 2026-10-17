@@ -18,6 +18,11 @@ for priority, readiness, release, ownership, dependencies, and parent/child
 relationships. Do not create local planning or specification files for normal
 implementation work.
 
+Before selecting work, run `scripts/github-setup/select-next-work.sh` against
+the live Project. A non-zero result is a tracking blocker; repair missing
+required Project fields, non-epic parent links, or sub-issue progress before
+recommending an Issue.
+
 Before selecting work, use the live Project's `Ready to work` and `Epics`
 views, read the complete issue, inspect blockers and required checks, and emit
 the selected issue and evidence as JSON.

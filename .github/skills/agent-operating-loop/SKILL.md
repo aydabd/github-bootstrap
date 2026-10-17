@@ -14,6 +14,11 @@ of truth for priority, readiness, release, dependencies, and parent/child
 relationships. Superpowers is required. If the plugin or selected skill is
 unavailable, stop with `FAIL` and exact installation instructions.
 
+Before selecting work, run `scripts/github-setup/select-next-work.sh` against
+the live Project. A non-zero result is a tracking blocker: repair missing
+required Project fields, non-epic parent links, or sub-issue progress before
+recommending an Issue.
+
 Use the declared Superpowers gates for discovery, brainstorming, planning,
 worktree isolation, TDD, debugging, parallel work, review, verification, and
 cleanup. Before PR handoff, complete the closeout gate by reconciling the Issue,

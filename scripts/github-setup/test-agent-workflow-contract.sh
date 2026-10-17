@@ -93,6 +93,8 @@ for instructions in "$repo_root/AGENTS.md" "$repo_root/templates/AGENTS.md" "$re
         fail "closeout acceptance evidence requirement is missing from $instructions"
     grep -Fq 'project.fields' "$instructions" ||
         fail "closeout Project-field evidence requirement is missing from $instructions"
+    grep -Fq 'select-next-work.sh' "$instructions" ||
+        fail "next-work tracking validation is missing from $instructions"
 done
 
 for instructions in "$repo_root/AGENTS.md" "$repo_root/.github/skills/agent-operating-loop/SKILL.md"; do
