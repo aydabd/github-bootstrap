@@ -11,7 +11,8 @@ fail() {
     exit 1
 }
 
-grep -Fq 'gh issue view "$issue_number" --repo "$repository"' "$selector" ||
+expected_lookup="gh issue view \"\$issue_number\" --repo \"\$repository\""
+grep -Fq "$expected_lookup" "$selector" ||
     fail "live issue enrichment is not scoped to the requested repository"
 
 cat > "$fixture" << 'JSON'
