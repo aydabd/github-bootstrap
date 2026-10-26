@@ -10,6 +10,6 @@
   "devDependencies": {
     "@taplo/cli": "0.7.0",
     "markdownlint-cli": "0.49.1",
-    "prettier": "3.9.9"
+    "prettier": "3.9.10"
   }
 }
