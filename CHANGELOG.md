@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.30.1](https://github.com/aydabd/github-bootstrap/compare/v2.30.0...v2.30.1) (2026-11-02)
+
+
+### Bug Fixes
+
+* **deps:** override minimatch to 11.0.4 for Dependabot alerts ([#412](https://github.com/aydabd/github-bootstrap/issues/412)) ([2183f5d](https://github.com/aydabd/github-bootstrap/commit/2183f5d3e756044d57a1d18f148196a10a2034bc))
+
 ## [2.30.0](https://github.com/aydabd/github-bootstrap/compare/v2.29.4...v2.30.0) (2026-10-17)
 
 
