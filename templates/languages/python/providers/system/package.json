@@ -5,6 +5,7 @@
   "overrides": {
     "js-yaml": "5.4.1",
     "katex": "0.18.2",
+    "minimatch": "11.0.4",
     "smol-toml": "1.9.0"
   },
   "devDependencies": {
